@@ -85,6 +85,28 @@ RSpec.describe Kettle::Family::CLI do
     expect(JSON.parse(stdout).fetch("selected_members")).to eq(["alpha"])
   end
 
+  it "plans workflow commands by default" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["test", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("skipped alpha test")
+    expect(out.string).to include("pass --execute")
+  end
+
+  it "returns failure status for readiness check failures" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["check", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(1)
+    expect(out.string).to include("failed alpha check")
+    expect(out.string).to include("resume: kettle-family check --start-at alpha")
+  end
+
   def write_gem(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)

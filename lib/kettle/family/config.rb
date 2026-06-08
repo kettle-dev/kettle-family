@@ -58,6 +58,10 @@ module Kettle
         fetch_path("members", "order", "hints") || []
       end
 
+      def command_for(name)
+        fetch_path("commands", name)
+      end
+
       private
 
       def fetch_path(*keys)

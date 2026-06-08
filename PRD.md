@@ -308,13 +308,13 @@ Use this checklist to track implementation atomically. Mark items complete only 
 
 ### M2: Command Runner and Checks
 
-- [ ] Add per-member command runner using explicit working directories.
-- [ ] Prefer `mise exec -C` when a member has `mise.toml`.
-- [ ] Add command result model with status, elapsed time, and output summaries.
-- [ ] Add `check`, `test`, `lint`, and `docs` command skeletons.
-- [ ] Add readiness checks for required files and binstubs.
-- [ ] Add release lockfile/local-path checks.
-- [ ] Add concise failure summaries and resume hints.
+- [x] Add per-member command runner using explicit working directories.
+- [x] Prefer `mise exec -C` when a member has `mise.toml`.
+- [x] Add command result model with status, elapsed time, and output summaries.
+- [x] Add `check`, `test`, `lint`, and `docs` command skeletons.
+- [x] Add readiness checks for required files and binstubs.
+- [x] Add release lockfile/local-path checks.
+- [x] Add concise failure summaries and resume hints.
 
 ### M3: Templating Workflow
 
