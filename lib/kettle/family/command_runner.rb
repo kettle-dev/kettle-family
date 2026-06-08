@@ -111,6 +111,8 @@ module Kettle
       end
 
       def pty_available?
+        return false unless RUBY_ENGINE == "ruby"
+
         require "pty"
         true
       rescue LoadError
