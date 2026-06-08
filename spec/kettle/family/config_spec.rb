@@ -63,4 +63,29 @@ RSpec.describe Kettle::Family::Config do
 
     expect(config.members_root).to eq(File.join(@tmpdir, "components"))
   end
+
+  it "loads release target branches from release config" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1_8-even-v0
+          - r1_9-even-v2
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_target_branches).to eq(%w[r1_8-even-v0 r1_9-even-v2])
+  end
+
+  it "loads release target branches from branch aliases" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      branches:
+        release_targets:
+          - r3_2-even-v24
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_target_branches).to eq(["r3_2-even-v24"])
+  end
 end

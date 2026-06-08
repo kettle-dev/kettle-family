@@ -144,6 +144,7 @@ module Kettle
           selected_members: selected,
           config_path: config.path,
           branch_lanes: config.branch_lanes,
+          release_target_branches: config.release_target_branches,
           command: command,
           results: results
         )

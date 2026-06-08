@@ -104,6 +104,20 @@ gem install kettle-family
 
 ## ⚙️ Configuration
 
+`kettle-family` reads `.kettle-family.yml` from the family root by default.
+For a flat repository that releases from multiple long-lived branches, list the
+branches under `release.target_branches`; `kettle-family release` will check out
+each branch in order and then run the normal flat-repo release phases on that
+checkout.
+
+```yaml
+release:
+  target_branches:
+    - r1_8-even-v0
+    - r1_9-even-v2
+    - r2_0-even-v4
+```
+
 ## 🔧 Basic Usage
 
 TODO: Write usage instructions here

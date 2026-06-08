@@ -33,6 +33,23 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish release_tag release_push])
   end
 
+  it "plans releases across configured target branches" do
+    write_release_config(target_branches: %w[r1_8-even-v0 r1_9-even-v2])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+
+    results = described_class.new(command: "release", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[
+      release_checkout check release_changelog release_build
+      release_checkout check release_changelog release_build
+    ])
+    expect(results.select { |result| result.phase == "release_checkout" }.map(&:command)).to eq([
+      ["git", "checkout", "r1_8-even-v0"],
+      ["git", "checkout", "r1_9-even-v2"]
+    ])
+  end
+
   it "executes configured build command after checks" do
     marker = File.join(@tmpdir, "built")
     write_release_config(build_command: [RbConfig.ruby, "-e", "File.write(#{marker.dump}, 'built')"])
@@ -57,17 +74,17 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], target_branches: nil)
+    release = {
+      "build_command" => build_command,
+      "publish_command" => [RbConfig.ruby, "-e", "puts 'publish'"],
+      "tag_command" => [RbConfig.ruby, "-e", "puts 'tag'"],
+      "push_command" => [RbConfig.ruby, "-e", "puts 'push'"]
+    }
+    release["target_branches"] = target_branches if target_branches
     File.write(
       File.join(@tmpdir, ".kettle-family.yml"),
-      YAML.dump(
-        "release" => {
-          "build_command" => build_command,
-          "publish_command" => [RbConfig.ruby, "-e", "puts 'publish'"],
-          "tag_command" => [RbConfig.ruby, "-e", "puts 'tag'"],
-          "push_command" => [RbConfig.ruby, "-e", "puts 'push'"]
-        }
-      )
+      YAML.dump("release" => release)
     )
   end
 

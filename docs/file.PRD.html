@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: PRD
+  
+    &mdash; Documentation by YARD 0.9.44
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css">
+
+  <link rel="stylesheet" href="css/common.css" type="text/css">
+
+<script type="text/javascript">
+  pathId = "PRD";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div id="main_progress" aria-hidden="true"></div>
+
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: PRD</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="kettlefamily-prd">Kettle::Family PRD</h1>
+
+<h2 id="summary">Summary</h2>
+
+<p>Kettle::Family is a RubyGem that ships reusable command-line tooling for managing a related set of Ruby gems as one operational family. It should replace bespoke workspace scripts with a configurable, tested, gem-installed CLI that can discover member gems, run ordered workflows, enforce safety gates, and produce machine-readable reports.</p>
+
+<p>The initial product should preserve the practical patterns from:</p>
+
+<ul>
+  <li>
+<code>rubocop-lts/meta/scripts</code>: multi-repository version planning, branch-aware release sequencing, dry-run-first publishing, and explicit execution gates.</li>
+  <li>
+<code>structuredmerge/ruby/workspace-scripts</code>: dependency-ordered gem discovery, selected family operations, templating, lockfile normalization, readiness checks, version alignment, docs, lint, tests, git push, and release orchestration.</li>
+</ul>
+
+<h2 id="problem">Problem</h2>
+
+<p>The current family-management scripts work, but they are local to specific workspaces and encode project-specific assumptions directly in scripts. That creates several recurring problems:</p>
+
+<ul>
+  <li>Operators must copy or adapt scripts between gem families.</li>
+  <li>Family membership and ordering are hard-coded.</li>
+  <li>Dry-run, selection, reporting, and safety behavior varies by script.</li>
+  <li>Release and templating workflows are difficult to test as product behavior.</li>
+  <li>Workflows are not available through a single installed executable.</li>
+  <li>There is no shared configuration contract for describing a gem family.</li>
+</ul>
+
+<p>Kettle::Family should make these workflows portable while keeping the current operator-grade safety constraints.</p>
+
+<h2 id="goals">Goals</h2>
+
+<ul>
+  <li>Provide one installed CLI for gem-family operations.</li>
+  <li>Support both single-repository workspaces and sibling multi-repository workspaces.</li>
+  <li>Discover family members from gemspecs, Git remotes, and/or explicit config.</li>
+  <li>Run family workflows in deterministic order.</li>
+  <li>Prefer dependency order when local gem dependencies define a valid DAG.</li>
+  <li>Support fixed custom order when release order differs from dependency order.</li>
+  <li>Provide <code>--only</code>, <code>--start-at</code>, and future <code>--exclude</code> selection controls.</li>
+  <li>Default to plan/dry-run behavior for destructive or publishing actions.</li>
+  <li>Require explicit <code>--execute</code> for operations that publish, push, tag, or mutate multiple repos.</li>
+  <li>Emit concise human output and optional JSON reports.</li>
+  <li>Keep commands self-contained per repository, especially for <code>mise exec -C</code>.</li>
+  <li>Preserve release-compatible dependency state by default.</li>
+  <li>Make failures resumable through selection controls and structured reports.</li>
+</ul>
+
+<h2 id="non-goals">Non-Goals</h2>
+
+<ul>
+  <li>Do not replace <code>kettle-dev</code>, <code>kettle-release</code>, <code>kettle-changelog</code>, or <code>kettle-jem</code>.</li>
+  <li>Do not implement source-code templating directly; call <code>kettle-jem</code> or its public Ruby APIs.</li>
+  <li>Do not manage arbitrary non-Ruby package ecosystems in the first release.</li>
+  <li>Do not introduce a GUI.</li>
+  <li>Do not require every family to use a monorepo layout.</li>
+  <li>Do not bypass each member gem’s own Bundler, mise, git, or release tooling.</li>
+</ul>
+
+<h2 id="users">Users</h2>
+
+<ul>
+  <li>Gem maintainers managing a family of related Ruby gems.</li>
+  <li>Release managers who need ordered, resumable, auditable workflows.</li>
+  <li>Template maintainers applying <code>kettle-jem</code> across many gems.</li>
+  <li>CI maintainers who need repeatable readiness checks for a gem family.</li>
+</ul>
+
+<h2 id="primary-use-cases">Primary Use Cases</h2>
+
+<h3 id="family-discovery">Family Discovery</h3>
+
+<p>As a maintainer, I can run a command in a workspace and see the member gems Kettle::Family would operate on, including their root paths, gem names, versions, local dependencies, and selected execution order.</p>
+
+<h3 id="template-all-gems">Template All Gems</h3>
+
+<p>As a template maintainer, I can run one command to apply <code>kettle-jem</code> to every selected family member, optionally normalize lockfiles afterward, and commit the combined result only when the worktree was clean before the run.</p>
+
+<h3 id="run-quality-gates">Run Quality Gates</h3>
+
+<p>As a maintainer, I can run lint, tests, docs generation, and release-readiness checks across a family with consistent selection and reporting.</p>
+
+<h3 id="align-family-versions">Align Family Versions</h3>
+
+<p>As a release manager, I can update all family member <code>VERSION</code> constants and exact intra-family gemspec dependency pins to a target version, with <code>--check</code>, <code>--dry-run</code>, and <code>--execute</code> modes.</p>
+
+<h3 id="release-family">Release Family</h3>
+
+<p>As a release manager, I can preview or execute a release sequence across selected gems in the correct order, with optional readiness checks, changelog preparation, local-path dependency controls, and resumability from a named member.</p>
+
+<h3 id="multi-repo-branch-releases">Multi-Repo Branch Releases</h3>
+
+<p>As a release manager, I can model a family where one repository has branch lanes and related repositories map to those lanes, then plan bumps/releases without hand-editing scripts.</p>
+
+<h2 id="product-surface">Product Surface</h2>
+
+<p>The gem should expose an executable:</p>
+
+<pre class="code language-sh"><code class="language-sh">kettle-family COMMAND [options]
+</code></pre>
+
+<p>Initial commands:</p>
+
+<ul>
+  <li><code>kettle-family discover</code></li>
+  <li><code>kettle-family plan</code></li>
+  <li><code>kettle-family template</code></li>
+  <li><code>kettle-family check</code></li>
+  <li><code>kettle-family test</code></li>
+  <li><code>kettle-family lint</code></li>
+  <li><code>kettle-family docs</code></li>
+  <li><code>kettle-family bump-version VERSION</code></li>
+  <li><code>kettle-family release</code></li>
+  <li><code>kettle-family report</code></li>
+</ul>
+
+<p>Command options should be consistent where applicable:</p>
+
+<ul>
+  <li><code>--config PATH</code></li>
+  <li><code>--root PATH</code></li>
+  <li><code>--only MEMBER</code></li>
+  <li><code>--start-at MEMBER</code></li>
+  <li><code>--json</code></li>
+  <li><code>--report PATH</code></li>
+  <li><code>--dry-run</code></li>
+  <li><code>--execute</code></li>
+  <li><code>--allow-dirty</code></li>
+  <li><code>--[no-]commit</code></li>
+</ul>
+
+<h2 id="configuration">Configuration</h2>
+
+<p>The product should support a family config file. Proposed default path:</p>
+
+<pre class="code language-text"><code class="language-text">.kettle-family.yml
+</code></pre>
+
+<p>Open question: also support <code>.structuredmerge/kettle-family.yml</code> for projects that prefer StructuredMerge-style config colocation.</p>
+
+<p>The config should describe:</p>
+
+<ul>
+  <li>Family name.</li>
+  <li>Workspace mode: <code>monorepo</code>, <code>sibling_repos</code>, or <code>explicit</code>.</li>
+  <li>Member discovery roots.</li>
+  <li>Explicit members, when discovery is not sufficient.</li>
+  <li>Release order override.</li>
+  <li>Dependency-order behavior.</li>
+  <li>Member-specific command environment.</li>
+  <li>Template profile and repository topology defaults.</li>
+  <li>Readiness checks and required files.</li>
+  <li>Release settings.</li>
+  <li>Branch lane mappings for multi-branch families.</li>
+</ul>
+
+<p>Example:</p>
+
+<pre class="code language-yaml"><code class="language-yaml">family:
+  name: structuredmerge-ruby
+  mode: monorepo
+  members_root: gems
+
+members:
+  discover: true
+  order:
+    mode: dependency
+    hints:
+      - tree_haver
+      - ast-merge
+      - kettle-jem
+
+template:
+  command: kettle-jem install
+  profile: monorepo-subgem-release
+  repository_topology: monorepo-subproject
+  normalize_lockfiles: true
+
+release:
+  default_execute: false
+  readiness: true
+  changelog: true
+  local_path_gems: false
+</code></pre>
+
+<h2 id="functional-requirements">Functional Requirements</h2>
+
+<h3 id="discovery">Discovery</h3>
+
+<ul>
+  <li>Load member gems from explicit config and/or discovered <code>*.gemspec</code> files.</li>
+  <li>Validate that each discovered member has one primary gemspec unless config disambiguates it.</li>
+  <li>Load gemspec metadata without requiring unrelated local path hacks.</li>
+  <li>Discover <code>lib/**/version.rb</code> for each member.</li>
+  <li>Read local family dependencies from gemspec dependencies.</li>
+  <li>Build a dependency graph when possible.</li>
+  <li>Detect cycles and report them with actionable member names.</li>
+  <li>Support order hints for deterministic sorting.</li>
+  <li>Support fixed order for release workflows.</li>
+</ul>
+
+<h3 id="selection">Selection</h3>
+
+<ul>
+  <li>
+<code>--only MEMBER</code> runs exactly one selected member and fails for unknown members.</li>
+  <li>
+<code>--start-at MEMBER</code> runs from a selected member through the end of the chosen order.</li>
+  <li>Future <code>--exclude MEMBER</code> may remove one or more members from a run.</li>
+  <li>Selection must be applied after order calculation.</li>
+  <li>Empty selections must fail with a clear error.</li>
+</ul>
+
+<h3 id="execution">Execution</h3>
+
+<ul>
+  <li>Commands must run with explicit working directories.</li>
+  <li>Prefer <code>mise exec -C MEMBER_ROOT -- ...</code> when a member has <code>mise.toml</code>.</li>
+  <li>Support plain command execution when <code>mise</code> is not configured.</li>
+  <li>Capture command status, stdout/stderr summaries, elapsed time, and failure reason.</li>
+  <li>Stop on first failure by default.</li>
+  <li>Future mode may support <code>--continue-on-failure</code>.</li>
+</ul>
+
+<h3 id="templating">Templating</h3>
+
+<ul>
+  <li>Call <code>kettle-jem</code> through its public CLI or Ruby APIs.</li>
+  <li>Support per-family and per-member template profile settings.</li>
+  <li>Support repository topology settings.</li>
+  <li>Support <code>--skip-commit</code> for per-member templating.</li>
+  <li>Support one family-level commit when enabled and safe.</li>
+  <li>Refuse family-level commit when the relevant worktree is dirty before the run, unless <code>--allow-dirty</code> is provided.</li>
+  <li>Normalize lockfiles after templating when configured.</li>
+</ul>
+
+<h3 id="version-alignment">Version Alignment</h3>
+
+<ul>
+  <li>Support <code>bump-version VERSION</code>.</li>
+  <li>Validate target version with <code>Gem::Version</code>.</li>
+  <li>Optional <code>--from VERSION</code> requires every member to currently match.</li>
+  <li>Update member <code>VERSION</code> constants.</li>
+  <li>Update exact intra-family dependency pins.</li>
+  <li>Refuse ambiguous dependency requirements unless config allows a strategy.</li>
+  <li>Provide <code>--check</code>, <code>--dry-run</code>, and <code>--execute</code>.</li>
+</ul>
+
+<h3 id="readiness-checks">Readiness Checks</h3>
+
+<ul>
+  <li>Check required project files.</li>
+  <li>Check required release harness files and executable binstubs.</li>
+  <li>Check for local path remotes in release lockfiles.</li>
+  <li>Check obsolete or legacy config paths.</li>
+  <li>Check generated docs presence when configured.</li>
+  <li>Check that generated repository URLs match configured/derived repository ownership.</li>
+  <li>Report all failures, not just the first.</li>
+</ul>
+
+<h3 id="release">Release</h3>
+
+<ul>
+  <li>Default to plan-only output.</li>
+  <li>Require <code>--execute</code> to run release commands.</li>
+  <li>Support release order independent from dependency order.</li>
+  <li>Support <code>--only</code>, <code>--start-at</code>, and <code>--start-step</code>.</li>
+  <li>Support local-path dependency mode only when explicitly enabled.</li>
+  <li>Support pre-release readiness checks.</li>
+  <li>Support a family/root changelog step.</li>
+  <li>Support gem build-only vs publish modes.</li>
+  <li>Support optional git push and tag creation, gated by explicit flags.</li>
+</ul>
+
+<h3 id="reporting">Reporting</h3>
+
+<ul>
+  <li>Human output should be concise and phase-oriented.</li>
+  <li>JSON output should be available through <code>--json</code> or <code>--report PATH</code>.</li>
+  <li>Avoid dumping large JSON reports to stdout by default.</li>
+  <li>Reports should include:
+    <ul>
+      <li>family name</li>
+      <li>selected members</li>
+      <li>order mode</li>
+      <li>command phases</li>
+      <li>per-member status</li>
+      <li>changed files where available</li>
+      <li>diagnostics</li>
+      <li>elapsed time</li>
+      <li>resumable selection hints</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="safety-requirements">Safety Requirements</h2>
+
+<ul>
+  <li>Never default to publishing, pushing, tagging, or committing across a family.</li>
+  <li>Require explicit <code>--execute</code> for release and publish actions.</li>
+  <li>Require explicit <code>--commit</code> or configured commit behavior for family-level commits.</li>
+  <li>Refuse multi-repo mutation when selected repos have dirty worktrees, unless <code>--allow-dirty</code> is set.</li>
+  <li>Never delete or rewrite lockfiles manually.</li>
+  <li>Never mutate generated docs except by running the configured generator.</li>
+  <li>Preserve each member’s own release and template tooling boundaries.</li>
+  <li>Keep all scratch/report files under the workspace or member <code>tmp/</code> directories.</li>
+</ul>
+
+<h2 id="ux-requirements">UX Requirements</h2>
+
+<ul>
+  <li>CLI help must clearly state default dry-run vs execute behavior.</li>
+  <li>Every command must print selected members before mutation.</li>
+  <li>Every mutating command must print whether it will commit, push, tag, or publish.</li>
+  <li>Failures must identify the member, phase, command, working directory, and suggested resume command.</li>
+  <li>JSON reports should be stable enough for CI consumption.</li>
+</ul>
+
+<h2 id="technical-requirements">Technical Requirements</h2>
+
+<ul>
+  <li>Ruby implementation.</li>
+  <li>Use <code>OptionParser</code> initially unless a stronger CLI framework becomes necessary.</li>
+  <li>Use <code>Open3</code> for non-interactive command execution.</li>
+  <li>Use <code>PTY</code> only for interactive release prompts that require passphrases or OTP.</li>
+  <li>Use <code>Prism</code> for Ruby source edits where practical.</li>
+  <li>Avoid regex-based source edits for Ruby when Prism can identify the node.</li>
+  <li>Keep code organized under <code>Kettle::Family</code>.</li>
+  <li>Provide unit specs for discovery, ordering, config loading, selection, and report generation.</li>
+  <li>Provide integration/system specs using temporary fixture gems.</li>
+</ul>
+
+<h2 id="task-list">Task List</h2>
+
+<p>Use this checklist to track implementation atomically. Mark items complete only after code, specs, and relevant docs are updated.</p>
+
+<h3 id="m1-core-model-and-discovery">M1: Core Model and Discovery</h3>
+
+<ul class="task-list">
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add PRD task list for atomic tracking.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add executable entrypoint for <code>kettle-family</code>.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add config loader for <code>.kettle-family.yml</code> and <code>.structuredmerge/kettle-family.yml</code>.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add member model and gemspec discovery.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add dependency graph ordering with cycle errors.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add <code>--only</code> and <code>--start-at</code> selection handling.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add JSON/human report model with <code>--report</code> support.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add <code>kettle-family discover</code> and <code>kettle-family plan</code>.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add fixture coverage for explicit config members.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add fixture coverage for fixed order and order hints.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add CLI executable integration spec.</li>
+</ul>
+
+<h3 id="m2-command-runner-and-checks">M2: Command Runner and Checks</h3>
+
+<ul class="task-list">
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add per-member command runner using explicit working directories.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Prefer <code>mise exec -C</code> when a member has <code>mise.toml</code>.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add command result model with status, elapsed time, and output summaries.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add <code>check</code>, <code>test</code>, <code>lint</code>, and <code>docs</code> command skeletons.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add readiness checks for required files and binstubs.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add release lockfile/local-path checks.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add concise failure summaries and resume hints.</li>
+</ul>
+
+<h3 id="m3-templating-workflow">M3: Templating Workflow</h3>
+
+<ul class="task-list">
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add <code>template</code> command.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Invoke <code>kettle-jem</code> through configured CLI command.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Support template profile and repository topology env/config.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Support per-member <code>--skip-commit</code> templating.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add lockfile normalization hook.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add family-level commit safety checks.</li>
+</ul>
+
+<h3 id="m4-version-alignment">M4: Version Alignment</h3>
+
+<ul class="task-list">
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add <code>bump-version VERSION</code> command.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Validate target versions with <code>Gem::Version</code>.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add <code>--from VERSION</code> guard.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Update member <code>VERSION</code> constants.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Update exact intra-family dependency pins.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add <code>--check</code>, <code>--dry-run</code>, and <code>--execute</code> modes.</li>
+</ul>
+
+<h3 id="m5-release-workflow">M5: Release Workflow</h3>
+
+<ul class="task-list">
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add release planning command behavior.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add fixed release order support for release workflows.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add readiness and changelog phases.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add build-only vs publish modes.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add safe push/tag gates.</li>
+</ul>
+
+<h3 id="m6-multi-repo-and-branch-lanes">M6: Multi-Repo and Branch Lanes</h3>
+
+<ul class="task-list">
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add sibling repository workspace mode.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add branch-lane release mappings.</li>
+  <li class="task-list-item">
+<input type="checkbox" class="task-list-item-checkbox" disabled checked>Add rubocop-lts-style release bump audit support.</li>
+</ul>
+
+<h2 id="milestones">Milestones</h2>
+
+<h3 id="m1-core-model-and-discovery-1">M1: Core Model and Discovery</h3>
+
+<ul>
+  <li>Add config loader.</li>
+  <li>Add member discovery.</li>
+  <li>Add dependency graph and ordering.</li>
+  <li>Add selection handling.</li>
+  <li>Add JSON report model.</li>
+  <li>Add <code>kettle-family discover</code>.</li>
+</ul>
+
+<h3 id="m2-command-runner-and-checks-1">M2: Command Runner and Checks</h3>
+
+<ul>
+  <li>Add per-member command runner.</li>
+  <li>Add <code>check</code>, <code>test</code>, <code>lint</code>, and <code>docs</code> command skeletons.</li>
+  <li>Add readiness checks modeled after StructuredMerge Ruby scripts.</li>
+  <li>Add concise reports and failure summaries.</li>
+</ul>
+
+<h3 id="m3-templating-workflow-1">M3: Templating Workflow</h3>
+
+<ul>
+  <li>Add <code>template</code> command.</li>
+  <li>Integrate with <code>kettle-jem</code>.</li>
+  <li>Support lockfile normalization.</li>
+  <li>Support family-level commit safety.</li>
+</ul>
+
+<h3 id="m4-version-alignment-1">M4: Version Alignment</h3>
+
+<ul>
+  <li>Add <code>bump-version</code>.</li>
+  <li>Implement Prism-backed version and dependency edits.</li>
+  <li>Add <code>--check</code>, <code>--dry-run</code>, and <code>--execute</code>.</li>
+</ul>
+
+<h3 id="m5-release-workflow-1">M5: Release Workflow</h3>
+
+<ul>
+  <li>Add release planning and execution.</li>
+  <li>Support fixed release order.</li>
+  <li>Support readiness and changelog steps.</li>
+  <li>Support build-only vs publish.</li>
+  <li>Support safe push/tag gates.</li>
+</ul>
+
+<h3 id="m6-multi-repo-and-branch-lanes-1">M6: Multi-Repo and Branch Lanes</h3>
+
+<ul>
+  <li>Add sibling repository workspace mode.</li>
+  <li>Add branch-lane release mapping.</li>
+  <li>Add release bump audit support for families like <code>rubocop-lts</code>.</li>
+</ul>
+
+<h2 id="success-metrics">Success Metrics</h2>
+
+<ul>
+  <li>A StructuredMerge Ruby family workflow can be expressed without bespoke numbered scripts.</li>
+  <li>A rubocop-lts-style family workflow can be expressed without hard-coded release scripts.</li>
+  <li>
+<code>kettle-family discover</code> produces correct member order for a fixture family.</li>
+  <li>
+<code>kettle-family template --dry-run</code> and <code>--execute</code> are safe and resumable.</li>
+  <li>
+<code>kettle-family bump-version --check</code> can detect required version edits without writing.</li>
+  <li>Release commands default to non-mutating plan output.</li>
+  <li>CI can consume JSON reports.</li>
+</ul>
+
+<h2 id="open-questions">Open Questions</h2>
+
+<ul>
+  <li>Should <code>nomono</code> be a runtime dependency, an optional integration, or only a config pattern Kettle::Family understands?</li>
+  <li>Should the config live at <code>.kettle-family.yml</code>, <code>.structuredmerge/kettle-family.yml</code>, or both?</li>
+  <li>Should <code>kettle-family</code> install multiple executable aliases for common workflows?</li>
+  <li>How much rubocop-lts branch-lane logic belongs in generic Kettle::Family vs family-specific plugin/config?</li>
+  <li>Should family-level commits be supported for sibling multi-repo mode, or only per-repo commits?</li>
+  <li>Should release publishing handle interactive MFA directly, or delegate entirely to <code>kettle-release</code>?</li>
+</ul>
+</div></div>
+
+      <div id="footer">
+  Generated on Mon Jun  8 01:31:44 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.44 (ruby-4.0.5).
+</div>
+
+    </div>
+  </body>
+</html>

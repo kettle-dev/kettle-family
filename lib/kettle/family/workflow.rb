@@ -49,8 +49,25 @@ module Kettle
       end
 
       def release_results
+        return branch_target_release_results unless config.release_target_branches.empty?
+
+        release_member_results(members)
+      end
+
+      def branch_target_release_results
         runner = CommandRunner.new(execute: execute)
-        members.each_with_object([]) do |member, memo|
+        config.release_target_branches.each_with_object([]) do |branch, memo|
+          memo << checkout_branch_result(branch: branch, runner: runner)
+          break memo unless memo.last.ok?
+
+          memo.concat(release_member_results(members))
+          break memo unless memo.last&.ok?
+        end
+      end
+
+      def release_member_results(release_members)
+        runner = CommandRunner.new(execute: execute)
+        release_members.each_with_object([]) do |member, memo|
           append_release_internal_checks(member: member, memo: memo)
           break memo unless memo.last(2).all?(&:ok?)
 
@@ -60,6 +77,14 @@ module Kettle
           append_release_git_phases(member: member, runner: runner, memo: memo)
           break memo unless memo.last.ok?
         end
+      end
+
+      def checkout_branch_result(branch:, runner:)
+        runner.call(
+          member: family_member,
+          phase: "release_checkout",
+          command: ["git", "checkout", branch]
+        )
       end
 
       def append_release_internal_checks(member:, memo:)

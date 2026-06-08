@@ -5,9 +5,9 @@ require "json"
 module Kettle
   module Family
     class Report
-      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes
+      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches
 
-      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, command: nil, results: [])
+      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], command: nil, results: [])
         @family_name = family_name
         @family_mode = family_mode
         @order_mode = order_mode
@@ -17,6 +17,7 @@ module Kettle
         @command = command
         @results = results
         @branch_lanes = branch_lanes
+        @release_target_branches = release_target_branches
       end
 
       def to_h
@@ -28,6 +29,7 @@ module Kettle
           "members" => members.map(&:to_h),
           "selected_members" => selected_members.map(&:name),
           "branch_lanes" => branch_lanes,
+          "release_target_branches" => release_target_branches,
           "command" => command,
           "results" => results.map(&:to_h),
           "resume_hint" => resume_hint
@@ -44,6 +46,7 @@ module Kettle
         lines << "config: #{config_path || "none"}"
         lines << "order: #{order_mode}"
         lines << "command: #{command}" if command
+        lines << "release targets: #{release_target_branches.join(", ")}" unless release_target_branches.empty?
         lines << "members:"
         selected_names = selected_members.map(&:name)
         members.each do |member|

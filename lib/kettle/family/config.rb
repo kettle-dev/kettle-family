@@ -110,6 +110,10 @@ module Kettle
         fetch_path("release", "push_command") || command_for("release_push") || "git push --follow-tags"
       end
 
+      def release_target_branches
+        fetch_path("release", "target_branches") || fetch_path("branches", "release_targets") || []
+      end
+
       def branch_lanes
         fetch_path("branch_lanes") || fetch_path("branches", "lanes") || {}
       end
