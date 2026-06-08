@@ -1,20 +1,26 @@
 # frozen_string_literal: true
 
 require "open3"
+require "pty"
 
 module Kettle
   module Family
     class CommandRunner
-      def initialize(execute: false)
+      def initialize(execute: false, gem_signing_password: nil)
         @execute = execute
+        @gem_signing_password = gem_signing_password
       end
 
-      def call(member:, phase:, command:, env: {})
+      def call(member:, phase:, command:, env: {}, interactive: false)
         argv = command_argv(member: member, command: command)
         return skipped_result(member: member, phase: phase, argv: argv) unless execute
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        stdout, stderr, status = Open3.capture3(env, *argv, chdir: member.root)
+        stdout, stderr, status = if interactive
+          run_interactive(env: env, argv: argv, chdir: member.root)
+        else
+          Open3.capture3(env, *argv, chdir: member.root)
+        end
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         CommandResult.new(
           member_name: member.name,
@@ -33,7 +39,39 @@ module Kettle
 
       private
 
-      attr_reader :execute
+      attr_reader :execute, :gem_signing_password
+
+      def run_interactive(env:, argv:, chdir:)
+        stdout = +""
+        status = nil
+        PTY.spawn(env, *argv, chdir: chdir) do |output, input, pid|
+          begin
+            loop do
+              readers = [output]
+              readers << $stdin if $stdin.tty?
+              ready = IO.select(readers)
+              ready.first.each do |reader|
+                if reader.equal?(output)
+                  chunk = output.readpartial(1024)
+                  stdout << chunk
+                  $stdout.print(chunk)
+                  input.write("#{gem_signing_password}\n") if gem_signing_password && signing_password_prompt?(chunk)
+                else
+                  input.write($stdin.readpartial(1024))
+                end
+              end
+            end
+          rescue Errno::EIO
+            # PTY raises EIO when the child process exits after closing the slave.
+          end
+          _, status = Process.wait2(pid)
+        end
+        [stdout, "", status]
+      end
+
+      def signing_password_prompt?(chunk)
+        chunk.match?(/pass(?:\s|-)?phrase|PEM password|private key password/i)
+      end
 
       def command_argv(member:, command:)
         argv = normalize_command(command)

@@ -27,6 +27,7 @@ Please file a bug if you notice a violation of semantic versioning.
 - Added the `release` workflow with readiness/changelog gates, build-only and publish modes, fixed-order planning, and explicit tag/push phases.
 - Added sibling-repository discovery, branch lane mappings, and a read-only `branch-lanes` audit command for multi-branch release planning.
 - Added `release.target_branches` config so a flat repository can release sequentially across configured branch targets.
+- Added `kettle-family release` passthroughs for `kettle-release` resume/security options and automatic already-published skips for resumable family releases.
 
 ### Changed
 

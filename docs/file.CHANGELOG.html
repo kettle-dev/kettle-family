@@ -82,6 +82,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>Added the <code>release</code> workflow with readiness/changelog gates, build-only and publish modes, fixed-order planning, and explicit tag/push phases.</li>
   <li>Added sibling-repository discovery, branch lane mappings, and a read-only <code>branch-lanes</code> audit command for multi-branch release planning.</li>
   <li>Added <code>release.target_branches</code> config so a flat repository can release sequentially across configured branch targets.</li>
+  <li>Added <code>kettle-family release</code> passthroughs for <code>kettle-release</code> resume/security options and automatic already-published skips for resumable family releases.</li>
 </ul>
 
 <h3 id="changed">Changed</h3>
@@ -96,7 +97,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 </div></div>
 
       <div id="footer">
-  Generated on Mon Jun  8 01:31:44 2026 by
+  Generated on Mon Jun  8 02:14:21 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

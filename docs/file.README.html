@@ -307,6 +307,17 @@ checkout.</p>
     - r2_0-even-v4
 </code></pre>
 
+<p>For publish runs, <code>kettle-family release --publish</code> uses <code>bundle exec kettle-release</code><br>
+by default. Resume and security-release options pass through to <code>kettle-release</code>:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --publish --start-step 10 --local-ci
+</code></pre>
+
+<p>Executed publish runs skip versions that are already published, which lets a<br>
+family release resume after a failure without recreating release-prep commits.<br>
+CI failures abort by default; pass <code>--continue-ci-failures</code> to set<br>
+<code>K_RELEASE_CI_CONTINUE=true</code> for the underlying release command.</p>
+
 <h2 id="-basic-usage">🔧 Basic Usage</h2>
 
 <p>TODO: Write usage instructions here</p>
@@ -513,7 +524,7 @@ Please consider sponsoring me or the project.</p>
 </div></div>
 
       <div id="footer">
-  Generated on Mon Jun  8 01:31:44 2026 by
+  Generated on Mon Jun  8 02:14:21 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

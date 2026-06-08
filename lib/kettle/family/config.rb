@@ -99,7 +99,7 @@ module Kettle
       end
 
       def release_publish_command
-        fetch_path("release", "publish_command") || command_for("release_publish") || "bundle exec rake release"
+        fetch_path("release", "publish_command") || command_for("release_publish") || "bundle exec kettle-release"
       end
 
       def release_tag_command

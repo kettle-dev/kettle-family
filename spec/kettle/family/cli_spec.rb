@@ -166,6 +166,22 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("skipped #{File.basename(@tmpdir)} release_checkout")
   end
 
+  it "passes release resume options through the CLI" do
+    write_ready_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(
+      ["release", "--root", @tmpdir, "--publish", "--start-step", "10", "--local-ci", "--continue-ci-failures", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    release = report.fetch("results").find { |result| result.fetch("phase") == "release_publish" }
+    expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 --local-ci"])
+  end
+
   def write_gem(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "lib", name))

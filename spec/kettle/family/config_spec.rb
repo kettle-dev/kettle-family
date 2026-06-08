@@ -88,4 +88,10 @@ RSpec.describe Kettle::Family::Config do
 
     expect(config.release_target_branches).to eq(["r3_2-even-v24"])
   end
+
+  it "defaults publish releases to kettle-release" do
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_publish_command).to eq("bundle exec kettle-release")
+  end
 end

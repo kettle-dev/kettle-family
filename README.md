@@ -118,6 +118,18 @@ release:
     - r2_0-even-v4
 ```
 
+For publish runs, `kettle-family release --publish` uses `bundle exec kettle-release`
+by default. Resume and security-release options pass through to `kettle-release`:
+
+```console
+kettle-family release --publish --start-step 10 --local-ci
+```
+
+Executed publish runs skip versions that are already published, which lets a
+family release resume after a failure without recreating release-prep commits.
+CI failures abort by default; pass `--continue-ci-failures` to set
+`K_RELEASE_CI_CONTINUE=true` for the underlying release command.
+
 ## 🔧 Basic Usage
 
 TODO: Write usage instructions here

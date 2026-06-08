@@ -75,6 +75,10 @@ module Kettle
               --from VERSION   Require selected members to currently match VERSION
               --publish        Use publish release command instead of build command
               --build-only      Use build release command (default)
+              --start-step N    Pass start_step=N through to kettle-release commands
+              --local-ci        Pass --local-ci through to kettle-release commands
+              --continue-ci-failures
+                               Set K_RELEASE_CI_CONTINUE=true for release commands
               --tag            Add release tag phase
               --push           Add release push phase
               --commit         Add final family-level git commit phase for template
@@ -97,6 +101,9 @@ module Kettle
           check: false,
           from_version: nil,
           publish: false,
+          release_start_step: nil,
+          release_local_ci: false,
+          release_continue_ci_failures: false,
           tag: false,
           push: false,
           commit: false,
@@ -115,6 +122,9 @@ module Kettle
           parser.on("--from VERSION") { |value| options[:from_version] = value }
           parser.on("--publish") { options[:publish] = true }
           parser.on("--build-only") { options[:publish] = false }
+          parser.on("--start-step N", Integer) { |value| options[:release_start_step] = value }
+          parser.on("--local-ci") { options[:release_local_ci] = true }
+          parser.on("--continue-ci-failures") { options[:release_continue_ci_failures] = true }
           parser.on("--tag") { options[:tag] = true }
           parser.on("--push") { options[:push] = true }
           parser.on("--commit") { options[:commit] = true }
@@ -164,7 +174,10 @@ module Kettle
           allow_dirty: options[:allow_dirty],
           publish: options[:publish],
           push: options[:push],
-          tag: options[:tag]
+          tag: options[:tag],
+          start_step: options[:release_start_step],
+          local_ci: options[:release_local_ci],
+          continue_ci_failures: options[:release_continue_ci_failures]
         ).results
       end
 
