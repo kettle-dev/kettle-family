@@ -2,7 +2,7 @@
 
 RSpec.describe Kettle::Family do
   it "has a version number" do
-    expect(Kettle::Family::VERSION).not_to be nil
+    expect(Kettle::Family::VERSION).not_to be_nil
   end
 
   it "exposes the generated namespace" do

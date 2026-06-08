@@ -288,6 +288,67 @@ release:
 - Provide unit specs for discovery, ordering, config loading, selection, and report generation.
 - Provide integration/system specs using temporary fixture gems.
 
+## Task List
+
+Use this checklist to track implementation atomically. Mark items complete only after code, specs, and relevant docs are updated.
+
+### M1: Core Model and Discovery
+
+- [x] Add PRD task list for atomic tracking.
+- [x] Add executable entrypoint for `kettle-family`.
+- [x] Add config loader for `.kettle-family.yml` and `.structuredmerge/kettle-family.yml`.
+- [x] Add member model and gemspec discovery.
+- [x] Add dependency graph ordering with cycle errors.
+- [x] Add `--only` and `--start-at` selection handling.
+- [x] Add JSON/human report model with `--report` support.
+- [x] Add `kettle-family discover` and `kettle-family plan`.
+- [x] Add fixture coverage for explicit config members.
+- [x] Add fixture coverage for fixed order and order hints.
+- [x] Add CLI executable integration spec.
+
+### M2: Command Runner and Checks
+
+- [ ] Add per-member command runner using explicit working directories.
+- [ ] Prefer `mise exec -C` when a member has `mise.toml`.
+- [ ] Add command result model with status, elapsed time, and output summaries.
+- [ ] Add `check`, `test`, `lint`, and `docs` command skeletons.
+- [ ] Add readiness checks for required files and binstubs.
+- [ ] Add release lockfile/local-path checks.
+- [ ] Add concise failure summaries and resume hints.
+
+### M3: Templating Workflow
+
+- [ ] Add `template` command.
+- [ ] Invoke `kettle-jem` through configured CLI command.
+- [ ] Support template profile and repository topology env/config.
+- [ ] Support per-member `--skip-commit` templating.
+- [ ] Add lockfile normalization hook.
+- [ ] Add family-level commit safety checks.
+
+### M4: Version Alignment
+
+- [ ] Add `bump-version VERSION` command.
+- [ ] Validate target versions with `Gem::Version`.
+- [ ] Add `--from VERSION` guard.
+- [ ] Update member `VERSION` constants.
+- [ ] Update exact intra-family dependency pins.
+- [ ] Add `--check`, `--dry-run`, and `--execute` modes.
+
+### M5: Release Workflow
+
+- [ ] Add release planning command behavior.
+- [ ] Add fixed release order support for release workflows.
+- [ ] Add readiness and changelog phases.
+- [ ] Add build-only vs publish modes.
+- [ ] Add safe push/tag gates.
+
+### M6: Multi-Repo and Branch Lanes
+
+- [ ] Add sibling repository workspace mode.
+- [ ] Add branch-lane release mappings.
+- [ ] Add rubocop-lts-style release bump audit support.
+
+
 ## Milestones
 
 ### M1: Core Model and Discovery

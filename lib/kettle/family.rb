@@ -3,11 +3,17 @@
 require "version_gem"
 
 require_relative "family/version"
+require_relative "family/member"
+require_relative "family/config"
+require_relative "family/discovery"
+require_relative "family/orderer"
+require_relative "family/selection"
+require_relative "family/report"
+require_relative "family/cli"
 
 module Kettle
   module Family
     class Error < StandardError; end
-    # Your code goes here...
   end
 end
 

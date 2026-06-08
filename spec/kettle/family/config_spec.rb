@@ -1,0 +1,66 @@
+# frozen_string_literal: true
+
+require "fileutils"
+require "tmpdir"
+
+RSpec.describe Kettle::Family::Config do
+  around do |example|
+    Dir.mktmpdir("kettle-family-config-spec") do |dir|
+      @tmpdir = dir
+      example.run
+    end
+  end
+
+  it "loads default config values when no config file exists" do
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.path).to be_nil
+    expect(config.family_name).to eq(File.basename(@tmpdir))
+    expect(config.members_root).to eq(@tmpdir)
+    expect(config.discover_members?).to be(true)
+    expect(config.order_mode).to eq("dependency")
+    expect(config.order_hints).to be_empty
+  end
+
+  it "loads configured values and stringifies keys" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        name: configured-family
+        members_root: gems
+      members:
+        discover: false
+        explicit:
+          - root: alpha
+        order:
+          mode: fixed
+          hints:
+            - alpha
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.family_name).to eq("configured-family")
+    expect(config.members_root).to eq(File.join(@tmpdir, "gems"))
+    expect(config.discover_members?).to be(false)
+    expect(config.explicit_members).to eq([{"root" => File.join(@tmpdir, "alpha")}])
+    expect(config.order_mode).to eq("fixed")
+    expect(config.order_hints).to eq(["alpha"])
+  end
+
+  it "loads an explicit config path" do
+    File.write(File.join(@tmpdir, "family.yml"), "family:\n  name: explicit\n")
+
+    config = described_class.load(root: @tmpdir, path: "family.yml")
+
+    expect(config.path).to eq(File.join(@tmpdir, "family.yml"))
+    expect(config.family_name).to eq("explicit")
+  end
+
+  it "falls back to members.root when family.members_root is absent" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), "members:\n  root: components\n")
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.members_root).to eq(File.join(@tmpdir, "components"))
+  end
+end
