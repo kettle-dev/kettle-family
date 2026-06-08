@@ -336,11 +336,11 @@ Use this checklist to track implementation atomically. Mark items complete only 
 
 ### M5: Release Workflow
 
-- [ ] Add release planning command behavior.
-- [ ] Add fixed release order support for release workflows.
-- [ ] Add readiness and changelog phases.
-- [ ] Add build-only vs publish modes.
-- [ ] Add safe push/tag gates.
+- [x] Add release planning command behavior.
+- [x] Add fixed release order support for release workflows.
+- [x] Add readiness and changelog phases.
+- [x] Add build-only vs publish modes.
+- [x] Add safe push/tag gates.
 
 ### M6: Multi-Repo and Branch Lanes
 

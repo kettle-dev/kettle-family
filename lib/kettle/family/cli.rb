@@ -6,8 +6,8 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan check test lint docs template bump-version].freeze
-      WORKFLOW_COMMANDS = %w[check test lint docs template].freeze
+      COMMANDS = %w[discover plan check test lint docs template bump-version release].freeze
+      WORKFLOW_COMMANDS = %w[check test lint docs template release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
         new(argv, out: out, err: err).call
@@ -58,6 +58,7 @@ module Kettle
               docs            Plan or execute configured docs command per member
               template        Plan or execute kettle-jem templating per member
               bump-version    Check, plan, or execute family version alignment
+              release         Plan or execute release build/publish phases
 
           Options:
               --root PATH      Workspace or family root (default: current directory)
@@ -70,6 +71,10 @@ module Kettle
               --dry-run        Plan external workflow commands without running them (default)
               --check          Check whether bump-version would need edits
               --from VERSION   Require selected members to currently match VERSION
+              --publish        Use publish release command instead of build command
+              --build-only      Use build release command (default)
+              --tag            Add release tag phase
+              --push           Add release push phase
               --commit         Add final family-level git commit phase for template
               --no-commit      Disable final family-level git commit phase (default)
               --allow-dirty    Allow template --commit when the family worktree starts dirty
@@ -89,6 +94,9 @@ module Kettle
           execute: false,
           check: false,
           from_version: nil,
+          publish: false,
+          tag: false,
+          push: false,
           commit: false,
           allow_dirty: false
         }
@@ -103,6 +111,10 @@ module Kettle
           parser.on("--dry-run") { options[:execute] = false }
           parser.on("--check") { options[:check] = true }
           parser.on("--from VERSION") { |value| options[:from_version] = value }
+          parser.on("--publish") { options[:publish] = true }
+          parser.on("--build-only") { options[:publish] = false }
+          parser.on("--tag") { options[:tag] = true }
+          parser.on("--push") { options[:push] = true }
           parser.on("--commit") { options[:commit] = true }
           parser.on("--no-commit") { options[:commit] = false }
           parser.on("--allow-dirty") { options[:allow_dirty] = true }
@@ -138,7 +150,10 @@ module Kettle
           members: members,
           execute: options[:execute],
           commit: options[:commit],
-          allow_dirty: options[:allow_dirty]
+          allow_dirty: options[:allow_dirty],
+          publish: options[:publish],
+          push: options[:push],
+          tag: options[:tag]
         ).results
       end
 

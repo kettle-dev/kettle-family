@@ -129,6 +129,26 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("version changes required")
   end
 
+  it "plans releases in fixed configured order" do
+    write_ready_gem("alpha")
+    write_ready_gem("beta")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        order:
+          mode: fixed
+          hints:
+            - beta
+            - alpha
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string.index("* beta")).to be < out.string.index("* alpha")
+    expect(out.string).to include("skipped beta release_build")
+  end
+
   def write_gem(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "lib", name))
@@ -143,5 +163,20 @@ RSpec.describe Kettle::Family::CLI do
         spec.version = "1.0.0"
       end
     RUBY
+  end
+
+  def write_ready_gem(name)
+    write_gem(name)
+    root = File.join(@tmpdir, name)
+    FileUtils.mkdir_p(File.join(root, "bin"))
+    %w[Gemfile Rakefile README.md LICENSE.md].each do |path|
+      File.write(File.join(root, path), "stub\n")
+    end
+    File.write(File.join(root, "CHANGELOG.md"), "## [Unreleased]\n")
+    %w[bin/rake bin/rspec].each do |path|
+      full_path = File.join(root, path)
+      File.write(full_path, "#!/bin/sh\n")
+      FileUtils.chmod("u+x", full_path)
+    end
   end
 end

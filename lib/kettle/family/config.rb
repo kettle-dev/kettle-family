@@ -82,6 +82,22 @@ module Kettle
         fetch_path("template", "normalize_lockfiles_command") || "bundle lock"
       end
 
+      def release_build_command
+        fetch_path("release", "build_command") || command_for("release_build") || "bundle exec rake build"
+      end
+
+      def release_publish_command
+        fetch_path("release", "publish_command") || command_for("release_publish") || "bundle exec rake release"
+      end
+
+      def release_tag_command
+        fetch_path("release", "tag_command") || command_for("release_tag") || "git tag"
+      end
+
+      def release_push_command
+        fetch_path("release", "push_command") || command_for("release_push") || "git push --follow-tags"
+      end
+
       private
 
       def fetch_path(*keys)
