@@ -5,25 +5,29 @@ require "json"
 module Kettle
   module Family
     class Report
-      attr_reader :family_name, :order_mode, :members, :selected_members, :config_path, :command, :results
+      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes
 
-      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, command: nil, results: [])
+      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, command: nil, results: [])
         @family_name = family_name
+        @family_mode = family_mode
         @order_mode = order_mode
         @members = members
         @selected_members = selected_members
         @config_path = config_path
         @command = command
         @results = results
+        @branch_lanes = branch_lanes
       end
 
       def to_h
         {
           "family" => family_name,
+          "family_mode" => family_mode,
           "config_path" => config_path,
           "order_mode" => order_mode,
           "members" => members.map(&:to_h),
           "selected_members" => selected_members.map(&:name),
+          "branch_lanes" => branch_lanes,
           "command" => command,
           "results" => results.map(&:to_h),
           "resume_hint" => resume_hint
@@ -36,6 +40,7 @@ module Kettle
 
       def to_text
         lines = ["family: #{family_name}"]
+        lines << "mode: #{family_mode}" if family_mode
         lines << "config: #{config_path || "none"}"
         lines << "order: #{order_mode}"
         lines << "command: #{command}" if command

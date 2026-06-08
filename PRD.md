@@ -344,9 +344,9 @@ Use this checklist to track implementation atomically. Mark items complete only 
 
 ### M6: Multi-Repo and Branch Lanes
 
-- [ ] Add sibling repository workspace mode.
-- [ ] Add branch-lane release mappings.
-- [ ] Add rubocop-lts-style release bump audit support.
+- [x] Add sibling repository workspace mode.
+- [x] Add branch-lane release mappings.
+- [x] Add rubocop-lts-style release bump audit support.
 
 
 ## Milestones

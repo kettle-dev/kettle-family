@@ -27,7 +27,9 @@ module Kettle
       attr_reader :config
 
       def discover_members
-        gemspecs = Dir.glob(File.join(config.members_root, "**", "*.gemspec"))
+        gemspecs = config.member_roots.flat_map do |root|
+          Dir.glob(File.join(root, "**", "*.gemspec"))
+        end
         gemspecs.reject! { |path| path.include?("/vendor/") }
         gemspecs.map { |path| member_from_gemspec(path) }
       end

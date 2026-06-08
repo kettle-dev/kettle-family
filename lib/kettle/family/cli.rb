@@ -6,7 +6,7 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan check test lint docs template bump-version release].freeze
+      COMMANDS = %w[discover plan report check test lint docs template bump-version release branch-lanes].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
@@ -52,6 +52,7 @@ module Kettle
           Commands:
               discover        Discover family members and print selected order
               plan            Alias for discover while execution workflows are built
+              report          Print family discovery and configuration report
               check           Run internal read-only readiness checks
               test            Plan or execute configured test command per member
               lint            Plan or execute configured lint command per member
@@ -59,6 +60,7 @@ module Kettle
               template        Plan or execute kettle-jem templating per member
               bump-version    Check, plan, or execute family version alignment
               release         Plan or execute release build/publish phases
+              branch-lanes    Audit configured branch lane release mappings
 
           Options:
               --root PATH      Workspace or family root (default: current directory)
@@ -128,13 +130,20 @@ module Kettle
         members = Discovery.new(config: config).members
         ordered = Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         selected = Selection.new(members: ordered).apply(only: options[:only], start_at: options[:start_at])
-        results = command_results(command: command, config: config, members: selected, options: options)
+        result_members = if command == "branch-lanes"
+          ordered
+        else
+          selected
+        end
+        results = command_results(command: command, config: config, members: result_members, options: options)
         Report.new(
           family_name: config.family_name,
+          family_mode: config.family_mode,
           order_mode: config.order_mode,
           members: ordered,
           selected_members: selected,
           config_path: config.path,
+          branch_lanes: config.branch_lanes,
           command: command,
           results: results
         )
@@ -142,6 +151,7 @@ module Kettle
 
       def command_results(command:, config:, members:, options:)
         return bump_version_results(members: members, options: options) if command == "bump-version"
+        return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
         Workflow.new(
@@ -171,6 +181,10 @@ module Kettle
         return :execute if options[:execute]
 
         :dry_run
+      end
+
+      def branch_lane_results(config:, members:)
+        BranchLaneAudit.new(config: config, members: members).results
       end
 
       def write_report(report, options)

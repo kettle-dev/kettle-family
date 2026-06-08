@@ -30,9 +30,21 @@ module Kettle
         fetch_path("family", "name") || File.basename(root)
       end
 
+      def family_mode
+        fetch_path("family", "mode") || "monorepo"
+      end
+
       def members_root
         configured = fetch_path("family", "members_root") || fetch_path("members", "root")
         configured ? File.expand_path(configured, root) : root
+      end
+
+      def member_roots
+        configured = fetch_path("members", "roots")
+        return configured.map { |path| File.expand_path(path, root) } if configured
+        return sibling_member_roots if family_mode == "sibling_repos"
+
+        [members_root]
       end
 
       def explicit_members
@@ -98,7 +110,17 @@ module Kettle
         fetch_path("release", "push_command") || command_for("release_push") || "git push --follow-tags"
       end
 
+      def branch_lanes
+        fetch_path("branch_lanes") || fetch_path("branches", "lanes") || {}
+      end
+
       private
+
+      def sibling_member_roots
+        Dir.children(root)
+          .map { |entry| File.join(root, entry) }
+          .select { |path| File.directory?(path) }
+      end
 
       def fetch_path(*keys)
         keys.reduce(data) do |memo, key|
