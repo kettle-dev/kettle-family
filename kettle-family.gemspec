@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "👩‍👩‍👧‍👧 CLI helpers for managing related Ruby gems as a family."
   spec.description = "👩‍👩‍👧‍👧 Kettle::Family provides scripts and conventions for coordinating related Ruby gems as one family."
-  spec.homepage = "https://github.com/pboling/kettle-family"
+  spec.homepage = "https://github.com/kettle-rb/kettle-family"
   spec.licenses = ["MIT"]
   spec.required_ruby_version = ">= 3.2.0"
 
