@@ -6,6 +6,7 @@ module Kettle
       :name,
       :root,
       :gemspec_path,
+      :version_file,
       :version,
       :dependencies,
       keyword_init: true
@@ -15,6 +16,7 @@ module Kettle
           "name" => name,
           "root" => root,
           "gemspec_path" => gemspec_path,
+          "version_file" => version_file,
           "version" => version,
           "dependencies" => dependencies
         }

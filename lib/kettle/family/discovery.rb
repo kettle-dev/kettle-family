@@ -57,9 +57,15 @@ module Kettle
           name: spec.name,
           root: File.dirname(path),
           gemspec_path: path,
+          version_file: version_file(File.dirname(path)),
           version: spec.version.to_s,
           dependencies: spec.dependencies.map(&:name).sort
         )
+      end
+
+      def version_file(root)
+        candidates = Dir.glob(File.join(root, "lib", "**", "version.rb"))
+        candidates.min
       end
 
       def load_gemspec(path)

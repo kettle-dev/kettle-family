@@ -327,12 +327,12 @@ Use this checklist to track implementation atomically. Mark items complete only 
 
 ### M4: Version Alignment
 
-- [ ] Add `bump-version VERSION` command.
-- [ ] Validate target versions with `Gem::Version`.
-- [ ] Add `--from VERSION` guard.
-- [ ] Update member `VERSION` constants.
-- [ ] Update exact intra-family dependency pins.
-- [ ] Add `--check`, `--dry-run`, and `--execute` modes.
+- [x] Add `bump-version VERSION` command.
+- [x] Validate target versions with `Gem::Version`.
+- [x] Add `--from VERSION` guard.
+- [x] Update member `VERSION` constants.
+- [x] Update exact intra-family dependency pins.
+- [x] Add `--check`, `--dry-run`, and `--execute` modes.
 
 ### M5: Release Workflow
 

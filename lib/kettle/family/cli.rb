@@ -6,7 +6,7 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan check test lint docs template].freeze
+      COMMANDS = %w[discover plan check test lint docs template bump-version].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
@@ -25,7 +25,11 @@ module Kettle
 
         raise Error, "unknown command #{command.inspect}" unless COMMANDS.include?(command)
 
+        target_version = argv.shift if command == "bump-version"
+        raise Error, "bump-version requires VERSION" if command == "bump-version" && !target_version
+
         options = parse_options
+        options[:target_version] = target_version
         return help if options.delete(:help)
 
         report = build_report(command, options)
@@ -53,6 +57,7 @@ module Kettle
               lint            Plan or execute configured lint command per member
               docs            Plan or execute configured docs command per member
               template        Plan or execute kettle-jem templating per member
+              bump-version    Check, plan, or execute family version alignment
 
           Options:
               --root PATH      Workspace or family root (default: current directory)
@@ -63,6 +68,8 @@ module Kettle
               --report PATH    Write JSON report to PATH
               --execute        Execute external workflow commands
               --dry-run        Plan external workflow commands without running them (default)
+              --check          Check whether bump-version would need edits
+              --from VERSION   Require selected members to currently match VERSION
               --commit         Add final family-level git commit phase for template
               --no-commit      Disable final family-level git commit phase (default)
               --allow-dirty    Allow template --commit when the family worktree starts dirty
@@ -80,6 +87,8 @@ module Kettle
           json: false,
           report: nil,
           execute: false,
+          check: false,
+          from_version: nil,
           commit: false,
           allow_dirty: false
         }
@@ -92,6 +101,8 @@ module Kettle
           parser.on("--report PATH") { |value| options[:report] = value }
           parser.on("--execute") { options[:execute] = true }
           parser.on("--dry-run") { options[:execute] = false }
+          parser.on("--check") { options[:check] = true }
+          parser.on("--from VERSION") { |value| options[:from_version] = value }
           parser.on("--commit") { options[:commit] = true }
           parser.on("--no-commit") { options[:commit] = false }
           parser.on("--allow-dirty") { options[:allow_dirty] = true }
@@ -105,7 +116,7 @@ module Kettle
         members = Discovery.new(config: config).members
         ordered = Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         selected = Selection.new(members: ordered).apply(only: options[:only], start_at: options[:start_at])
-        results = workflow_results(command: command, config: config, members: selected, options: options)
+        results = command_results(command: command, config: config, members: selected, options: options)
         Report.new(
           family_name: config.family_name,
           order_mode: config.order_mode,
@@ -117,7 +128,8 @@ module Kettle
         )
       end
 
-      def workflow_results(command:, config:, members:, options:)
+      def command_results(command:, config:, members:, options:)
+        return bump_version_results(members: members, options: options) if command == "bump-version"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
         Workflow.new(
@@ -128,6 +140,22 @@ module Kettle
           commit: options[:commit],
           allow_dirty: options[:allow_dirty]
         ).results
+      end
+
+      def bump_version_results(members:, options:)
+        VersionBump.new(
+          members: members,
+          target_version: options[:target_version],
+          from_version: options[:from_version],
+          mode: bump_version_mode(options)
+        ).results
+      end
+
+      def bump_version_mode(options)
+        return :check if options[:check]
+        return :execute if options[:execute]
+
+        :dry_run
       end
 
       def write_report(report, options)

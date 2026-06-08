@@ -118,9 +118,25 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("skipped #{File.basename(@tmpdir)} family_commit")
   end
 
+  it "checks version bumps without writing" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["bump-version", "1.1.0", "--root", @tmpdir, "--check"], out: out, err: StringIO.new)
+
+    expect(status).to eq(1)
+    expect(out.string).to include("failed alpha bump-version")
+    expect(out.string).to include("version changes required")
+  end
+
   def write_gem(name)
     root = File.join(@tmpdir, name)
-    FileUtils.mkdir_p(root)
+    FileUtils.mkdir_p(File.join(root, "lib", name))
+    File.write(File.join(root, "lib", name, "version.rb"), <<~RUBY)
+      module #{name.capitalize}
+        VERSION = "1.0.0"
+      end
+    RUBY
     File.write(File.join(root, "#{name}.gemspec"), <<~RUBY)
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
