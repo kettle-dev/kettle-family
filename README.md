@@ -21,6 +21,24 @@ I've summarized my thoughts in [this blog post](https://dev.to/galtzo/hostile-ta
 
 ## 🌻 Synopsis <a href="https://discord.gg/3qme4XHNKN"><img alt="Galtzo FLOSS Logo by Aboling0, CC BY-SA 4.0" src="https://logos.galtzo.com/assets/images/galtzo-floss/avatar-128px.svg" width="8%" align="right"/></a> <a href="https://ruby-toolbox.com"><img alt="ruby-lang Logo, Yukihiro Matsumoto, Ruby Visual Identity Team, CC BY-SA 2.5" src="https://logos.galtzo.com/assets/images/ruby-lang/avatar-128px.svg" width="8%" align="right"/></a>
 
+`kettle-family` coordinates repeated maintenance workflows across related Ruby
+gems. It can discover member gems, order them by dependency or explicit hints,
+run shared check/test/lint/docs/template workflows, bump aligned versions, and
+drive release preparation or publishing.
+
+Families can be monorepos, sibling repository workspaces, or a single flat gem
+that releases from several long-lived branches. For branch-stacked gems,
+`release.target_branches` lists the branches to process; the release workflow
+checks each branch out sequentially, rediscovers that branch's gem metadata, and
+runs the normal flat-repo release flow.
+
+Publish runs are resumable. Before invoking `kettle-release`, `kettle-family`
+checks whether the current gem/version is already published and skips it when it
+is, avoiding duplicate release-prep commits after a failure/fix/retry cycle.
+`kettle-release` options such as `start_step=N` and `--local-ci` pass through,
+CI failures still abort by default, and gem signing passphrases are cached once
+per family run while RubyGems MFA prompts remain interactive.
+
 ## 💡 Info you can shake a stick at
 
 | Tokens to Remember | [![Gem name][⛳️name-img]][⛳️gem-name] [![Gem namespace][⛳️namespace-img]][⛳️gem-namespace] |
@@ -105,10 +123,12 @@ gem install kettle-family
 ## ⚙️ Configuration
 
 `kettle-family` reads `.kettle-family.yml` from the family root by default.
+Use `--config PATH` to load a different file.
+
 For a flat repository that releases from multiple long-lived branches, list the
-branches under `release.target_branches`; `kettle-family release` will check out
-each branch in order and then run the normal flat-repo release phases on that
-checkout.
+release branches under `release.target_branches`. The branch list is processed
+in order. Each branch must be clean enough for `git checkout`, and each branch
+is treated as a normal flat gem after checkout.
 
 ```yaml
 release:
@@ -118,21 +138,66 @@ release:
     - r2_0-even-v4
 ```
 
-For publish runs, `kettle-family release --publish` uses `bundle exec kettle-release`
-by default. Resume and security-release options pass through to `kettle-release`:
+Publish runs use `bundle exec kettle-release` by default. The release command
+can be overridden when a family needs a custom wrapper:
+
+```yaml
+release:
+  publish_command: bundle exec kettle-release
+```
+
+Resume and security-release options pass through to `kettle-release`:
 
 ```console
 kettle-family release --publish --start-step 10 --local-ci
 ```
 
-Executed publish runs skip versions that are already published, which lets a
-family release resume after a failure without recreating release-prep commits.
-CI failures abort by default; pass `--continue-ci-failures` to set
-`K_RELEASE_CI_CONTINUE=true` for the underlying release command.
+Executed publish runs skip versions that are already published. CI failures
+abort by default; pass `--continue-ci-failures` to set
+`K_RELEASE_CI_CONTINUE=true` for the underlying `kettle-release` process.
 
 ## 🔧 Basic Usage
 
-TODO: Write usage instructions here
+Inspect discovery and release plans before executing them:
+
+```console
+kettle-family discover
+kettle-family release
+```
+
+Run release prep/build phases without publishing:
+
+```console
+kettle-family release --execute
+```
+
+Publish through `kettle-release`, prompting once for the gem signing key
+password and leaving RubyGems MFA prompts interactive:
+
+```console
+kettle-family release --publish --execute
+```
+
+Resume a failed family publish after fixing the failure. Already published
+versions are skipped automatically; `start_step` is passed to `kettle-release`
+for unreleased members that still need work:
+
+```console
+kettle-family release --publish --execute --start-step 10
+```
+
+For security updates, publish locally before pushing commits/tags to remotes by
+passing `--local-ci` through to `kettle-release`:
+
+```console
+kettle-family release --publish --execute --local-ci
+```
+
+If you intentionally need to continue after CI failures, opt in explicitly:
+
+```console
+kettle-family release --publish --execute --continue-ci-failures
+```
 
 ## 🦷 FLOSS Funding
 
