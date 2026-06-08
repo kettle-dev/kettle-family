@@ -9,12 +9,12 @@ module Kettle
         @execute = execute
       end
 
-      def call(member:, phase:, command:)
+      def call(member:, phase:, command:, env: {})
         argv = command_argv(member: member, command: command)
         return skipped_result(member: member, phase: phase, argv: argv) unless execute
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        stdout, stderr, status = Open3.capture3(*argv, chdir: member.root)
+        stdout, stderr, status = Open3.capture3(env, *argv, chdir: member.root)
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         CommandResult.new(
           member_name: member.name,

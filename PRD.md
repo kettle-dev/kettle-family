@@ -318,12 +318,12 @@ Use this checklist to track implementation atomically. Mark items complete only 
 
 ### M3: Templating Workflow
 
-- [ ] Add `template` command.
-- [ ] Invoke `kettle-jem` through configured CLI command.
-- [ ] Support template profile and repository topology env/config.
-- [ ] Support per-member `--skip-commit` templating.
-- [ ] Add lockfile normalization hook.
-- [ ] Add family-level commit safety checks.
+- [x] Add `template` command.
+- [x] Invoke `kettle-jem` through configured CLI command.
+- [x] Support template profile and repository topology env/config.
+- [x] Support per-member `--skip-commit` templating.
+- [x] Add lockfile normalization hook.
+- [x] Add family-level commit safety checks.
 
 ### M4: Version Alignment
 

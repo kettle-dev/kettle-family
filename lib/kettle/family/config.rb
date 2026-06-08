@@ -62,6 +62,26 @@ module Kettle
         fetch_path("commands", name)
       end
 
+      def template_command
+        fetch_path("template", "command") || command_for("template")
+      end
+
+      def template_profile
+        fetch_path("template", "profile")
+      end
+
+      def template_repository_topology
+        fetch_path("template", "repository_topology")
+      end
+
+      def normalize_lockfiles?
+        fetch_path("template", "normalize_lockfiles") == true
+      end
+
+      def normalize_lockfiles_command
+        fetch_path("template", "normalize_lockfiles_command") || "bundle lock"
+      end
+
       private
 
       def fetch_path(*keys)
