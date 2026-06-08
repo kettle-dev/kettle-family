@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "open3"
-require "pty"
 
 module Kettle
   module Family
@@ -42,6 +41,12 @@ module Kettle
       attr_reader :execute, :gem_signing_password
 
       def run_interactive(env:, argv:, chdir:)
+        return run_interactive_pty(env: env, argv: argv, chdir: chdir) if pty_available?
+
+        run_interactive_open3(env: env, argv: argv, chdir: chdir)
+      end
+
+      def run_interactive_pty(env:, argv:, chdir:)
         stdout = +""
         status = nil
         PTY.spawn(env, *argv, chdir: chdir) do |output, input, pid|
@@ -55,7 +60,7 @@ module Kettle
                   chunk = output.readpartial(1024)
                   stdout << chunk
                   $stdout.print(chunk)
-                  input.write("#{gem_signing_password}\n") if gem_signing_password && signing_password_prompt?(chunk)
+                  write_signing_password(input, chunk)
                 else
                   input.write($stdin.readpartial(1024))
                 end
@@ -67,6 +72,56 @@ module Kettle
           _, status = Process.wait2(pid)
         end
         [stdout, "", status]
+      end
+
+      def run_interactive_open3(env:, argv:, chdir:)
+        captured_stdout = +""
+        captured_stderr = +""
+        status = nil
+        Open3.popen3(env, *argv, chdir: chdir) do |input, output, error, wait_thread|
+          readers = [output, error]
+          readers << $stdin if $stdin.tty?
+          until readers.empty?
+            ready = IO.select(readers)
+            ready.first.each do |reader|
+              if reader.equal?($stdin)
+                input.write($stdin.readpartial(1024))
+              else
+                read_interactive_stream(reader, output, input, captured_stdout, captured_stderr, readers)
+              end
+            end
+          end
+          status = wait_thread.value
+        end
+        [captured_stdout, captured_stderr, status]
+      end
+
+      def read_interactive_stream(reader, output, input, captured_stdout, captured_stderr, readers)
+        chunk = reader.readpartial(1024)
+        if reader.equal?(output)
+          captured_stdout << chunk
+          $stdout.print(chunk)
+        else
+          captured_stderr << chunk
+          $stderr.print(chunk)
+        end
+        write_signing_password(input, chunk)
+      rescue EOFError
+        readers.delete(reader)
+      end
+
+      def pty_available?
+        require "pty"
+        true
+      rescue LoadError
+        false
+      end
+
+      def write_signing_password(input, chunk)
+        return unless gem_signing_password && signing_password_prompt?(chunk)
+
+        input.write("#{gem_signing_password}\n")
+        input.flush
       end
 
       def signing_password_prompt?(chunk)

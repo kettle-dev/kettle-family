@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "prism"
-
 module Kettle
   module Family
     class VersionBump
@@ -79,8 +77,7 @@ module Kettle
       end
 
       def version_string_node(source, path)
-        parse_result = Prism.parse(source)
-        raise Error, "could not parse #{path}" unless parse_result.success?
+        parse_result = parse_source(source, path)
 
         constant = each_node(parse_result.value).find do |node|
           node.is_a?(Prism::ConstantWriteNode) && node.name == :VERSION && node.value.is_a?(Prism::StringNode)
@@ -90,12 +87,27 @@ module Kettle
 
       def gemspec_dependency_edits(member)
         source = File.read(member.gemspec_path)
-        parse_result = Prism.parse(source)
-        raise Error, "could not parse #{member.gemspec_path}" unless parse_result.success?
+        parse_result = parse_source(source, member.gemspec_path)
 
         each_node(parse_result.value).filter_map do |node|
           dependency_edit_for(member.gemspec_path, source, node)
         end
+      end
+
+      def parse_source(source, path)
+        require_prism
+        parse_result = Prism.parse(source)
+        raise Error, "could not parse #{path}" unless parse_result.success?
+
+        parse_result
+      end
+
+      def require_prism
+        return if defined?(Prism)
+
+        require "prism"
+      rescue LoadError => error
+        raise Error, "bump-version requires Prism; install the prism gem or run on a Ruby engine that provides it (#{error.message})"
       end
 
       def each_node(root)

@@ -1,0 +1,5 @@
+# frozen_string_literal: true
+
+if RUBY_ENGINE == "ruby" && Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.3")
+  gem "prism", "~> 1.0"
+end

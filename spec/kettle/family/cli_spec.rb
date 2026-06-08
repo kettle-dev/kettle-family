@@ -118,7 +118,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("skipped #{File.basename(@tmpdir)} family_commit")
   end
 
-  it "checks version bumps without writing" do
+  it "checks version bumps without writing", :prism do
     write_gem("alpha")
     out = StringIO.new
 

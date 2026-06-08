@@ -3,7 +3,7 @@
 require "fileutils"
 require "tmpdir"
 
-RSpec.describe Kettle::Family::VersionBump do
+RSpec.describe Kettle::Family::VersionBump, :prism do
   around do |example|
     Dir.mktmpdir("kettle-family-version-bump-spec") do |dir|
       @tmpdir = dir

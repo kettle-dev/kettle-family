@@ -28,6 +28,7 @@ Please file a bug if you notice a violation of semantic versioning.
 - Added sibling-repository discovery, branch lane mappings, and a read-only `branch-lanes` audit command for multi-branch release planning.
 - Added `release.target_branches` config so a flat repository can release sequentially across configured branch targets.
 - Added `kettle-family release` passthroughs for `kettle-release` resume/security options and automatic already-published skips for resumable family releases.
+- Added explicit runtime dependency wiring for extracted stdlib gems used by the CLI.
 
 ### Changed
 
@@ -36,5 +37,8 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Removed
 
 ### Fixed
+
+- Fixed CI load failures on engines without `pty` by falling back to Open3 for interactive release commands.
+- Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
 ### Security

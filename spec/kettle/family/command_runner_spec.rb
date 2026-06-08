@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "stringio"
 require "tmpdir"
 
 RSpec.describe Kettle::Family::CommandRunner do
@@ -59,6 +60,62 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.status).to eq(7)
     expect(result.stderr).to eq("nope\n")
     expect(result.reason).to eq("command failed")
+  end
+
+  it "falls back to Open3 for interactive commands when PTY is unavailable" do
+    member = member_at("alpha")
+    runner = described_class.new(execute: true, gem_signing_password: "secret")
+    allow(runner).to receive(:pty_available?).and_return(false)
+    allow($stdin).to receive(:tty?).and_return(false)
+
+    result = runner.call(
+      member: member,
+      phase: "release_publish",
+      command: [RbConfig.ruby, "-e", "warn 'interactive'; puts 'fallback'"]
+    )
+
+    expect(result).to be_ok
+    expect(result.stdout).to eq("fallback\n")
+    expect(result.stderr).to eq("interactive\n")
+  end
+
+  it "uses PTY for interactive commands when available" do
+    member = member_at("alpha")
+    runner = described_class.new(execute: true)
+    skip "PTY is unavailable on this Ruby engine" unless runner.send(:pty_available?)
+
+    result = runner.call(
+      member: member,
+      phase: "release_publish",
+      command: [RbConfig.ruby, "-e", "puts 'pty'"],
+      interactive: true
+    )
+
+    expect(result).to be_ok
+    expect(result.stdout).to include("pty")
+    expect(result.stderr).to eq("")
+  end
+
+  it "reports PTY availability from the runtime" do
+    runner = described_class.new
+
+    expect(runner.send(:pty_available?)).to be(true).or be(false)
+  end
+
+  it "reports missing PTY support" do
+    runner = described_class.new
+    allow(runner).to receive(:require).with("pty").and_raise(LoadError)
+
+    expect(runner.send(:pty_available?)).to be(false)
+  end
+
+  it "writes cached signing passwords when an interactive prompt is detected" do
+    runner = described_class.new(gem_signing_password: "secret")
+    input = StringIO.new
+
+    runner.send(:write_signing_password, input, "PEM password: ")
+
+    expect(input.string).to eq("secret\n")
   end
 
   it "rejects unsupported command shapes" do

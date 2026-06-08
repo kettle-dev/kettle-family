@@ -83,6 +83,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>Added sibling-repository discovery, branch lane mappings, and a read-only <code>branch-lanes</code> audit command for multi-branch release planning.</li>
   <li>Added <code>release.target_branches</code> config so a flat repository can release sequentially across configured branch targets.</li>
   <li>Added <code>kettle-family release</code> passthroughs for <code>kettle-release</code> resume/security options and automatic already-published skips for resumable family releases.</li>
+  <li>Added explicit runtime dependency wiring for extracted stdlib gems used by the CLI.</li>
 </ul>
 
 <h3 id="changed">Changed</h3>
@@ -93,11 +94,16 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="fixed">Fixed</h3>
 
+<ul>
+  <li>Fixed CI load failures on engines without <code>pty</code> by falling back to Open3 for interactive release commands.</li>
+  <li>Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.</li>
+</ul>
+
 <h3 id="security">Security</h3>
 </div></div>
 
       <div id="footer">
-  Generated on Mon Jun  8 02:14:21 2026 by
+  Generated on Mon Jun  8 02:38:18 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

@@ -83,6 +83,24 @@ I've summarized my thoughts in [this blog post](https://dev.to/galtzo/hostile-ta
 <h2 id="-synopsis--">🌻 Synopsis <a href="https://discord.gg/3qme4XHNKN"><img alt="Galtzo FLOSS Logo by Aboling0, CC BY-SA 4.0" src="https://logos.galtzo.com/assets/images/galtzo-floss/avatar-128px.svg" width="8%" align="right"></a> <a href="https://ruby-toolbox.com"><img alt="ruby-lang Logo, Yukihiro Matsumoto, Ruby Visual Identity Team, CC BY-SA 2.5" src="https://logos.galtzo.com/assets/images/ruby-lang/avatar-128px.svg" width="8%" align="right"></a>
 </h2>
 
+<p><code>kettle-family</code> coordinates repeated maintenance workflows across related Ruby<br>
+gems. It can discover member gems, order them by dependency or explicit hints,<br>
+run shared check/test/lint/docs/template workflows, bump aligned versions, and<br>
+drive release preparation or publishing.</p>
+
+<p>Families can be monorepos, sibling repository workspaces, or a single flat gem<br>
+that releases from several long-lived branches. For branch-stacked gems,<br>
+<code>release.target_branches</code> lists the branches to process; the release workflow<br>
+checks each branch out sequentially, rediscovers that branch’s gem metadata, and<br>
+runs the normal flat-repo release flow.</p>
+
+<p>Publish runs are resumable. Before invoking <code>kettle-release</code>, <code>kettle-family</code><br>
+checks whether the current gem/version is already published and skips it when it<br>
+is, avoiding duplicate release-prep commits after a failure/fix/retry cycle.<br>
+<code>kettle-release</code> options such as <code>start_step=N</code> and <code>--local-ci</code> pass through,<br>
+CI failures still abort by default, and gem signing passphrases are cached once<br>
+per family run while RubyGems MFA prompts remain interactive.</p>
+
 <h2 id="-info-you-can-shake-a-stick-at">💡 Info you can shake a stick at</h2>
 
 <table>
@@ -295,10 +313,12 @@ not practical for the current toolchain.</p>
 <h2 id="️-configuration">⚙️ Configuration</h2>
 
 <p><code>kettle-family</code> reads <code>.kettle-family.yml</code> from the family root by default.<br>
-For a flat repository that releases from multiple long-lived branches, list the<br>
-branches under <code>release.target_branches</code>; <code>kettle-family release</code> will check out<br>
-each branch in order and then run the normal flat-repo release phases on that<br>
-checkout.</p>
+Use <code>--config PATH</code> to load a different file.</p>
+
+<p>For a flat repository that releases from multiple long-lived branches, list the<br>
+release branches under <code>release.target_branches</code>. The branch list is processed<br>
+in order. Each branch must be clean enough for <code>git checkout</code>, and each branch<br>
+is treated as a normal flat gem after checkout.</p>
 
 <pre class="code language-yaml"><code class="language-yaml">release:
   target_branches:
@@ -307,20 +327,58 @@ checkout.</p>
     - r2_0-even-v4
 </code></pre>
 
-<p>For publish runs, <code>kettle-family release --publish</code> uses <code>bundle exec kettle-release</code><br>
-by default. Resume and security-release options pass through to <code>kettle-release</code>:</p>
+<p>Publish runs use <code>bundle exec kettle-release</code> by default. The release command<br>
+can be overridden when a family needs a custom wrapper:</p>
+
+<pre class="code language-yaml"><code class="language-yaml">release:
+  publish_command: bundle exec kettle-release
+</code></pre>
+
+<p>Resume and security-release options pass through to <code>kettle-release</code>:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --start-step 10 --local-ci
 </code></pre>
 
-<p>Executed publish runs skip versions that are already published, which lets a<br>
-family release resume after a failure without recreating release-prep commits.<br>
-CI failures abort by default; pass <code>--continue-ci-failures</code> to set<br>
-<code>K_RELEASE_CI_CONTINUE=true</code> for the underlying release command.</p>
+<p>Executed publish runs skip versions that are already published. CI failures<br>
+abort by default; pass <code>--continue-ci-failures</code> to set<br>
+<code>K_RELEASE_CI_CONTINUE=true</code> for the underlying <code>kettle-release</code> process.</p>
 
 <h2 id="-basic-usage">🔧 Basic Usage</h2>
 
-<p>TODO: Write usage instructions here</p>
+<p>Inspect discovery and release plans before executing them:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family discover
+kettle-family release
+</code></pre>
+
+<p>Run release prep/build phases without publishing:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --execute
+</code></pre>
+
+<p>Publish through <code>kettle-release</code>, prompting once for the gem signing key<br>
+password and leaving RubyGems MFA prompts interactive:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --publish --execute
+</code></pre>
+
+<p>Resume a failed family publish after fixing the failure. Already published<br>
+versions are skipped automatically; <code>start_step</code> is passed to <code>kettle-release</code><br>
+for unreleased members that still need work:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --publish --execute --start-step 10
+</code></pre>
+
+<p>For security updates, publish locally before pushing commits/tags to remotes by<br>
+passing <code>--local-ci</code> through to <code>kettle-release</code>:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --publish --execute --local-ci
+</code></pre>
+
+<p>If you intentionally need to continue after CI failures, opt in explicitly:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --publish --execute --continue-ci-failures
+</code></pre>
 
 <h2 id="-floss-funding">🦷 FLOSS Funding</h2>
 
@@ -524,7 +582,7 @@ Please consider sponsoring me or the project.</p>
 </div></div>
 
       <div id="footer">
-  Generated on Mon Jun  8 02:14:21 2026 by
+  Generated on Mon Jun  8 02:38:18 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
