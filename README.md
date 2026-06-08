@@ -35,9 +35,10 @@ runs the normal flat-repo release flow.
 Publish runs are resumable. Before invoking `kettle-release`, `kettle-family`
 checks whether the current gem/version is already published and skips it when it
 is, avoiding duplicate release-prep commits after a failure/fix/retry cycle.
-`kettle-release` options such as `start_step=N` and `--local-ci` pass through,
-CI failures still abort by default, and gem signing passphrases are cached once
-per family run while RubyGems MFA prompts remain interactive.
+`kettle-release` runs its own `kettle-pre-release` gate for full publish flows;
+options such as `start_step=N` and `--local-ci` pass through, CI failures still
+abort by default, and gem signing passphrases are cached once per family run
+while RubyGems MFA prompts remain interactive.
 
 ## 💡 Info you can shake a stick at
 
@@ -138,15 +139,19 @@ release:
     - r2_0-even-v4
 ```
 
-Publish runs use `bundle exec kettle-release` by default. The release command
-can be overridden when a family needs a custom wrapper:
+Publish runs use `bundle exec kettle-release` by default, which means full
+publish flows inherit the `kettle-pre-release` gate from `kettle-release`. The
+release command can be overridden when a family needs a custom wrapper:
 
 ```yaml
 release:
   publish_command: bundle exec kettle-release
 ```
 
-Resume and security-release options pass through to `kettle-release`:
+Resume and security-release options pass through to `kettle-release`. Passing
+`--start-step N` appends `start_step=N`; as with direct `kettle-release` usage,
+`N > 1` resumes after the pre-release gate and should be used only after that
+gate already passed or the failure was intentionally handled:
 
 ```console
 kettle-family release --publish --start-step 10 --local-ci
@@ -171,8 +176,9 @@ Run release prep/build phases without publishing:
 kettle-family release --execute
 ```
 
-Publish through `kettle-release`, prompting once for the gem signing key
-password and leaving RubyGems MFA prompts interactive:
+Publish through `kettle-release`. A full publish first runs the
+`kettle-pre-release` gate, then prompts once for the gem signing key password
+and leaves RubyGems MFA prompts interactive:
 
 ```console
 kettle-family release --publish --execute
@@ -180,7 +186,8 @@ kettle-family release --publish --execute
 
 Resume a failed family publish after fixing the failure. Already published
 versions are skipped automatically; `start_step` is passed to `kettle-release`
-for unreleased members that still need work:
+for unreleased members that still need work. Use `--start-step` only after the
+pre-release gate already passed or the failure was intentionally handled:
 
 ```console
 kettle-family release --publish --execute --start-step 10

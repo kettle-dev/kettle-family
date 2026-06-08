@@ -97,9 +97,10 @@ runs the normal flat-repo release flow.</p>
 <p>Publish runs are resumable. Before invoking <code>kettle-release</code>, <code>kettle-family</code><br>
 checks whether the current gem/version is already published and skips it when it<br>
 is, avoiding duplicate release-prep commits after a failure/fix/retry cycle.<br>
-<code>kettle-release</code> options such as <code>start_step=N</code> and <code>--local-ci</code> pass through,<br>
-CI failures still abort by default, and gem signing passphrases are cached once<br>
-per family run while RubyGems MFA prompts remain interactive.</p>
+<code>kettle-release</code> runs its own <code>kettle-pre-release</code> gate for full publish flows;<br>
+options such as <code>start_step=N</code> and <code>--local-ci</code> pass through, CI failures still<br>
+abort by default, and gem signing passphrases are cached once per family run<br>
+while RubyGems MFA prompts remain interactive.</p>
 
 <h2 id="-info-you-can-shake-a-stick-at">💡 Info you can shake a stick at</h2>
 
@@ -327,14 +328,18 @@ is treated as a normal flat gem after checkout.</p>
     - r2_0-even-v4
 </code></pre>
 
-<p>Publish runs use <code>bundle exec kettle-release</code> by default. The release command<br>
-can be overridden when a family needs a custom wrapper:</p>
+<p>Publish runs use <code>bundle exec kettle-release</code> by default, which means full<br>
+publish flows inherit the <code>kettle-pre-release</code> gate from <code>kettle-release</code>. The<br>
+release command can be overridden when a family needs a custom wrapper:</p>
 
 <pre class="code language-yaml"><code class="language-yaml">release:
   publish_command: bundle exec kettle-release
 </code></pre>
 
-<p>Resume and security-release options pass through to <code>kettle-release</code>:</p>
+<p>Resume and security-release options pass through to <code>kettle-release</code>. Passing<br>
+<code>--start-step N</code> appends <code>start_step=N</code>; as with direct <code>kettle-release</code> usage,<br>
+<code>N &gt; 1</code> resumes after the pre-release gate and should be used only after that<br>
+gate already passed or the failure was intentionally handled:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --start-step 10 --local-ci
 </code></pre>
@@ -356,15 +361,17 @@ kettle-family release
 <pre class="code language-console"><code class="language-console">kettle-family release --execute
 </code></pre>
 
-<p>Publish through <code>kettle-release</code>, prompting once for the gem signing key<br>
-password and leaving RubyGems MFA prompts interactive:</p>
+<p>Publish through <code>kettle-release</code>. A full publish first runs the<br>
+<code>kettle-pre-release</code> gate, then prompts once for the gem signing key password<br>
+and leaves RubyGems MFA prompts interactive:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --execute
 </code></pre>
 
 <p>Resume a failed family publish after fixing the failure. Already published<br>
 versions are skipped automatically; <code>start_step</code> is passed to <code>kettle-release</code><br>
-for unreleased members that still need work:</p>
+for unreleased members that still need work. Use <code>--start-step</code> only after the<br>
+pre-release gate already passed or the failure was intentionally handled:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --execute --start-step 10
 </code></pre>
@@ -582,7 +589,7 @@ Please consider sponsoring me or the project.</p>
 </div></div>
 
       <div id="footer">
-  Generated on Mon Jun  8 02:38:18 2026 by
+  Generated on Mon Jun  8 03:15:46 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
