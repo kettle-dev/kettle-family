@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.name = "kettle-family"
   spec.version = Module.new.tap { |mod| Kernel.load("#{__dir__}/lib/kettle/family/version.rb", mod) }::Kettle::Family::Version::VERSION
   spec.authors = ["Peter H. Boling"]
-  spec.email = ["floss@glatzo.com"]
+  spec.email = ["floss@galtzo.com"]
 
   spec.summary = "👩‍👩‍👧‍👧 CLI helpers for managing related Ruby gems as a family."
   spec.description = "👩‍👩‍👧‍👧 Kettle::Family provides scripts and conventions for coordinating related Ruby gems as one family."

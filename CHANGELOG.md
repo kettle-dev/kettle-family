@@ -38,6 +38,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Corrected misspelled contact metadata to use `galtzo.com`.
+
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
