@@ -1,4 +1,4 @@
-<a href="https://github.com/kettle-rb"><img alt="kettle-rb Logo by Aboling0, CC BY-SA 4.0" src="https://logos.galtzo.com/assets/images/kettle-rb/avatar-128px.svg" width="14%" align="right"/></a>
+<a href="https://github.com/kettle-dev"><img alt="kettle-dev Logo by Aboling0, CC BY-SA 4.0" src="https://logos.galtzo.com/assets/images/kettle-dev/avatar-128px.svg" width="14%" align="right"/></a>
 
 # 👩‍👩‍👧‍👧 Kettle::Family
 
@@ -75,14 +75,14 @@ not practical for the current toolchain.
 
 | Federated [DVCS][💎d-in-dvcs] Repository | Status | Issues | PRs | Wiki | CI | Discussions |
 |-------------------------------------------------|-----------------------------------------------------------------------|---------------------------|--------------------------|---------------------------|--------------------------|------------------------------|
-| 🧪 [kettle-rb/kettle-family on GitLab][📜src-gl] | The Truth | [💚][🤝gl-issues] | [💚][🤝gl-pulls] | [💚][📜gl-wiki] | 🐭 Tiny Matrix | ➖ |
-| 🧊 [kettle-rb/kettle-family on CodeBerg][📜src-cb] | An Ethical Mirror ([Donate][🤝cb-donate]) | [💚][🤝cb-issues] | [💚][🤝cb-pulls] | ➖ | ⭕️ No Matrix | ➖ |
-| 🐙 [kettle-rb/kettle-family on GitHub][📜src-gh] | Another Mirror | [💚][🤝gh-issues] | [💚][🤝gh-pulls] | [💚][📜gh-wiki] | 💯 Full Matrix | [💚][gh-discussions] |
+| 🧪 [kettle-dev/kettle-family on GitLab][📜src-gl] | The Truth | [💚][🤝gl-issues] | [💚][🤝gl-pulls] | [💚][📜gl-wiki] | 🐭 Tiny Matrix | ➖ |
+| 🧊 [kettle-dev/kettle-family on CodeBerg][📜src-cb] | An Ethical Mirror ([Donate][🤝cb-donate]) | [💚][🤝cb-issues] | [💚][🤝cb-pulls] | ➖ | ⭕️ No Matrix | ➖ |
+| 🐙 [kettle-dev/kettle-family on GitHub][📜src-gh] | Another Mirror | [💚][🤝gh-issues] | [💚][🤝gh-pulls] | [💚][📜gh-wiki] | 💯 Full Matrix | [💚][gh-discussions] |
 | 🎮️ [Discord Server][✉️discord-invite] | [![Live Chat on Discord][✉️discord-invite-img-ftb]][✉️discord-invite] | [Let's][✉️discord-invite] | [talk][✉️discord-invite] | [about][✉️discord-invite] | [this][✉️discord-invite] | [library!][✉️discord-invite] |
 
 </details>
 
-[gh-discussions]: https://github.com/kettle-rb/kettle-family/discussions
+[gh-discussions]: https://github.com/kettle-dev/kettle-family/discussions
 
 ### Enterprise Support [![Tidelift](https://tidelift.com/badges/package/rubygems/kettle-family)](https://tidelift.com/subscription/pkg/rubygems-kettle-family?utm_source=rubygems-kettle-family&utm_medium=referral&utm_campaign=readme)
 
@@ -208,17 +208,17 @@ kettle-family release --publish --execute --continue-ci-failures
 
 ## 🦷 FLOSS Funding
 
-While kettle-rb tools are free software and will always be, the project would benefit immensely from some funding.
+While kettle-dev tools are free software and will always be, the project would benefit immensely from some funding.
 Raising a monthly budget of... "dollars" would make the project more sustainable.
 
 We welcome both individual and corporate sponsors! We also offer a
 wide array of funding channels to account for your preferences.
 Currently, [Open Collective][🖇osc] is our preferred funding platform.
 
-**If you're working in a company that's making significant use of kettle-rb tools we'd
-appreciate it if you suggest to your company to become a kettle-rb sponsor.**
+**If you're working in a company that's making significant use of kettle-dev tools we'd
+appreciate it if you suggest to your company to become a kettle-dev sponsor.**
 
-You can support the development of kettle-rb tools via
+You can support the development of kettle-dev tools via
 [GitHub Sponsors][🖇sponsor],
 [Liberapay][⛳liberapay],
 [PayPal][🖇paypal],
@@ -231,7 +231,7 @@ and [Tidelift][🏙️entsup-tidelift].
 
 ### Open Collective for Individuals
 
-Support us with a monthly donation and help us continue our activities. [[Become a backer](https://opencollective.com/kettle-rb#backer)]
+Support us with a monthly donation and help us continue our activities. [[Become a backer](https://opencollective.com/kettle-dev#backer)]
 
 NOTE: [kettle-readme-backers][kettle-readme-backers] updates this list every day, automatically.
 
@@ -241,7 +241,7 @@ No backers yet. Be the first!
 
 ### Open Collective for Organizations
 
-Become a sponsor and get your logo on our README on GitHub with a link to your site. [[Become a sponsor](https://opencollective.com/kettle-rb#sponsor)]
+Become a sponsor and get your logo on our README on GitHub with a link to your site. [[Become a sponsor](https://opencollective.com/kettle-dev#sponsor)]
 
 NOTE: [kettle-readme-backers][kettle-readme-backers] updates this list every day, automatically.
 
@@ -249,7 +249,7 @@ NOTE: [kettle-readme-backers][kettle-readme-backers] updates this list every day
 No sponsors yet. Be the first!
 <!-- OPENCOLLECTIVE-ORGANIZATIONS:END -->
 
-[kettle-readme-backers]: https://github.com/kettle-rb/kettle-family/blob/main/exe/kettle-readme-backers
+[kettle-readme-backers]: https://github.com/kettle-dev/kettle-family/blob/main/exe/kettle-readme-backers
 
 ### Another way to support open-source
 
@@ -305,16 +305,16 @@ chat rooms and mailing lists agrees to follow the [![Contributor Covenant 2.1][�
 
 Made with [contributors-img][🖐contrib-rocks].
 
-Also see GitLab Contributors: [https://gitlab.com/kettle-rb/kettle-family/-/graphs/main][🚎contributors-gl]
+Also see GitLab Contributors: [https://gitlab.com/kettle-dev/kettle-family/-/graphs/main][🚎contributors-gl]
 
 <details>
  <summary>⭐️ Star History</summary>
 
-<a href="https://star-history.com/kettle-rb/kettle-family&Date">
+<a href="https://star-history.com/kettle-dev/kettle-family&Date">
  <picture>
- <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kettle-rb/kettle-family&type=Date&theme=dark" />
- <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kettle-rb/kettle-family&type=Date" />
- <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=kettle-rb/kettle-family&type=Date" />
+ <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=kettle-dev/kettle-family&type=Date&theme=dark" />
+ <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=kettle-dev/kettle-family&type=Date" />
+ <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=kettle-dev/kettle-family&type=Date" />
  </picture>
 </a>
 
@@ -377,7 +377,7 @@ To join the community or get help 👇️ Join the Discord.
 
 To say "thanks!" ☝️ Join the Discord or 👇️ send money.
 
-[![Sponsor kettle-rb/kettle-family on Open Source Collective][🖇osc-all-bottom-img]][🖇osc] 💌 [![Sponsor me on GitHub Sponsors][🖇sponsor-bottom-img]][🖇sponsor] 💌 [![Sponsor me on Liberapay][⛳liberapay-bottom-img]][⛳liberapay] 💌 [![Donate on PayPal][🖇paypal-bottom-img]][🖇paypal]
+[![Sponsor kettle-dev/kettle-family on Open Source Collective][🖇osc-all-bottom-img]][🖇osc] 💌 [![Sponsor me on GitHub Sponsors][🖇sponsor-bottom-img]][🖇sponsor] 💌 [![Sponsor me on Liberapay][⛳liberapay-bottom-img]][⛳liberapay] 💌 [![Donate on PayPal][🖇paypal-bottom-img]][🖇paypal]
 
 ### Please give the project a star ⭐ ♥.
 
@@ -388,17 +388,17 @@ Thanks for RTFM. ☺️
 [⛳liberapay-img]: https://img.shields.io/liberapay/goal/pboling.svg?logo=liberapay&color=a51611&style=flat
 [⛳liberapay-bottom-img]: https://img.shields.io/liberapay/goal/pboling.svg?style=for-the-badge&logo=liberapay&color=a51611
 [⛳liberapay]: https://liberapay.com/pboling/donate
-[🖇osc-all-img]: https://img.shields.io/opencollective/all/kettle-rb
-[🖇osc-sponsors-img]: https://img.shields.io/opencollective/sponsors/kettle-rb
-[🖇osc-backers-img]: https://img.shields.io/opencollective/backers/kettle-rb
-[🖇osc-backers]: https://opencollective.com/kettle-rb#backer
-[🖇osc-backers-i]: https://opencollective.com/kettle-rb/backers/badge.svg?style=flat
-[🖇osc-sponsors]: https://opencollective.com/kettle-rb#sponsor
-[🖇osc-sponsors-i]: https://opencollective.com/kettle-rb/sponsors/badge.svg?style=flat
-[🖇osc-all-bottom-img]: https://img.shields.io/opencollective/all/kettle-rb?style=for-the-badge
-[🖇osc-sponsors-bottom-img]: https://img.shields.io/opencollective/sponsors/kettle-rb?style=for-the-badge
-[🖇osc-backers-bottom-img]: https://img.shields.io/opencollective/backers/kettle-rb?style=for-the-badge
-[🖇osc]: https://opencollective.com/kettle-rb
+[🖇osc-all-img]: https://img.shields.io/opencollective/all/kettle-dev
+[🖇osc-sponsors-img]: https://img.shields.io/opencollective/sponsors/kettle-dev
+[🖇osc-backers-img]: https://img.shields.io/opencollective/backers/kettle-dev
+[🖇osc-backers]: https://opencollective.com/kettle-dev#backer
+[🖇osc-backers-i]: https://opencollective.com/kettle-dev/backers/badge.svg?style=flat
+[🖇osc-sponsors]: https://opencollective.com/kettle-dev#sponsor
+[🖇osc-sponsors-i]: https://opencollective.com/kettle-dev/sponsors/badge.svg?style=flat
+[🖇osc-all-bottom-img]: https://img.shields.io/opencollective/all/kettle-dev?style=for-the-badge
+[🖇osc-sponsors-bottom-img]: https://img.shields.io/opencollective/sponsors/kettle-dev?style=for-the-badge
+[🖇osc-backers-bottom-img]: https://img.shields.io/opencollective/backers/kettle-dev?style=for-the-badge
+[🖇osc]: https://opencollective.com/kettle-dev
 [🖇sponsor-img]: https://img.shields.io/badge/Sponsor_Me!-pboling.svg?style=social&logo=github
 [🖇sponsor-bottom-img]: https://img.shields.io/badge/Sponsor_Me!-pboling-blue?style=for-the-badge&logo=github
 [🖇sponsor]: https://github.com/sponsors/pboling
@@ -422,12 +422,12 @@ Thanks for RTFM. ☺️
 [✉️ruby-friends]: https://app.daily.dev/squads/rubyfriends
 
 [✇bundle-group-pattern]: https://gist.github.com/pboling/4564780
-[⛳️gem-namespace]: https://github.com/kettle-rb/kettle-family
+[⛳️gem-namespace]: https://github.com/kettle-dev/kettle-family
 [⛳️namespace-img]: https://img.shields.io/badge/namespace-Kettle::Family-3C2D2D.svg?style=square&logo=ruby&logoColor=white
 [⛳️gem-name]: https://bestgems.org/gems/kettle-family
 [⛳️name-img]: https://img.shields.io/badge/name-kettle--family-3C2D2D.svg?style=square&logo=rubygems&logoColor=red
-[⛳️tag-img]: https://img.shields.io/github/tag/kettle-rb/kettle-family.svg
-[⛳️tag]: https://github.com/kettle-rb/kettle-family/releases
+[⛳️tag-img]: https://img.shields.io/github/tag/kettle-dev/kettle-family.svg
+[⛳️tag]: https://github.com/kettle-dev/kettle-family/releases
 [🚂maint-blog]: http://www.railsbling.com/tags/kettle-family
 [🚂maint-blog-img]: https://img.shields.io/badge/blog-railsbling-0093D0.svg?style=for-the-badge&logo=rubyonrails&logoColor=orange
 [🚂maint-contact]: http://www.railsbling.com/contact
@@ -462,54 +462,54 @@ Thanks for RTFM. ☺️
 [💁🏼‍♂️peterboling]: http://www.peterboling.com
 [🚂railsbling]: http://www.railsbling.com
 [📜src-gl-img]: https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&logo=Gitlab&logoColor=orange
-[📜src-gl]: https://gitlab.com/kettle-rb/kettle-family
+[📜src-gl]: https://gitlab.com/kettle-dev/kettle-family
 [📜src-cb-img]: https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&logo=CodeBerg&logoColor=blue
-[📜src-cb]: https://codeberg.org/kettle-rb/kettle-family
+[📜src-cb]: https://codeberg.org/kettle-dev/kettle-family
 [📜src-gh-img]: https://img.shields.io/badge/GitHub-238636?style=for-the-badge&logo=Github&logoColor=green
-[📜src-gh]: https://github.com/kettle-rb/kettle-family
+[📜src-gh]: https://github.com/kettle-dev/kettle-family
 [📜docs-cr-rd-img]: https://img.shields.io/badge/RubyDoc-Current_Release-943CD2?style=for-the-badge&logo=readthedocs&logoColor=white
 [📜docs-head-rd-img]: https://img.shields.io/badge/YARD_on_Galtzo.com-HEAD-943CD2?style=for-the-badge&logo=readthedocs&logoColor=white
-[📜gl-wiki]: https://gitlab.com/kettle-rb/kettle-family/-/wikis/home
-[📜gh-wiki]: https://github.com/kettle-rb/kettle-family/wiki
+[📜gl-wiki]: https://gitlab.com/kettle-dev/kettle-family/-/wikis/home
+[📜gh-wiki]: https://github.com/kettle-dev/kettle-family/wiki
 [📜gl-wiki-img]: https://img.shields.io/badge/wiki-gitlab-943CD2.svg?style=for-the-badge&logo=gitlab&logoColor=white
 [📜gh-wiki-img]: https://img.shields.io/badge/wiki-github-943CD2.svg?style=for-the-badge&logo=github&logoColor=white
 [👽dl-rank]: https://bestgems.org/gems/kettle-family
 [👽dl-ranki]: https://img.shields.io/gem/rd/kettle-family.svg
 [👽version]: https://bestgems.org/gems/kettle-family
 [👽versioni]: https://img.shields.io/gem/v/kettle-family.svg
-[🏀qlty-mnt]: https://qlty.sh/gh/kettle-rb/projects/kettle-family
-[🏀qlty-mnti]: https://qlty.sh/gh/kettle-rb/projects/kettle-family/maintainability.svg
-[🏀qlty-cov]: https://qlty.sh/gh/kettle-rb/projects/kettle-family/metrics/code?sort=coverageRating
-[🏀qlty-covi]: https://qlty.sh/gh/kettle-rb/projects/kettle-family/coverage.svg
-[🏀codecov]: https://codecov.io/gh/kettle-rb/kettle-family
-[🏀codecovi]: https://codecov.io/gh/kettle-rb/kettle-family/graph/badge.svg
-[🏀coveralls]: https://coveralls.io/github/kettle-rb/kettle-family?branch=main
-[🏀coveralls-img]: https://coveralls.io/repos/github/kettle-rb/kettle-family/badge.svg?branch=main
-[🚎ruby-3.2-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/ruby-3.2.yml
-[🚎ruby-3.3-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/ruby-3.3.yml
-[🚎ruby-3.4-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/ruby-3.4.yml
-[🚎truby-24.2-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/truffleruby-24.2.yml
-[🚎truby-25.0-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/truffleruby-25.0.yml
-[🚎2-cov-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/coverage.yml
-[🚎2-cov-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/coverage.yml/badge.svg
-[🚎3-hd-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/heads.yml
-[🚎3-hd-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/heads.yml/badge.svg
-[🚎5-st-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/style.yml
-[🚎5-st-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/style.yml/badge.svg
-[🚎9-t-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/truffle.yml
-[🚎9-t-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/truffle.yml/badge.svg
-[🚎10-j-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/jruby.yml
-[🚎10-j-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/jruby.yml/badge.svg
-[🚎11-c-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/current.yml
-[🚎11-c-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/current.yml/badge.svg
-[🚎12-crh-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/dep-heads.yml
-[🚎12-crh-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/dep-heads.yml/badge.svg
-[🚎13-🔒️-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/locked_deps.yml
-[🚎13-🔒️-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/locked_deps.yml/badge.svg
-[🚎14-🔓️-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/unlocked_deps.yml
-[🚎14-🔓️-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/unlocked_deps.yml/badge.svg
-[🚎15-🪪-wf]: https://github.com/kettle-rb/kettle-family/actions/workflows/license-eye.yml
-[🚎15-🪪-wfi]: https://github.com/kettle-rb/kettle-family/actions/workflows/license-eye.yml/badge.svg
+[🏀qlty-mnt]: https://qlty.sh/gh/kettle-dev/projects/kettle-family
+[🏀qlty-mnti]: https://qlty.sh/gh/kettle-dev/projects/kettle-family/maintainability.svg
+[🏀qlty-cov]: https://qlty.sh/gh/kettle-dev/projects/kettle-family/metrics/code?sort=coverageRating
+[🏀qlty-covi]: https://qlty.sh/gh/kettle-dev/projects/kettle-family/coverage.svg
+[🏀codecov]: https://codecov.io/gh/kettle-dev/kettle-family
+[🏀codecovi]: https://codecov.io/gh/kettle-dev/kettle-family/graph/badge.svg
+[🏀coveralls]: https://coveralls.io/github/kettle-dev/kettle-family?branch=main
+[🏀coveralls-img]: https://coveralls.io/repos/github/kettle-dev/kettle-family/badge.svg?branch=main
+[🚎ruby-3.2-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/ruby-3.2.yml
+[🚎ruby-3.3-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/ruby-3.3.yml
+[🚎ruby-3.4-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/ruby-3.4.yml
+[🚎truby-24.2-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/truffleruby-24.2.yml
+[🚎truby-25.0-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/truffleruby-25.0.yml
+[🚎2-cov-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/coverage.yml
+[🚎2-cov-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/coverage.yml/badge.svg
+[🚎3-hd-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/heads.yml
+[🚎3-hd-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/heads.yml/badge.svg
+[🚎5-st-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/style.yml
+[🚎5-st-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/style.yml/badge.svg
+[🚎9-t-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/truffle.yml
+[🚎9-t-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/truffle.yml/badge.svg
+[🚎10-j-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/jruby.yml
+[🚎10-j-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/jruby.yml/badge.svg
+[🚎11-c-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/current.yml
+[🚎11-c-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/current.yml/badge.svg
+[🚎12-crh-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/dep-heads.yml
+[🚎12-crh-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/dep-heads.yml/badge.svg
+[🚎13-🔒️-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/locked_deps.yml
+[🚎13-🔒️-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/locked_deps.yml/badge.svg
+[🚎14-🔓️-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/unlocked_deps.yml
+[🚎14-🔓️-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/unlocked_deps.yml/badge.svg
+[🚎15-🪪-wf]: https://github.com/kettle-dev/kettle-family/actions/workflows/license-eye.yml
+[🚎15-🪪-wfi]: https://github.com/kettle-dev/kettle-family/actions/workflows/license-eye.yml/badge.svg
 [💎ruby-3.2i]: https://img.shields.io/badge/Ruby-3.2-CC342D?style=for-the-badge&logo=ruby&logoColor=white
 [💎ruby-3.3i]: https://img.shields.io/badge/Ruby-3.3-CC342D?style=for-the-badge&logo=ruby&logoColor=white
 [💎ruby-3.4i]: https://img.shields.io/badge/Ruby-3.4-CC342D?style=for-the-badge&logo=ruby&logoColor=white
@@ -521,34 +521,34 @@ Thanks for RTFM. ☺️
 [💎truby-c-i]: https://img.shields.io/badge/Truffle_Ruby-current-34BCB1?style=for-the-badge&logo=ruby&logoColor=green
 [💎jruby-c-i]: https://img.shields.io/badge/JRuby-current-FBE742?style=for-the-badge&logo=ruby&logoColor=green
 [💎jruby-headi]: https://img.shields.io/badge/JRuby-HEAD-FBE742?style=for-the-badge&logo=ruby&logoColor=blue
-[🤝gh-issues]: https://github.com/kettle-rb/kettle-family/issues
-[🤝gh-pulls]: https://github.com/kettle-rb/kettle-family/pulls
-[🤝gl-issues]: https://gitlab.com/kettle-rb/kettle-family/-/issues
-[🤝gl-pulls]: https://gitlab.com/kettle-rb/kettle-family/-/merge_requests
-[🤝cb-issues]: https://codeberg.org/kettle-rb/kettle-family/issues
-[🤝cb-pulls]: https://codeberg.org/kettle-rb/kettle-family/pulls
+[🤝gh-issues]: https://github.com/kettle-dev/kettle-family/issues
+[🤝gh-pulls]: https://github.com/kettle-dev/kettle-family/pulls
+[🤝gl-issues]: https://gitlab.com/kettle-dev/kettle-family/-/issues
+[🤝gl-pulls]: https://gitlab.com/kettle-dev/kettle-family/-/merge_requests
+[🤝cb-issues]: https://codeberg.org/kettle-dev/kettle-family/issues
+[🤝cb-pulls]: https://codeberg.org/kettle-dev/kettle-family/pulls
 [🤝cb-donate]: https://donate.codeberg.org/
-[🤝contributing]: https://github.com/kettle-rb/kettle-family/blob/main/CONTRIBUTING.md
-[🏀codecov-g]: https://codecov.io/gh/kettle-rb/kettle-family/graph/badge.svg
+[🤝contributing]: https://github.com/kettle-dev/kettle-family/blob/main/CONTRIBUTING.md
+[🏀codecov-g]: https://codecov.io/gh/kettle-dev/kettle-family/graph/badge.svg
 [🖐contrib-rocks]: https://contrib.rocks
-[🖐contributors]: https://github.com/kettle-rb/kettle-family/graphs/contributors
-[🖐contributors-img]: https://contrib.rocks/image?repo=kettle-rb/kettle-family
-[🚎contributors-gl]: https://gitlab.com/kettle-rb/kettle-family/-/graphs/main
-[🪇conduct]: https://github.com/kettle-rb/kettle-family/blob/main/CODE_OF_CONDUCT.md
+[🖐contributors]: https://github.com/kettle-dev/kettle-family/graphs/contributors
+[🖐contributors-img]: https://contrib.rocks/image?repo=kettle-dev/kettle-family
+[🚎contributors-gl]: https://gitlab.com/kettle-dev/kettle-family/-/graphs/main
+[🪇conduct]: https://github.com/kettle-dev/kettle-family/blob/main/CODE_OF_CONDUCT.md
 [🪇conduct-img]: https://img.shields.io/badge/Contributor_Covenant-2.1-259D6C.svg
 [📌pvc]: http://guides.rubygems.org/patterns/#pessimistic-version-constraint
 [📌semver]: https://semver.org/spec/v2.0.0.html
 [📌semver-img]: https://img.shields.io/badge/semver-2.0.0-259D6C.svg?style=flat
 [📌semver-breaking]: https://github.com/semver/semver/issues/716#issuecomment-869336139
 [📌major-versions-not-sacred]: https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html
-[📌changelog]: https://github.com/kettle-rb/kettle-family/blob/main/CHANGELOG.md
+[📌changelog]: https://github.com/kettle-dev/kettle-family/blob/main/CHANGELOG.md
 [📗keep-changelog]: https://keepachangelog.com/en/1.0.0/
 [📗keep-changelog-img]: https://img.shields.io/badge/keep--a--changelog-1.0.0-34495e.svg?style=flat
 [📌gitmoji]: https://gitmoji.dev
 [📌gitmoji-img]: https://img.shields.io/badge/gitmoji_commits-%20%F0%9F%98%9C%20%F0%9F%98%8D-34495e.svg?style=flat-square
 [🧮kloc]: https://www.youtube.com/watch?v=dQw4w9WgXcQ
 [🧮kloc-img]: https://img.shields.io/badge/KLOC-5.053-FFDD67.svg?style=for-the-badge&logo=YouTube&logoColor=blue
-[🔐security]: https://github.com/kettle-rb/kettle-family/blob/main/SECURITY.md
+[🔐security]: https://github.com/kettle-dev/kettle-family/blob/main/SECURITY.md
 [🔐security-img]: https://img.shields.io/badge/security-policy-259D6C.svg?style=flat
 [📄copyright-notice-explainer]: https://opensource.stackexchange.com/questions/5778/why-do-licenses-such-as-the-mit-license-specify-a-single-year
 [📄license]: LICENSE.md
@@ -562,7 +562,7 @@ Thanks for RTFM. ☺️
 [🚎yard-current]: http://rubydoc.info/gems/kettle-family
 [🚎yard-head]: https://kettle-family.galtzo.com
 [💎stone_checksums]: https://github.com/galtzo-floss/stone_checksums
-[💎SHA_checksums]: https://gitlab.com/kettle-rb/kettle-family/-/tree/main/checksums
+[💎SHA_checksums]: https://gitlab.com/kettle-dev/kettle-family/-/tree/main/checksums
 [💎rlts]: https://github.com/rubocop-lts/rubocop-lts
 [💎rlts-img]: https://img.shields.io/badge/code_style_&_linting-rubocop--lts-34495e.svg?plastic&logo=ruby&logoColor=white
 [💎appraisal2]: https://github.com/appraisal-rb/appraisal2
@@ -574,8 +574,8 @@ Thanks for RTFM. ☺️
 |---|---|
 | Package | kettle-family |
 | Description | 👩‍👩‍👧‍👧 Kettle::Family provides scripts and conventions for coordinating related Ruby gems as one family. |
-| Homepage | https://github.com/kettle-rb/kettle-family |
-| Source | https://github.com/kettle-rb/kettle-family/tree/v0.1.0 |
+| Homepage | https://github.com/kettle-dev/kettle-family |
+| Source | https://github.com/kettle-dev/kettle-family/tree/v0.1.0 |
 | License | `MIT` |
-| Funding | https://github.com/sponsors/pboling, https://issuehunt.io/u/pboling, https://ko-fi.com/pboling, https://liberapay.com/pboling/donate, https://opencollective.com/kettle-rb, https://patreon.com/galtzo, https://polar.sh/pboling, https://thanks.dev/u/gh/pboling, https://tidelift.com/funding/github/rubygems/kettle-family, https://www.buymeacoffee.com/pboling |
+| Funding | https://github.com/sponsors/pboling, https://issuehunt.io/u/pboling, https://ko-fi.com/pboling, https://liberapay.com/pboling/donate, https://opencollective.com/kettle-dev, https://opencollective.com/kettle-rb, https://patreon.com/galtzo, https://polar.sh/pboling, https://thanks.dev/u/gh/pboling, https://tidelift.com/funding/github/rubygems/kettle-family, https://www.buymeacoffee.com/pboling |
 <!-- kettle-jem:metadata:end -->
