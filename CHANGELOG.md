@@ -38,6 +38,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Restored `docs/CNAME` so the generated documentation site keeps its custom domain.
 - Corrected misspelled contact metadata to use `galtzo.com`.
 
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
