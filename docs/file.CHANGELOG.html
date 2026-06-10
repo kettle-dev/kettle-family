@@ -70,9 +70,32 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased">[Unreleased]</h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.0...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
+
+<h3 id="changed">Changed</h3>
+
+<h3 id="deprecated">Deprecated</h3>
+
+<h3 id="removed">Removed</h3>
+
+<h3 id="fixed">Fixed</h3>
+
+<h3 id="security">Security</h3>
+
+<h2 id="010---2026-06-10">
+<a href="https://github.com/kettle-dev/kettle-family/compare/e4a9ca8ed52605b6375bbdd4f745b905a68b8b24...v0.1.0">0.1.0</a> - 2026-06-10</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.0">v0.1.0</a>
+</li>
+  <li>COVERAGE: 94.28% – 742/787 lines in 17 files</li>
+  <li>BRANCH COVERAGE: 78.25% – 223/285 branches in 17 files</li>
+  <li>42.34% documented</li>
+</ul>
+
+<h3 id="added-1">Added</h3>
 
 <ul>
   <li>Added the initial <code>kettle-family</code> CLI discovery slice with config loading, gemspec discovery, dependency ordering, selection, and JSON reports.</li>
@@ -86,24 +109,21 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>Added explicit runtime dependency wiring for extracted stdlib gems used by the CLI.</li>
 </ul>
 
-<h3 id="changed">Changed</h3>
-
-<h3 id="deprecated">Deprecated</h3>
-
-<h3 id="removed">Removed</h3>
-
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed-1">Fixed</h3>
 
 <ul>
+  <li>Updated generated project metadata links to use the migrated <code>kettle-dev</code><br>
+GitHub organization.</li>
+  <li>Restored <code>docs/CNAME</code> so the generated documentation site keeps its custom domain.</li>
+  <li>Corrected misspelled contact metadata to use <code>galtzo.com</code>.</li>
   <li>Fixed CI load failures on engines without compatible <code>pty</code> support by falling back to Open3 for interactive release commands.</li>
   <li>Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.</li>
 </ul>
 
-<h3 id="security">Security</h3>
 </div></div>
 
       <div id="footer">
-  Generated on Mon Jun  8 02:48:15 2026 by
+  Generated on Wed Jun 10 02:31:02 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

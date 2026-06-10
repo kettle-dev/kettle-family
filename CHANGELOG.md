@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.1.0] - 2026-06-10
+
+- TAG: [v0.1.0][0.1.0t]
+- COVERAGE: 94.28% -- 742/787 lines in 17 files
+- BRANCH COVERAGE: 78.25% -- 223/285 branches in 17 files
+- 42.34% documented
+
+### Added
+
 - Added the initial `kettle-family` CLI discovery slice with config loading, gemspec discovery, dependency ordering, selection, and JSON reports.
 - Added workflow command planning/execution, readiness checks, and failure resume hints for `check`, `test`, `lint`, and `docs`.
 - Added the `template` workflow with kettle-jem command planning, template environment, lockfile normalization hooks, and explicit family commit safety.
@@ -30,20 +49,15 @@ Please file a bug if you notice a violation of semantic versioning.
 - Added `kettle-family release` passthroughs for `kettle-release` resume/security options and automatic already-published skips for resumable family releases.
 - Added explicit runtime dependency wiring for extracted stdlib gems used by the CLI.
 
-### Changed
-
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Updated generated project metadata links to use the migrated `kettle-dev`
   GitHub organization.
 - Restored `docs/CNAME` so the generated documentation site keeps its custom domain.
 - Corrected misspelled contact metadata to use `galtzo.com`.
-
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-### Security
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/kettle-dev/kettle-family/compare/e4a9ca8ed52605b6375bbdd4f745b905a68b8b24...v0.1.0
+[0.1.0t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.0
