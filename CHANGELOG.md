@@ -20,6 +20,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+#### Discovery
+
+- Added configurable member discovery excludes via `members.exclude` /
+  `members.ignore`.
+
 ### Changed
 
 ### Deprecated
@@ -27,6 +32,12 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Removed
 
 ### Fixed
+
+#### Discovery
+
+- Member discovery now filters configured excludes and git-ignored paths before
+  loading gemspecs, avoiding duplicate fixture/tmp gemspecs in recursive family
+  roots.
 
 ### Security
 

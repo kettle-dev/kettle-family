@@ -6,6 +6,7 @@ module Kettle
   module Family
     class Config
       DEFAULT_PATHS = [".kettle-family.yml", ".structuredmerge/kettle-family.yml"].freeze
+      DEFAULT_MEMBER_EXCLUDES = ["**/vendor/**"].freeze
 
       attr_reader :data, :path, :root
 
@@ -60,6 +61,12 @@ module Kettle
       def discover_members?
         members = data.fetch("members", {})
         members.fetch("discover", true)
+      end
+
+      def member_exclude_patterns
+        members = data.fetch("members", {})
+        patterns = members.fetch("exclude", nil) || members.fetch("ignore", nil) || []
+        DEFAULT_MEMBER_EXCLUDES + Array(patterns)
       end
 
       def order_mode

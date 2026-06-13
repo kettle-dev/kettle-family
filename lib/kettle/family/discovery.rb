@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "open3"
+
 module Kettle
   module Family
     class Discovery
@@ -30,7 +32,7 @@ module Kettle
         gemspecs = config.member_roots.flat_map do |root|
           Dir.glob(File.join(root, "**", "*.gemspec"))
         end
-        gemspecs.reject! { |path| path.include?("/vendor/") }
+        gemspecs.reject! { |path| excluded_gemspec?(path) }
         gemspecs.map { |path| member_from_gemspec(path) }
       end
 
@@ -77,6 +79,42 @@ module Kettle
         spec
       rescue => error
         raise Error, "could not load gemspec #{path}: #{error.message}"
+      end
+
+      def excluded_gemspec?(path)
+        ignored_by_git?(path) || excluded_by_pattern?(path)
+      end
+
+      def ignored_by_git?(path)
+        _stdout, _stderr, status = Open3.capture3("git", "check-ignore", "--quiet", "--", path, chdir: config.root)
+        status.success?
+      end
+
+      def excluded_by_pattern?(path)
+        config.member_exclude_patterns.any? do |pattern|
+          path_matches_pattern?(path, pattern)
+        end
+      end
+
+      def path_matches_pattern?(path, pattern)
+        relative_candidates(path).any? do |relative|
+          File.fnmatch?(pattern, relative, File::FNM_DOTMATCH | File::FNM_EXTGLOB)
+        end
+      end
+
+      def relative_candidates(path)
+        ([config.root] + config.member_roots).filter_map do |root|
+          relative_path(path, root)
+        end
+      end
+
+      def relative_path(path, root)
+        expanded_path = File.expand_path(path)
+        expanded_root = File.expand_path(root)
+        prefix = "#{expanded_root}/"
+        return unless expanded_path.start_with?(prefix)
+
+        expanded_path.delete_prefix(prefix)
       end
     end
   end

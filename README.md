@@ -126,6 +126,22 @@ gem install kettle-family
 `kettle-family` reads `.kettle-family.yml` from the family root by default.
 Use `--config PATH` to load a different file.
 
+Member discovery is recursive under the configured member roots. Discovery skips
+gemspecs ignored by git and any configured `members.exclude` glob patterns before
+loading gemspec metadata, so fixture or temporary gemspecs do not create duplicate
+members. Exclude patterns are matched relative to the family root and to each
+member root.
+
+```yaml
+family:
+  members_root: gems
+
+members:
+  exclude:
+    - "**/tmp/**"
+    - "**/vendor/**"
+```
+
 For a flat repository that releases from multiple long-lived branches, list the
 release branches under `release.target_branches`. The branch list is processed
 in order. Each branch must be clean enough for `git checkout`, and each branch

@@ -118,6 +118,35 @@ RSpec.describe Kettle::Family::Discovery do
       .to raise_error(Kettle::Family::Error, /duplicate family member/)
   end
 
+  it "excludes discovered gemspecs with configured glob patterns before loading members" do
+    write_gem("alpha")
+    write_gem("beta")
+    write_gemspec(File.join(@tmpdir, "beta", "tmp", "fixture"), "alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        exclude:
+          - "**/tmp/**"
+    YAML
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config).members
+
+    expect(members.map(&:name)).to eq(%w[alpha beta])
+  end
+
+  it "excludes gemspecs ignored by git before loading members" do
+    system("git", "init", "--quiet", chdir: @tmpdir)
+    write_gem("alpha")
+    write_gem("beta")
+    write_gemspec(File.join(@tmpdir, "beta", "tmp", "fixture"), "alpha")
+    File.write(File.join(@tmpdir, ".gitignore"), "tmp/\n")
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config).members
+
+    expect(members.map(&:name)).to eq(%w[alpha beta])
+  end
+
   it "wraps gemspec load failures" do
     root = File.join(@tmpdir, "broken")
     FileUtils.mkdir_p(root)
@@ -136,6 +165,7 @@ RSpec.describe Kettle::Family::Discovery do
   end
 
   def write_gemspec(root, name, dependencies: [])
+    FileUtils.mkdir_p(root)
     dependency_lines = dependencies.map do |dependency|
       %(  spec.add_dependency "#{dependency}", "= 1.0.0")
     end
