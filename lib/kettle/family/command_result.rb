@@ -13,8 +13,7 @@ module Kettle
       :stderr,
       :elapsed_seconds,
       :skipped,
-      :reason,
-      keyword_init: true
+      :reason
     ) do
       def to_h
         {

@@ -8,8 +8,7 @@ module Kettle
       :gemspec_path,
       :version_file,
       :version,
-      :dependencies,
-      keyword_init: true
+      :dependencies
     ) do
       def to_h
         {
