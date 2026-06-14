@@ -9,13 +9,6 @@ require "securerandom"
 module Kettle
   module Family
     class ReleaseStateCheck
-      RELEASE_STATE_SCRIPT = <<~RUBY
-        require "json"
-        require "kettle/dev"
-        cli = Kettle::Dev::ChangelogCLI.new(strict: false, root: Dir.pwd)
-        puts JSON.pretty_generate(cli.release_state)
-      RUBY
-
       def initialize(members:, config: nil)
         @members = members
         @config = config
@@ -57,7 +50,7 @@ module Kettle
       end
 
       def release_state_command
-        [RbConfig.ruby, "-e", RELEASE_STATE_SCRIPT]
+        [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
       end
 
       def result(member:, command:, stdout:, stderr:, status:, elapsed:, success:, state:, reason: nil, branch: nil)

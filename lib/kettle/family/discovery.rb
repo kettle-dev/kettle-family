@@ -63,8 +63,26 @@ module Kettle
           gemspec_path: path,
           version_file: version_file(File.dirname(path)),
           version: spec.version.to_s,
-          dependencies: spec.dependencies.map(&:name).sort
+          dependencies: spec.dependencies.map(&:name).sort,
+          required_ruby_version: required_ruby_version(spec),
+          licenses: licenses(spec),
+          authors: authors(spec)
         )
+      end
+
+      def required_ruby_version(spec)
+        value = spec.required_ruby_version&.to_s&.strip
+        value.empty? ? nil : value
+      end
+
+      def licenses(spec)
+        values = Array(spec.licenses).compact.map(&:to_s).map(&:strip).reject(&:empty?)
+        values = [spec.license.to_s.strip] if values.empty? && spec.respond_to?(:license) && !spec.license.to_s.strip.empty?
+        values
+      end
+
+      def authors(spec)
+        Array(spec.authors).compact.map(&:to_s).map(&:strip).reject(&:empty?)
       end
 
       def version_file(root)

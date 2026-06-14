@@ -64,6 +64,7 @@ module Kettle
       private
 
       def append_results(lines)
+        return append_metadata_results(lines) if command == "metadata"
         return if results.empty?
         return append_release_state_results(lines) if command == "release-state"
 
@@ -80,6 +81,21 @@ module Kettle
         return "ok" if result.success
 
         "failed"
+      end
+
+      def append_metadata_results(lines)
+        lines << "metadata:"
+        rows = [["gem", "version", "ruby", "licenses", "authors"]]
+        selected_members.each do |member|
+          rows << [
+            member.name.to_s,
+            member.version.to_s,
+            blank_as_none(member.required_ruby_version),
+            blank_as_none(Array(member.licenses).join(", ")),
+            blank_as_none(Array(member.authors).join(", "))
+          ]
+        end
+        lines.concat(format_table(rows).map { |line| "  #{line}" })
       end
 
       def append_release_state_results(lines)
@@ -143,6 +159,11 @@ module Kettle
         else
           "unknown"
         end
+      end
+
+      def blank_as_none(value)
+        text = value.to_s.strip
+        text.empty? ? "(none)" : text
       end
 
       def resume_hint

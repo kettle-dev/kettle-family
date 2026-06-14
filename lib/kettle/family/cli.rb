@@ -6,7 +6,7 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan report check test lint docs template bump-version release branch-lanes release-state].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template bump-version release branch-lanes release-state].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
@@ -53,6 +53,7 @@ module Kettle
               discover        Discover family members and print selected order
               plan            Alias for discover while execution workflows are built
               report          Print family discovery and configuration report
+              metadata        Print version, Ruby floor, license, and author metadata
               check           Run internal read-only readiness checks
               test            Plan or execute configured test command per member
               lint            Plan or execute configured lint command per member
@@ -139,7 +140,7 @@ module Kettle
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
         members = Discovery.new(config: config).members
-        ordered = if command == "release-state"
+        ordered = if %w[metadata release-state].include?(command)
           members.sort_by(&:name)
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered

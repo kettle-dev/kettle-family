@@ -29,7 +29,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
     expect(result).to be_ok
     expect(result.command.first).to eq(RbConfig.ruby)
-    expect(result.command).to include("-e")
+    expect(result.command).to include("-S", "kettle-changelog", "--release-state", "--json")
     expect(result.workdir).to eq(member.root)
     expect(result.state).to include("latest_released" => "1.2.3", "pending_release" => true)
   end

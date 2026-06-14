@@ -68,6 +68,33 @@ RSpec.describe Kettle::Family::Discovery do
     expect(members.map(&:name)).to eq(["custom"])
   end
 
+  it "captures version, Ruby floor, license, and author metadata from gemspecs" do
+    root = File.join(@tmpdir, "alpha")
+    FileUtils.mkdir_p(root)
+    File.write(File.join(root, "alpha.gemspec"), <<~RUBY)
+      Gem::Specification.new do |spec|
+        spec.name = "alpha"
+        spec.version = "1.2.3"
+        spec.required_ruby_version = ">= 3.2"
+        spec.licenses = ["MIT"]
+        spec.authors = ["Example Author"]
+      end
+    RUBY
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = described_class.new(config: config).members.fetch(0)
+
+    expect(member.version).to eq("1.2.3")
+    expect(member.required_ruby_version).to eq(">= 3.2")
+    expect(member.licenses).to eq(["MIT"])
+    expect(member.authors).to eq(["Example Author"])
+    expect(member.to_h).to include(
+      "required_ruby_version" => ">= 3.2",
+      "licenses" => ["MIT"],
+      "authors" => ["Example Author"]
+    )
+  end
+
   it "rejects explicit members without gemspecs" do
     FileUtils.mkdir_p(File.join(@tmpdir, "empty"))
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)

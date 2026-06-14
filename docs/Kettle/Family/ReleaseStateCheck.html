@@ -103,27 +103,6 @@
 </div>
 
 
-  
-    <h2>
-      Constant Summary
-      <small><a href="#" class="constants_summary_toggle">collapse</a></small>
-    </h2>
-
-    <dl class="constants">
-      
-        <dt id="RELEASE_STATE_SCRIPT-constant" class="">RELEASE_STATE_SCRIPT =
-          
-        </dt>
-        <dd><pre class="code"><span class='heredoc_beg'>&lt;&lt;~RUBY</span>
-<span class='tstring_content'>  require &quot;json&quot;
-</span><span class='tstring_content'>  require &quot;kettle/dev&quot;
-</span><span class='tstring_content'>  cli = Kettle::Dev::ChangelogCLI.new(strict: false, root: Dir.pwd)
-</span><span class='tstring_content'>  puts JSON.pretty_generate(cli.release_state)
-</span><span class='heredoc_end'>RUBY</span></pre></dd>
-      
-    </dl>
-  
-
 
 
 
@@ -218,13 +197,13 @@
       <pre class="lines">
 
 
-19
-20
-21
-22</pre>
+12
+13
+14
+15</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 19</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 12</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
@@ -257,14 +236,14 @@
       <pre class="lines">
 
 
-24
-25
-26
-27
-28</pre>
+17
+18
+19
+20
+21</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 24</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 17</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
@@ -281,7 +260,7 @@
 </div>
 
       <div id="footer">
-  Generated on Sun Jun 14 00:31:08 2026 by
+  Generated on Sun Jun 14 01:07:54 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

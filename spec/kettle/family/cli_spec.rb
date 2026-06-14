@@ -28,6 +28,18 @@ RSpec.describe Kettle::Family::CLI do
     expect(report.fetch("selected_members")).to eq(["alpha"])
   end
 
+  it "prints a metadata table" do
+    write_gem("alpha", license: "MIT", authors: ["Example Author"], required_ruby_version: ">= 3.2")
+    out = StringIO.new
+
+    status = described_class.call(["metadata", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("metadata:")
+    expect(out.string).to include("gem    version  ruby    licenses  authors")
+    expect(out.string).to include("alpha  1.0.0    >= 3.2  MIT       Example Author")
+  end
+
   it "writes JSON reports without forcing JSON stdout" do
     write_gem("alpha")
     out = StringIO.new
@@ -249,7 +261,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
   end
 
-  def write_gem(name, dependencies: [])
+  def write_gem(name, dependencies: [], license: nil, authors: [], required_ruby_version: nil)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "lib", name))
     File.write(File.join(root, "lib", name, "version.rb"), <<~RUBY)
@@ -257,11 +269,16 @@ RSpec.describe Kettle::Family::CLI do
         VERSION = "1.0.0"
       end
     RUBY
+    metadata_lines = []
+    metadata_lines << %(spec.required_ruby_version = "#{required_ruby_version}") if required_ruby_version
+    metadata_lines << %(spec.licenses = ["#{license}"]) if license
+    metadata_lines << %(spec.authors = #{authors.inspect}) unless authors.empty?
     File.write(File.join(root, "#{name}.gemspec"), <<~RUBY)
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "1.0.0"
         #{dependencies.map { |dependency| %(spec.add_dependency "#{dependency}") }.join("\n")}
+        #{metadata_lines.join("\n")}
       end
     RUBY
   end

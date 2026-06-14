@@ -8,7 +8,10 @@ module Kettle
       :gemspec_path,
       :version_file,
       :version,
-      :dependencies
+      :dependencies,
+      :required_ruby_version,
+      :licenses,
+      :authors
     ) do
       def to_h
         {
@@ -17,7 +20,10 @@ module Kettle
           "gemspec_path" => gemspec_path,
           "version_file" => version_file,
           "version" => version,
-          "dependencies" => dependencies
+          "dependencies" => dependencies,
+          "required_ruby_version" => required_ruby_version,
+          "licenses" => Array(licenses),
+          "authors" => Array(authors)
         }
       end
     end
