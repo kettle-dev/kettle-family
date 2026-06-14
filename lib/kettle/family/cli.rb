@@ -168,7 +168,7 @@ module Kettle
       def command_results(command:, config:, members:, options:)
         return bump_version_results(members: members, options: options) if command == "bump-version"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
-        return release_state_results(members: members) if command == "release-state"
+        return release_state_results(config: config, members: members) if command == "release-state"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
         Workflow.new(
@@ -207,8 +207,8 @@ module Kettle
         BranchLaneAudit.new(config: config, members: members).results
       end
 
-      def release_state_results(members:)
-        ReleaseStateCheck.new(members: members).results
+      def release_state_results(config:, members:)
+        ReleaseStateCheck.new(config: config, members: members).results
       end
 
       def write_report(report, options)

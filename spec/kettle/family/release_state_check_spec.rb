@@ -45,6 +45,24 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.stderr).to eq("boom")
   end
 
+  it "checks each configured release target branch independently" do
+    member = member("alpha")
+    config = instance_double(Kettle::Family::Config, root: @tmpdir, release_target_branches: %w[r1 r2])
+    check = described_class.new(config: config, members: [member])
+    branch_members = [member]
+    allow(check).to receive_messages(git_root: @tmpdir, discover_branch_members: branch_members)
+    allow(check).to receive(:with_branch_worktree).and_yield(@tmpdir)
+    allow(Open3).to receive(:capture3).and_return(
+      [JSON.generate("gem_name" => "alpha", "version" => "1.0.1", "pending_release" => false), "", status(0, true)],
+      [JSON.generate("gem_name" => "alpha", "version" => "1.0.2", "pending_release" => true), "", status(0, true)]
+    )
+
+    results = check.results
+
+    expect(results.map(&:branch)).to eq(%w[r1 r2])
+    expect(results.map { |result| result.state.fetch("version") }).to eq(%w[1.0.1 1.0.2])
+  end
+
   def member(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)

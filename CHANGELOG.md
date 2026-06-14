@@ -22,6 +22,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- `kettle-family release-state` now expands configured
+  `release.target_branches` and reports release state for each branch
+  independently.
+
 ### Deprecated
 
 ### Removed

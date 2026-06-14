@@ -84,7 +84,7 @@ module Kettle
 
       def append_release_state_results(lines)
         lines << "release state:"
-        rows = [["gem", "version.rb", "latest released", "latest changelog", "unreleased", "prepared", "pending"]]
+        rows = release_state_header
         results.each do |result|
           rows << release_state_row(result)
         end
@@ -101,7 +101,7 @@ module Kettle
 
       def release_state_row(result)
         state = result.state || {}
-        [
+        row = [
           state.fetch("gem_name", result.member_name).to_s,
           state.fetch("version", "unknown").to_s,
           state.fetch("latest_released", nil).to_s.empty? ? "unknown" : state.fetch("latest_released").to_s,
@@ -110,6 +110,20 @@ module Kettle
           yes_no(state.fetch("prepared_release_pending", nil)),
           yes_no(state.fetch("pending_release", nil))
         ]
+        return row unless release_state_has_branches?
+
+        [result.branch.to_s.empty? ? "current" : result.branch.to_s, *row]
+      end
+
+      def release_state_header
+        header = [["gem", "version.rb", "latest released", "latest changelog", "unreleased", "prepared", "pending"]]
+        return header unless release_state_has_branches?
+
+        [["branch", *header.first]]
+      end
+
+      def release_state_has_branches?
+        results.any? { |result| !result.branch.to_s.empty? }
       end
 
       def format_table(rows)
