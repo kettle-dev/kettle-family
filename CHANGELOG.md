@@ -20,15 +20,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Added `kettle-family metadata` to report each family member's version, Ruby
-  requirement, licenses, and authors.
-
 ### Changed
-
-- Project licensing changed from MIT to AGPL-3.0-only.
-- `kettle-family release-state` now invokes `kettle-changelog` from the active
-  toolchain instead of depending on `kettle-dev` as a published runtime
-  dependency.
 
 ### Deprecated
 
@@ -41,9 +33,9 @@ Please file a bug if you notice a violation of semantic versioning.
 ## [0.1.3] - 2026-06-14
 
 - TAG: [v0.1.3][0.1.3t]
-- COVERAGE: 94.23% -- 899/954 lines in 19 files
-- BRANCH COVERAGE: 79.09% -- 261/330 branches in 19 files
-- 42.28% documented
+- COVERAGE: 94.34% -- 917/972 lines in 19 files
+- BRANCH COVERAGE: 78.36% -- 268/342 branches in 19 files
+- 44.00% documented
 
 ### Changed
 
@@ -52,12 +44,22 @@ Please file a bug if you notice a violation of semantic versioning.
   `release.target_branches` and reports release state for each branch
   independently.
 
+- Project licensing changed from MIT to AGPL-3.0-only.
+- `kettle-family release-state` now invokes `kettle-changelog` from the active
+  toolchain instead of depending on `kettle-dev` as a published runtime
+  dependency.
+
 ### Fixed
 
 - Fixed release-state checks to use the active `kettle-dev` API instead of each
   member's potentially stale bundle.
 - Fixed default discovery excludes so top-level `vendor/`, `tmp/`, `spec/`, and
   `test/` directories are ignored.
+
+### Added
+
+- Added `kettle-family metadata` to report each family member's version, Ruby
+  requirement, licenses, and authors.
 
 ## [0.1.2] - 2026-06-13
 
