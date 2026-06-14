@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.1.1] - 2026-06-13
+
+- TAG: [v0.1.1][0.1.1t]
+- COVERAGE: 94.16% -- 838/890 lines in 19 files
+- BRANCH COVERAGE: 77.92% -- 240/308 branches in 19 files
+- 41.80% documented
+
+### Added
+
 - Added configurable member discovery excludes via `members.exclude` /
   `members.ignore`.
 - Added `kettle-family release-state` to report changelog release state across
@@ -29,17 +48,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Retemplated generated project files with `kettle-dev` >= 2.2.7.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Member discovery now filters configured excludes and git-ignored paths before
   loading gemspecs, avoiding duplicate fixture/tmp gemspecs in recursive family
   roots.
-
-### Security
 
 ## [0.1.0] - 2026-06-10
 
@@ -69,6 +82,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/kettle-dev/kettle-family/compare/v0.1.0...v0.1.1
+[0.1.1t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.1
 [0.1.0]: https://github.com/kettle-dev/kettle-family/compare/e4a9ca8ed52605b6375bbdd4f745b905a68b8b24...v0.1.0
 [0.1.0t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.0
