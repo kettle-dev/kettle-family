@@ -22,6 +22,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Runtime dependency `kettle-dev` now requires 2.2.8 or newer.
 - `kettle-family release-state` now expands configured
   `release.target_branches` and reports release state for each branch
   independently.

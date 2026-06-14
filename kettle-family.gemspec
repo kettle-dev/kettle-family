@@ -95,7 +95,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Utilities
-  spec.add_dependency("kettle-dev", "~> 2.2", ">= 2.2.7")                    # ruby >= 3.2.0
+  spec.add_dependency("kettle-dev", "~> 2.2", ">= 2.2.8")                    # ruby >= 3.2.0
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("version_gem", "~> 1.1", ">= 1.1.11")              # ruby >= 2.2.0
 
