@@ -18,7 +18,7 @@ RSpec.describe Kettle::Family::Config do
     expect(config.family_name).to eq(File.basename(@tmpdir))
     expect(config.members_root).to eq(@tmpdir)
     expect(config.discover_members?).to be(true)
-    expect(config.member_exclude_patterns).to eq(["**/vendor/**"])
+    expect(config.member_exclude_patterns).to eq(["**/vendor/**", "**/tmp/**", "**/spec/**", "**/test/**"])
     expect(config.order_mode).to eq("dependency")
     expect(config.order_hints).to be_empty
   end
@@ -33,7 +33,7 @@ RSpec.describe Kettle::Family::Config do
         explicit:
           - root: alpha
         exclude:
-          - "**/tmp/**"
+          - "**/custom/**"
         order:
           mode: fixed
           hints:
@@ -45,7 +45,7 @@ RSpec.describe Kettle::Family::Config do
     expect(config.family_name).to eq("configured-family")
     expect(config.members_root).to eq(File.join(@tmpdir, "gems"))
     expect(config.discover_members?).to be(false)
-    expect(config.member_exclude_patterns).to eq(["**/vendor/**", "**/tmp/**"])
+    expect(config.member_exclude_patterns).to eq(["**/vendor/**", "**/tmp/**", "**/spec/**", "**/test/**", "**/custom/**"])
     expect(config.explicit_members).to eq([{"root" => File.join(@tmpdir, "alpha")}])
     expect(config.order_mode).to eq("fixed")
     expect(config.order_hints).to eq(["alpha"])

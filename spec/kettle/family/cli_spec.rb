@@ -217,7 +217,39 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("yes")
   end
 
-  def write_gem(name)
+  it "does not require dependency ordering for release-state reports" do
+    write_gem("alpha", dependencies: ["beta"])
+    write_gem("beta", dependencies: ["alpha"])
+    results = %w[alpha beta].map do |name|
+      Kettle::Family::ReleaseStateResult.new(
+        member_name: name,
+        command: %w[bundle exec kettle-changelog --release-state --json],
+        workdir: File.join(@tmpdir, name),
+        status: 0,
+        success: true,
+        stdout: "",
+        stderr: "",
+        elapsed_seconds: 0.1,
+        state: {
+          "gem_name" => name,
+          "version" => "1.0.0",
+          "latest_released" => "1.0.0",
+          "latest_changelog_version" => "1.0.0",
+          "unreleased_entries" => false,
+          "prepared_release_pending" => false,
+          "pending_release" => false
+        }
+      )
+    end
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: results)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+
+    status = described_class.call(["release-state", "--root", @tmpdir], out: StringIO.new, err: StringIO.new)
+
+    expect(status).to eq(0)
+  end
+
+  def write_gem(name, dependencies: [])
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "lib", name))
     File.write(File.join(root, "lib", name, "version.rb"), <<~RUBY)
@@ -229,6 +261,7 @@ RSpec.describe Kettle::Family::CLI do
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "1.0.0"
+        #{dependencies.map { |dependency| %(spec.add_dependency "#{dependency}") }.join("\n")}
       end
     RUBY
   end

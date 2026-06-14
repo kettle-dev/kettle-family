@@ -121,12 +121,23 @@ RSpec.describe Kettle::Family::Discovery do
   it "excludes discovered gemspecs with configured glob patterns before loading members" do
     write_gem("alpha")
     write_gem("beta")
-    write_gemspec(File.join(@tmpdir, "beta", "tmp", "fixture"), "alpha")
+    write_gemspec(File.join(@tmpdir, "beta", "custom", "fixture"), "alpha")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       members:
         exclude:
-          - "**/tmp/**"
+          - "**/custom/**"
     YAML
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config).members
+
+    expect(members.map(&:name)).to eq(%w[alpha beta])
+  end
+
+  it "excludes default test fixture gemspecs before loading members" do
+    write_gem("alpha")
+    write_gem("beta")
+    write_gemspec(File.join(@tmpdir, "beta", "spec", "support", "fixtures"), "alpha")
 
     config = Kettle::Family::Config.load(root: @tmpdir)
     members = described_class.new(config: config).members

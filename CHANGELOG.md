@@ -53,6 +53,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Member discovery now filters configured excludes and git-ignored paths before
   loading gemspecs, avoiding duplicate fixture/tmp gemspecs in recursive family
   roots.
+- Member discovery now skips default `spec/` and `test/` fixture trees before
+  loading gemspecs, avoiding fixture load failures in family roots.
 
 ## [0.1.0] - 2026-06-10
 

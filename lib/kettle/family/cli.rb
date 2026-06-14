@@ -139,7 +139,11 @@ module Kettle
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
         members = Discovery.new(config: config).members
-        ordered = Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
+        ordered = if command == "release-state"
+          members.sort_by(&:name)
+        else
+          Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
+        end
         selected = Selection.new(members: ordered).apply(only: options[:only], start_at: options[:start_at])
         result_members = if command == "branch-lanes"
           ordered
