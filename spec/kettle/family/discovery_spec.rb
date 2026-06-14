@@ -145,6 +145,38 @@ RSpec.describe Kettle::Family::Discovery do
     expect(members.map(&:name)).to eq(%w[alpha beta])
   end
 
+  it "excludes default top-level vendored gemspecs before loading members" do
+    write_gem("alpha")
+    write_gemspec(File.join(@tmpdir, "vendor", "fixture"), "vendored")
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config).members
+
+    expect(members.map(&:name)).to eq(["alpha"])
+  end
+
+  it "loads discovered gemspecs from their own directory" do
+    root = File.join(@tmpdir, "relative-load")
+    FileUtils.mkdir_p(File.join(root, "lib", "relative"))
+    File.write(File.join(root, "lib", "relative", "version.rb"), <<~RUBY)
+      module Relative
+        VERSION = "1.0.0"
+      end
+    RUBY
+    File.write(File.join(root, "relative-load.gemspec"), <<~RUBY)
+      Kernel.load "lib/relative/version.rb"
+      Gem::Specification.new do |spec|
+        spec.name = "relative-load"
+        spec.version = Relative::VERSION
+      end
+    RUBY
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config).members
+
+    expect(members.map(&:name)).to eq(["relative-load"])
+  end
+
   it "excludes gemspecs ignored by git before loading members" do
     system("git", "init", "--quiet", chdir: @tmpdir)
     write_gem("alpha")

@@ -73,7 +73,11 @@ module Kettle
       end
 
       def load_gemspec(path)
-        spec = Gem::Specification.load(path)
+        # Some legacy gemspecs use root-relative Kernel.load calls, and RubyGems
+        # evaluates gemspecs relative to the current process directory.
+        # rubocop:disable ThreadSafety/DirChdir
+        spec = Dir.chdir(File.dirname(path)) { Gem::Specification.load(path) }
+        # rubocop:enable ThreadSafety/DirChdir
         raise Error, "could not load gemspec #{path}" unless spec
 
         spec

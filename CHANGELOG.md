@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Fixed release-state checks to use the active `kettle-dev` API instead of each
+  member's potentially stale bundle.
+- Fixed default discovery excludes so top-level `vendor/`, `tmp/`, `spec/`, and
+  `test/` directories are ignored.
+
 ### Security
 
 ## [0.1.2] - 2026-06-13

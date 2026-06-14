@@ -12,7 +12,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     end
   end
 
-  it "collects release state JSON from each member bundle" do
+  it "collects release state JSON for each member using the active kettle-dev API" do
     member = member("alpha")
     state = {
       "gem_name" => "alpha",
@@ -28,7 +28,8 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     result = described_class.new(members: [member]).results.fetch(0)
 
     expect(result).to be_ok
-    expect(result.command).to eq(%w[bundle exec kettle-changelog --release-state --json])
+    expect(result.command.first).to eq(RbConfig.ruby)
+    expect(result.command).to include("-e")
     expect(result.workdir).to eq(member.root)
     expect(result.state).to include("latest_released" => "1.2.3", "pending_release" => true)
   end

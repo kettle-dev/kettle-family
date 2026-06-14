@@ -6,7 +6,16 @@ module Kettle
   module Family
     class Config
       DEFAULT_PATHS = [".kettle-family.yml", ".structuredmerge/kettle-family.yml"].freeze
-      DEFAULT_MEMBER_EXCLUDES = ["**/vendor/**", "**/tmp/**", "**/spec/**", "**/test/**"].freeze
+      DEFAULT_MEMBER_EXCLUDES = [
+        "vendor/**",
+        "**/vendor/**",
+        "tmp/**",
+        "**/tmp/**",
+        "spec/**",
+        "**/spec/**",
+        "test/**",
+        "**/test/**"
+      ].freeze
 
       attr_reader :data, :path, :root
 
