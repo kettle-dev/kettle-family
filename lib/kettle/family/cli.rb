@@ -6,7 +6,7 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan report check test lint docs template bump-version release branch-lanes].freeze
+      COMMANDS = %w[discover plan report check test lint docs template bump-version release branch-lanes release-state].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
@@ -61,6 +61,7 @@ module Kettle
               bump-version    Check, plan, or execute family version alignment
               release         Plan or execute release build/publish phases
               branch-lanes    Audit configured branch lane release mappings
+              release-state   Report changelog release state for family members
 
           Options:
               --root PATH      Workspace or family root (default: current directory)
@@ -163,6 +164,7 @@ module Kettle
       def command_results(command:, config:, members:, options:)
         return bump_version_results(members: members, options: options) if command == "bump-version"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
+        return release_state_results(members: members) if command == "release-state"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
         Workflow.new(
@@ -199,6 +201,10 @@ module Kettle
 
       def branch_lane_results(config:, members:)
         BranchLaneAudit.new(config: config, members: members).results
+      end
+
+      def release_state_results(members:)
+        ReleaseStateCheck.new(members: members).results
       end
 
       def write_report(report, options)

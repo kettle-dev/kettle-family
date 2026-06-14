@@ -65,6 +65,7 @@ module Kettle
 
       def append_results(lines)
         return if results.empty?
+        return append_release_state_results(lines) if command == "release-state"
 
         lines << "results:"
         results.each do |result|
@@ -79,6 +80,55 @@ module Kettle
         return "ok" if result.success
 
         "failed"
+      end
+
+      def append_release_state_results(lines)
+        lines << "release state:"
+        rows = [["gem", "version.rb", "latest released", "latest changelog", "unreleased", "prepared", "pending"]]
+        results.each do |result|
+          rows << release_state_row(result)
+        end
+        lines.concat(format_table(rows).map { |line| "  #{line}" })
+        failures = results.reject(&:ok?)
+        return if failures.empty?
+
+        lines << "release state errors:"
+        failures.each do |result|
+          lines << "  failed #{result.member_name} #{result.reason || ""}".rstrip
+          lines << "    #{result.stderr}" unless result.stderr.to_s.empty?
+        end
+      end
+
+      def release_state_row(result)
+        state = result.state || {}
+        [
+          state.fetch("gem_name", result.member_name).to_s,
+          state.fetch("version", "unknown").to_s,
+          state.fetch("latest_released", nil).to_s.empty? ? "unknown" : state.fetch("latest_released").to_s,
+          state.fetch("latest_changelog_version", nil).to_s.empty? ? "none" : state.fetch("latest_changelog_version").to_s,
+          yes_no(state.fetch("unreleased_entries", nil)),
+          yes_no(state.fetch("prepared_release_pending", nil)),
+          yes_no(state.fetch("pending_release", nil))
+        ]
+      end
+
+      def format_table(rows)
+        widths = rows.transpose.map { |column| column.map(&:length).max }
+        rows.flat_map.with_index do |row, index|
+          line = row.each_with_index.map { |value, i| value.ljust(widths.fetch(i)) }.join("  ").rstrip
+          index.zero? ? [line, widths.map { |width| "-" * width }.join("  ")] : [line]
+        end
+      end
+
+      def yes_no(value)
+        case value
+        when true
+          "yes"
+        when false
+          "no"
+        else
+          "unknown"
+        end
       end
 
       def resume_hint

@@ -182,6 +182,41 @@ RSpec.describe Kettle::Family::CLI do
     expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 --local-ci"])
   end
 
+  it "prints a release-state table" do
+    write_gem("alpha")
+    result = Kettle::Family::ReleaseStateResult.new(
+      member_name: "alpha",
+      command: %w[bundle exec kettle-changelog --release-state --json],
+      workdir: File.join(@tmpdir, "alpha"),
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.1,
+      state: {
+        "gem_name" => "alpha",
+        "version" => "1.2.4",
+        "latest_released" => "1.2.3",
+        "latest_changelog_version" => "1.2.4",
+        "unreleased_entries" => false,
+        "prepared_release_pending" => true,
+        "pending_release" => true
+      }
+    )
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: [result])
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["release-state", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("release state:")
+    expect(out.string).to include("latest released")
+    expect(out.string).to include("alpha")
+    expect(out.string).to include("1.2.3")
+    expect(out.string).to include("yes")
+  end
+
   def write_gem(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "lib", name))

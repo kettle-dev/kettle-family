@@ -22,10 +22,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Added configurable member discovery excludes via `members.exclude` /
   `members.ignore`.
+- Added `kettle-family release-state` to report changelog release state across
+  family members using `kettle-changelog --release-state --json`.
 
 ### Changed
 
-- Retemplated generated project files with `kettle-dev` >= 2.2.6.
+- Retemplated generated project files with `kettle-dev` >= 2.2.7.
 
 ### Deprecated
 

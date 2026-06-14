@@ -186,6 +186,16 @@ kettle-family discover
 kettle-family release
 ```
 
+Audit changelog release state across the selected family members:
+
+```console
+kettle-family release-state
+```
+
+The release-state report lists each gem's current `version.rb`, latest published
+release, latest versioned `CHANGELOG.md` section, and whether pending changelog
+work exists in either `Unreleased` or an unpublished prepared release section.
+
 Run release prep/build phases without publishing:
 
 ```console
