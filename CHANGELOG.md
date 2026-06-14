@@ -25,6 +25,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Project licensing changed from MIT to AGPL-3.0-only.
 - `kettle-family release-state` now invokes `kettle-changelog` from the active
   toolchain instead of depending on `kettle-dev` as a published runtime
   dependency.

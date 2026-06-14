@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.summary = "👩‍👩‍👧‍👧 CLI helpers for managing related Ruby gems as a family."
   spec.description = "👩‍👩‍👧‍👧 Kettle::Family provides scripts and conventions for coordinating related Ruby gems as one family."
   spec.homepage = "https://github.com/kettle-dev/kettle-family"
-  spec.licenses = ["MIT"]
+  spec.licenses = ["AGPL-3.0-only"]
   spec.required_ruby_version = ">= 3.2.0"
 
   # Linux distros often package gems and securely certify them independent
@@ -112,7 +112,7 @@ Gem::Specification.new do |spec|
   #       and preferably a modular one (see gemfiles/modular/*.gemfile).
 
   # Dev, Test, & Release Tasks
-  spec.add_development_dependency("kettle-dev", "~> 2.2", ">= 2.2.8")         # ruby >= 3.2.0
+  spec.add_development_dependency("kettle-dev", "~> 2.2", ">= 2.2.8")      # ruby >= 3.2.0
 
   # Security
   spec.add_development_dependency("bundler-audit", "~> 0.9.3")                      # ruby >= 2.0.0

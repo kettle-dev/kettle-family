@@ -249,7 +249,7 @@ readme:
 #   - When MIT (or AGPL), a PolyForm variant, AND LicenseRef-Big-Time-Public-License
 #     are all present, a use-case guide table is added to README and LICENSE.md.
 licenses:
-  - MIT
+  - AGPL-3.0-only
 
 # Apache SkyWalking Eyes dependency license overrides.
 # Use these when license-eye cannot identify a dependency license from the

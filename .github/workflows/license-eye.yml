@@ -36,8 +36,8 @@ jobs:
         uses: apache/skywalking-eyes/dependency@61275cc80d0798a405cb070f7d3a8aaf7cf2c2c1 # v0.8.0
         with:
           config: .licenserc.yaml
-          mode: "check"
+          mode: "resolve"
           # Generated from configured licenses. Compatibility check mode is used
           #   only when License-Eye has a usable main-license matrix; otherwise
           #   resolve mode records dependency licenses without false failures.
-          flags: "--weak-compatible"
+          flags: ""
