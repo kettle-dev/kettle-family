@@ -169,11 +169,11 @@ module Kettle
 
       def unreleased_entries?(content)
         lines = content.lines
-        start = lines.index { |line| line.match?(/\A## \[Unreleased\]/) }
+        start = lines.index { |line| line.start_with?("## [Unreleased]") }
         return false unless start
 
         following = lines[(start + 1)..] || []
-        block = following.take_while { |line| !line.match?(/\A## \[/) }
+        block = following.take_while { |line| !line.start_with?("## [") }
         block.any? { |line| line.match?(/\S/) && !line.match?(/\A###? /) }
       end
 
