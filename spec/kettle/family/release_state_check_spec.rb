@@ -59,7 +59,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
   it "checks each configured release target branch independently" do
     member = member("alpha")
-    config = instance_double(Kettle::Family::Config, root: @tmpdir, release_target_branches: %w[r1 r2])
+    config = release_state_config(release_target_branches: %w[r1 r2])
     check = described_class.new(config: config, members: [member])
     branch_members = [member]
     allow(check).to receive_messages(git_root: @tmpdir, discover_branch_members: branch_members)
@@ -77,7 +77,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
   it "reports configured branch worktree failures as branch results" do
     member = member("alpha")
-    config = instance_double(Kettle::Family::Config, root: @tmpdir, release_target_branches: %w[r1])
+    config = release_state_config(release_target_branches: %w[r1])
     check = described_class.new(config: config, members: [member])
     allow(check).to receive(:git_root).and_return(@tmpdir)
     allow(check).to receive(:with_branch_worktree).and_raise(Kettle::Family::Error, "missing branch")
@@ -91,7 +91,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
   end
 
   it "computes git roots and reports git failures" do
-    config = instance_double(Kettle::Family::Config, root: @tmpdir, release_target_branches: [])
+    config = release_state_config
     check = described_class.new(config: config, members: [])
     allow(Open3).to receive(:capture3).and_return(["#{@tmpdir}\n", "", status(0, true)])
 
@@ -104,7 +104,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
   end
 
   it "adds and removes temporary branch worktrees" do
-    config = instance_double(Kettle::Family::Config, root: @tmpdir, release_target_branches: [])
+    config = release_state_config
     check = described_class.new(config: config, members: [])
     allow(SecureRandom).to receive(:hex).and_return("abc123")
     allow(check).to receive(:add_branch_worktree)
@@ -116,6 +116,49 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(yielded).to end_with("tmp/kettle-family-release-state/worktree-#{Process.pid}-abc123")
     expect(check).to have_received(:add_branch_worktree).with(root: @tmpdir, branch: "main", worktree_root: yielded)
     expect(check).to have_received(:remove_branch_worktree).with(root: @tmpdir, worktree_root: yielded)
+  end
+
+  it "checks a shared root changelog once for the family" do
+    FileUtils.mkdir_p(File.join(@tmpdir, "gems", "tree_haver", "lib", "tree_haver"))
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), <<~MARKDOWN)
+      ## [Unreleased]
+
+      ### Fixed
+
+      - Pending fix.
+
+      ## [7.0.0] - 2026-05-05
+    MARKDOWN
+    File.write(File.join(@tmpdir, "gems", "tree_haver", "lib", "tree_haver", "version.rb"), <<~RUBY)
+      module TreeHaver
+        VERSION = "7.0.0"
+      end
+    RUBY
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        name: structuredmerge-ruby
+      changelog:
+        mode: root
+        path: CHANGELOG.md
+        version_file: gems/tree_haver/lib/tree_haver/version.rb
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member("alpha")
+
+    result = described_class.new(config: config, members: [member]).results.fetch(0)
+
+    expect(result).to be_ok
+    expect(result.member_name).to eq("structuredmerge-ruby")
+    expect(result.workdir).to eq(@tmpdir)
+    expect(result.command).to eq(["internal", "release-state", "root-changelog"])
+    expect(result.state).to include(
+      "gem_name" => "structuredmerge-ruby",
+      "version" => "7.0.0",
+      "latest_changelog_version" => "7.0.0",
+      "unreleased_entries" => true,
+      "prepared_release_pending" => true,
+      "pending_release" => true
+    )
   end
 
   it "raises when git cannot add a branch worktree" do
@@ -146,17 +189,17 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     outside = File.join(@tmpdir, "outside")
     FileUtils.mkdir_p([subdir, outside])
 
-    root_config = instance_double(Kettle::Family::Config, root: git_root, release_target_branches: [])
+    root_config = release_state_config(root: git_root)
     root_check = described_class.new(config: root_config, members: [])
     allow(root_check).to receive(:git_root).and_return(File.realpath(git_root))
     expect(root_check.send(:relative_config_root)).to eq(".")
 
-    subdir_config = instance_double(Kettle::Family::Config, root: subdir, release_target_branches: [])
+    subdir_config = release_state_config(root: subdir)
     subdir_check = described_class.new(config: subdir_config, members: [])
     allow(subdir_check).to receive(:git_root).and_return(File.realpath(git_root))
     expect(subdir_check.send(:relative_config_root)).to eq("gems")
 
-    outside_config = instance_double(Kettle::Family::Config, root: outside, release_target_branches: [])
+    outside_config = release_state_config(root: outside)
     outside_check = described_class.new(config: outside_config, members: [])
     allow(outside_check).to receive(:git_root).and_return(File.realpath(git_root))
     expect {
@@ -172,5 +215,16 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
   def status(exitstatus, success)
     instance_double(Process::Status, exitstatus: exitstatus, success?: success)
+  end
+
+  def release_state_config(root: @tmpdir, release_target_branches: [])
+    instance_double(
+      Kettle::Family::Config,
+      root: root,
+      release_target_branches: release_target_branches,
+      shared_changelog?: false,
+      changelog_workdir: nil,
+      changelog_env: {}
+    )
   end
 end

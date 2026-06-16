@@ -33,6 +33,35 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish release_tag release_push])
   end
 
+  it "plans a configured family changelog phase and shared root changelog checks" do
+    write_release_config(
+      build_command: [RbConfig.ruby, "-e", "puts 'build'"],
+      family_changelog: {"enabled" => true, "command" => [RbConfig.ruby, "-e", "puts 'changelog'"]},
+      check: {
+        "required_files" => %w[Gemfile Rakefile README.md LICENSE.md],
+        "required_bins" => %w[bin/rake bin/rspec],
+        "root_required_files" => ["CHANGELOG.md"]
+      },
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
+      },
+      release_env: {"KETTLE_RB_DEV" => false}
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", changelog: false)
+
+    results = described_class.new(command: "release", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[family_changelog check release_changelog release_build])
+    expect(results.first.command).to eq([RbConfig.ruby, "-e", "puts 'changelog'"])
+    expect(results.first.workdir).to eq(@tmpdir)
+    expect(results.first.skipped).to be(true)
+    expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'build'"])
+  end
+
   it "plans releases across configured target branches" do
     write_release_config(target_branches: %w[r1_8-even-v0 r1_9-even-v2])
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -125,7 +154,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -133,19 +162,24 @@ RSpec.describe Kettle::Family::Workflow do
       "push_command" => [RbConfig.ruby, "-e", "puts 'push'"]
     }
     release["target_branches"] = target_branches if target_branches
+    release["family_changelog"] = family_changelog if family_changelog
+    release["env"] = release_env if release_env
+    config = {"release" => release}
+    config["check"] = check if check
+    config["changelog"] = changelog if changelog
     File.write(
       File.join(@tmpdir, ".kettle-family.yml"),
-      YAML.dump("release" => release)
+      YAML.dump(config)
     )
   end
 
-  def ready_member(name)
+  def ready_member(name, changelog: true)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))
     %w[Gemfile Rakefile README.md LICENSE.md].each do |path|
       File.write(File.join(root, path), "stub\n")
     end
-    File.write(File.join(root, "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(root, "CHANGELOG.md"), "## [Unreleased]\n") if changelog
     %w[bin/rake bin/rspec].each do |path|
       full_path = File.join(root, path)
       File.write(full_path, "#!/bin/sh\n")

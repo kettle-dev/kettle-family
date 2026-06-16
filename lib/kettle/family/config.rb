@@ -90,6 +90,64 @@ module Kettle
         fetch_path("commands", name)
       end
 
+      def check_required_files
+        fetch_path("check", "required_files") || ReadinessCheck::REQUIRED_FILES
+      end
+
+      def check_required_bins
+        fetch_path("check", "required_bins") || ReadinessCheck::REQUIRED_BINS
+      end
+
+      def check_root_required_files
+        fetch_path("check", "root_required_files") || []
+      end
+
+      def check_member_required_dirs
+        fetch_path("check", "member_required_dirs") || []
+      end
+
+      def check_forbidden_tracked_member_dirs
+        fetch_path("check", "forbidden_tracked_member_dirs") || []
+      end
+
+      def check_forbidden_tracked_member_dirs_except
+        fetch_path("check", "forbidden_tracked_member_dirs_except") || []
+      end
+
+      def check_readme_links
+        fetch_path("check", "readme_links") || {}
+      end
+
+      def changelog_mode
+        fetch_path("changelog", "mode") || "member"
+      end
+
+      def shared_changelog?
+        changelog_mode == "root"
+      end
+
+      def changelog_path
+        fetch_path("changelog", "path") || "CHANGELOG.md"
+      end
+
+      def changelog_version_file
+        fetch_path("changelog", "version_file")
+      end
+
+      def changelog_workdir(_member = nil)
+        shared_changelog? ? root : nil
+      end
+
+      def changelog_full_path(member)
+        File.expand_path(changelog_path, shared_changelog? ? root : member.root)
+      end
+
+      def changelog_env
+        return {} unless changelog_version_file
+
+        {"K_CHANGELOG_VERSION_FILE" => changelog_version_file.to_s}
+      end
+
       def template_command
         fetch_path("template", "command") || command_for("template")
       end
@@ -116,6 +174,18 @@ module Kettle
 
       def release_publish_command
         fetch_path("release", "publish_command") || command_for("release_publish") || "bundle exec kettle-release"
+      end
+
+      def release_env
+        stringify_env(fetch_path("release", "env") || {})
+      end
+
+      def release_family_changelog?
+        fetch_path("release", "family_changelog", "enabled") == true
+      end
+
+      def release_family_changelog_command
+        fetch_path("release", "family_changelog", "command") || "bundle exec kettle-changelog"
       end
 
       def release_tag_command
@@ -159,6 +229,10 @@ module Kettle
         else
           value
         end
+      end
+
+      def stringify_env(value)
+        stringify_keys(value).to_h { |key, item| [key.to_s, item.to_s] }
       end
     end
   end

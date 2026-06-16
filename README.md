@@ -142,6 +142,36 @@ members:
     - "**/vendor/**"
 ```
 
+Monorepo families whose member gems share release metadata from the repository
+root can configure readiness and changelog ownership explicitly:
+
+```yaml
+check:
+  required_files:
+    - Gemfile
+    - Rakefile
+    - README.md
+    - LICENSE.md
+  required_bins:
+    - bin/rake
+    - bin/rspec
+  root_required_files:
+    - CHANGELOG.md
+    - SECURITY.md
+
+changelog:
+  mode: root
+  path: CHANGELOG.md
+  version_file: gems/tree_haver/lib/tree_haver/version.rb
+
+release:
+  env:
+    KETTLE_RB_DEV: false
+  family_changelog:
+    enabled: true
+    command: bundle exec kettle-changelog
+```
+
 For a flat repository that releases from multiple long-lived branches, list the
 release branches under `release.target_branches`. The branch list is processed
 in order. Each branch must be clean enough for `git checkout`, and each branch

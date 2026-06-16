@@ -34,6 +34,40 @@ RSpec.describe Kettle::Family::ReadinessCheck do
     expect(result.stdout).to include("local path remote")
   end
 
+  it "uses configured member and root readiness requirements" do
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      check:
+        required_files:
+          - Gemfile
+          - Rakefile
+          - README.md
+          - LICENSE.md
+        required_bins:
+          - bin/rake
+        root_required_files:
+          - CHANGELOG.md
+        member_required_dirs:
+          - docs
+        readme_links:
+          CHANGELOG.md: CHANGELOG.md
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    root = File.join(@tmpdir, "alpha")
+    FileUtils.mkdir_p([File.join(root, "bin"), File.join(root, "docs")])
+    %w[Gemfile Rakefile README.md LICENSE.md].each do |path|
+      File.write(File.join(root, path), path == "README.md" ? "../CHANGELOG.md\n" : "stub\n")
+    end
+    rake = File.join(root, "bin", "rake")
+    File.write(rake, "#!/bin/sh\n")
+    FileUtils.chmod("u+x", rake)
+    member = Kettle::Family::Member.new(name: "alpha", root: root, gemspec_path: nil, version: "1.0.0", dependencies: [])
+
+    result = described_class.call(member: member, config: config)
+
+    expect(result).to be_ok
+  end
+
   def ready_member(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))

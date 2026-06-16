@@ -54,14 +54,14 @@ module Kettle
       attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures
 
       def check_results
-        members.map { |member| ReadinessCheck.call(member: member) }
+        members.map { |member| ReadinessCheck.call(member: member, config: config) }
       end
 
       def release_results
         prompt_for_gem_signing_password if execute && publish && gem_signing_required?
         return branch_target_release_results unless config.release_target_branches.empty?
 
-        release_member_results(members)
+        release_member_results(members, include_family_changelog: true)
       end
 
       def branch_target_release_results
@@ -72,14 +72,18 @@ module Kettle
           break memo unless memo.last.ok?
 
           branch_members = rediscovered_selected_members(selected_names)
-          memo.concat(release_member_results(branch_members))
+          memo.concat(release_member_results(branch_members, include_family_changelog: true))
           break memo unless memo.last&.ok?
         end
       end
 
-      def release_member_results(release_members)
+      def release_member_results(release_members, include_family_changelog: false)
         runner = command_runner
-        release_members.each_with_object([]) do |member, memo|
+        results = []
+        append_family_changelog_result(runner: runner, memo: results) if include_family_changelog
+        return results unless results.all?(&:ok?)
+
+        release_members.each_with_object(results) do |member, memo|
           if skip_already_released?(member)
             memo << already_released_result(member)
             next
@@ -121,8 +125,19 @@ module Kettle
       end
 
       def append_release_internal_checks(member:, memo:)
-        memo << ReadinessCheck.call(member: member)
-        memo << ChangelogCheck.call(member: member) if memo.last.ok?
+        memo << ReadinessCheck.call(member: member, config: config)
+        memo << ChangelogCheck.call(member: member, config: config) if memo.last.ok?
+      end
+
+      def append_family_changelog_result(runner:, memo:)
+        return unless config.release_family_changelog?
+
+        memo << runner.call(
+          member: family_member,
+          phase: "family_changelog",
+          command: config.release_family_changelog_command,
+          env: release_env.merge(config.changelog_env)
+        )
       end
 
       def release_phase
@@ -155,7 +170,9 @@ module Kettle
       end
 
       def release_env
-        continue_ci_failures ? {"K_RELEASE_CI_CONTINUE" => "true"} : {}
+        env = config.release_env.dup
+        env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures
+        env
       end
 
       def append_release_git_phases(member:, runner:, memo:)

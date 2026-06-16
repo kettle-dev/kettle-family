@@ -31,6 +31,21 @@ RSpec.describe Kettle::Family::ChangelogCheck do
     expect(incomplete.stdout).to include("missing Unreleased")
   end
 
+  it "can validate a root changelog for member gems" do
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      changelog:
+        mode: root
+        path: CHANGELOG.md
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    result = described_class.call(member: member, config: config)
+
+    expect(result).to be_ok
+  end
+
   def member_at(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)

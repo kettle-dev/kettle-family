@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Added configurable readiness checks, root/shared changelog support, release
+  environment overrides, and an optional family changelog release phase for
+  monorepo gem families whose members share root release metadata.
+
 ### Changed
 
 ### Deprecated

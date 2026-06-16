@@ -117,4 +117,52 @@ RSpec.describe Kettle::Family::Config do
 
     expect(config.release_publish_command).to eq("bundle exec kettle-release")
   end
+
+  it "loads configurable checks, shared changelog, and release env" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      check:
+        required_files:
+          - Gemfile
+          - Rakefile
+        required_bins:
+          - bin/rake
+        root_required_files:
+          - CHANGELOG.md
+        member_required_dirs:
+          - docs
+        forbidden_tracked_member_dirs:
+          - .github
+        forbidden_tracked_member_dirs_except:
+          - kettle-jem
+        readme_links:
+          CHANGELOG.md: CHANGELOG.md
+      changelog:
+        mode: root
+        path: CHANGELOG.md
+        version_file: gems/tree_haver/lib/tree_haver/version.rb
+      release:
+        env:
+          KETTLE_RB_DEV: false
+          TREE_SITTER_LANGUAGE_PACK_DEV: ""
+        family_changelog:
+          enabled: true
+          command: bundle exec kettle-changelog
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.check_required_files).to eq(%w[Gemfile Rakefile])
+    expect(config.check_required_bins).to eq(["bin/rake"])
+    expect(config.check_root_required_files).to eq(["CHANGELOG.md"])
+    expect(config.check_member_required_dirs).to eq(["docs"])
+    expect(config.check_forbidden_tracked_member_dirs).to eq([".github"])
+    expect(config.check_forbidden_tracked_member_dirs_except).to eq(["kettle-jem"])
+    expect(config.check_readme_links).to eq("CHANGELOG.md" => "CHANGELOG.md")
+    expect(config.shared_changelog?).to be(true)
+    expect(config.changelog_full_path(double(root: File.join(@tmpdir, "gems", "alpha")))).to eq(File.join(@tmpdir, "CHANGELOG.md"))
+    expect(config.changelog_env).to eq("K_CHANGELOG_VERSION_FILE" => "gems/tree_haver/lib/tree_haver/version.rb")
+    expect(config.release_env).to eq("KETTLE_RB_DEV" => "false", "TREE_SITTER_LANGUAGE_PACK_DEV" => "")
+    expect(config.release_family_changelog?).to be(true)
+    expect(config.release_family_changelog_command).to eq("bundle exec kettle-changelog")
+  end
 end
