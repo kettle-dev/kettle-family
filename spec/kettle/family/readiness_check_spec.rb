@@ -56,7 +56,7 @@ RSpec.describe Kettle::Family::ReadinessCheck do
     root = File.join(@tmpdir, "alpha")
     FileUtils.mkdir_p([File.join(root, "bin"), File.join(root, "docs")])
     %w[Gemfile Rakefile README.md LICENSE.md].each do |path|
-      File.write(File.join(root, path), path == "README.md" ? "../CHANGELOG.md\n" : "stub\n")
+      File.write(File.join(root, path), (path == "README.md") ? "../CHANGELOG.md\n" : "stub\n")
     end
     rake = File.join(root, "bin", "rake")
     File.write(rake, "#!/bin/sh\n")

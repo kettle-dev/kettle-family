@@ -240,13 +240,15 @@
 18
 19
 20
-21</pre>
+21
+22</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 17</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+  <span class='kw'>return</span> <span class='lbracket'>[</span><span class='id identifier rubyid_check_family_changelog'>check_family_changelog</span><span class='rbracket'>]</span> <span class='kw'>if</span> <span class='id identifier rubyid_shared_changelog?'>shared_changelog?</span>
 
   <span class='id identifier rubyid_members'>members</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span> <span class='id identifier rubyid_check_member'>check_member</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
 <span class='kw'>end</span></pre>
@@ -260,7 +262,7 @@
 </div>
 
       <div id="footer">
-  Generated on Sun Jun 14 01:07:54 2026 by
+  Generated on Tue Jun 16 17:21:34 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

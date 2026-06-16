@@ -331,6 +331,35 @@ members:
     - &quot;**/vendor/**&quot;
 </code></pre>
 
+<p>Monorepo families whose member gems share release metadata from the repository<br>
+root can configure readiness and changelog ownership explicitly:</p>
+
+<pre class="code language-yaml"><code class="language-yaml">check:
+  required_files:
+    - Gemfile
+    - Rakefile
+    - README.md
+    - LICENSE.md
+  required_bins:
+    - bin/rake
+    - bin/rspec
+  root_required_files:
+    - CHANGELOG.md
+    - SECURITY.md
+
+changelog:
+  mode: root
+  path: CHANGELOG.md
+  version_file: gems/tree_haver/lib/tree_haver/version.rb
+
+release:
+  env:
+    KETTLE_RB_DEV: false
+  family_changelog:
+    enabled: true
+    command: bundle exec kettle-changelog
+</code></pre>
+
 <p>For a flat repository that releases from multiple long-lived branches, list the<br>
 release branches under <code>release.target_branches</code>. The branch list is processed<br>
 in order. Each branch must be clean enough for <code>git checkout</code>, and each branch<br>
@@ -551,7 +580,7 @@ Please consider sponsoring me or the project.</p>
 </div></div>
 
       <div id="footer">
-  Generated on Sun Jun 14 01:21:08 2026 by
+  Generated on Tue Jun 16 17:21:34 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

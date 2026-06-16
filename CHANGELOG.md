@@ -20,10 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Added configurable readiness checks, root/shared changelog support, release
-  environment overrides, and an optional family changelog release phase for
-  monorepo gem families whose members share root release metadata.
-
 ### Changed
 
 ### Deprecated
@@ -33,6 +29,19 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.1.4] - 2026-06-16
+
+- TAG: [v0.1.4][0.1.4t]
+- COVERAGE: 93.72% -- 1060/1131 lines in 19 files
+- BRANCH COVERAGE: 76.12% -- 322/423 branches in 19 files
+- 40.14% documented
+
+### Added
+
+- Added configurable readiness checks, root/shared changelog support, release
+  environment overrides, and an optional family changelog release phase for
+  monorepo gem families whose members share root release metadata.
 
 ## [0.1.3] - 2026-06-14
 
@@ -126,7 +135,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/kettle-dev/kettle-family/compare/v0.1.3...v0.1.4
+[0.1.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.4
 [0.1.3]: https://github.com/kettle-dev/kettle-family/compare/v0.1.2...v0.1.3
 [0.1.3t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.3
 [0.1.2]: https://github.com/kettle-dev/kettle-family/compare/v0.1.1...v0.1.2

@@ -2,5 +2,9 @@
   "Appraisals:426052147": [
     [12, 30, 11, "Style/HashSyntax: Use the new Ruby 1.9 hash syntax.", 476532049],
     [12, 64, 12, "Style/HashSyntax: Use the new Ruby 1.9 hash syntax.", 3823002898]
+  ],
+  "lib/kettle/family/release_state_check.rb:1855295529": [
+    [172, 38, 34, "Performance/StartWith: Use `String#start_with?` instead of a regex match anchored to the beginning of the string.", 1446539429],
+    [176, 48, 22, "Performance/StartWith: Use `String#start_with?` instead of a regex match anchored to the beginning of the string.", 1519390066]
   ]
 }
