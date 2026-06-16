@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Fixed the Ruby 3.2 CI appraisal so root changelog release-state checks have
+  Prism available.
+
 ### Security
 
 ## [0.1.4] - 2026-06-16

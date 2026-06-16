@@ -69,6 +69,7 @@ end
 
 appraise "ruby-3-2" do
   eval_gemfile "modular/json/truffleruby_23_1.gemfile"
+  eval_gemfile "modular/prism/mri_3_2.gemfile"
   eval_gemfile "modular/x_std_libs/r3/libs.gemfile"
 end
 
