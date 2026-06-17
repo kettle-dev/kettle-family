@@ -20,13 +20,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Added `kettle-family install` to build and install selected local family gems,
-  including config-defined `install.local_dependencies` resolved relative to the
-  `.kettle-family.yml` file.
-
 ### Changed
-
-- Development dependency `kettle-dev` now requires 2.2.10 or newer.
 
 ### Deprecated
 
@@ -35,6 +29,23 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.1.5] - 2026-06-17
+
+- TAG: [v0.1.5][0.1.5t]
+- COVERAGE: 94.24% -- 1162/1233 lines in 20 files
+- BRANCH COVERAGE: 77.32% -- 358/463 branches in 20 files
+- 39.73% documented
+
+### Added
+
+- Added `kettle-family install` to build and install selected local family gems,
+  including config-defined `install.local_dependencies` resolved relative to the
+  `.kettle-family.yml` file.
+
+### Changed
+
+- Development dependency `kettle-dev` now requires 2.2.10 or newer.
 
 ## [0.1.4] - 2026-06-16
 
@@ -146,7 +157,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/kettle-dev/kettle-family/compare/v0.1.4...v0.1.5
+[0.1.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.5
 [0.1.4]: https://github.com/kettle-dev/kettle-family/compare/v0.1.3...v0.1.4
 [0.1.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.4
 [0.1.3]: https://github.com/kettle-dev/kettle-family/compare/v0.1.2...v0.1.3
