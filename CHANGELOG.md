@@ -28,9 +28,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Fixed the Ruby 3.2 CI appraisal so root changelog release-state checks have
-  Prism available.
-
 ### Security
 
 ## [0.1.4] - 2026-06-16
@@ -45,6 +42,11 @@ Please file a bug if you notice a violation of semantic versioning.
 - Added configurable readiness checks, root/shared changelog support, release
   environment overrides, and an optional family changelog release phase for
   monorepo gem families whose members share root release metadata.
+
+### Fixed
+
+- Fixed the Ruby 3.2 CI appraisal so root changelog release-state checks have
+  Prism available.
 
 ## [0.1.3] - 2026-06-14
 
