@@ -112,6 +112,23 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_target_branches).to eq(["r3_2-even-v24"])
   end
 
+  it "resolves install local dependencies relative to the config file" do
+    FileUtils.mkdir_p(File.join(@tmpdir, "config"))
+    File.write(File.join(@tmpdir, "config", "family.yml"), <<~YAML)
+      install:
+        local_dependencies:
+          - ../deps/token-resolver
+          - path: /absolute/example
+    YAML
+
+    config = described_class.load(root: @tmpdir, path: "config/family.yml")
+
+    expect(config.install_local_dependencies).to eq([
+      File.join(@tmpdir, "deps", "token-resolver"),
+      "/absolute/example"
+    ])
+  end
+
   it "defaults publish releases to kettle-release" do
     config = described_class.load(root: @tmpdir)
 

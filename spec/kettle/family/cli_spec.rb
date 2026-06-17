@@ -108,6 +108,25 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("pass --execute")
   end
 
+  it "plans local dependency installs before selected family members" do
+    write_gem("alpha")
+    dep_root = File.join(@tmpdir, "deps", "token-resolver")
+    write_gem_at(dep_root, "token-resolver")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      install:
+        local_dependencies:
+          - deps/token-resolver
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["install", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("skipped token-resolver install")
+    expect(out.string).to include("skipped alpha install")
+    expect(out.string.index("token-resolver install")).to be < out.string.index("alpha install")
+  end
+
   it "returns failure status for readiness check failures" do
     write_gem("alpha")
     out = StringIO.new
@@ -263,6 +282,10 @@ RSpec.describe Kettle::Family::CLI do
 
   def write_gem(name, dependencies: [], license: nil, authors: [], required_ruby_version: nil)
     root = File.join(@tmpdir, name)
+    write_gem_at(root, name, dependencies: dependencies, license: license, authors: authors, required_ruby_version: required_ruby_version)
+  end
+
+  def write_gem_at(root, name, dependencies: [], license: nil, authors: [], required_ruby_version: nil)
     FileUtils.mkdir_p(File.join(root, "lib", name))
     File.write(File.join(root, "lib", name, "version.rb"), <<~RUBY)
       module #{name.capitalize}

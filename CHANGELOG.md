@@ -20,7 +20,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Added `kettle-family install` to build and install selected local family gems,
+  including config-defined `install.local_dependencies` resolved relative to the
+  `.kettle-family.yml` file.
+
 ### Changed
+
+- Development dependency `kettle-dev` now requires 2.2.10 or newer.
 
 ### Deprecated
 

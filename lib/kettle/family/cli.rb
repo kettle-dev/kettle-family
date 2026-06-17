@@ -6,7 +6,7 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan report metadata check test lint docs template bump-version release branch-lanes release-state].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template install bump-version release branch-lanes release-state].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
@@ -59,6 +59,7 @@ module Kettle
               lint            Plan or execute configured lint command per member
               docs            Plan or execute configured docs command per member
               template        Plan or execute kettle-jem templating per member
+              install         Build and install selected local family gems
               bump-version    Check, plan, or execute family version alignment
               release         Plan or execute release build/publish phases
               branch-lanes    Audit configured branch lane release mappings
@@ -140,7 +141,9 @@ module Kettle
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
         members = Discovery.new(config: config).members
-        ordered = if %w[metadata release-state].include?(command)
+        ordered = if command == "install"
+          install_order(members, config)
+        elsif %w[metadata release-state].include?(command)
           members.sort_by(&:name)
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
@@ -170,6 +173,7 @@ module Kettle
         return bump_version_results(members: members, options: options) if command == "bump-version"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members) if command == "release-state"
+        return install_results(config: config, members: members, options: options) if command == "install"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
         Workflow.new(
@@ -208,8 +212,19 @@ module Kettle
         BranchLaneAudit.new(config: config, members: members).results
       end
 
+      def install_results(config:, members:, options:)
+        LocalInstall.new(config: config, members: members, execute: options[:execute]).results
+      end
+
       def release_state_results(config:, members:)
         ReleaseStateCheck.new(config: config, members: members).results
+      end
+
+      def install_order(members, config)
+        by_name = members.to_h { |member| [member.name, member] }
+        hinted = config.order_hints.filter_map { |name| by_name[name] }
+        hinted_names = hinted.map(&:name)
+        hinted + members.reject { |member| hinted_names.include?(member.name) }.sort_by(&:name)
       end
 
       def write_report(report, options)

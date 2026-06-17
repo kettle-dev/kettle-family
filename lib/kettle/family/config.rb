@@ -168,6 +168,14 @@ module Kettle
         fetch_path("template", "normalize_lockfiles_command") || "bundle lock"
       end
 
+      def install_local_dependencies
+        paths = fetch_path("install", "local_dependencies") || fetch_path("local_dependencies") || []
+        Array(paths).map do |entry|
+          value = entry.is_a?(Hash) ? stringify_keys(entry).fetch("path") : entry
+          expand_config_relative_path(value)
+        end
+      end
+
       def release_build_command
         fetch_path("release", "build_command") || command_for("release_build") || "bundle exec rake build"
       end
@@ -205,6 +213,17 @@ module Kettle
       end
 
       private
+
+      def expand_config_relative_path(value)
+        text = value.to_s
+        return text if text.start_with?("/")
+
+        File.expand_path(text, config_dir)
+      end
+
+      def config_dir
+        path ? File.dirname(path) : root
+      end
 
       def sibling_member_roots
         Dir.children(root)
