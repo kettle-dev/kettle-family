@@ -40,7 +40,7 @@ RSpec.describe Kettle::Family::Workflow do
       command: [
         RbConfig.ruby,
         "-e",
-        "puts [ENV['K_JEM_TEMPLATING'], ENV['KETTLE_JEM_TEMPLATE_PROFILE'], ENV['KJ_REPOSITORY_TOPOLOGY']].join('/')",
+        "puts [ENV['KETTLE_JEM_TEMPLATE_PROFILE'], ENV['KJ_REPOSITORY_TOPOLOGY']].join('/')",
         "--",
         "--skip-commit"
       ]
@@ -50,7 +50,43 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
-    expect(results.fetch(1).stdout).to eq("true/full/standalone\n")
+    expect(results.fetch(1).stdout).to eq("full/standalone\n")
+  end
+
+  it "passes explicit environment overrides through member mise execution" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nK_JEM_TEMPLATING = \"false\"\n")
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      env_overrides: {
+        "K_JEM_TEMPLATING" => "true",
+        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems"
+      }
+    ).results
+
+    expect(results.fetch(1).command).to eq(
+      [
+        "mise",
+        "exec",
+        "-C",
+        member.root,
+        "--",
+        "env",
+        "KETTLE_JEM_TEMPLATE_PROFILE=full",
+        "KJ_REPOSITORY_TOPOLOGY=standalone",
+        "K_JEM_TEMPLATING=true",
+        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "bundle",
+        "exec",
+        "kettle-jem",
+        "install"
+      ]
+    )
   end
 
   def write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])

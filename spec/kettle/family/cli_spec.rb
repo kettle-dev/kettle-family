@@ -149,6 +149,55 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).not_to include("family_commit")
   end
 
+  it "plans workflow environment overrides after mise" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", "mise.toml"), "[env]\nK_JEM_TEMPLATING = \"false\"\n")
+    out = StringIO.new
+
+    status = described_class.call(
+      [
+        "template",
+        "--root",
+        @tmpdir,
+        "--env",
+        "K_JEM_TEMPLATING=true",
+        "--env",
+        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "--json"
+      ],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    command = JSON.parse(out.string).fetch("results").first.fetch("command")
+    expect(command).to eq(
+      [
+        "mise",
+        "exec",
+        "-C",
+        File.join(@tmpdir, "alpha"),
+        "--",
+        "env",
+        "K_JEM_TEMPLATING=true",
+        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "sh",
+        "-lc",
+        "bundle exec kettle-jem install"
+      ]
+    )
+  end
+
+  it "rejects invalid workflow environment overrides" do
+    write_gem("alpha")
+    err = StringIO.new
+
+    status = described_class.call(["template", "--root", @tmpdir, "--env", "not-valid"], out: StringIO.new, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("--env requires KEY=VALUE")
+  end
+
   it "checks version bumps without writing", :prism do
     write_gem("alpha")
     out = StringIO.new

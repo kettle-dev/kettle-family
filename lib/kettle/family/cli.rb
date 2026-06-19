@@ -74,6 +74,7 @@ module Kettle
               --report PATH    Write JSON report to PATH
               --execute        Execute external workflow commands
               --dry-run        Plan external workflow commands without running them (default)
+              --env KEY=VALUE  Override an environment variable for each member workflow command
               --check          Check whether bump-version would need edits
               --from VERSION   Require selected members to currently match VERSION
               --publish        Use publish release command instead of build command
@@ -101,6 +102,7 @@ module Kettle
           json: false,
           report: nil,
           execute: false,
+          workflow_env: {},
           check: false,
           from_version: nil,
           publish: false,
@@ -121,6 +123,7 @@ module Kettle
           parser.on("--report PATH") { |value| options[:report] = value }
           parser.on("--execute") { options[:execute] = true }
           parser.on("--dry-run") { options[:execute] = false }
+          parser.on("--env KEY=VALUE") { |value| parse_env_override(value, options[:workflow_env]) }
           parser.on("--check") { options[:check] = true }
           parser.on("--from VERSION") { |value| options[:from_version] = value }
           parser.on("--publish") { options[:publish] = true }
@@ -188,8 +191,17 @@ module Kettle
           tag: options[:tag],
           start_step: options[:release_start_step],
           local_ci: options[:release_local_ci],
-          continue_ci_failures: options[:release_continue_ci_failures]
+          continue_ci_failures: options[:release_continue_ci_failures],
+          env_overrides: options[:workflow_env]
         ).results
+      end
+
+      def parse_env_override(value, env)
+        key, env_value = value.split("=", 2)
+        raise OptionParser::InvalidArgument, "--env requires KEY=VALUE" if key.to_s.empty? || env_value.nil?
+        raise OptionParser::InvalidArgument, "invalid environment variable name #{key.inspect}" unless key.match?(/\A[A-Za-z_][A-Za-z0-9_]*\z/)
+
+        env[key] = env_value
       end
 
       def bump_version_results(members:, options:)

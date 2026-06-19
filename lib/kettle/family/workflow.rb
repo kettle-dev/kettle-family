@@ -15,7 +15,7 @@ module Kettle
         "docs" => "bundle exec rake yard"
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false)
+      def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {})
         @command = command
         @config = config
         @members = members
@@ -28,6 +28,7 @@ module Kettle
         @start_step = start_step
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
+        @env_overrides = env_overrides
         @gem_signing_password = nil
       end
 
@@ -53,7 +54,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures
+      attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :env_overrides
 
       def check_results
         members.map { |member| ReadinessCheck.call(member: member, config: config) }
@@ -253,12 +254,12 @@ module Kettle
       end
 
       def workflow_env
-        return {} unless command == "template"
-
         {}.tap do |env|
-          env["K_JEM_TEMPLATING"] = "true"
-          env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
-          env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
+          if command == "template"
+            env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
+            env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
+          end
+          env.merge!(env_overrides)
         end
       end
 
