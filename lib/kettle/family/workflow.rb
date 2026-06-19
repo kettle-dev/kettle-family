@@ -37,11 +37,16 @@ module Kettle
         runner = CommandRunner.new(execute: execute)
         command_text = workflow_command
         results = members.each_with_object([]) do |member, memo|
+          if command == "template" && config.normalize_lockfiles?
+            normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
+            break memo unless memo.last.ok?
+          end
+
           result = runner.call(member: member, phase: command, command: command_text, env: workflow_env)
           memo << result
           break memo unless result.ok?
 
-          normalize_lockfiles(member: member, runner: runner, memo: memo) if command == "template"
+          normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
         end
         results
       end
@@ -251,17 +256,18 @@ module Kettle
         return {} unless command == "template"
 
         {}.tap do |env|
+          env["K_JEM_TEMPLATING"] = "true"
           env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
           env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
         end
       end
 
-      def normalize_lockfiles(member:, runner:, memo:)
+      def normalize_lockfiles(member:, runner:, memo:, phase:)
         return unless config.normalize_lockfiles?
 
         result = runner.call(
           member: member,
-          phase: "normalize_lockfiles",
+          phase: phase,
           command: config.normalize_lockfiles_command
         )
         memo << result

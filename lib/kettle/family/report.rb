@@ -72,6 +72,7 @@ module Kettle
         results.each do |result|
           lines << "  #{result_state(result)} #{result.member_name} #{result.phase} #{result.reason || ""}".rstrip
           lines << "    #{result.stdout}" unless result.stdout.to_s.empty?
+          lines << "    #{result.stderr}" if !result.ok? && !result.stderr.to_s.empty?
           lines << "    resume: #{resume_hint_for(result)}" unless result.ok?
         end
       end

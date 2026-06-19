@@ -19,8 +19,8 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member]).results
 
-    expect(results.map(&:phase)).to eq(%w[template normalize_lockfiles])
-    expect(results.first.command).not_to include("--skip-commit")
+    expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles])
+    expect(results.fetch(1).command).not_to include("--skip-commit")
     expect(results).to all(satisfy(&:skipped))
   end
 
@@ -31,8 +31,8 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], commit: false).results
 
-    expect(results.map(&:phase)).to eq(%w[template normalize_lockfiles])
-    expect(results.first.command).to end_with("--skip-commit")
+    expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles])
+    expect(results.fetch(1).command).to end_with("--skip-commit")
   end
 
   it "passes template profile and repository topology environment when executing" do
@@ -40,7 +40,7 @@ RSpec.describe Kettle::Family::Workflow do
       command: [
         RbConfig.ruby,
         "-e",
-        "puts [ENV['KETTLE_JEM_TEMPLATE_PROFILE'], ENV['KJ_REPOSITORY_TOPOLOGY']].join('/')",
+        "puts [ENV['K_JEM_TEMPLATING'], ENV['KETTLE_JEM_TEMPLATE_PROFILE'], ENV['KJ_REPOSITORY_TOPOLOGY']].join('/')",
         "--",
         "--skip-commit"
       ]
@@ -50,7 +50,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
-    expect(results.first.stdout).to eq("full/standalone\n")
+    expect(results.fetch(1).stdout).to eq("true/full/standalone\n")
   end
 
   def write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])
