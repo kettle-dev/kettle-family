@@ -11,14 +11,15 @@ module Kettle
       end
 
       def call(member:, phase:, command:, env: {}, interactive: false)
-        argv = command_argv(member: member, command: command)
+        argv = command_argv(member: member, command: command, env: env)
+        process_env = process_env(member: member, env: env)
         return skipped_result(member: member, phase: phase, argv: argv) unless execute
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         stdout, stderr, status = if interactive
-          run_interactive(env: env, argv: argv, chdir: member.root)
+          run_interactive(env: process_env, argv: argv, chdir: member.root)
         else
-          Open3.capture3(env, *argv, chdir: member.root)
+          Open3.capture3(process_env, *argv, chdir: member.root)
         end
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         CommandResult.new(
@@ -130,11 +131,21 @@ module Kettle
         chunk.match?(/pass(?:\s|-)?phrase|PEM password|private key password/i)
       end
 
-      def command_argv(member:, command:)
+      def command_argv(member:, command:, env: {})
         argv = normalize_command(command)
         return argv unless File.file?(File.join(member.root, "mise.toml"))
 
-        ["mise", "exec", "-C", member.root, "--", *argv]
+        injected_env = env.map { |key, value| "#{key}=#{value}" }
+        mise_argv = ["mise", "exec", "-C", member.root, "--"]
+        return [*mise_argv, *argv] if injected_env.empty?
+
+        [*mise_argv, "env", *injected_env, *argv]
+      end
+
+      def process_env(member:, env:)
+        return env unless File.file?(File.join(member.root, "mise.toml"))
+
+        {}
       end
 
       def normalize_command(command)

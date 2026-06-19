@@ -32,6 +32,34 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.command).to start_with("mise", "exec", "-C", member.root, "--")
   end
 
+  it "injects workflow env after mise so member config cannot override it" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nK_JEM_TEMPLATING = \"false\"\n")
+
+    result = described_class.new.call(
+      member: member,
+      phase: "template",
+      command: ["bundle", "exec", "kettle-jem", "install"],
+      env: {"K_JEM_TEMPLATING" => "true"}
+    )
+
+    expect(result.command).to eq(
+      [
+        "mise",
+        "exec",
+        "-C",
+        member.root,
+        "--",
+        "env",
+        "K_JEM_TEMPLATING=true",
+        "bundle",
+        "exec",
+        "kettle-jem",
+        "install"
+      ]
+    )
+  end
+
   it "executes commands when requested" do
     member = member_at("alpha")
 
