@@ -260,20 +260,22 @@
 34
 35
 36
-37</pre>
+37
+38</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 13</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>member:</span><span class='comma'>,</span> <span class='label'>phase:</span><span class='comma'>,</span> <span class='label'>command:</span><span class='comma'>,</span> <span class='label'>env:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>interactive:</span> <span class='kw'>false</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_argv'>argv</span> <span class='op'>=</span> <span class='id identifier rubyid_command_argv'>command_argv</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>command:</span> <span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_argv'>argv</span> <span class='op'>=</span> <span class='id identifier rubyid_command_argv'>command_argv</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>command:</span> <span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='label'>env:</span> <span class='id identifier rubyid_env'>env</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_process_env'>process_env</span> <span class='op'>=</span> <span class='id identifier rubyid_process_env'>process_env</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>env:</span> <span class='id identifier rubyid_env'>env</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_skipped_result'>skipped_result</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>phase:</span> <span class='id identifier rubyid_phase'>phase</span><span class='comma'>,</span> <span class='label'>argv:</span> <span class='id identifier rubyid_argv'>argv</span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='id identifier rubyid_execute'>execute</span>
 
   <span class='id identifier rubyid_started'>started</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_stdout'>stdout</span><span class='comma'>,</span> <span class='id identifier rubyid_stderr'>stderr</span><span class='comma'>,</span> <span class='id identifier rubyid_status'>status</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='id identifier rubyid_interactive'>interactive</span>
-    <span class='id identifier rubyid_run_interactive'>run_interactive</span><span class='lparen'>(</span><span class='label'>env:</span> <span class='id identifier rubyid_env'>env</span><span class='comma'>,</span> <span class='label'>argv:</span> <span class='id identifier rubyid_argv'>argv</span><span class='comma'>,</span> <span class='label'>chdir:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_run_interactive'>run_interactive</span><span class='lparen'>(</span><span class='label'>env:</span> <span class='id identifier rubyid_process_env'>process_env</span><span class='comma'>,</span> <span class='label'>argv:</span> <span class='id identifier rubyid_argv'>argv</span><span class='comma'>,</span> <span class='label'>chdir:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='rparen'>)</span>
   <span class='kw'>else</span>
-    <span class='const'>Open3</span><span class='period'>.</span><span class='id identifier rubyid_capture3'>capture3</span><span class='lparen'>(</span><span class='id identifier rubyid_env'>env</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='comma'>,</span> <span class='label'>chdir:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='rparen'>)</span>
+    <span class='const'>Open3</span><span class='period'>.</span><span class='id identifier rubyid_capture3'>capture3</span><span class='lparen'>(</span><span class='id identifier rubyid_process_env'>process_env</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='comma'>,</span> <span class='label'>chdir:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='rparen'>)</span>
   <span class='kw'>end</span>
   <span class='id identifier rubyid_elapsed'>elapsed</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span> <span class='op'>-</span> <span class='id identifier rubyid_started'>started</span>
   <span class='const'><span class='object_link'><a href="CommandResult.html" title="Kettle::Family::CommandResult (class)">CommandResult</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
@@ -300,7 +302,7 @@
 </div>
 
       <div id="footer">
-  Generated on Mon Jun  8 02:38:18 2026 by
+  Generated on Thu Jun 18 23:27:41 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

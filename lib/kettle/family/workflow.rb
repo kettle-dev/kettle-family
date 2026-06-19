@@ -37,7 +37,7 @@ module Kettle
         return release_results if command == "release"
         runner = CommandRunner.new(execute: execute)
         command_text = workflow_command
-        results = members.each_with_object([]) do |member, memo|
+        members.each_with_object([]) do |member, memo|
           if command == "template" && config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
             break memo unless memo.last.ok?
@@ -49,7 +49,6 @@ module Kettle
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
         end
-        results
       end
 
       private

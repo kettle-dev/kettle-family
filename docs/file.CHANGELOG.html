@@ -70,7 +70,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.5...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.6...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
 
@@ -84,6 +84,34 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="security">Security</h3>
 
+<h2 id="016---2026-06-18">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.5...v0.1.6">0.1.6</a> - 2026-06-18</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.6">v0.1.6</a>
+</li>
+  <li>COVERAGE: 94.12% – 1169/1242 lines in 20 files</li>
+  <li>BRANCH COVERAGE: 76.97% – 361/469 branches in 20 files</li>
+  <li>39.73% documented</li>
+</ul>
+
+<h3 id="changed-1">Changed</h3>
+
+<ul>
+  <li>
+<code>kettle-family template</code> now lets each member <code>kettle-jem</code> run create its own<br>
+templating commit by default; use <code>--no-commit</code> to pass <code>--skip-commit</code> to<br>
+member templating commands.</li>
+</ul>
+
+<h3 id="added-1">Added</h3>
+
+<ul>
+  <li>Added <code>--env KEY=VALUE</code> workflow overrides so <code>kettle-family</code> commands can<br>
+run a session with explicit environment values after member <code>mise.toml</code><br>
+defaults have loaded.</li>
+</ul>
+
 <h2 id="015---2026-06-17">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.4...v0.1.5">0.1.5</a> - 2026-06-17</h2>
 
@@ -95,7 +123,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-1">Added</h3>
+<h3 id="added-2">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family install</code> to build and install selected local family gems,<br>
@@ -103,7 +131,7 @@ including config-defined <code>install.local_dependencies</code> resolved relati
 <code>.kettle-family.yml</code> file.</li>
 </ul>
 
-<h3 id="changed-1">Changed</h3>
+<h3 id="changed-2">Changed</h3>
 
 <ul>
   <li>Development dependency <code>kettle-dev</code> now requires 2.2.10 or newer.</li>
@@ -120,7 +148,7 @@ including config-defined <code>install.local_dependencies</code> resolved relati
   <li>40.14% documented</li>
 </ul>
 
-<h3 id="added-2">Added</h3>
+<h3 id="added-3">Added</h3>
 
 <ul>
   <li>Added configurable readiness checks, root/shared changelog support, release<br>
@@ -146,7 +174,7 @@ Prism available.</li>
   <li>44.00% documented</li>
 </ul>
 
-<h3 id="changed-2">Changed</h3>
+<h3 id="changed-3">Changed</h3>
 
 <ul>
   <li>Runtime dependency <code>kettle-dev</code> now requires 2.2.8 or newer.</li>
@@ -171,7 +199,7 @@ member’s potentially stale bundle.</li>
 <code>test/</code> directories are ignored.</li>
 </ul>
 
-<h3 id="added-3">Added</h3>
+<h3 id="added-4">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family metadata</code> to report each family member’s version, Ruby<br>
@@ -200,7 +228,7 @@ requirement, licenses, and authors.</li>
   <li>41.80% documented</li>
 </ul>
 
-<h3 id="added-4">Added</h3>
+<h3 id="added-5">Added</h3>
 
 <ul>
   <li>Added configurable member discovery excludes via <code>members.exclude</code> /<br>
@@ -209,7 +237,7 @@ requirement, licenses, and authors.</li>
 family members using <code>kettle-changelog --release-state --json</code>.</li>
 </ul>
 
-<h3 id="changed-3">Changed</h3>
+<h3 id="changed-4">Changed</h3>
 
 <ul>
   <li>Retemplated generated project files with <code>kettle-dev</code> &gt;= 2.2.7.</li>
@@ -236,7 +264,7 @@ loading gemspecs, avoiding fixture load failures in family roots.</li>
   <li>42.34% documented</li>
 </ul>
 
-<h3 id="added-5">Added</h3>
+<h3 id="added-6">Added</h3>
 
 <ul>
   <li>Added the initial <code>kettle-family</code> CLI discovery slice with config loading, gemspec discovery, dependency ordering, selection, and JSON reports.</li>
@@ -264,7 +292,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Wed Jun 17 03:53:02 2026 by
+  Generated on Thu Jun 18 23:27:41 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

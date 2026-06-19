@@ -20,10 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Added `--env KEY=VALUE` workflow overrides so `kettle-family` commands can
-  run a session with explicit environment values after member `mise.toml`
-  defaults have loaded.
-
 ### Changed
 
 ### Deprecated
@@ -46,6 +42,12 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family template` now lets each member `kettle-jem` run create its own
   templating commit by default; use `--no-commit` to pass `--skip-commit` to
   member templating commands.
+
+### Added
+
+- Added `--env KEY=VALUE` workflow overrides so `kettle-family` commands can
+  run a session with explicit environment values after member `mise.toml`
+  defaults have loaded.
 
 ## [0.1.5] - 2026-06-17
 
