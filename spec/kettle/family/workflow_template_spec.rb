@@ -12,16 +12,27 @@ RSpec.describe Kettle::Family::Workflow do
     end
   end
 
-  it "adds skip-commit, template env, lockfile normalization, and family commit plan phases" do
+  it "allows member templating commits by default and adds lockfile normalization" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
 
-    results = described_class.new(command: "template", config: config, members: [member], commit: true).results
+    results = described_class.new(command: "template", config: config, members: [member]).results
 
-    expect(results.map(&:phase)).to eq(%w[template normalize_lockfiles family_commit])
-    expect(results.first.command).to end_with("--skip-commit")
+    expect(results.map(&:phase)).to eq(%w[template normalize_lockfiles])
+    expect(results.first.command).not_to include("--skip-commit")
     expect(results).to all(satisfy(&:skipped))
+  end
+
+  it "passes skip-commit to member templating when commits are disabled" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "template", config: config, members: [member], commit: false).results
+
+    expect(results.map(&:phase)).to eq(%w[template normalize_lockfiles])
+    expect(results.first.command).to end_with("--skip-commit")
   end
 
   it "passes template profile and repository topology environment when executing" do
@@ -40,17 +51,6 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
     expect(results.first.stdout).to eq("full/standalone\n")
-  end
-
-  it "refuses template commit execution when the family worktree starts dirty" do
-    write_template_config
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = member_at("alpha")
-    allow(Kettle::Family::GitStatus).to receive(:dirty?).and_return(true)
-
-    expect do
-      described_class.new(command: "template", config: config, members: [member], execute: true, commit: true).results
-    end.to raise_error(Kettle::Family::Error, /dirty worktree/)
   end
 
   def write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])

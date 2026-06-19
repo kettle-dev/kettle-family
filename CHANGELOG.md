@@ -22,6 +22,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- `kettle-family template` now lets each member `kettle-jem` run create its own
+  templating commit by default; use `--no-commit` to pass `--skip-commit` to
+  member templating commands.
+
 ### Deprecated
 
 ### Removed

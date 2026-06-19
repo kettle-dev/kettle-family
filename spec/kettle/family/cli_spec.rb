@@ -138,15 +138,15 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("resume: kettle-family check --start-at alpha")
   end
 
-  it "plans template commands with family commit" do
+  it "plans template commands with member commits by default" do
     write_gem("alpha")
     out = StringIO.new
 
-    status = described_class.call(["template", "--root", @tmpdir, "--commit"], out: out, err: StringIO.new)
+    status = described_class.call(["template", "--root", @tmpdir], out: out, err: StringIO.new)
 
     expect(status).to eq(0)
     expect(out.string).to include("skipped alpha template")
-    expect(out.string).to include("skipped #{File.basename(@tmpdir)} family_commit")
+    expect(out.string).not_to include("family_commit")
   end
 
   it "checks version bumps without writing", :prism do

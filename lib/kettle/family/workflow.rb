@@ -15,7 +15,7 @@ module Kettle
         "docs" => "bundle exec rake yard"
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, commit: false, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false)
+      def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false)
         @command = command
         @config = config
         @members = members
@@ -34,8 +34,6 @@ module Kettle
       def results
         return check_results if command == "check"
         return release_results if command == "release"
-        guard_family_commit!
-
         runner = CommandRunner.new(execute: execute)
         command_text = workflow_command
         results = members.each_with_object([]) do |member, memo|
@@ -45,7 +43,6 @@ module Kettle
 
           normalize_lockfiles(member: member, runner: runner, memo: memo) if command == "template"
         end
-        append_family_commit(results: results, runner: runner)
         results
       end
 
@@ -229,14 +226,6 @@ module Kettle
         raise Error, "gem signing password is required" if @gem_signing_password.to_s.empty?
       end
 
-      def guard_family_commit!
-        return unless command == "template" && commit && execute
-        return if allow_dirty
-        return unless GitStatus.dirty?(config.root)
-
-        raise Error, "refusing template --commit with dirty worktree; pass --allow-dirty to override"
-      end
-
       def workflow_command
         return template_command if command == "template"
 
@@ -250,6 +239,7 @@ module Kettle
 
       def template_command
         command_text = config.template_command || DEFAULT_COMMANDS.fetch("template")
+        return command_text if commit
         return command_text if command_text.is_a?(Array) && command_text.include?("--skip-commit")
         return [*command_text, "--skip-commit"] if command_text.is_a?(Array)
         return command_text if command_text.include?("--skip-commit")
@@ -275,17 +265,6 @@ module Kettle
           command: config.normalize_lockfiles_command
         )
         memo << result
-      end
-
-      def append_family_commit(results:, runner:)
-        return unless command == "template" && commit
-        return unless results.all?(&:ok?)
-
-        results << runner.call(
-          member: family_member,
-          phase: "family_commit",
-          command: "git add -A && git commit -m 'Apply kettle-family template updates'"
-        )
       end
 
       def family_member

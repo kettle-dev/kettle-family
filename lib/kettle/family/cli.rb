@@ -84,9 +84,9 @@ module Kettle
                                Set K_RELEASE_CI_CONTINUE=true for release commands
               --tag            Add release tag phase
               --push           Add release push phase
-              --commit         Add final family-level git commit phase for template
-              --no-commit      Disable final family-level git commit phase (default)
-              --allow-dirty    Allow template --commit when the family worktree starts dirty
+              --commit         Allow each templated member's kettle-jem run to commit (default)
+              --no-commit      Pass --skip-commit to each templated member's kettle-jem run
+              --allow-dirty    Reserved for compatibility; member repos manage their own commit safety
               --help           Print this help
         HELP
         0
@@ -109,7 +109,7 @@ module Kettle
           release_continue_ci_failures: false,
           tag: false,
           push: false,
-          commit: false,
+          commit: true,
           allow_dirty: false
         }
         OptionParser.new do |parser|
