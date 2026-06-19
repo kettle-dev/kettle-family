@@ -20,11 +20,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-### Changed
+- Added `--env KEY=VALUE` workflow overrides so `kettle-family` commands can
+  run a session with explicit environment values after member `mise.toml`
+  defaults have loaded.
 
-- `kettle-family template` now lets each member `kettle-jem` run create its own
-  templating commit by default; use `--no-commit` to pass `--skip-commit` to
-  member templating commands.
+### Changed
 
 ### Deprecated
 
@@ -33,6 +33,19 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.1.6] - 2026-06-18
+
+- TAG: [v0.1.6][0.1.6t]
+- COVERAGE: 94.12% -- 1169/1242 lines in 20 files
+- BRANCH COVERAGE: 76.97% -- 361/469 branches in 20 files
+- 39.73% documented
+
+### Changed
+
+- `kettle-family template` now lets each member `kettle-jem` run create its own
+  templating commit by default; use `--no-commit` to pass `--skip-commit` to
+  member templating commands.
 
 ## [0.1.5] - 2026-06-17
 
@@ -161,7 +174,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/kettle-dev/kettle-family/compare/v0.1.5...v0.1.6
+[0.1.6t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.6
 [0.1.5]: https://github.com/kettle-dev/kettle-family/compare/v0.1.4...v0.1.5
 [0.1.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.5
 [0.1.4]: https://github.com/kettle-dev/kettle-family/compare/v0.1.3...v0.1.4
