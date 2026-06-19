@@ -183,7 +183,7 @@ RSpec.describe Kettle::Family::CLI do
         "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
         "sh",
         "-lc",
-        "bundle exec kettle-jem install"
+        "kettle-jem install"
       ]
     )
   end

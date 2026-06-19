@@ -60,6 +60,32 @@ RSpec.describe Kettle::Family::CommandRunner do
     )
   end
 
+  it "wraps commands with mise when a member has .tool-versions" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, ".tool-versions"), "ruby 4.0.5\n")
+
+    result = described_class.new.call(
+      member: member,
+      phase: "template",
+      command: ["kettle-jem", "install"],
+      env: {"K_JEM_TEMPLATING" => "true"}
+    )
+
+    expect(result.command).to eq(
+      [
+        "mise",
+        "exec",
+        "-C",
+        member.root,
+        "--",
+        "env",
+        "K_JEM_TEMPLATING=true",
+        "kettle-jem",
+        "install"
+      ]
+    )
+  end
+
   it "executes commands when requested" do
     member = member_at("alpha")
 

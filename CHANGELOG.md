@@ -28,6 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family dependency ordering now ignores development dependencies, preventing
+  false cycles between gems that only reference each other in test or release
+  tooling.
+- `kettle-family template` can bootstrap legacy members that do not yet have
+  generated templating bundle wiring, and member command execution now respects
+  `.tool-versions` mise configuration files.
+
 ### Security
 
 ## [0.1.6] - 2026-06-18

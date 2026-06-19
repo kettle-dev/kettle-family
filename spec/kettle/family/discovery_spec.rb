@@ -22,6 +22,16 @@ RSpec.describe Kettle::Family::Discovery do
     expect(ordered.map(&:name)).to eq(%w[alpha beta])
   end
 
+  it "ignores development dependencies for family ordering" do
+    write_gem("alpha")
+    write_gem("beta", development_dependencies: ["alpha"])
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = described_class.new(config: config).members.find { |candidate| candidate.name == "beta" }
+
+    expect(member.dependencies).to eq([])
+  end
+
   it "applies selection after ordering" do
     write_gem("alpha")
     write_gem("beta", dependencies: ["alpha"])
@@ -228,22 +238,26 @@ RSpec.describe Kettle::Family::Discovery do
       .to raise_error(Kettle::Family::Error, /could not load gemspec/)
   end
 
-  def write_gem(name, dependencies: [])
+  def write_gem(name, dependencies: [], development_dependencies: [])
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
-    write_gemspec(root, name, dependencies: dependencies)
+    write_gemspec(root, name, dependencies: dependencies, development_dependencies: development_dependencies)
   end
 
-  def write_gemspec(root, name, dependencies: [])
+  def write_gemspec(root, name, dependencies: [], development_dependencies: [])
     FileUtils.mkdir_p(root)
     dependency_lines = dependencies.map do |dependency|
       %(  spec.add_dependency "#{dependency}", "= 1.0.0")
+    end
+    development_dependency_lines = development_dependencies.map do |dependency|
+      %(  spec.add_development_dependency "#{dependency}", "= 1.0.0")
     end
     File.write(File.join(root, "#{name}.gemspec"), <<~RUBY)
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "1.0.0"
       #{dependency_lines.join("\n")}
+      #{development_dependency_lines.join("\n")}
       end
     RUBY
   end

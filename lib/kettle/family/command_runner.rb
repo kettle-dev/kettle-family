@@ -133,7 +133,7 @@ module Kettle
 
       def command_argv(member:, command:, env: {})
         argv = normalize_command(command)
-        return argv unless File.file?(File.join(member.root, "mise.toml"))
+        return argv unless mise_configured?(member)
 
         injected_env = env.map { |key, value| "#{key}=#{value}" }
         mise_argv = ["mise", "exec", "-C", member.root, "--"]
@@ -143,9 +143,15 @@ module Kettle
       end
 
       def process_env(member:, env:)
-        return env unless File.file?(File.join(member.root, "mise.toml"))
+        return env unless mise_configured?(member)
 
         {}
+      end
+
+      def mise_configured?(member)
+        %w[mise.toml .mise.toml .tool-versions].any? do |path|
+          File.file?(File.join(member.root, path))
+        end
       end
 
       def normalize_command(command)

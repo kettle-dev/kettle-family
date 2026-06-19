@@ -36,13 +36,13 @@ module Kettle
         return check_results if command == "check"
         return release_results if command == "release"
         runner = CommandRunner.new(execute: execute)
-        command_text = workflow_command
         members.each_with_object([]) do |member, memo|
           if command == "template" && config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
             break memo unless memo.last.ok?
           end
 
+          command_text = workflow_command(member)
           result = runner.call(member: member, phase: command, command: command_text, env: workflow_env)
           memo << result
           break memo unless result.ok?
@@ -231,8 +231,8 @@ module Kettle
         raise Error, "gem signing password is required" if @gem_signing_password.to_s.empty?
       end
 
-      def workflow_command
-        return template_command if command == "template"
+      def workflow_command(member = nil)
+        return template_command(member) if command == "template"
 
         command_for(command)
       end
@@ -242,14 +242,28 @@ module Kettle
         configured || DEFAULT_COMMANDS.fetch(name)
       end
 
-      def template_command
-        command_text = config.template_command || DEFAULT_COMMANDS.fetch("template")
+      def template_command(member)
+        command_text = config.template_command || default_template_command(member)
         return command_text if commit
         return command_text if command_text.is_a?(Array) && command_text.include?("--skip-commit")
         return [*command_text, "--skip-commit"] if command_text.is_a?(Array)
         return command_text if command_text.include?("--skip-commit")
 
         "#{command_text} --skip-commit"
+      end
+
+      def default_template_command(member)
+        return DEFAULT_COMMANDS.fetch("template") if templating_bundle_wired?(member)
+
+        "kettle-jem install"
+      end
+
+      def templating_bundle_wired?(member)
+        gemfile = File.join(member.root, "Gemfile")
+        return false unless File.file?(gemfile)
+
+        content = File.read(gemfile)
+        content.include?("K_JEM_TEMPLATING") || content.include?("gemfiles/modular/templating")
       end
 
       def workflow_env

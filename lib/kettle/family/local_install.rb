@@ -50,7 +50,7 @@ module Kettle
           gemspec_path: gemspec,
           version_file: version_file(File.dirname(gemspec)),
           version: spec.version.to_s,
-          dependencies: spec.dependencies.map(&:name).sort,
+          dependencies: spec.runtime_dependencies.map(&:name).sort,
           required_ruby_version: required_ruby_version(spec),
           licenses: Array(spec.licenses),
           authors: Array(spec.authors)
