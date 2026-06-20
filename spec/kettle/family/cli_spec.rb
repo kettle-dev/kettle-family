@@ -285,6 +285,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     expect(out.string.scan("release_checkout").size).to eq(2)
     expect(out.string.scan("alpha add-changelog").size).to eq(2)
+    expect(out.string.scan("commit_changelog").size).to eq(2)
   end
 
   it "plans releases in fixed configured order" do

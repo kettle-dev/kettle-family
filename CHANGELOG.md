@@ -22,7 +22,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Added `kettle-family add-changelog` to pass one unreleased changelog entry to
   each selected member via the absolute installed `kettle-changelog`, including
-  configured branch-lane traversal, so member binstubs cannot shadow it.
+  configured branch-lane traversal, so member binstubs cannot shadow it. Branch
+  lane runs commit each member changelog update before checking out the next
+  branch.
 
 ### Changed
 

@@ -234,6 +234,9 @@ module Kettle
           branch_members = members if branch_members.empty?
           memo.concat(command_results_for_current_branch(command: command, config: config, members: branch_members, options: options))
           break memo unless memo.last&.ok?
+
+          commit_changelog_entries(branch_members: branch_members, runner: runner, memo: memo) if command == "add-changelog"
+          break memo unless memo.last&.ok?
         end
       end
 
@@ -290,6 +293,21 @@ module Kettle
 
       def installed_executable(name)
         File.join(Gem.bindir, name)
+      end
+
+      def commit_changelog_entries(branch_members:, runner:, memo:)
+        branch_members.each do |member|
+          memo << runner.call(
+            member: member,
+            phase: "commit_changelog",
+            command: [
+              "sh",
+              "-lc",
+              "if ! git diff --quiet -- CHANGELOG.md; then git add CHANGELOG.md && git commit -m '📝 Add runtime compatibility changelog entry'; fi"
+            ]
+          )
+          break unless memo.last.ok?
+        end
       end
 
       def bump_version_mode(options)
