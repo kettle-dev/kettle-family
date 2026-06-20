@@ -6,7 +6,7 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan report metadata check test lint docs template install bump-version release branch-lanes release-state].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template install bump-version add-changelog release branch-lanes release-state].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
@@ -61,6 +61,7 @@ module Kettle
               template        Plan or execute kettle-jem templating per member
               install         Build and install selected local family gems
               bump-version    Check, plan, or execute family version alignment
+              add-changelog   Add an entry to an existing Unreleased changelog section
               release         Plan or execute release build/publish phases
               branch-lanes    Audit configured branch lane release mappings
               release-state   Report changelog release state for family members
@@ -75,6 +76,8 @@ module Kettle
               --execute        Execute external workflow commands
               --dry-run        Plan external workflow commands without running them (default)
               --env KEY=VALUE  Override an environment variable for each member workflow command
+              --section NAME   Changelog section for add-changelog
+              --entry TEXT     Changelog entry for add-changelog
               --check          Check whether bump-version would need edits
               --from VERSION   Require selected members to currently match VERSION
               --publish        Use publish release command instead of build command
@@ -103,6 +106,8 @@ module Kettle
           report: nil,
           execute: false,
           workflow_env: {},
+          changelog_section: nil,
+          changelog_entry: nil,
           check: false,
           from_version: nil,
           publish: false,
@@ -124,6 +129,8 @@ module Kettle
           parser.on("--execute") { options[:execute] = true }
           parser.on("--dry-run") { options[:execute] = false }
           parser.on("--env KEY=VALUE") { |value| parse_env_override(value, options[:workflow_env]) }
+          parser.on("--section NAME") { |value| options[:changelog_section] = value }
+          parser.on("--entry TEXT") { |value| options[:changelog_entry] = value }
           parser.on("--check") { options[:check] = true }
           parser.on("--from VERSION") { |value| options[:from_version] = value }
           parser.on("--publish") { options[:publish] = true }
@@ -180,6 +187,7 @@ module Kettle
 
       def command_results_for_current_branch(command:, config:, members:, options:)
         return bump_version_results(members: members, options: options) if command == "bump-version"
+        return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members) if command == "release-state"
         return install_results(config: config, members: members, options: options) if command == "install"
@@ -206,7 +214,7 @@ module Kettle
         return false if config.release_target_branches.empty?
         return false if command == "release-state"
         return false if command == "branch-lanes"
-        return false unless WORKFLOW_COMMANDS.include?(command) || %w[bump-version install].include?(command)
+        return false unless WORKFLOW_COMMANDS.include?(command) || %w[bump-version install add-changelog].include?(command)
 
         !WORKFLOW_COMMANDS.include?(command)
       end
@@ -261,6 +269,23 @@ module Kettle
           from_version: options[:from_version],
           mode: bump_version_mode(options)
         ).results
+      end
+
+      def add_changelog_results(members:, options:)
+        section = options[:changelog_section].to_s
+        entry = options[:changelog_entry].to_s
+        raise Error, "add-changelog requires --section" if section.empty?
+        raise Error, "add-changelog requires --entry" if entry.empty?
+
+        runner = CommandRunner.new(execute: options[:execute])
+        members.each_with_object([]) do |member, memo|
+          memo << runner.call(
+            member: member,
+            phase: "add-changelog",
+            command: ["bundle", "exec", "kettle-changelog", "--add-unreleased-entry", "--section", section, "--entry", entry]
+          )
+          break memo unless memo.last.ok?
+        end
       end
 
       def bump_version_mode(options)

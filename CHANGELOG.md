@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Added `kettle-family add-changelog` to pass one unreleased changelog entry to
+  each selected member, including configured branch-lane traversal.
+
 ### Changed
 
 - Retemplated project metadata and CI/development automation with `kettle-jem` v7.0.0.

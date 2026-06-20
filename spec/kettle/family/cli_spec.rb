@@ -243,6 +243,43 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("alpha bump-version").size).to eq(2)
   end
 
+  it "plans changelog entry additions per member" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(
+      ["add-changelog", "--root", @tmpdir, "--section", "Changed", "--entry", "Added support for JRuby 10.1.", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").first
+    expect(result.fetch("phase")).to eq("add-changelog")
+    expect(result.fetch("command")).to include("bundle", "exec", "kettle-changelog")
+  end
+
+  it "plans changelog entry additions across configured release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1_8-even-v0
+          - r1_9-even-v2
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(
+      ["add-changelog", "--root", @tmpdir, "--section", "Changed", "--entry", "Added support for JRuby 10.1."],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha add-changelog").size).to eq(2)
+  end
+
   it "plans releases in fixed configured order" do
     write_ready_gem("alpha")
     write_ready_gem("beta")
