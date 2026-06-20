@@ -21,8 +21,8 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Added
 
 - Added `kettle-family add-changelog` to pass one unreleased changelog entry to
-  each selected member via the installed `kettle-changelog`, including
-  configured branch-lane traversal.
+  each selected member via the absolute installed `kettle-changelog`, including
+  configured branch-lane traversal, so member binstubs cannot shadow it.
 
 ### Changed
 

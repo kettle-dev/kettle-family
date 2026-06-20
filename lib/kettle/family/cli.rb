@@ -282,10 +282,14 @@ module Kettle
           memo << runner.call(
             member: member,
             phase: "add-changelog",
-            command: ["kettle-changelog", "--add-unreleased-entry", "--section", section, "--entry", entry]
+            command: [installed_executable("kettle-changelog"), "--add-unreleased-entry", "--section", section, "--entry", entry]
           )
           break memo unless memo.last.ok?
         end
+      end
+
+      def installed_executable(name)
+        File.join(Gem.bindir, name)
       end
 
       def bump_version_mode(options)

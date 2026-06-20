@@ -257,7 +257,7 @@ RSpec.describe Kettle::Family::CLI do
     result = JSON.parse(out.string).fetch("results").first
     expect(result.fetch("phase")).to eq("add-changelog")
     expect(result.fetch("command")).to eq([
-      "kettle-changelog",
+      File.join(Gem.bindir, "kettle-changelog"),
       "--add-unreleased-entry",
       "--section",
       "Changed",
