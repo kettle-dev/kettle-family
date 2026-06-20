@@ -89,6 +89,33 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "plans templating across configured release target branches" do
+    write_template_config(
+      release_target_branches: %w[r1_8-even-v0 r1_9-even-v2]
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "template", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(
+      %w[
+        release_checkout
+        prepare_lockfiles
+        template
+        normalize_lockfiles
+        commit_normalized_lockfiles
+        release_checkout
+        prepare_lockfiles
+        template
+        normalize_lockfiles
+        commit_normalized_lockfiles
+      ]
+    )
+    expect(results.fetch(0).command).to eq(["git", "checkout", "r1_8-even-v0"])
+    expect(results.fetch(5).command).to eq(["git", "checkout", "r1_9-even-v2"])
+  end
+
   it "bootstraps legacy members without bundle exec when templating wiring is absent" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -110,18 +137,20 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle exec kettle-jem install"])
   end
 
-  def write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])
+  def write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil)
+    config = {
+      "template" => {
+        "command" => command,
+        "profile" => "full",
+        "repository_topology" => "standalone",
+        "normalize_lockfiles" => true,
+        "normalize_lockfiles_command" => [RbConfig.ruby, "-e", "puts 'normalized'"]
+      }
+    }
+    config["release"] = {"target_branches" => release_target_branches} if release_target_branches
     File.write(
       File.join(@tmpdir, ".kettle-family.yml"),
-      YAML.dump(
-        "template" => {
-          "command" => command,
-          "profile" => "full",
-          "repository_topology" => "standalone",
-          "normalize_lockfiles" => true,
-          "normalize_lockfiles_command" => [RbConfig.ruby, "-e", "puts 'normalized'"]
-        }
-      )
+      YAML.dump(config)
     )
   end
 

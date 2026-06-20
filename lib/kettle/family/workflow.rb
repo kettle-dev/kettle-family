@@ -35,8 +35,18 @@ module Kettle
       def results
         return check_results if command == "check"
         return release_results if command == "release"
+        return branch_target_template_results if command == "template" && !config.release_target_branches.empty?
+
+        member_workflow_results(members)
+      end
+
+      private
+
+      attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :env_overrides
+
+      def member_workflow_results(workflow_members)
         runner = CommandRunner.new(execute: execute)
-        members.each_with_object([]) do |member, memo|
+        workflow_members.each_with_object([]) do |member, memo|
           if command == "template" && config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
             break memo unless memo.last.ok?
@@ -50,10 +60,6 @@ module Kettle
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
         end
       end
-
-      private
-
-      attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :env_overrides
 
       def check_results
         members.map { |member| ReadinessCheck.call(member: member, config: config) }
@@ -75,6 +81,23 @@ module Kettle
 
           branch_members = rediscovered_selected_members(selected_names)
           memo.concat(release_member_results(branch_members, include_family_changelog: true))
+          break memo unless memo.last&.ok?
+        end
+      end
+
+      def branch_target_template_results
+        runner = CommandRunner.new(execute: execute)
+        selected_names = members.map(&:name)
+        config.release_target_branches.each_with_object([]) do |branch, memo|
+          memo << checkout_branch_result(branch: branch, runner: runner)
+          break memo unless memo.last.ok?
+
+          branch_members = rediscovered_selected_members(selected_names)
+          branch_members = members if branch_members.empty?
+          memo.concat(member_workflow_results(branch_members))
+          break memo unless memo.last&.ok?
+
+          commit_normalized_lockfiles(branch_members: branch_members, runner: runner, memo: memo)
           break memo unless memo.last&.ok?
         end
       end
@@ -285,6 +308,25 @@ module Kettle
           command: config.normalize_lockfiles_command
         )
         memo << result
+      end
+
+      def commit_normalized_lockfiles(branch_members:, runner:, memo:)
+        return unless config.normalize_lockfiles? && commit
+
+        branch_members.each do |member|
+          result = runner.call(
+            member: member,
+            phase: "commit_normalized_lockfiles",
+            command: [
+              "sh",
+              "-lc",
+              "files=$(git ls-files --modified --others --exclude-standard -- Gemfile.lock '*.lock' '**/*.lock'); " \
+                "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔒 Normalize lockfiles after templating'; fi"
+            ]
+          )
+          memo << result
+          break unless result.ok?
+        end
       end
 
       def family_member
