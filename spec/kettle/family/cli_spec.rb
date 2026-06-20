@@ -127,6 +127,23 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.index("token-resolver install")).to be < out.string.index("alpha install")
   end
 
+  it "plans local installs across configured release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1_8-even-v0
+          - r1_9-even-v2
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["install", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha install").size).to eq(2)
+  end
+
   it "returns failure status for readiness check failures" do
     write_gem("alpha")
     out = StringIO.new
@@ -207,6 +224,23 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(1)
     expect(out.string).to include("failed alpha bump-version")
     expect(out.string).to include("version changes required")
+  end
+
+  it "plans version bumps across configured release target branches", :prism do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1_8-even-v0
+          - r1_9-even-v2
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["bump-version", "1.1.0", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha bump-version").size).to eq(2)
   end
 
   it "plans releases in fixed configured order" do

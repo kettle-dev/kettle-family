@@ -116,6 +116,27 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(5).command).to eq(["git", "checkout", "r1_9-even-v2"])
   end
 
+  it "plans member workflow commands across configured release target branches" do
+    write_template_config(
+      release_target_branches: %w[r1_8-even-v0 r1_9-even-v2]
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    workflow = described_class.new(command: "test", config: config, members: [member])
+    allow(workflow).to receive(:rediscovered_selected_members).and_return([member])
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[
+      release_checkout test
+      release_checkout test
+    ])
+    expect(results.select { |result| result.phase == "release_checkout" }.map(&:command)).to eq([
+      ["git", "checkout", "r1_8-even-v0"],
+      ["git", "checkout", "r1_9-even-v2"]
+    ])
+  end
+
   it "bootstraps legacy members without bundle exec when templating wiring is absent" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")

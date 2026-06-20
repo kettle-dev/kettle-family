@@ -33,16 +33,22 @@ module Kettle
       end
 
       def results
-        return check_results if command == "check"
-        return release_results if command == "release"
-        return branch_target_template_results if command == "template" && !config.release_target_branches.empty?
+        prompt_for_gem_signing_password if command == "release" && execute && publish && gem_signing_required?
+        return branch_target_results unless config.release_target_branches.empty?
 
-        member_workflow_results(members)
+        current_branch_results(members)
       end
 
       private
 
       attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :env_overrides
+
+      def current_branch_results(workflow_members)
+        return check_results(workflow_members) if command == "check"
+        return release_member_results(workflow_members, include_family_changelog: true) if command == "release"
+
+        member_workflow_results(workflow_members)
+      end
 
       def member_workflow_results(workflow_members)
         runner = CommandRunner.new(execute: execute)
@@ -61,18 +67,11 @@ module Kettle
         end
       end
 
-      def check_results
-        members.map { |member| ReadinessCheck.call(member: member, config: config) }
+      def check_results(workflow_members)
+        workflow_members.map { |member| ReadinessCheck.call(member: member, config: config) }
       end
 
-      def release_results
-        prompt_for_gem_signing_password if execute && publish && gem_signing_required?
-        return branch_target_release_results unless config.release_target_branches.empty?
-
-        release_member_results(members, include_family_changelog: true)
-      end
-
-      def branch_target_release_results
+      def branch_target_results
         runner = command_runner
         selected_names = members.map(&:name)
         config.release_target_branches.each_with_object([]) do |branch, memo|
@@ -80,21 +79,8 @@ module Kettle
           break memo unless memo.last.ok?
 
           branch_members = rediscovered_selected_members(selected_names)
-          memo.concat(release_member_results(branch_members, include_family_changelog: true))
-          break memo unless memo.last&.ok?
-        end
-      end
-
-      def branch_target_template_results
-        runner = CommandRunner.new(execute: execute)
-        selected_names = members.map(&:name)
-        config.release_target_branches.each_with_object([]) do |branch, memo|
-          memo << checkout_branch_result(branch: branch, runner: runner)
-          break memo unless memo.last.ok?
-
-          branch_members = rediscovered_selected_members(selected_names)
           branch_members = members if branch_members.empty?
-          memo.concat(member_workflow_results(branch_members))
+          memo.concat(current_branch_results(branch_members))
           break memo unless memo.last&.ok?
 
           commit_normalized_lockfiles(branch_members: branch_members, runner: runner, memo: memo)
@@ -311,7 +297,7 @@ module Kettle
       end
 
       def commit_normalized_lockfiles(branch_members:, runner:, memo:)
-        return unless config.normalize_lockfiles? && commit
+        return unless command == "template" && config.normalize_lockfiles? && commit
 
         branch_members.each do |member|
           result = runner.call(

@@ -30,10 +30,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- `kettle-family template` now traverses configured release target branches,
-  matching release branch-lane behavior for gems with per-series branches, and
-  commits post-template lockfile normalization changes before moving to the
-  next branch.
+- Commands now traverse configured release target branches, matching release
+  branch-lane behavior for gems with per-series branches, and `kettle-family
+  template` commits post-template lockfile normalization changes before moving
+  to the next branch.
 - Family dependency ordering now ignores development dependencies, preventing
   false cycles between gems that only reference each other in test or release
   tooling.

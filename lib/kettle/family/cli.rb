@@ -173,6 +173,12 @@ module Kettle
       end
 
       def command_results(command:, config:, members:, options:)
+        return branch_target_command_results(command: command, config: config, members: members, options: options) if branch_target_command?(command, config)
+
+        command_results_for_current_branch(command: command, config: config, members: members, options: options)
+      end
+
+      def command_results_for_current_branch(command:, config:, members:, options:)
         return bump_version_results(members: members, options: options) if command == "bump-version"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members) if command == "release-state"
@@ -194,6 +200,50 @@ module Kettle
           continue_ci_failures: options[:release_continue_ci_failures],
           env_overrides: options[:workflow_env]
         ).results
+      end
+
+      def branch_target_command?(command, config)
+        return false if config.release_target_branches.empty?
+        return false if command == "release-state"
+        return false if command == "branch-lanes"
+        return false unless WORKFLOW_COMMANDS.include?(command) || %w[bump-version install].include?(command)
+
+        !WORKFLOW_COMMANDS.include?(command)
+      end
+
+      def branch_target_command_results(command:, config:, members:, options:)
+        runner = CommandRunner.new(execute: options[:execute])
+        selected_names = members.map(&:name)
+        config.release_target_branches.each_with_object([]) do |branch, memo|
+          memo << runner.call(
+            member: family_member(config),
+            phase: "release_checkout",
+            command: ["git", "checkout", branch]
+          )
+          break memo unless memo.last.ok?
+
+          branch_members = rediscovered_selected_members(config: config, selected_names: selected_names, command: command)
+          branch_members = members if branch_members.empty?
+          memo.concat(command_results_for_current_branch(command: command, config: config, members: branch_members, options: options))
+          break memo unless memo.last&.ok?
+        end
+      end
+
+      def rediscovered_selected_members(config:, selected_names:, command:)
+        discovered = Discovery.new(config: config).members
+        ordered = command == "install" ? install_order(discovered, config) : Orderer.new(members: discovered, mode: config.order_mode, hints: config.order_hints).ordered
+        ordered.select { |member| selected_names.include?(member.name) }
+      end
+
+      def family_member(config)
+        Member.new(
+          name: config.family_name,
+          root: config.root,
+          gemspec_path: nil,
+          version_file: nil,
+          version: nil,
+          dependencies: []
+        )
       end
 
       def parse_env_override(value, env)
