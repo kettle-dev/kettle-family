@@ -256,7 +256,14 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     result = JSON.parse(out.string).fetch("results").first
     expect(result.fetch("phase")).to eq("add-changelog")
-    expect(result.fetch("command")).to include("bundle", "exec", "kettle-changelog")
+    expect(result.fetch("command")).to eq([
+      "kettle-changelog",
+      "--add-unreleased-entry",
+      "--section",
+      "Changed",
+      "--entry",
+      "Added support for JRuby 10.1."
+    ])
   end
 
   it "plans changelog entry additions across configured release target branches" do

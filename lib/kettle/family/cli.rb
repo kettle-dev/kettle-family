@@ -282,7 +282,7 @@ module Kettle
           memo << runner.call(
             member: member,
             phase: "add-changelog",
-            command: ["bundle", "exec", "kettle-changelog", "--add-unreleased-entry", "--section", section, "--entry", entry]
+            command: ["kettle-changelog", "--add-unreleased-entry", "--section", section, "--entry", entry]
           )
           break memo unless memo.last.ok?
         end
