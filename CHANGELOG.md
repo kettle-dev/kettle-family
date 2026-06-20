@@ -26,6 +26,8 @@ Please file a bug if you notice a violation of semantic versioning.
   lane runs commit each member changelog update before checking out the next
   branch.
 
+- Added support for JRuby 10.1 and TruffleRuby 34.0.
+
 ### Changed
 
 - Retemplated project metadata and CI/development automation with `kettle-jem` v7.0.0.
