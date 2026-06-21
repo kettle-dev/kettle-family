@@ -286,40 +286,16 @@
 37
 38
 39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49
-50
-51
-52</pre>
+40</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 35</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_check_results'>check_results</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>check</span><span class='tstring_end'>&quot;</span></span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_release_results'>release_results</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span>
-  <span class='id identifier rubyid_runner'>runner</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="CommandRunner.html" title="Kettle::Family::CommandRunner (class)">CommandRunner</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'><span class='object_link'><a href="CommandRunner.html#initialize-instance_method" title="Kettle::Family::CommandRunner#initialize (method)">new</a></span></span><span class='lparen'>(</span><span class='label'>execute:</span> <span class='id identifier rubyid_execute'>execute</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_command_text'>command_text</span> <span class='op'>=</span> <span class='id identifier rubyid_workflow_command'>workflow_command</span>
-  <span class='id identifier rubyid_members'>members</span><span class='period'>.</span><span class='id identifier rubyid_each_with_object'>each_with_object</span><span class='lparen'>(</span><span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='id identifier rubyid_memo'>memo</span><span class='op'>|</span>
-    <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>template</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_normalize_lockfiles?'>normalize_lockfiles?</span>
-      <span class='id identifier rubyid_normalize_lockfiles'>normalize_lockfiles</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>runner:</span> <span class='id identifier rubyid_runner'>runner</span><span class='comma'>,</span> <span class='label'>memo:</span> <span class='id identifier rubyid_memo'>memo</span><span class='comma'>,</span> <span class='label'>phase:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>prepare_lockfiles</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
-      <span class='kw'>break</span> <span class='id identifier rubyid_memo'>memo</span> <span class='kw'>unless</span> <span class='id identifier rubyid_memo'>memo</span><span class='period'>.</span><span class='id identifier rubyid_last'>last</span><span class='period'>.</span><span class='id identifier rubyid_ok?'>ok?</span>
-    <span class='kw'>end</span>
+  <span class='id identifier rubyid_prompt_for_gem_signing_password'>prompt_for_gem_signing_password</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_execute'>execute</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_publish'>publish</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_gem_signing_required?'>gem_signing_required?</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_branch_target_results'>branch_target_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
 
-    <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='id identifier rubyid_runner'>runner</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>phase:</span> <span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='label'>command:</span> <span class='id identifier rubyid_command_text'>command_text</span><span class='comma'>,</span> <span class='label'>env:</span> <span class='id identifier rubyid_workflow_env'>workflow_env</span><span class='rparen'>)</span>
-    <span class='id identifier rubyid_memo'>memo</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_result'>result</span>
-    <span class='kw'>break</span> <span class='id identifier rubyid_memo'>memo</span> <span class='kw'>unless</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_ok?'>ok?</span>
-
-    <span class='id identifier rubyid_normalize_lockfiles'>normalize_lockfiles</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>runner:</span> <span class='id identifier rubyid_runner'>runner</span><span class='comma'>,</span> <span class='label'>memo:</span> <span class='id identifier rubyid_memo'>memo</span><span class='comma'>,</span> <span class='label'>phase:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>normalize_lockfiles</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>template</span><span class='tstring_end'>&quot;</span></span>
-  <span class='kw'>end</span>
+  <span class='id identifier rubyid_current_branch_results'>current_branch_results</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -331,7 +307,7 @@
 </div>
 
       <div id="footer">
-  Generated on Thu Jun 18 23:27:41 2026 by
+  Generated on Sun Jun 21 00:20:10 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

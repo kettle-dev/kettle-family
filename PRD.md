@@ -4,10 +4,13 @@
 
 Kettle::Family is a RubyGem that ships reusable command-line tooling for managing a related set of Ruby gems as one operational family. It should replace bespoke workspace scripts with a configurable, tested, gem-installed CLI that can discover member gems, run ordered workflows, enforce safety gates, and produce machine-readable reports.
 
-The initial product should preserve the practical patterns from:
+The initial product preserves and productizes the practical patterns that used
+to live in bespoke workspace scripts, including:
 
 - `rubocop-lts/meta/scripts`: multi-repository version planning, branch-aware release sequencing, dry-run-first publishing, and explicit execution gates.
-- `structuredmerge/ruby/workspace-scripts`: dependency-ordered gem discovery, selected family operations, templating, lockfile normalization, readiness checks, version alignment, docs, lint, tests, git push, and release orchestration.
+- dependency-ordered gem discovery, selected family operations, templating,
+  lockfile normalization, readiness checks, version alignment, docs, lint,
+  tests, git push, and release orchestration.
 
 ## Problem
 
@@ -64,6 +67,12 @@ As a maintainer, I can run a command in a workspace and see the member gems Kett
 
 As a template maintainer, I can run one command to apply `kettle-jem` to every selected family member, optionally normalize lockfiles afterward, and commit the combined result only when the worktree was clean before the run.
 
+### Install Family Stack
+
+As a maintainer working on unreleased local family gems, I can run
+`kettle-family install --execute` from the family root to build and install the
+selected stack in dependency order before templating or cross-gem validation.
+
 ### Run Quality Gates
 
 As a maintainer, I can run lint, tests, docs generation, and release-readiness checks across a family with consistent selection and reporting.
@@ -93,6 +102,7 @@ Initial commands:
 - `kettle-family discover`
 - `kettle-family plan`
 - `kettle-family template`
+- `kettle-family install`
 - `kettle-family check`
 - `kettle-family test`
 - `kettle-family lint`

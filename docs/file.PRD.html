@@ -65,13 +65,15 @@
 
 <p>Kettle::Family is a RubyGem that ships reusable command-line tooling for managing a related set of Ruby gems as one operational family. It should replace bespoke workspace scripts with a configurable, tested, gem-installed CLI that can discover member gems, run ordered workflows, enforce safety gates, and produce machine-readable reports.</p>
 
-<p>The initial product should preserve the practical patterns from:</p>
+<p>The initial product preserves and productizes the practical patterns that used<br>
+to live in bespoke workspace scripts, including:</p>
 
 <ul>
   <li>
 <code>rubocop-lts/meta/scripts</code>: multi-repository version planning, branch-aware release sequencing, dry-run-first publishing, and explicit execution gates.</li>
-  <li>
-<code>structuredmerge/ruby/workspace-scripts</code>: dependency-ordered gem discovery, selected family operations, templating, lockfile normalization, readiness checks, version alignment, docs, lint, tests, git push, and release orchestration.</li>
+  <li>dependency-ordered gem discovery, selected family operations, templating,<br>
+lockfile normalization, readiness checks, version alignment, docs, lint,<br>
+tests, git push, and release orchestration.</li>
 </ul>
 
 <h2 id="problem">Problem</h2>
@@ -137,6 +139,12 @@
 
 <p>As a template maintainer, I can run one command to apply <code>kettle-jem</code> to every selected family member, optionally normalize lockfiles afterward, and commit the combined result only when the worktree was clean before the run.</p>
 
+<h3 id="install-family-stack">Install Family Stack</h3>
+
+<p>As a maintainer working on unreleased local family gems, I can run<br>
+<code>kettle-family install --execute</code> from the family root to build and install the<br>
+selected stack in dependency order before templating or cross-gem validation.</p>
+
 <h3 id="run-quality-gates">Run Quality Gates</h3>
 
 <p>As a maintainer, I can run lint, tests, docs generation, and release-readiness checks across a family with consistent selection and reporting.</p>
@@ -166,6 +174,7 @@
   <li><code>kettle-family discover</code></li>
   <li><code>kettle-family plan</code></li>
   <li><code>kettle-family template</code></li>
+  <li><code>kettle-family install</code></li>
   <li><code>kettle-family check</code></li>
   <li><code>kettle-family test</code></li>
   <li><code>kettle-family lint</code></li>
@@ -586,7 +595,7 @@ release:
 </div></div>
 
       <div id="footer">
-  Generated on Mon Jun  8 01:31:44 2026 by
+  Generated on Sun Jun 21 00:20:10 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
