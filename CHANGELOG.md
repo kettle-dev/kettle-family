@@ -38,6 +38,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Corrected OpenCollective funding metadata to use the `kettle-dev` collective.
 - Commands now traverse configured release target branches, matching release
   branch-lane behavior for gems with per-series branches, and `kettle-family
   template` commits post-template lockfile normalization changes before moving
