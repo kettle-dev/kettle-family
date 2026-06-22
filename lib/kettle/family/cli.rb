@@ -242,7 +242,7 @@ module Kettle
 
       def rediscovered_selected_members(config:, selected_names:, command:)
         discovered = Discovery.new(config: config).members
-        ordered = command == "install" ? install_order(discovered, config) : Orderer.new(members: discovered, mode: config.order_mode, hints: config.order_hints).ordered
+        ordered = (command == "install") ? install_order(discovered, config) : Orderer.new(members: discovered, mode: config.order_mode, hints: config.order_hints).ordered
         ordered.select { |member| selected_names.include?(member.name) }
       end
 

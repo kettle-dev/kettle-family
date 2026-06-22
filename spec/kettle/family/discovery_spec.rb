@@ -29,7 +29,7 @@ RSpec.describe Kettle::Family::Discovery do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = described_class.new(config: config).members.find { |candidate| candidate.name == "beta" }
 
-    expect(member.dependencies).to eq([])
+    expect(member.dependencies).to be_empty
   end
 
   it "applies selection after ordering" do

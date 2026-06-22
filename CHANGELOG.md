@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.1.7] - 2026-06-22
+
+- TAG: [v0.1.7][0.1.7t]
+- COVERAGE: 94.50% -- 1236/1308 lines in 20 files
+- BRANCH COVERAGE: 76.49% -- 397/519 branches in 20 files
+- 39.73% documented
+
+### Added
+
 - Added `kettle-family add-changelog` to pass one unreleased changelog entry to
   each selected member via the absolute installed `kettle-changelog`, including
   configured branch-lane traversal, so member binstubs cannot shadow it. Branch
@@ -31,10 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Changed
 
 - Retemplated project metadata and CI/development automation with `kettle-jem` v7.0.0.
-
-### Deprecated
-
-### Removed
 
 ### Fixed
 
@@ -49,8 +64,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family template` can bootstrap legacy members that do not yet have
   generated templating bundle wiring, and member command execution now respects
   `.tool-versions` mise configuration files.
-
-### Security
 
 ## [0.1.6] - 2026-06-18
 
@@ -198,7 +211,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/kettle-dev/kettle-family/compare/v0.1.6...v0.1.7
+[0.1.7t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.7
 [0.1.6]: https://github.com/kettle-dev/kettle-family/compare/v0.1.5...v0.1.6
 [0.1.6t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.6
 [0.1.5]: https://github.com/kettle-dev/kettle-family/compare/v0.1.4...v0.1.5
