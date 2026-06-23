@@ -82,6 +82,14 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="fixed">Fixed</h3>
 
+<ul>
+  <li>Release workflows now cache gem signing passwords for signed build commands,<br>
+even when publishing is not enabled.</li>
+  <li>Release workflows now normalize configured lockfiles before readiness checks<br>
+with local path dependency environment variables disabled, then commit any<br>
+resulting lockfile changes.</li>
+</ul>
+
 <h3 id="security">Security</h3>
 
 <h2 id="0110---2026-06-23">
@@ -402,7 +410,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Tue Jun 23 08:25:40 2026 by
+  Generated on Tue Jun 23 16:21:50 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
