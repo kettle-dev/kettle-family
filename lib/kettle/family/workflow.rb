@@ -33,7 +33,7 @@ module Kettle
       end
 
       def results
-        prompt_for_gem_signing_password if command == "release" && execute && publish && gem_signing_required?
+        prompt_for_gem_signing_password if command == "release" && execute && release_signing_prompt_required?
         return branch_target_results unless config.release_target_branches.empty?
         return member_local_branch_target_results if member_local_branch_targets?
 
@@ -150,6 +150,14 @@ module Kettle
             next
           end
 
+          if config.release_normalize_lockfiles?
+            normalize_release_lockfiles(member: member, runner: runner, memo: memo)
+            break memo unless memo.last&.ok?
+
+            commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "release")
+            break memo unless memo.last&.ok?
+          end
+
           append_release_internal_checks(member: member, memo: memo)
           break memo unless memo.last(2).all?(&:ok?)
 
@@ -158,7 +166,7 @@ module Kettle
             phase: release_phase,
             command: release_command,
             env: release_env,
-            interactive: publish
+            interactive: release_command_interactive?
           )
           break memo unless memo.last.ok?
 
@@ -223,6 +231,10 @@ module Kettle
       def release_command
         command = publish ? config.release_publish_command : config.release_build_command
         kettle_release_command?(command) ? append_kettle_release_args(command) : command
+      end
+
+      def release_command_interactive?
+        publish || !!@gem_signing_password
       end
 
       def kettle_release_command?(command)
@@ -292,11 +304,25 @@ module Kettle
         !ENV.fetch("SKIP_GEM_SIGNING", "").casecmp("true").zero?
       end
 
+      def release_signing_prompt_required?
+        return false unless gem_signing_required?
+        return true if publish
+
+        members.any? { |member| signed_gemspec?(member) }
+      end
+
+      def signed_gemspec?(member)
+        return false unless member.gemspec_path && File.file?(member.gemspec_path)
+
+        content = File.read(member.gemspec_path)
+        content.include?("signing_key") || content.include?("cert_chain")
+      end
+
       def prompt_for_gem_signing_password
         return if @gem_signing_password
 
         print("Gem signing key password (cached for this family release; MFA prompts still remain interactive): ")
-        @gem_signing_password = if $stdin.respond_to?(:noecho)
+        @gem_signing_password = if $stdin.respond_to?(:noecho) && $stdin.tty?
           $stdin.noecho(&:gets)&.chomp
         else
           $stdin.gets&.chomp
@@ -361,8 +387,23 @@ module Kettle
         memo << result
       end
 
-      def commit_normalized_lockfiles(branch_members:, runner:, memo:)
-        return unless command == "template" && config.normalize_lockfiles? && commit
+      def normalize_release_lockfiles(member:, runner:, memo:)
+        result = runner.call(
+          member: member,
+          phase: "release_normalize_lockfiles",
+          command: config.release_normalize_lockfiles_command,
+          env: release_lockfile_env
+        )
+        memo << result
+      end
+
+      def release_lockfile_env
+        release_env.merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
+      end
+
+      def commit_normalized_lockfiles(branch_members:, runner:, memo:, reason: command)
+        return unless commit
+        return unless commit_normalized_lockfiles?(reason)
 
         branch_members.each do |member|
           result = runner.call(
@@ -377,6 +418,17 @@ module Kettle
           )
           memo << result
           break unless result.ok?
+        end
+      end
+
+      def commit_normalized_lockfiles?(reason)
+        case reason
+        when "template"
+          config.normalize_lockfiles?
+        when "release"
+          config.release_normalize_lockfiles?
+        else
+          false
         end
       end
 

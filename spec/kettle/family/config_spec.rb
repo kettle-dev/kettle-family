@@ -135,6 +135,42 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_publish_command).to eq("bundle exec kettle-release")
   end
 
+  it "defaults release lockfile normalization to template normalization" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      template:
+        normalize_lockfiles: true
+        normalize_lockfiles_command:
+          - bundle
+          - update
+          - nomono
+          - --bundler
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_normalize_lockfiles?).to be(true)
+    expect(config.release_normalize_lockfiles_command).to eq(%w[bundle update nomono --bundler])
+    expect(config.release_disable_local_path_env).to include("SMORG_RB_DEV", "K_JEM_TEMPLATING")
+  end
+
+  it "allows release lockfile normalization overrides" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      template:
+        normalize_lockfiles: true
+      release:
+        normalize_lockfiles: false
+        normalize_lockfiles_command: bundle lock
+        disable_local_path_env:
+          - CUSTOM_DEV
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_normalize_lockfiles?).to be(false)
+    expect(config.release_normalize_lockfiles_command).to eq("bundle lock")
+    expect(config.release_disable_local_path_env).to eq(["CUSTOM_DEV"])
+  end
+
   it "loads configurable checks, shared changelog, and release env" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       check:

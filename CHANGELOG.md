@@ -28,6 +28,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release workflows now cache gem signing passwords for signed build commands,
+  even when publishing is not enabled.
+- Release workflows now normalize configured lockfiles before readiness checks
+  with local path dependency environment variables disabled, then commit any
+  resulting lockfile changes.
+
 ### Security
 
 ## [0.1.10] - 2026-06-23

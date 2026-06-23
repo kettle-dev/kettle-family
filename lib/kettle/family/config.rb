@@ -168,6 +168,22 @@ module Kettle
         fetch_path("template", "normalize_lockfiles_command") || "bundle lock"
       end
 
+      def release_normalize_lockfiles?
+        configured = fetch_path("release", "normalize_lockfiles")
+        return configured unless configured.nil?
+
+        normalize_lockfiles?
+      end
+
+      def release_normalize_lockfiles_command
+        fetch_path("release", "normalize_lockfiles_command") || normalize_lockfiles_command
+      end
+
+      def release_disable_local_path_env
+        configured = fetch_path("release", "disable_local_path_env")
+        Array(configured || default_release_disable_local_path_env)
+      end
+
       def install_local_dependencies
         paths = fetch_path("install", "local_dependencies") || fetch_path("local_dependencies") || []
         Array(paths).map do |entry|
@@ -213,6 +229,19 @@ module Kettle
       end
 
       private
+
+      def default_release_disable_local_path_env
+        %w[
+          K_JEM_TEMPLATING
+          SMORG_RB_DEV
+          TREE_SITTER_LANGUAGE_PACK_DEV
+          KETTLE_RB_DEV
+          RUBOCOP_LTS_DEV
+          PBOLING_DEV
+          GALTZO_FLOSS_DEV
+          UR_BRAIN_DEV
+        ]
+      end
 
       def expand_config_relative_path(value)
         text = value.to_s

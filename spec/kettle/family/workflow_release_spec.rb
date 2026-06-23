@@ -99,6 +99,82 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 --local-ci"])
   end
 
+  it "prompts once for gem signing before executed build releases" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = signed_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true)
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+
+    workflow.results
+
+    expect(workflow).to have_received(:prompt_for_gem_signing_password).once
+  end
+
+  it "uses the cached gem signing password for executed build prompts" do
+    write_release_config(
+      build_command: [
+        RbConfig.ruby,
+        "-e",
+        "print 'Enter PEM pass phrase:'; $stdout.flush; exit(STDIN.gets&.chomp == 'secret' ? 0 : 1)"
+      ]
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = signed_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true)
+    allow(workflow).to receive(:prompt_for_gem_signing_password) do
+      workflow.instance_variable_set(:@gem_signing_password, "secret")
+    end
+
+    results = workflow.results
+
+    expect(results).to all(be_ok)
+    expect(results.last.stdout).to include("Enter PEM pass phrase:")
+  end
+
+  it "normalizes release lockfiles with local path env disabled before readiness" do
+    write_release_config(
+      build_command: [RbConfig.ruby, "-e", "puts 'build'"],
+      template: {
+        "normalize_lockfiles" => true,
+        "normalize_lockfiles_command" => %w[bundle update nomono --bundler]
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nSMORG_RB_DEV = \"true\"\n")
+
+    results = described_class.new(command: "release", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[
+      release_normalize_lockfiles
+      commit_normalized_lockfiles
+      check
+      release_changelog
+      release_build
+    ])
+    expect(results.first.command).to eq([
+      "mise",
+      "exec",
+      "-C",
+      member.root,
+      "--",
+      "env",
+      "K_JEM_TEMPLATING=false",
+      "SMORG_RB_DEV=false",
+      "TREE_SITTER_LANGUAGE_PACK_DEV=false",
+      "KETTLE_RB_DEV=false",
+      "RUBOCOP_LTS_DEV=false",
+      "PBOLING_DEV=false",
+      "GALTZO_FLOSS_DEV=false",
+      "UR_BRAIN_DEV=false",
+      "bundle",
+      "update",
+      "nomono",
+      "--bundler"
+    ])
+  end
+
   it "skips already published versions during executed publish releases" do
     write_release_config(publish_command: [RbConfig.ruby, "-e", "abort 'should not run'"])
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -176,7 +252,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -187,6 +263,7 @@ RSpec.describe Kettle::Family::Workflow do
     release["family_changelog"] = family_changelog if family_changelog
     release["env"] = release_env if release_env
     config = {"release" => release}
+    config["template"] = template if template
     config["check"] = check if check
     config["changelog"] = changelog if changelog
     File.write(
@@ -208,6 +285,13 @@ RSpec.describe Kettle::Family::Workflow do
       FileUtils.chmod("u+x", full_path)
     end
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: [])
+  end
+
+  def signed_member(name)
+    member = ready_member(name)
+    gemspec = File.join(member.root, "#{name}.gemspec")
+    File.write(gemspec, "Gem::Specification.new do |spec|\n  spec.signing_key = 'key.pem'\nend\n")
+    Kettle::Family::Member.new(name: name, root: member.root, gemspec_path: gemspec, version_file: nil, version: member.version, dependencies: [])
   end
 
   def member_with_version(name, version)
