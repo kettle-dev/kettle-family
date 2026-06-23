@@ -28,14 +28,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [0.1.9] - 2026-06-23
+
+- TAG: [v0.1.9][0.1.9t]
+- COVERAGE: 94.43% -- 1255/1329 lines in 20 files
+- BRANCH COVERAGE: 76.45% -- 409/535 branches in 20 files
+- 39.73% documented
+
+### Fixed
+
 - Member workflow commands now run with the parent Bundler environment removed,
   so `bundle exec` inside a member uses that member's lockfile instead of
   pre-activated gems from the `kettle-family` process.
 - CLI parsing now rejects stray positional arguments after options, catching
   missing repeated `--env` flags instead of silently ignoring environment
   overrides.
-
-### Security
 
 ## [0.1.8] - 2026-06-23
 
@@ -231,7 +240,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/kettle-dev/kettle-family/compare/v0.1.8...v0.1.9
+[0.1.9t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.9
 [0.1.8]: https://github.com/kettle-dev/kettle-family/compare/v0.1.7...v0.1.8
 [0.1.8t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.8
 [0.1.7]: https://github.com/kettle-dev/kettle-family/compare/v0.1.6...v0.1.7
