@@ -5,9 +5,9 @@ require "json"
 module Kettle
   module Family
     class Report
-      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches
+      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches
 
-      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], command: nil, results: [])
+      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, command: nil, results: [])
         @family_name = family_name
         @family_mode = family_mode
         @order_mode = order_mode
@@ -18,6 +18,7 @@ module Kettle
         @results = results
         @branch_lanes = branch_lanes
         @release_target_branches = release_target_branches
+        @member_release_target_branches = member_release_target_branches
       end
 
       def to_h
@@ -30,6 +31,7 @@ module Kettle
           "selected_members" => selected_members.map(&:name),
           "branch_lanes" => branch_lanes,
           "release_target_branches" => release_target_branches,
+          "member_release_target_branches" => member_release_target_branches,
           "command" => command,
           "results" => results.map(&:to_h),
           "resume_hint" => resume_hint
@@ -47,6 +49,7 @@ module Kettle
         lines << "order: #{order_mode}"
         lines << "command: #{command}" if command
         lines << "release targets: #{release_target_branches.join(", ")}" unless release_target_branches.empty?
+        append_member_release_targets(lines)
         lines << "members:"
         selected_names = selected_members.map(&:name)
         members.each do |member|
@@ -74,6 +77,15 @@ module Kettle
           lines << "    #{result.stdout}" unless result.stdout.to_s.empty?
           lines << "    #{result.stderr}" if !result.ok? && !result.stderr.to_s.empty?
           lines << "    resume: #{resume_hint_for(result)}" unless result.ok?
+        end
+      end
+
+      def append_member_release_targets(lines)
+        return if member_release_target_branches.empty?
+
+        lines << "member release targets:"
+        member_release_target_branches.each do |member_name, branches|
+          lines << "  #{member_name}: #{branches.join(", ")}"
         end
       end
 

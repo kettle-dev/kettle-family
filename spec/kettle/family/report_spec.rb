@@ -39,4 +39,19 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("r3_2-even-v24")
     expect(text).to include("rubocop-lts")
   end
+
+  it "renders member-local release target branches" do
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "release",
+      member_release_target_branches: {"rubocop-lts" => %w[r1 r2]}
+    )
+
+    expect(report.to_text).to include("member release targets:\n  rubocop-lts: r1, r2")
+    expect(report.to_h.fetch("member_release_target_branches")).to eq("rubocop-lts" => %w[r1 r2])
+  end
 end

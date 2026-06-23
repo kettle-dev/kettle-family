@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Workflow commands now honor member-local `.kettle-family.yml` release target
+  branches when the active family root has no branch stack, and reports list
+  those member-local branch targets.
+
 ### Security
 
 ## [0.1.9] - 2026-06-23

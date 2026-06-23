@@ -35,6 +35,7 @@ module Kettle
       def results
         prompt_for_gem_signing_password if command == "release" && execute && publish && gem_signing_required?
         return branch_target_results unless config.release_target_branches.empty?
+        return member_local_branch_target_results if member_local_branch_targets?
 
         current_branch_results(members)
       end
@@ -88,6 +89,55 @@ module Kettle
         end
       end
 
+      def member_local_branch_target_results
+        return release_member_local_branch_target_results if command == "release"
+
+        members.each_with_object([]) do |member, memo|
+          member_config = member_local_release_config(member)
+          if member_config
+            memo.concat(member_local_workflow(member: member, member_config: member_config).results)
+          else
+            memo.concat(current_branch_results([member]))
+          end
+          break memo unless memo.last&.ok?
+        end
+      end
+
+      def release_member_local_branch_target_results
+        runner = command_runner
+        results = []
+        append_family_changelog_result(runner: runner, memo: results)
+        return results unless results.all?(&:ok?)
+
+        members.each_with_object(results) do |member, memo|
+          member_config = member_local_release_config(member)
+          if member_config
+            memo.concat(member_local_workflow(member: member, member_config: member_config).results)
+          else
+            memo.concat(release_member_results([member], include_family_changelog: false))
+          end
+          break memo unless memo.last&.ok?
+        end
+      end
+
+      def member_local_workflow(member:, member_config:)
+        self.class.new(
+          command: command,
+          config: member_config,
+          members: [member],
+          execute: execute,
+          commit: commit,
+          allow_dirty: allow_dirty,
+          publish: publish,
+          push: push,
+          tag: tag,
+          start_step: start_step,
+          local_ci: local_ci,
+          continue_ci_failures: continue_ci_failures,
+          env_overrides: env_overrides
+        )
+      end
+
       def release_member_results(release_members, include_family_changelog: false)
         runner = command_runner
         results = []
@@ -125,6 +175,21 @@ module Kettle
         discovered = Discovery.new(config: config).members
         ordered = Orderer.new(members: discovered, mode: config.order_mode, hints: config.order_hints).ordered
         ordered.select { |member| selected_names.include?(member.name) }
+      end
+
+      def member_local_branch_targets?
+        members.any? { |member| member_local_release_config(member) }
+      end
+
+      def member_local_release_config(member)
+        member_config = Config.load(root: member.root)
+        return unless member_config.path
+        return if config.path && File.realpath(member_config.path) == File.realpath(config.path)
+        return if member_config.release_target_branches.empty?
+
+        member_config
+      rescue Errno::ENOENT
+        nil
       end
 
       def checkout_branch_result(branch:, runner:)

@@ -339,6 +339,25 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("skipped #{File.basename(@tmpdir)} release_checkout")
   end
 
+  it "prints and plans member-local release target branches in root release plans" do
+    write_ready_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("member release targets:")
+    expect(out.string).to include("alpha: r1, r2")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha release_build").size).to eq(2)
+  end
+
   it "passes release resume options through the CLI" do
     write_ready_gem("alpha")
     out = StringIO.new

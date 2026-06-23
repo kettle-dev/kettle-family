@@ -130,6 +130,28 @@ RSpec.describe Kettle::Family::Workflow do
     expect(release_checks.map(&:workdir)).to eq(rediscovered.flatten.map(&:root))
   end
 
+  it "plans releases across member-local target branches when the active family config has none" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+
+    results = described_class.new(command: "release", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[
+      release_checkout check release_changelog release_build
+      release_checkout check release_changelog release_build
+    ])
+    expect(results.select { |result| result.phase == "release_checkout" }.map(&:command)).to eq([
+      ["git", "checkout", "r1"],
+      ["git", "checkout", "r2"]
+    ])
+  end
+
   it "executes configured build command after checks" do
     marker = File.join(@tmpdir, "built")
     write_release_config(build_command: [RbConfig.ruby, "-e", "File.write(#{marker.dump}, 'built')"])

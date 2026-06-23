@@ -176,6 +176,7 @@ module Kettle
           config_path: config.path,
           branch_lanes: config.branch_lanes,
           release_target_branches: config.release_target_branches,
+          member_release_target_branches: member_release_target_branches(members: selected, config: config),
           command: command,
           results: results
         )
@@ -329,6 +330,24 @@ module Kettle
 
       def release_state_results(config:, members:)
         ReleaseStateCheck.new(config: config, members: members).results
+      end
+
+      def member_release_target_branches(members:, config:)
+        members.each_with_object({}) do |member, memo|
+          member_config = member_local_release_config(member: member, config: config)
+          memo[member.name] = member_config.release_target_branches if member_config
+        end
+      end
+
+      def member_local_release_config(member:, config:)
+        member_config = Config.load(root: member.root)
+        return unless member_config.path
+        return if config.path && File.realpath(member_config.path) == File.realpath(config.path)
+        return if member_config.release_target_branches.empty?
+
+        member_config
+      rescue Errno::ENOENT
+        nil
       end
 
       def install_order(members, config)

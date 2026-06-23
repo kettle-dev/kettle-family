@@ -44,6 +44,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["internal", "readiness"])
   end
 
+  it "plans member workflow commands across member-local target branches" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+
+    results = described_class.new(command: "lint", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[release_checkout lint release_checkout lint])
+    expect(results.select { |result| result.phase == "release_checkout" }.map(&:command)).to eq([
+      ["git", "checkout", "r1"],
+      ["git", "checkout", "r2"]
+    ])
+  end
+
   def write_config(command:)
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       commands:
