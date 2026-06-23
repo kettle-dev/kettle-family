@@ -30,6 +30,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Security
 
+## [0.1.12] - 2026-06-23
+
+- TAG: [v0.1.12][0.1.12t]
+- COVERAGE: 94.34% -- 1300/1378 lines in 20 files
+- BRANCH COVERAGE: 75.92% -- 432/569 branches in 20 files
+- 40.40% documented
+
+### Fixed
+
+- Release reports now label plain `release` as build-only mode and
+  `release --publish` as publish mode, making it clear when the workflow will
+  run `kettle-release`.
+- Branch-stack release workflows now reuse the cached gem signing password in
+  member-local child workflows, avoiding a second signing prompt for the same
+  family run.
+
 ## [0.1.11] - 2026-06-23
 
 - TAG: [v0.1.11][0.1.11t]
@@ -268,7 +284,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.12...HEAD
+[0.1.12]: https://github.com/kettle-dev/kettle-family/compare/v0.1.11...v0.1.12
+[0.1.12t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.12
 [0.1.11]: https://github.com/kettle-dev/kettle-family/compare/v0.1.10...v0.1.11
 [0.1.11t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.11
 [0.1.10]: https://github.com/kettle-dev/kettle-family/compare/v0.1.9...v0.1.10

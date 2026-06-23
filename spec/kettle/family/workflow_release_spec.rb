@@ -132,6 +132,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.stdout).to include("Enter PEM pass phrase:")
   end
 
+  it "passes the cached gem signing password to member-local branch workflows" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = signed_member("alpha")
+    member_config_path = File.join(member.root, ".kettle-family.yml")
+    File.write(member_config_path, <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+    member_config = Kettle::Family::Config.load(root: member.root, path: member_config_path)
+    workflow = described_class.new(command: "release", config: config, members: [member])
+    workflow.instance_variable_set(:@gem_signing_password, "secret")
+
+    child = workflow.send(:member_local_workflow, member: member, member_config: member_config)
+
+    expect(child.instance_variable_get(:@gem_signing_password)).to eq("secret")
+  end
+
   it "normalizes release lockfiles with local path env disabled before readiness" do
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],

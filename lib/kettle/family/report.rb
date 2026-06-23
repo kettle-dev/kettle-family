@@ -5,9 +5,9 @@ require "json"
 module Kettle
   module Family
     class Report
-      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches
+      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode
 
-      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, command: nil, results: [])
+      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [])
         @family_name = family_name
         @family_mode = family_mode
         @order_mode = order_mode
@@ -19,6 +19,7 @@ module Kettle
         @branch_lanes = branch_lanes
         @release_target_branches = release_target_branches
         @member_release_target_branches = member_release_target_branches
+        @release_mode = release_mode
       end
 
       def to_h
@@ -32,6 +33,7 @@ module Kettle
           "branch_lanes" => branch_lanes,
           "release_target_branches" => release_target_branches,
           "member_release_target_branches" => member_release_target_branches,
+          "release_mode" => release_mode,
           "command" => command,
           "results" => results.map(&:to_h),
           "resume_hint" => resume_hint
@@ -48,6 +50,7 @@ module Kettle
         lines << "config: #{config_path || "none"}"
         lines << "order: #{order_mode}"
         lines << "command: #{command}" if command
+        lines << "release mode: #{release_mode}" if release_mode
         lines << "release targets: #{release_target_branches.join(", ")}" unless release_target_branches.empty?
         append_member_release_targets(lines)
         lines << "members:"

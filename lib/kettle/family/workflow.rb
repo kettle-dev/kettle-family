@@ -15,7 +15,7 @@ module Kettle
         "docs" => "bundle exec rake yard"
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {})
+      def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {}, gem_signing_password: nil)
         @command = command
         @config = config
         @members = members
@@ -29,7 +29,7 @@ module Kettle
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
         @env_overrides = env_overrides
-        @gem_signing_password = nil
+        @gem_signing_password = gem_signing_password
       end
 
       def results
@@ -134,7 +134,8 @@ module Kettle
           start_step: start_step,
           local_ci: local_ci,
           continue_ci_failures: continue_ci_failures,
-          env_overrides: env_overrides
+          env_overrides: env_overrides,
+          gem_signing_password: @gem_signing_password
         )
       end
 

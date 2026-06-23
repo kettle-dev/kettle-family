@@ -141,7 +141,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {})  &#x21d2; Workflow </a>
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {}, gem_signing_password: nil)  &#x21d2; Workflow </a>
     
 
     
@@ -196,7 +196,7 @@
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {})  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::Workflow (class)">Workflow</a></span></tt> 
+    #<strong>initialize</strong>(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {}, gem_signing_password: nil)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::Workflow (class)">Workflow</a></span></tt> 
   
 
   
@@ -238,7 +238,7 @@
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 18</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>command:</span><span class='comma'>,</span> <span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>commit:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>allow_dirty:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>publish:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>push:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>tag:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>start_step:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>local_ci:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>continue_ci_failures:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>env_overrides:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>command:</span><span class='comma'>,</span> <span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>commit:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>allow_dirty:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>publish:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>push:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>tag:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>start_step:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>local_ci:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>continue_ci_failures:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>env_overrides:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>gem_signing_password:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@command</span> <span class='op'>=</span> <span class='id identifier rubyid_command'>command</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
@@ -252,7 +252,7 @@
   <span class='ivar'>@local_ci</span> <span class='op'>=</span> <span class='id identifier rubyid_local_ci'>local_ci</span>
   <span class='ivar'>@continue_ci_failures</span> <span class='op'>=</span> <span class='id identifier rubyid_continue_ci_failures'>continue_ci_failures</span>
   <span class='ivar'>@env_overrides</span> <span class='op'>=</span> <span class='id identifier rubyid_env_overrides'>env_overrides</span>
-  <span class='ivar'>@gem_signing_password</span> <span class='op'>=</span> <span class='kw'>nil</span>
+  <span class='ivar'>@gem_signing_password</span> <span class='op'>=</span> <span class='id identifier rubyid_gem_signing_password'>gem_signing_password</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -309,7 +309,7 @@
 </div>
 
       <div id="footer">
-  Generated on Tue Jun 23 16:21:50 2026 by
+  Generated on Tue Jun 23 16:33:38 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

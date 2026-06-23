@@ -177,6 +177,7 @@ module Kettle
           branch_lanes: config.branch_lanes,
           release_target_branches: config.release_target_branches,
           member_release_target_branches: member_release_target_branches(members: selected, config: config),
+          release_mode: release_mode(command: command, options: options),
           command: command,
           results: results
         )
@@ -330,6 +331,12 @@ module Kettle
 
       def release_state_results(config:, members:)
         ReleaseStateCheck.new(config: config, members: members).results
+      end
+
+      def release_mode(command:, options:)
+        return unless command == "release"
+
+        options[:publish] ? "publish" : "build-only"
       end
 
       def member_release_target_branches(members:, config:)

@@ -318,8 +318,20 @@ RSpec.describe Kettle::Family::CLI do
     status = described_class.call(["release", "--root", @tmpdir], out: out, err: StringIO.new)
 
     expect(status).to eq(0)
+    expect(out.string).to include("release mode: build-only")
     expect(out.string.index("* beta")).to be < out.string.index("* alpha")
     expect(out.string).to include("skipped beta release_build")
+  end
+
+  it "prints publish mode when release publishing is requested" do
+    write_ready_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--publish"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("release mode: publish")
+    expect(out.string).to include("skipped alpha release_publish")
   end
 
   it "prints configured release target branches in release plans" do
