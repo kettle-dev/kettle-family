@@ -286,7 +286,8 @@
 37
 38
 39
-40</pre>
+40
+41</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 35</span>
@@ -294,6 +295,7 @@
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='id identifier rubyid_prompt_for_gem_signing_password'>prompt_for_gem_signing_password</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_execute'>execute</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_publish'>publish</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_gem_signing_required?'>gem_signing_required?</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_target_results'>branch_target_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_member_local_branch_target_results'>member_local_branch_target_results</span> <span class='kw'>if</span> <span class='id identifier rubyid_member_local_branch_targets?'>member_local_branch_targets?</span>
 
   <span class='id identifier rubyid_current_branch_results'>current_branch_results</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
@@ -307,7 +309,7 @@
 </div>
 
       <div id="footer">
-  Generated on Sun Jun 21 00:20:10 2026 by
+  Generated on Tue Jun 23 08:25:40 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

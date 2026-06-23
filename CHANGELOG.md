@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [0.1.10] - 2026-06-23
+
+- TAG: [v0.1.10][0.1.10t]
+- COVERAGE: 94.34% -- 1300/1378 lines in 20 files
+- BRANCH COVERAGE: 75.92% -- 432/569 branches in 20 files
+- 40.14% documented
+
+### Fixed
+
 - Workflow commands now honor member-local `.kettle-family.yml` release target
   branches when the active family root has no branch stack, and reports list
   those member-local branch targets.
-
-### Security
 
 ## [0.1.9] - 2026-06-23
 
@@ -244,7 +253,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.10...HEAD
+[0.1.10]: https://github.com/kettle-dev/kettle-family/compare/v0.1.9...v0.1.10
+[0.1.10t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.10
 [0.1.9]: https://github.com/kettle-dev/kettle-family/compare/v0.1.8...v0.1.9
 [0.1.9t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.9
 [0.1.8]: https://github.com/kettle-dev/kettle-family/compare/v0.1.7...v0.1.8
