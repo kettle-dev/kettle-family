@@ -3,7 +3,7 @@
 module Kettle
   module Family
     module Version
-      VERSION = "0.1.7"
+      VERSION = "0.1.8"
     end
     VERSION = Version::VERSION # Traditional Constant Location
   end
