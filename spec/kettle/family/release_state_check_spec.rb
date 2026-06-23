@@ -75,6 +75,20 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(results.map { |result| result.state.fetch("version") }).to eq(%w[1.0.1 1.0.2])
   end
 
+  it "delegates to member-local release target branches when the active family config has none" do
+    member = member("alpha")
+    parent_config = release_state_config
+    member_config = release_state_config(root: member.root, path: File.join(member.root, ".kettle-family.yml"), release_target_branches: %w[r1 r2])
+    branch_result = instance_double(Kettle::Family::ReleaseStateResult)
+    check = described_class.new(config: parent_config, members: [member])
+
+    allow(Kettle::Family::Config).to receive(:load).with(root: member.root).and_return(member_config)
+    member_check = instance_double(described_class, results: [branch_result])
+    allow(described_class).to receive(:new).with(config: member_config, members: [member]).and_return(member_check)
+
+    expect(check.results).to eq([branch_result])
+  end
+
   it "reports configured branch worktree failures as branch results" do
     member = member("alpha")
     config = release_state_config(release_target_branches: %w[r1])
@@ -217,10 +231,11 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     instance_double(Process::Status, exitstatus: exitstatus, success?: success)
   end
 
-  def release_state_config(root: @tmpdir, release_target_branches: [])
+  def release_state_config(root: @tmpdir, path: nil, release_target_branches: [])
     instance_double(
       Kettle::Family::Config,
       root: root,
+      path: path,
       release_target_branches: release_target_branches,
       shared_changelog?: false,
       changelog_workdir: nil,

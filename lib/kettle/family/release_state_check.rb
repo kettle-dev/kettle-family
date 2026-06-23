@@ -18,7 +18,14 @@ module Kettle
         return branch_results unless release_target_branches.empty?
         return [check_family_changelog] if shared_changelog?
 
-        members.map { |member| check_member(member) }
+        members.each_with_object([]) do |member, memo|
+          member_branch_results = member_local_branch_results(member)
+          if member_branch_results
+            memo.concat(member_branch_results)
+          else
+            memo << check_member(member)
+          end
+        end
       end
 
       private
@@ -232,6 +239,24 @@ module Kettle
         return [] unless config
 
         config.release_target_branches
+      end
+
+      def member_local_branch_results(member)
+        member_config = member_local_release_config(member)
+        return unless member_config
+
+        self.class.new(config: member_config, members: [member]).results
+      end
+
+      def member_local_release_config(member)
+        member_config = Config.load(root: member.root)
+        return unless member_config.path
+        return if config&.path && File.realpath(member_config.path) == File.realpath(config.path)
+        return if member_config.release_target_branches.empty?
+
+        member_config
+      rescue Errno::ENOENT
+        nil
       end
 
       def shared_changelog?

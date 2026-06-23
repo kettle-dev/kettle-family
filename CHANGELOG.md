@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family release-state` now honors member-local `.kettle-family.yml`
+  release target branches when the active family root has no branch stack,
+  allowing mixed sibling workspaces to report stacked gems correctly.
+
 ### Security
 
 ## [0.1.7] - 2026-06-22
