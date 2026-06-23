@@ -28,6 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Member workflow commands now run with the parent Bundler environment removed,
+  so `bundle exec` inside a member uses that member's lockfile instead of
+  pre-activated gems from the `kettle-family` process.
+- CLI parsing now rejects stray positional arguments after options, catching
+  missing repeated `--env` flags instead of silently ignoring environment
+  overrides.
+
 ### Security
 
 ## [0.1.8] - 2026-06-23

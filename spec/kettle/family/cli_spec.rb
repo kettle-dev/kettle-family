@@ -215,6 +215,20 @@ RSpec.describe Kettle::Family::CLI do
     expect(err.string).to include("--env requires KEY=VALUE")
   end
 
+  it "rejects stray positional arguments after options" do
+    write_gem("alpha")
+    err = StringIO.new
+
+    status = described_class.call(
+      ["template", "--root", @tmpdir, "--env", "K_JEM_TEMPLATING=true", "SMORG_RB_DEV=/workspace"],
+      out: StringIO.new,
+      err: err
+    )
+
+    expect(status).to eq(1)
+    expect(err.string).to include("unexpected argument(s): SMORG_RB_DEV=/workspace")
+  end
+
   it "checks version bumps without writing", :prism do
     write_gem("alpha")
     out = StringIO.new

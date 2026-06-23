@@ -101,6 +101,24 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.status).to eq(0)
   end
 
+  it "executes child commands with the parent Bundler environment removed" do
+    member = member_at("alpha")
+
+    result = described_class.new(execute: true).call(
+      member: member,
+      phase: "test",
+      command: [
+        RbConfig.ruby,
+        "-e",
+        "puts [ENV['BUNDLE_GEMFILE'], ENV['RUBYOPT'].to_s.include?('bundler/setup')].inspect"
+      ],
+      env: {"BUNDLE_GEMFILE" => File.join(member.root, "Gemfile")}
+    )
+
+    expect(result).to be_ok
+    expect(result.stdout).to eq("[\"#{File.join(member.root, "Gemfile")}\", false]\n")
+  end
+
   it "captures failing commands" do
     member = member_at("alpha")
 

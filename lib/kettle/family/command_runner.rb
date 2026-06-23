@@ -16,10 +16,12 @@ module Kettle
         return skipped_result(member: member, phase: phase, argv: argv) unless execute
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        stdout, stderr, status = if interactive
-          run_interactive(env: process_env, argv: argv, chdir: member.root)
-        else
-          Open3.capture3(process_env, *argv, chdir: member.root)
+        stdout, stderr, status = with_unbundled_environment do
+          if interactive
+            run_interactive(env: process_env, argv: argv, chdir: member.root)
+          else
+            Open3.capture3(process_env, *argv, chdir: member.root)
+          end
         end
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         CommandResult.new(
@@ -129,6 +131,14 @@ module Kettle
 
       def signing_password_prompt?(chunk)
         chunk.match?(/pass(?:\s|-)?phrase|PEM password|private key password/i)
+      end
+
+      def with_unbundled_environment
+        if defined?(Bundler)
+          Bundler.with_unbundled_env { yield }
+        else
+          yield
+        end
       end
 
       def command_argv(member:, command:, env: {})

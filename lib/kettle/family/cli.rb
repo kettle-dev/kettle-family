@@ -145,6 +145,8 @@ module Kettle
           parser.on("--allow-dirty") { options[:allow_dirty] = true }
           parser.on("--help") { options[:help] = true }
         end.parse!(argv)
+        raise OptionParser::InvalidArgument, "unexpected argument(s): #{argv.join(" ")}" unless argv.empty?
+
         options
       end
 
