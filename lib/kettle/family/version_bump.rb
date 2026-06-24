@@ -139,7 +139,7 @@ module Kettle
         current = requirement_node.unescaped
         dependency_target_version = member_target_versions.fetch(name_node.unescaped)
         exact_prefix = "= "
-        raise Error, "ambiguous family dependency #{name_node.unescaped.inspect} requirement #{current.inspect} in #{path}" unless current.start_with?(exact_prefix)
+        return unless current.start_with?(exact_prefix)
         return if current == "#{exact_prefix}#{dependency_target_version}"
 
         replacement = quote_like(requirement_node.location.slice, "#{exact_prefix}#{dependency_target_version}")

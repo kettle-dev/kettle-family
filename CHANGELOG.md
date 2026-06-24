@@ -32,6 +32,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family bump-version` now leaves non-exact family dependency
+  requirements unchanged instead of rejecting them as ambiguous, allowing
+  families with loose inter-gem constraints to use relative version bumps.
+
 ### Security
 
 ## [0.1.11] - 2026-06-23

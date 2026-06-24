@@ -83,12 +83,15 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
       .to raise_error(Kettle::Family::Error, /not --from/)
   end
 
-  it "rejects ambiguous family dependency requirements" do
+  it "leaves non-exact family dependency requirements unchanged" do
     alpha = write_gem("alpha", version: "1.0.0")
     beta = write_gem("beta", version: "1.0.0", dependencies: {"alpha" => "~> 1.0"})
 
-    expect { described_class.new(members: [alpha, beta], target_version: "1.1.0").results }
-      .to raise_error(Kettle::Family::Error, /ambiguous family dependency/)
+    results = described_class.new(members: [alpha, beta], target_version: "1.1.0", mode: :execute).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(beta.version_file)).to include('VERSION = "1.1.0"')
+    expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0"')
   end
 
   it "rejects invalid target versions" do
