@@ -3,14 +3,19 @@
 module Kettle
   module Family
     class VersionBump
+      BUMP_TYPES = %w[major minor patch pre].freeze
       DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency].freeze
 
       def initialize(members:, target_version:, from_version: nil, mode: :dry_run)
         @members = members
-        @target_version = validate_version(target_version)
+        @target_version = target_version.to_s
+        @explicit_target_version = validate_version(target_version) unless BUMP_TYPES.include?(@target_version)
         @from_version = validate_version(from_version) if from_version
         @mode = mode
         @member_names = members.map(&:name)
+        @member_target_versions = members.each_with_object({}) do |member, memo|
+          memo[member.name] = resolve_target_version(member)
+        end
       end
 
       def results
@@ -19,7 +24,7 @@ module Kettle
 
       private
 
-      attr_reader :members, :target_version, :from_version, :mode, :member_names
+      attr_reader :members, :target_version, :explicit_target_version, :from_version, :mode, :member_names, :member_target_versions
 
       def validate_version(version)
         Gem::Version.new(version).to_s
@@ -30,12 +35,13 @@ module Kettle
       def result_for(member)
         raise Error, "#{member.name} is #{member.version}, not --from #{from_version}" if from_version && member.version != from_version
 
-        edits = collect_edits(member)
+        member_target_version = target_version_for(member)
+        edits = collect_edits(member, member_target_version)
         write_edits(edits) if mode == :execute
         CommandResult.new(
           member_name: member.name,
           phase: "bump-version",
-          command: ["internal", "bump-version", target_version],
+          command: ["internal", "bump-version", member_target_version],
           workdir: member.root,
           status: check_failed?(edits) ? 1 : 0,
           success: !check_failed?(edits),
@@ -59,20 +65,20 @@ module Kettle
         nil
       end
 
-      def collect_edits(member)
+      def collect_edits(member, member_target_version)
         edits = []
-        edits << version_file_edit(member) if member.version_file
+        edits << version_file_edit(member, member_target_version) if member.version_file
         edits.concat(gemspec_dependency_edits(member))
         edits.compact
       end
 
-      def version_file_edit(member)
+      def version_file_edit(member, member_target_version)
         source = File.read(member.version_file)
         node = version_string_node(source, member.version_file)
         current = node.unescaped
-        return nil if current == target_version
+        return nil if current == member_target_version
 
-        replacement = quote_like(node.location.slice, target_version)
+        replacement = quote_like(node.location.slice, member_target_version)
         file_edit(member.version_file, source, node.location.start_offset, node.location.end_offset, replacement)
       end
 
@@ -131,12 +137,68 @@ module Kettle
         raise Error, "ambiguous family dependency #{name_node.unescaped.inspect} in #{path}" unless requirement_node.is_a?(Prism::StringNode)
 
         current = requirement_node.unescaped
+        dependency_target_version = member_target_versions.fetch(name_node.unescaped)
         exact_prefix = "= "
         raise Error, "ambiguous family dependency #{name_node.unescaped.inspect} requirement #{current.inspect} in #{path}" unless current.start_with?(exact_prefix)
-        return if current == "#{exact_prefix}#{target_version}"
+        return if current == "#{exact_prefix}#{dependency_target_version}"
 
-        replacement = quote_like(requirement_node.location.slice, "#{exact_prefix}#{target_version}")
+        replacement = quote_like(requirement_node.location.slice, "#{exact_prefix}#{dependency_target_version}")
         file_edit(path, source, requirement_node.location.start_offset, requirement_node.location.end_offset, replacement)
+      end
+
+      def target_version_for(member)
+        member_target_versions.fetch(member.name)
+      end
+
+      def resolve_target_version(member)
+        return explicit_target_version unless BUMP_TYPES.include?(target_version)
+
+        bumped_version(target_version, member.version)
+      end
+
+      def bumped_version(type, current_version)
+        return bumped_prerelease_version(current_version) if type == "pre"
+
+        version = Gem::Version.new(current_version)
+        segments = version.segments
+        unless segments.all? { |segment| segment.is_a?(Integer) }
+          raise Error, "cannot #{type}-bump non-numeric version #{current_version.inspect}"
+        end
+
+        major, minor, patch = (segments + [0, 0, 0])[0, 3]
+        case type
+        when "major"
+          "#{major + 1}.0.0"
+        when "minor"
+          "#{major}.#{minor + 1}.0"
+        when "patch"
+          "#{major}.#{minor}.#{patch + 1}"
+        end
+      end
+
+      def bumped_prerelease_version(current_version)
+        version = Gem::Version.new(current_version)
+        segments = version.segments
+        prerelease_index = segments.index { |segment| !segment.is_a?(Integer) }
+        raise Error, "cannot pre-bump version without prerelease segment #{current_version.inspect}" unless prerelease_index
+
+        release_core = segments[0...prerelease_index].join(".")
+        prerelease_suffix = prerelease_suffix_for(current_version, release_core)
+        "#{release_core}.#{prerelease_suffix.next}"
+      end
+
+      def prerelease_suffix_for(current_version, release_core)
+        prefix = "#{release_core}."
+        return string_tail(current_version, prefix.length) if current_version.start_with?(prefix)
+
+        canonical_version = Gem::Version.new(current_version).to_s
+        return string_tail(canonical_version, prefix.length) if canonical_version.start_with?(prefix)
+
+        raise Error, "cannot find prerelease segment in version #{current_version.inspect}"
+      end
+
+      def string_tail(value, offset)
+        value[offset, value.length - offset]
       end
 
       def file_edit(path, source, start_offset, end_offset, replacement)

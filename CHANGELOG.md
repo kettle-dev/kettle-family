@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family bump-version` now accepts the same relative bump targets as
+  `kettle-bump` (`major`, `minor`, `patch`, and `pre`) and applies them per
+  member from each member's current version.
+
 ### Changed
 
 ### Deprecated

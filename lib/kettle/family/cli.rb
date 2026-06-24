@@ -26,7 +26,7 @@ module Kettle
         raise Error, "unknown command #{command.inspect}" unless COMMANDS.include?(command)
 
         target_version = argv.shift if command == "bump-version"
-        raise Error, "bump-version requires VERSION" if command == "bump-version" && !target_version
+        raise Error, "bump-version requires VERSION, major, minor, patch, or pre" if command == "bump-version" && !target_version
 
         options = parse_options
         options[:target_version] = target_version
@@ -48,6 +48,7 @@ module Kettle
       def help
         out.puts(<<~HELP)
           Usage: kettle-family COMMAND [options]
+                 kettle-family bump-version VERSION|major|minor|patch|pre [options]
 
           Commands:
               discover        Discover family members and print selected order

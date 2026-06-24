@@ -240,6 +240,26 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("version changes required")
   end
 
+  it "accepts kettle-bump style version bump targets", :prism do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["bump-version", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("alpha bump-version")
+    expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
+  end
+
+  it "describes the accepted bump-version targets when omitted" do
+    err = StringIO.new
+
+    status = described_class.call(["bump-version"], out: StringIO.new, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("bump-version requires VERSION, major, minor, patch, or pre")
+  end
+
   it "plans version bumps across configured release target branches", :prism do
     write_gem("alpha")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)

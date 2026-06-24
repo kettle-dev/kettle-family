@@ -43,6 +43,39 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.1.0"')
   end
 
+  it "patch-bumps each member from its own current version" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "2.3.4", dependencies: {"alpha" => "= 1.0.0"})
+
+    results = described_class.new(members: [alpha, beta], target_version: "patch", mode: :execute).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(alpha.version_file)).to include('VERSION = "1.0.1"')
+    expect(File.read(beta.version_file)).to include('VERSION = "2.3.5"')
+    expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.0.1"')
+  end
+
+  it "supports minor, major, and prerelease bump targets" do
+    minor = write_gem("minor", version: "1.2.3")
+    major = write_gem("major", version: "1.2.3")
+    prerelease = write_gem("prerelease", version: "1.2.3.rc1")
+
+    described_class.new(members: [minor], target_version: "minor", mode: :execute).results
+    described_class.new(members: [major], target_version: "major", mode: :execute).results
+    described_class.new(members: [prerelease], target_version: "pre", mode: :execute).results
+
+    expect(File.read(minor.version_file)).to include('VERSION = "1.3.0"')
+    expect(File.read(major.version_file)).to include('VERSION = "2.0.0"')
+    expect(File.read(prerelease.version_file)).to include('VERSION = "1.2.3.rc2"')
+  end
+
+  it "rejects patch bumps for non-numeric release versions" do
+    alpha = write_gem("alpha", version: "1.0.0.rc1")
+
+    expect { described_class.new(members: [alpha], target_version: "patch").results }
+      .to raise_error(Kettle::Family::Error, /cannot patch-bump non-numeric version/)
+  end
+
   it "enforces --from versions" do
     alpha = write_gem("alpha", version: "1.0.0")
 
