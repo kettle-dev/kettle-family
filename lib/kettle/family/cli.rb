@@ -6,8 +6,9 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan report metadata check test lint docs template install bump-version add-changelog release branch-lanes release-state].freeze
-      WORKFLOW_COMMANDS = %w[check test lint docs template release].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template install bump-version add-changelog release push pull up branch-lanes release-state].freeze
+      WORKFLOW_COMMANDS = %w[check test lint docs template release push pull up].freeze
+      MAIN_BRANCH_SKIPPING_COMMANDS = %w[install release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
         new(argv, out: out, err: err).call
@@ -64,6 +65,9 @@ module Kettle
               bump-version    Check, plan, or execute family version alignment
               add-changelog   Add an entry to an existing Unreleased changelog section
               release         Plan or execute release build/publish phases
+              push            Plan or execute git push per member
+              pull            Plan or execute git pull --rebase per member
+              up              Plan or execute git pull --rebase then git push per member
               branch-lanes    Audit configured branch lane release mappings
               release-state   Report changelog release state for family members
 
@@ -176,8 +180,8 @@ module Kettle
           selected_members: selected,
           config_path: config.path,
           branch_lanes: config.branch_lanes,
-          release_target_branches: config.release_target_branches,
-          member_release_target_branches: member_release_target_branches(members: selected, config: config),
+          release_target_branches: branch_targets_for(command, config.release_target_branches),
+          member_release_target_branches: member_release_target_branches(command: command, members: selected, config: config),
           release_mode: release_mode(command: command, options: options),
           command: command,
           results: results
@@ -235,7 +239,7 @@ module Kettle
       def branch_target_command_results(command:, config:, members:, options:)
         runner = CommandRunner.new(execute: options[:execute])
         selected_names = members.map(&:name)
-        config.release_target_branches.each_with_object([]) do |branch, memo|
+        branch_targets_for(command, config.release_target_branches).each_with_object([]) do |branch, memo|
           memo << runner.call(
             member: family_member(config),
             phase: "release_checkout",
@@ -263,7 +267,7 @@ module Kettle
             next
           end
 
-          member_config.release_target_branches.each do |branch|
+          branch_targets_for(command, member_config.release_target_branches).each do |branch|
             memo << runner.call(
               member: member,
               phase: "release_checkout",
@@ -391,11 +395,17 @@ module Kettle
         options[:publish] ? "publish" : "build-only"
       end
 
-      def member_release_target_branches(members:, config:)
+      def member_release_target_branches(command:, members:, config:)
         members.each_with_object({}) do |member, memo|
           member_config = member_local_release_config(member: member, config: config)
-          memo[member.name] = member_config.release_target_branches if member_config
+          memo[member.name] = branch_targets_for(command, member_config.release_target_branches) if member_config
         end
+      end
+
+      def branch_targets_for(command, branches)
+        return branches unless MAIN_BRANCH_SKIPPING_COMMANDS.include?(command)
+
+        branches.reject { |branch| branch == "main" }
       end
 
       def member_local_release_config(member:, config:)

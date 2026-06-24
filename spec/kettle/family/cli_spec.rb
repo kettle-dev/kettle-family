@@ -144,6 +144,25 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("alpha install").size).to eq(2)
   end
 
+  it "skips main when planning local installs across configured release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - main
+          - r1_8-even-v0
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["install", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("release targets: r1_8-even-v0")
+    expect(out.string).not_to include("git checkout main")
+    expect(out.string.scan("release_checkout").size).to eq(1)
+    expect(out.string.scan("alpha install").size).to eq(1)
+  end
+
   it "returns failure status for readiness check failures" do
     write_gem("alpha")
     out = StringIO.new
@@ -164,6 +183,24 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     expect(out.string).to include("skipped alpha template")
     expect(out.string).not_to include("family_commit")
+  end
+
+  it "includes main when planning templating across configured release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - main
+          - r1_8-even-v0
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["template", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("release targets: main, r1_8-even-v0")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha template").size).to eq(2)
   end
 
   it "plans workflow environment overrides after mise" do
@@ -414,6 +451,57 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     expect(out.string).to include("release targets: r1_8-even-v0, r1_9-even-v2")
     expect(out.string).to include("skipped #{File.basename(@tmpdir)} release_checkout")
+  end
+
+  it "skips main when planning releases across configured release target branches" do
+    write_ready_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - main
+          - r1_8-even-v0
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("release targets: r1_8-even-v0")
+    expect(out.string).not_to include("git checkout main")
+    expect(out.string.scan("release_checkout").size).to eq(1)
+    expect(out.string.scan("alpha release_build").size).to eq(1)
+  end
+
+  it "plans standalone git sync commands per member" do
+    write_gem("alpha")
+    write_gem("beta")
+    out = StringIO.new
+
+    status = described_class.call(["up", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    results = JSON.parse(out.string).fetch("results")
+    expect(results.map { |result| [result.fetch("member"), result.fetch("phase"), result.fetch("command")] }).to eq([
+      ["alpha", "pull", %w[git pull --rebase]],
+      ["alpha", "push", %w[git push]],
+      ["beta", "pull", %w[git pull --rebase]],
+      ["beta", "push", %w[git push]]
+    ])
+  end
+
+  it "fails hard when an executed standalone git sync command fails" do
+    write_gem("alpha")
+    write_gem("beta")
+    out = StringIO.new
+
+    status = described_class.call(["pull", "--root", @tmpdir, "--execute", "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(1)
+    results = JSON.parse(out.string).fetch("results")
+    expect(results.size).to eq(1)
+    expect(results.first.fetch("member")).to eq("alpha")
+    expect(results.first.fetch("phase")).to eq("pull")
+    expect(results.first.fetch("success")).to be(false)
   end
 
   it "prints and plans member-local release target branches in root release plans" do

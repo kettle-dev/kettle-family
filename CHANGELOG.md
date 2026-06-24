@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family push`, `kettle-family pull`, and `kettle-family up` now plan
+  or execute family-wide git synchronization commands.
 - `kettle-family bump-version` now accepts the same relative bump targets as
   `kettle-bump` (`major`, `minor`, `patch`, and `pre`) and applies them per
   member from each member's current version.
@@ -32,6 +34,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Branch-stack commands now allow `main` as a configured branch target for
+  workflows like templating while excluding it from install and release
+  traversals.
 - `kettle-family bump-version` now leaves non-exact family dependency
   requirements unchanged instead of rejecting them as ambiguous, allowing
   families with loose inter-gem constraints to use relative version bumps.

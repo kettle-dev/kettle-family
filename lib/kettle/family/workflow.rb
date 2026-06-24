@@ -14,6 +14,12 @@ module Kettle
         "lint" => "bundle exec rake rubocop_gradual",
         "docs" => "bundle exec rake yard"
       }.freeze
+      GIT_SYNC_COMMANDS = {
+        "push" => [["push", %w[git push]]],
+        "pull" => [["pull", %w[git pull --rebase]]],
+        "up" => [["pull", %w[git pull --rebase]], ["push", %w[git push]]]
+      }.freeze
+      MAIN_BRANCH_SKIPPING_COMMANDS = %w[release].freeze
 
       def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {}, gem_signing_password: nil)
         @command = command
@@ -47,6 +53,7 @@ module Kettle
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
         return release_member_results(workflow_members, include_family_changelog: true) if command == "release"
+        return git_sync_results(workflow_members) if GIT_SYNC_COMMANDS.key?(command)
 
         member_workflow_results(workflow_members)
       end
@@ -75,7 +82,7 @@ module Kettle
       def branch_target_results
         runner = command_runner
         selected_names = members.map(&:name)
-        config.release_target_branches.each_with_object([]) do |branch, memo|
+        branch_targets.each_with_object([]) do |branch, memo|
           memo << checkout_branch_result(branch: branch, runner: runner)
           break memo unless memo.last.ok?
 
@@ -176,6 +183,17 @@ module Kettle
         end
       end
 
+      def git_sync_results(sync_members)
+        runner = command_runner
+        sync_members.each_with_object([]) do |member, memo|
+          GIT_SYNC_COMMANDS.fetch(command).each do |phase, git_command|
+            memo << runner.call(member: member, phase: phase, command: git_command)
+            break unless memo.last.ok?
+          end
+          break memo unless memo.last.ok?
+        end
+      end
+
       def command_runner
         CommandRunner.new(execute: execute, gem_signing_password: @gem_signing_password)
       end
@@ -188,6 +206,12 @@ module Kettle
 
       def member_local_branch_targets?
         members.any? { |member| member_local_release_config(member) }
+      end
+
+      def branch_targets
+        return config.release_target_branches unless MAIN_BRANCH_SKIPPING_COMMANDS.include?(command)
+
+        config.release_target_branches.reject { |branch| branch == "main" }
       end
 
       def member_local_release_config(member)
