@@ -35,6 +35,11 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family bump-version` now leaves non-exact family dependency
   requirements unchanged instead of rejecting them as ambiguous, allowing
   families with loose inter-gem constraints to use relative version bumps.
+- `kettle-family bump-version --execute` now reports actual writes as
+  `updated`, includes each member's `current -> target` version change, commits
+  version bump edits, and uses member-local branch target stacks so branch
+  traversal can continue safely.
+- Text reports now indent each line of multi-line command output consistently.
 
 ### Security
 

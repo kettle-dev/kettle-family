@@ -45,7 +45,7 @@ module Kettle
           workdir: member.root,
           status: check_failed?(edits) ? 1 : 0,
           success: !check_failed?(edits),
-          stdout: edit_summary(edits),
+          stdout: edit_summary(member: member, target_version: member_target_version, edits: edits),
           stderr: "",
           elapsed_seconds: 0.0,
           skipped: mode == :dry_run,
@@ -220,10 +220,13 @@ module Kettle
         end
       end
 
-      def edit_summary(edits)
-        return "no version changes needed" if edits.empty?
+      def edit_summary(member:, target_version:, edits:)
+        lines = ["#{member.version} -> #{target_version}"]
+        return [*lines, "no version changes needed"].join("\n") if edits.empty?
 
-        edits.map { |edit| "would update #{edit.fetch(:path)}" }.uniq.join("\n")
+        verb = (mode == :execute) ? "updated" : "would update"
+        lines.concat(edits.map { |edit| "#{verb} #{edit.fetch(:path)}" }.uniq)
+        lines.join("\n")
       end
     end
   end

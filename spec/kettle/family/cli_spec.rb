@@ -242,12 +242,14 @@ RSpec.describe Kettle::Family::CLI do
 
   it "accepts kettle-bump style version bump targets", :prism do
     write_gem("alpha")
+    initialize_git_repo(@tmpdir)
     out = StringIO.new
 
     status = described_class.call(["bump-version", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
 
     expect(status).to eq(0)
     expect(out.string).to include("alpha bump-version")
+    expect(out.string).to include("alpha commit_version_bump")
     expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
   end
 
@@ -275,6 +277,49 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     expect(out.string.scan("release_checkout").size).to eq(2)
     expect(out.string.scan("alpha bump-version").size).to eq(2)
+    expect(out.string.scan("alpha commit_version_bump").size).to eq(2)
+  end
+
+  it "plans version bump commits across configured release target branches", :prism do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+    initialize_git_repo(@tmpdir, branches: %w[r1 r2])
+    out = StringIO.new
+
+    status = described_class.call(["bump-version", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha bump-version").size).to eq(2)
+    expect(out.string.scan("alpha commit_version_bump").size).to eq(2)
+    expect(out.string).to include("1.0.0 -> 1.0.1")
+    expect(out.string).to include("updated")
+    expect(out.string).not_to include("would update")
+  end
+
+  it "plans version bumps across member-local release target branches", :prism do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["bump-version", "patch", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("member release targets:")
+    expect(out.string).to include("alpha: r1, r2")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha bump-version").size).to eq(2)
+    expect(out.string.scan("alpha commit_version_bump").size).to eq(2)
   end
 
   it "plans changelog entry additions per member" do
@@ -512,5 +557,21 @@ RSpec.describe Kettle::Family::CLI do
       File.write(full_path, "#!/bin/sh\n")
       FileUtils.chmod("u+x", full_path)
     end
+  end
+
+  def initialize_git_repo(path, branches: [])
+    run_git(path, "init", "--quiet")
+    run_git(path, "config", "user.email", "kettle-family@example.test")
+    run_git(path, "config", "user.name", "Kettle Family")
+    run_git(path, "add", ".")
+    run_git(path, "commit", "--quiet", "-m", "Initial fixture")
+    branches.each { |branch| run_git(path, "branch", branch) }
+  end
+
+  def run_git(path, *args)
+    stdout, stderr, status = Open3.capture3("git", *args, chdir: path)
+    raise "git #{args.join(" ")} failed: #{stderr}#{stdout}" unless status.success?
+
+    stdout
   end
 end

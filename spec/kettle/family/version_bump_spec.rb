@@ -18,6 +18,7 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
 
     expect(results.first).not_to be_ok
     expect(results.first.reason).to eq("version changes required")
+    expect(results.first.stdout).to include("1.0.0 -> 1.1.0")
     expect(results.first.stdout).to include("would update")
   end
 
@@ -38,6 +39,9 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     results = described_class.new(members: [alpha, beta], target_version: "1.1.0", mode: :execute).results
 
     expect(results).to all(be_ok)
+    expect(results.first.stdout).to include("1.0.0 -> 1.1.0")
+    expect(results.first.stdout).to include("updated")
+    expect(results.first.stdout).not_to include("would update")
     expect(File.read(alpha.version_file)).to include('VERSION = "1.1.0"')
     expect(File.read(beta.version_file)).to include('VERSION = "1.1.0"')
     expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.1.0"')

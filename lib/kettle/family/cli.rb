@@ -186,6 +186,7 @@ module Kettle
 
       def command_results(command:, config:, members:, options:)
         return branch_target_command_results(command: command, config: config, members: members, options: options) if branch_target_command?(command, config)
+        return member_local_branch_target_command_results(command: command, config: config, members: members, options: options) if member_local_branch_target_command?(command, config, members)
 
         command_results_for_current_branch(command: command, config: config, members: members, options: options)
       end
@@ -224,6 +225,13 @@ module Kettle
         !WORKFLOW_COMMANDS.include?(command)
       end
 
+      def member_local_branch_target_command?(command, config, members)
+        return false if !config.release_target_branches.empty?
+        return false unless command == "bump-version"
+
+        members.any? { |member| member_local_release_config(member: member, config: config) }
+      end
+
       def branch_target_command_results(command:, config:, members:, options:)
         runner = CommandRunner.new(execute: options[:execute])
         selected_names = members.map(&:name)
@@ -241,6 +249,33 @@ module Kettle
           break memo unless memo.last&.ok?
 
           commit_changelog_entries(branch_members: branch_members, runner: runner, memo: memo) if command == "add-changelog"
+          break memo unless memo.last&.ok?
+        end
+      end
+
+      def member_local_branch_target_command_results(command:, config:, members:, options:)
+        runner = CommandRunner.new(execute: options[:execute])
+        members.each_with_object([]) do |member, memo|
+          member_config = member_local_release_config(member: member, config: config)
+          unless member_config
+            memo.concat(command_results_for_current_branch(command: command, config: config, members: [member], options: options))
+            break memo unless memo.last&.ok?
+            next
+          end
+
+          member_config.release_target_branches.each do |branch|
+            memo << runner.call(
+              member: member,
+              phase: "release_checkout",
+              command: ["git", "checkout", branch]
+            )
+            break unless memo.last.ok?
+
+            branch_members = rediscovered_selected_members(config: member_config, selected_names: [member.name], command: command)
+            branch_members = [member] if branch_members.empty?
+            memo.concat(command_results_for_current_branch(command: command, config: member_config, members: branch_members, options: options))
+            break unless memo.last&.ok?
+          end
           break memo unless memo.last&.ok?
         end
       end
@@ -271,12 +306,28 @@ module Kettle
       end
 
       def bump_version_results(members:, options:)
-        VersionBump.new(
+        results = VersionBump.new(
           members: members,
           target_version: options[:target_version],
           from_version: options[:from_version],
           mode: bump_version_mode(options)
         ).results
+        return results if options[:check] || !options[:commit]
+        return results unless results.all?(&:ok?)
+
+        runner = CommandRunner.new(execute: options[:execute])
+        members.each_with_object(results) do |member, memo|
+          memo << runner.call(
+            member: member,
+            phase: "commit_version_bump",
+            command: [
+              "sh",
+              "-lc",
+              "if ! git diff --quiet -- '*.gemspec' 'lib/**/version.rb'; then git add -- '*.gemspec' 'lib/**/version.rb' && git commit -m '🔖 Bump gem version'; fi"
+            ]
+          )
+          break memo unless memo.last.ok?
+        end
       end
 
       def add_changelog_results(members:, options:)
