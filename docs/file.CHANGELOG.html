@@ -94,6 +94,12 @@ member from each member’s current version.</li>
 <code>kettle-family bump-version</code> now leaves non-exact family dependency<br>
 requirements unchanged instead of rejecting them as ambiguous, allowing<br>
 families with loose inter-gem constraints to use relative version bumps.</li>
+  <li>
+<code>kettle-family bump-version --execute</code> now reports actual writes as<br>
+<code>updated</code>, includes each member’s <code>current -&gt; target</code> version change, commits<br>
+version bump edits, and uses member-local branch target stacks so branch<br>
+traversal can continue safely.</li>
+  <li>Text reports now indent each line of multi-line command output consistently.</li>
 </ul>
 
 <h3 id="security">Security</h3>
@@ -443,7 +449,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Wed Jun 24 09:23:03 2026 by
+  Generated on Wed Jun 24 09:58:00 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
