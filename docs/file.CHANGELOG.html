@@ -89,6 +89,13 @@ member from each member’s current version.</li>
 
 <h3 id="fixed">Fixed</h3>
 
+<ul>
+  <li>
+<code>kettle-family bump-version</code> now leaves non-exact family dependency<br>
+requirements unchanged instead of rejecting them as ambiguous, allowing<br>
+families with loose inter-gem constraints to use relative version bumps.</li>
+</ul>
+
 <h3 id="security">Security</h3>
 
 <h2 id="0111---2026-06-23">
@@ -436,7 +443,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Wed Jun 24 08:52:45 2026 by
+  Generated on Wed Jun 24 09:23:03 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
