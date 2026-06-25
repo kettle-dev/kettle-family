@@ -86,6 +86,8 @@ include <code>main</code>.</li>
 <code>kettle-family bump-version</code> now accepts the same relative bump targets as<br>
 <code>kettle-bump</code> (<code>major</code>, <code>minor</code>, <code>patch</code>, and <code>pre</code>) and applies them per<br>
 member from each member’s current version.</li>
+  <li>Text output from <code>kettle-family</code> now starts with the loaded <code>kettle-family</code><br>
+version so local runs show which executable is active.</li>
 </ul>
 
 <h3 id="changed">Changed</h3>
@@ -110,6 +112,18 @@ families with loose inter-gem constraints to use relative version bumps.</li>
 version bump edits, and uses member-local branch target stacks so branch<br>
 traversal can continue safely.</li>
   <li>Text reports now indent each line of multi-line command output consistently.</li>
+  <li>
+<code>kettle-family release-state</code> now recovers member-local branch-stack release<br>
+configuration from another local branch when the current branch does not carry<br>
+<code>.kettle-family.yml</code>, restoring branch-matrix output for branch-stack families.</li>
+  <li>Branch <code>release-state</code> rows now report the latest released version from that<br>
+branch’s major line instead of the repository-wide latest tag.</li>
+  <li>Member-local branch-stack configuration is now discovered through the same<br>
+shared path for <code>install</code>, <code>bump-version</code>, <code>add-changelog</code>, workflow commands,<br>
+and <code>release-state</code>, including configs that only exist on another local<br>
+branch.</li>
+  <li>Branch lane audits now run as part of <code>kettle-family check</code>, and<br>
+<code>branch-lanes</code> is no longer advertised as a separate user-facing command.</li>
 </ul>
 
 <h3 id="security">Security</h3>
@@ -459,7 +473,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Wed Jun 24 18:15:21 2026 by
+  Generated on Thu Jun 25 01:36:47 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
