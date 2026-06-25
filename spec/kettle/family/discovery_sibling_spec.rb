@@ -30,7 +30,7 @@ RSpec.describe Kettle::Family::Discovery do
     expect(members.map(&:name)).to eq(%w[alpha beta])
   end
 
-  it "reports branch lane audit results through the CLI" do
+  it "reports branch lane audit results through readiness checks" do
     write_gem("alpha")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:
@@ -44,10 +44,10 @@ RSpec.describe Kettle::Family::Discovery do
     YAML
     out = StringIO.new
 
-    status = Kettle::Family::CLI.call(["branch-lanes", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+    status = Kettle::Family::CLI.call(["check", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
     report = JSON.parse(out.string)
 
-    expect(status).to eq(0)
+    expect(status).to eq(1)
     expect(report.fetch("family_mode")).to eq("sibling_repos")
     expect(report.fetch("branch_lanes")).to have_key("ruby-3-4")
     expect(report.fetch("results").first.fetch("phase")).to eq("branch_lane_audit")

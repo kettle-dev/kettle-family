@@ -55,6 +55,12 @@ Please file a bug if you notice a violation of semantic versioning.
   `.kettle-family.yml`, restoring branch-matrix output for branch-stack families.
 - Branch `release-state` rows now report the latest released version from that
   branch's major line instead of the repository-wide latest tag.
+- Member-local branch-stack configuration is now discovered through the same
+  shared path for `install`, `bump-version`, `add-changelog`, workflow commands,
+  and `release-state`, including configs that only exist on another local
+  branch.
+- Branch lane audits now run as part of `kettle-family check`, and
+  `branch-lanes` is no longer advertised as a separate user-facing command.
 
 ### Security
 

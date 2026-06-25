@@ -59,6 +59,7 @@ RSpec.describe Kettle::Family::CLI do
 
     expect(status).to eq(0)
     expect(out.string).to include("Usage: kettle-family")
+    expect(out.string).not_to include("branch-lanes")
   end
 
   it "rejects unknown commands" do
@@ -172,6 +173,25 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(1)
     expect(out.string).to include("failed alpha check")
     expect(out.string).to include("resume: kettle-family check --start-at alpha")
+  end
+
+  it "includes branch lane auditing in readiness checks" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      branch_lanes:
+        ruby18:
+          branch: r1_8-even-v0
+          version: "2"
+          members:
+            - alpha
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["check", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(1)
+    expect(out.string).to include("ok ruby18 branch_lane_audit")
+    expect(out.string).to include("failed alpha check")
   end
 
   it "plans template commands with member commits by default" do
@@ -390,6 +410,50 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("alpha commit_version_bump").size).to eq(2)
   end
 
+  it "plans local installs across member-local release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - main
+          - r1
+          - r2
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["install", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("member release targets:")
+    expect(out.string).to include("alpha: r1, r2")
+    expect(out.string).not_to include("git checkout main")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha install").size).to eq(2)
+  end
+
+  it "plans local installs from member-local release target config on another branch" do
+    write_gem("alpha")
+    initialize_git_repo(@tmpdir)
+    run_git(@tmpdir, "switch", "--quiet", "-c", "branch-stack-config")
+    File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+    run_git(@tmpdir, "add", ".")
+    run_git(@tmpdir, "commit", "--quiet", "-m", "Add branch stack config")
+    run_git(@tmpdir, "switch", "--quiet", "-")
+    out = StringIO.new
+
+    status = described_class.call(["install", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("alpha: r1, r2")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha install").size).to eq(2)
+  end
+
   it "plans changelog entry additions per member" do
     write_gem("alpha")
     out = StringIO.new
@@ -433,6 +497,28 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("release_checkout").size).to eq(2)
     expect(out.string.scan("alpha add-changelog").size).to eq(2)
     expect(out.string.scan("commit_changelog").size).to eq(2)
+  end
+
+  it "plans changelog entry additions across member-local release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(
+      ["add-changelog", "--root", @tmpdir, "--section", "Changed", "--entry", "Added support for JRuby 10.1."],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    expect(out.string).to include("alpha: r1, r2")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha add-changelog").size).to eq(2)
   end
 
   it "plans releases in fixed configured order" do
@@ -518,6 +604,25 @@ RSpec.describe Kettle::Family::CLI do
       ["beta", "pull", %w[git pull --rebase]],
       ["beta", "push", %w[git push]]
     ])
+  end
+
+  it "plans standalone git sync commands across member-local release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - main
+          - r1
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["up", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("alpha: main, r1")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha pull").size).to eq(2)
+    expect(out.string.scan("alpha push").size).to eq(2)
   end
 
   it "fails hard when an executed standalone git sync command fails" do

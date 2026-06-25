@@ -6,7 +6,6 @@ require "open3"
 require "rbconfig"
 require "rubygems"
 require "securerandom"
-require "yaml"
 
 module Kettle
   module Family
@@ -289,68 +288,7 @@ module Kettle
       end
 
       def member_local_release_config(member)
-        member_config = Config.load(root: member.root)
-        member_config = member_local_release_config_from_branch(member) || member_config unless member_config.path
-        return unless member_config.path
-        return if config&.path && File.realpath(member_config.path) == File.realpath(config.path)
-        return if member_config.release_target_branches.empty?
-
-        member_config
-      rescue Errno::ENOENT
-        nil
-      end
-
-      def member_local_release_config_from_branch(member)
-        root = member_git_root(member)
-        relative_root = member_relative_root(member, root)
-        member_local_config_paths(root, relative_root).each do |config_ref, content|
-          loaded = YAML.safe_load(content) || {}
-          branch_config = Config.new(root: member.root, path: config_ref, data: loaded)
-          return branch_config unless branch_config.release_target_branches.empty?
-        end
-        nil
-      rescue Error, Psych::SyntaxError
-        nil
-      end
-
-      def member_git_root(member)
-        stdout, stderr, status = Open3.capture3("git", "rev-parse", "--show-toplevel", chdir: member.root)
-        raise Error, "could not determine git root for #{member.root}: #{stderr}" unless status.success?
-
-        File.realpath(stdout.strip)
-      end
-
-      def member_relative_root(member, root)
-        member_root = File.realpath(member.root)
-        return "." if member_root == root
-        return member_root.delete_prefix("#{root}/") if member_root.start_with?("#{root}/")
-
-        raise Error, "member root #{member.root} is outside git root #{root}"
-      end
-
-      def member_local_config_paths(root, relative_root)
-        branches = local_branches(root)
-        candidates = Config::DEFAULT_PATHS.map do |path|
-          (relative_root == ".") ? path : File.join(relative_root, path)
-        end
-        branches.each_with_object([]) do |branch, memo|
-          candidates.each do |path|
-            content = git_show(root, "#{branch}:#{path}")
-            memo << ["#{branch}:#{path}", content] if content
-          end
-        end
-      end
-
-      def local_branches(root)
-        stdout, stderr, status = Open3.capture3("git", "for-each-ref", "--format=%(refname:short)", "refs/heads", chdir: root)
-        raise Error, "could not list local branches for #{root}: #{stderr}" unless status.success?
-
-        stdout.lines.map(&:strip).reject(&:empty?)
-      end
-
-      def git_show(root, revision)
-        stdout, _stderr, status = Open3.capture3("git", "show", revision, chdir: root)
-        status.success? ? stdout : nil
+        BranchTargetConfig.member_local_release_config(member: member, config: config)
       end
 
       def shared_changelog?

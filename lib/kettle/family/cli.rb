@@ -8,7 +8,6 @@ module Kettle
     class CLI
       COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins install bump-version add-changelog release push pull up branch-lanes release-state].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins release push pull up].freeze
-      MAIN_BRANCH_SKIPPING_COMMANDS = %w[install release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
         new(argv, out: out, err: err).call
@@ -71,7 +70,6 @@ module Kettle
               push            Plan or execute git push per member
               pull            Plan or execute git pull --rebase per member
               up              Plan or execute git pull --rebase then git push per member
-              branch-lanes    Audit configured branch lane release mappings
               release-state   Report changelog release state for family members
 
           Options:
@@ -186,7 +184,7 @@ module Kettle
           selected_members: selected,
           config_path: config.path,
           branch_lanes: config.branch_lanes,
-          release_target_branches: branch_targets_for(command, config.release_target_branches),
+          release_target_branches: BranchTargetConfig.branch_targets_for(command, config.release_target_branches),
           member_release_target_branches: member_release_target_branches(command: command, members: selected, config: config),
           release_mode: release_mode(command: command, options: options),
           command: command,
@@ -239,7 +237,7 @@ module Kettle
 
       def member_local_branch_target_command?(command, config, members)
         return false if !config.release_target_branches.empty?
-        return false unless command == "bump-version"
+        return false unless %w[bump-version install add-changelog].include?(command)
 
         members.any? { |member| member_local_release_config(member: member, config: config) }
       end
@@ -247,7 +245,7 @@ module Kettle
       def branch_target_command_results(command:, config:, members:, options:)
         runner = CommandRunner.new(execute: options[:execute])
         selected_names = members.map(&:name)
-        branch_targets_for(command, config.release_target_branches).each_with_object([]) do |branch, memo|
+        BranchTargetConfig.branch_targets_for(command, config.release_target_branches).each_with_object([]) do |branch, memo|
           memo << runner.call(
             member: family_member(config),
             phase: "release_checkout",
@@ -275,7 +273,7 @@ module Kettle
             next
           end
 
-          branch_targets_for(command, member_config.release_target_branches).each do |branch|
+          BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches).each do |branch|
             memo << runner.call(
               member: member,
               phase: "release_checkout",
@@ -413,25 +411,12 @@ module Kettle
       def member_release_target_branches(command:, members:, config:)
         members.each_with_object({}) do |member, memo|
           member_config = member_local_release_config(member: member, config: config)
-          memo[member.name] = branch_targets_for(command, member_config.release_target_branches) if member_config
+          memo[member.name] = BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches) if member_config
         end
       end
 
-      def branch_targets_for(command, branches)
-        return branches unless MAIN_BRANCH_SKIPPING_COMMANDS.include?(command)
-
-        branches.reject { |branch| branch == "main" }
-      end
-
       def member_local_release_config(member:, config:)
-        member_config = Config.load(root: member.root)
-        return unless member_config.path
-        return if config.path && File.realpath(member_config.path) == File.realpath(config.path)
-        return if member_config.release_target_branches.empty?
-
-        member_config
-      rescue Errno::ENOENT
-        nil
+        BranchTargetConfig.member_local_release_config(member: member, config: config)
       end
 
       def install_order(members, config)

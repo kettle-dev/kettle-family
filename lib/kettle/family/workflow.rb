@@ -20,7 +20,6 @@ module Kettle
         "pull" => [["pull", %w[git pull --rebase]]],
         "up" => [["pull", %w[git pull --rebase]], ["push", %w[git push]]]
       }.freeze
-      MAIN_BRANCH_SKIPPING_COMMANDS = %w[release].freeze
 
       def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, gem_signing_password: nil)
         @command = command
@@ -80,7 +79,10 @@ module Kettle
       end
 
       def check_results(workflow_members)
-        workflow_members.map { |member| ReadinessCheck.call(member: member, config: config) }
+        results = []
+        results.concat(BranchLaneAudit.new(config: config, members: workflow_members).results) unless config.branch_lanes.empty?
+        results.concat(workflow_members.map { |member| ReadinessCheck.call(member: member, config: config) })
+        results
       end
 
       def branch_target_results
@@ -215,20 +217,11 @@ module Kettle
       end
 
       def branch_targets
-        return config.release_target_branches unless MAIN_BRANCH_SKIPPING_COMMANDS.include?(command)
-
-        config.release_target_branches.reject { |branch| branch == "main" }
+        BranchTargetConfig.branch_targets_for(command, config.release_target_branches)
       end
 
       def member_local_release_config(member)
-        member_config = Config.load(root: member.root)
-        return unless member_config.path
-        return if config.path && File.realpath(member_config.path) == File.realpath(config.path)
-        return if member_config.release_target_branches.empty?
-
-        member_config
-      rescue Errno::ENOENT
-        nil
+        BranchTargetConfig.member_local_release_config(member: member, config: config)
       end
 
       def checkout_branch_result(branch:, runner:)
