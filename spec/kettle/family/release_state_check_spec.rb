@@ -64,15 +64,40 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     branch_members = [member]
     allow(check).to receive_messages(git_root: @tmpdir, discover_branch_members: branch_members)
     allow(check).to receive(:with_branch_worktree).and_yield(@tmpdir)
+    allow(check).to receive(:branch_latest_released).and_return("1.0.0", "1.0.1")
     allow(Open3).to receive(:capture3).and_return(
-      [JSON.generate("gem_name" => "alpha", "version" => "1.0.1", "pending_release" => false), "", status(0, true)],
-      [JSON.generate("gem_name" => "alpha", "version" => "1.0.2", "pending_release" => true), "", status(0, true)]
+      [JSON.generate("gem_name" => "alpha", "version" => "1.0.1", "latest_released" => "9.0.0", "latest_changelog_version" => "1.0.0", "pending_release" => false), "", status(0, true)],
+      [JSON.generate("gem_name" => "alpha", "version" => "1.0.2", "latest_released" => "9.0.0", "latest_changelog_version" => "1.0.1", "pending_release" => true), "", status(0, true)]
     )
 
     results = check.results
 
     expect(results.map(&:branch)).to eq(%w[r1 r2])
     expect(results.map { |result| result.state.fetch("version") }).to eq(%w[1.0.1 1.0.2])
+    expect(results.map { |result| result.state.fetch("latest_released") }).to eq(%w[1.0.0 1.0.1])
+  end
+
+  it "selects the latest release tag from the branch changelog major line" do
+    repo = File.join(@tmpdir, "repo")
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(repo, "README.md"), "test\n")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    %w[v2.0.0 v2.3.1 v24.0.2 v24.2.0].each { |tag| run_git(repo, "tag", "-m", tag, tag) }
+    member = Kettle::Family::Member.new(name: "alpha", root: repo, gemspec_path: nil, version_file: nil, version: "2.4.0", dependencies: [])
+    check = described_class.new(members: [member])
+
+    expect(check.send(:branch_latest_released, member, "2.4.0")).to eq("2.3.1")
+  end
+
+  it "leaves branch release state unchanged when the line version is unavailable" do
+    member = member("alpha")
+    check = described_class.new(members: [member])
+    state = {"latest_released" => "9.0.0"}
+
+    expect(check.send(:branch_filtered_state, member, state, "r1")).to eq(state)
   end
 
   it "delegates to member-local release target branches when the active family config has none" do
@@ -87,6 +112,37 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     allow(described_class).to receive(:new).with(config: member_config, members: [member]).and_return(member_check)
 
     expect(check.results).to eq([branch_result])
+  end
+
+  it "loads member-local release target branches from another local branch when the active branch lacks config" do
+    repo = File.join(@tmpdir, "repo")
+    member_root = File.join(repo, "alpha")
+    FileUtils.mkdir_p(member_root)
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(member_root, "alpha.gemspec"), "Gem::Specification.new { |spec| spec.name = 'alpha' }\n")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "switch", "--quiet", "-c", "branch-stack-config")
+    File.write(File.join(member_root, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1
+          - r2
+    YAML
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Add member branch stack")
+    run_git(repo, "switch", "--quiet", "-")
+
+    member = Kettle::Family::Member.new(name: "alpha", root: member_root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: [])
+    parent_config = release_state_config(root: repo)
+    check = described_class.new(config: parent_config, members: [member])
+
+    member_config = check.send(:member_local_release_config, member)
+
+    expect(member_config.path).to eq("branch-stack-config:alpha/.kettle-family.yml")
+    expect(member_config.release_target_branches).to eq(%w[r1 r2])
   end
 
   it "reports configured branch worktree failures as branch results" do
@@ -241,5 +297,13 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       changelog_workdir: nil,
       changelog_env: {}
     )
+  end
+
+  def run_git(path, *args)
+    FileUtils.mkdir_p(path)
+    stdout, stderr, status = Open3.capture3("git", *args, chdir: path)
+    raise "git #{args.join(" ")} failed: #{stderr}#{stdout}" unless status.success?
+
+    stdout
   end
 end

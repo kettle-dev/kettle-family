@@ -45,7 +45,7 @@ module Kettle
       end
 
       def to_text
-        lines = ["family: #{family_name}"]
+        lines = ["kettle-family: #{Kettle::Family::VERSION}", "family: #{family_name}"]
         lines << "mode: #{family_mode}" if family_mode
         lines << "config: #{config_path || "none"}"
         lines << "order: #{order_mode}"

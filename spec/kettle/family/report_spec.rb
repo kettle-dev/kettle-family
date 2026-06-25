@@ -1,6 +1,19 @@
 # frozen_string_literal: true
 
 RSpec.describe Kettle::Family::Report do
+  it "prints the loaded kettle-family version in text reports" do
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "discover"
+    )
+
+    expect(report.to_text.lines.first).to eq("kettle-family: #{Kettle::Family::VERSION}\n")
+  end
+
   it "renders release-state results with a branch column when branches are present" do
     result = Kettle::Family::ReleaseStateResult.new(
       member_name: "rubocop-lts",

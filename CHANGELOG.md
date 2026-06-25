@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family bump-version` now accepts the same relative bump targets as
   `kettle-bump` (`major`, `minor`, `patch`, and `pre`) and applies them per
   member from each member's current version.
+- Text output from `kettle-family` now starts with the loaded `kettle-family`
+  version so local runs show which executable is active.
 
 ### Changed
 
@@ -48,6 +50,11 @@ Please file a bug if you notice a violation of semantic versioning.
   version bump edits, and uses member-local branch target stacks so branch
   traversal can continue safely.
 - Text reports now indent each line of multi-line command output consistently.
+- `kettle-family release-state` now recovers member-local branch-stack release
+  configuration from another local branch when the current branch does not carry
+  `.kettle-family.yml`, restoring branch-matrix output for branch-stack families.
+- Branch `release-state` rows now report the latest released version from that
+  branch's major line instead of the repository-wide latest tag.
 
 ### Security
 

@@ -48,6 +48,8 @@ module Kettle
 
       def help
         out.puts(<<~HELP)
+          kettle-family: #{Kettle::Family::VERSION}
+
           Usage: kettle-family COMMAND [options]
                  kettle-family bump-version VERSION|major|minor|patch|pre [options]
 

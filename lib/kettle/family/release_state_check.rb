@@ -4,7 +4,9 @@ require "json"
 require "fileutils"
 require "open3"
 require "rbconfig"
+require "rubygems"
 require "securerandom"
+require "yaml"
 
 module Kettle
   module Family
@@ -57,6 +59,7 @@ module Kettle
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         success = status.success?
         state = success ? JSON.parse(stdout) : {}
+        state = branch_filtered_state(member, state, branch) if success && branch
         result(member: member, command: command, stdout: stdout, stderr: stderr, status: status.exitstatus, elapsed: elapsed, success: success, state: state, branch: branch)
       rescue JSON::ParserError => error
         result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
@@ -117,6 +120,43 @@ module Kettle
 
       def release_state_env
         config ? config.changelog_env : {}
+      end
+
+      def branch_filtered_state(member, state, _branch)
+        latest_released = branch_latest_released(member, state["latest_changelog_version"])
+        return state unless latest_released
+
+        state.merge("latest_released" => latest_released)
+      rescue ArgumentError
+        state
+      end
+
+      def branch_latest_released(member, line_version)
+        target_major = gem_version(line_version).segments.first
+        versions = release_tag_versions(member.root).select do |version|
+          version.segments.first == target_major
+        end
+        versions.max&.to_s
+      end
+
+      def release_tag_versions(root)
+        stdout, stderr, status = Open3.capture3("git", "tag", "--list", "v*", chdir: root)
+        raise Error, "could not list release tags for #{root}: #{stderr}" unless status.success?
+
+        stdout.lines.filter_map do |line|
+          tag = line.strip
+          next unless tag.start_with?("v")
+
+          gem_version(tag.delete_prefix("v"))
+        rescue ArgumentError
+          nil
+        end
+      end
+
+      def gem_version(value)
+        raise ArgumentError, "missing version" if value.to_s.empty?
+
+        Gem::Version.new(value)
       end
 
       def family_changelog_state(root)
@@ -250,6 +290,7 @@ module Kettle
 
       def member_local_release_config(member)
         member_config = Config.load(root: member.root)
+        member_config = member_local_release_config_from_branch(member) || member_config unless member_config.path
         return unless member_config.path
         return if config&.path && File.realpath(member_config.path) == File.realpath(config.path)
         return if member_config.release_target_branches.empty?
@@ -257,6 +298,59 @@ module Kettle
         member_config
       rescue Errno::ENOENT
         nil
+      end
+
+      def member_local_release_config_from_branch(member)
+        root = member_git_root(member)
+        relative_root = member_relative_root(member, root)
+        member_local_config_paths(root, relative_root).each do |config_ref, content|
+          loaded = YAML.safe_load(content) || {}
+          branch_config = Config.new(root: member.root, path: config_ref, data: loaded)
+          return branch_config unless branch_config.release_target_branches.empty?
+        end
+        nil
+      rescue Error, Psych::SyntaxError
+        nil
+      end
+
+      def member_git_root(member)
+        stdout, stderr, status = Open3.capture3("git", "rev-parse", "--show-toplevel", chdir: member.root)
+        raise Error, "could not determine git root for #{member.root}: #{stderr}" unless status.success?
+
+        File.realpath(stdout.strip)
+      end
+
+      def member_relative_root(member, root)
+        member_root = File.realpath(member.root)
+        return "." if member_root == root
+        return member_root.delete_prefix("#{root}/") if member_root.start_with?("#{root}/")
+
+        raise Error, "member root #{member.root} is outside git root #{root}"
+      end
+
+      def member_local_config_paths(root, relative_root)
+        branches = local_branches(root)
+        candidates = Config::DEFAULT_PATHS.map do |path|
+          (relative_root == ".") ? path : File.join(relative_root, path)
+        end
+        branches.each_with_object([]) do |branch, memo|
+          candidates.each do |path|
+            content = git_show(root, "#{branch}:#{path}")
+            memo << ["#{branch}:#{path}", content] if content
+          end
+        end
+      end
+
+      def local_branches(root)
+        stdout, stderr, status = Open3.capture3("git", "for-each-ref", "--format=%(refname:short)", "refs/heads", chdir: root)
+        raise Error, "could not list local branches for #{root}: #{stderr}" unless status.success?
+
+        stdout.lines.map(&:strip).reject(&:empty?)
+      end
+
+      def git_show(root, revision)
+        stdout, _stderr, status = Open3.capture3("git", "show", revision, chdir: root)
+        status.success? ? stdout : nil
       end
 
       def shared_changelog?
