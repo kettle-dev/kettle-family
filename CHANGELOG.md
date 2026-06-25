@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family release` now accepts `--accept` / `--no-accept` to control
+  whether interactive confirmation prompts are answered automatically.
+
 ### Changed
 
 ### Deprecated
@@ -27,6 +30,10 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Removed
 
 ### Fixed
+
+- Interactive release commands now answer `[y/N]` confirmation prompts before
+  writing cached PEM passphrases, preventing confirmation prompts from consuming
+  the signing password as input.
 
 ### Security
 

@@ -675,6 +675,17 @@ RSpec.describe Kettle::Family::CLI do
     expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 --local-ci"])
   end
 
+  it "passes interactive accept mode through release workflows" do
+    write_ready_gem("alpha")
+    workflow = instance_double(Kettle::Family::Workflow, results: [])
+    allow(Kettle::Family::Workflow).to receive(:new).and_return(workflow)
+
+    status = described_class.call(["release", "--root", @tmpdir, "--no-accept"], out: StringIO.new, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(Kettle::Family::Workflow).to have_received(:new).with(hash_including(accept: false))
+  end
+
   it "prints a release-state table" do
     write_gem("alpha")
     result = Kettle::Family::ReleaseStateResult.new(

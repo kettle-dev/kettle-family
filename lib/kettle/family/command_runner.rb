@@ -5,8 +5,9 @@ require "open3"
 module Kettle
   module Family
     class CommandRunner
-      def initialize(execute: false, gem_signing_password: nil)
+      def initialize(execute: false, accept: true, gem_signing_password: nil)
         @execute = execute
+        @accept = accept
         @gem_signing_password = gem_signing_password
       end
 
@@ -41,7 +42,7 @@ module Kettle
 
       private
 
-      attr_reader :execute, :gem_signing_password
+      attr_reader :execute, :accept, :gem_signing_password
 
       def run_interactive(env:, argv:, chdir:)
         return run_interactive_pty(env: env, argv: argv, chdir: chdir) if pty_available?
@@ -63,7 +64,7 @@ module Kettle
                   chunk = output.readpartial(1024)
                   stdout << chunk
                   $stdout.print(chunk)
-                  write_signing_password(input, chunk)
+                  handle_interactive_prompt(input, chunk)
                 else
                   input.write($stdin.readpartial(1024))
                 end
@@ -108,7 +109,7 @@ module Kettle
           captured_stderr << chunk
           $stderr.print(chunk)
         end
-        write_signing_password(input, chunk)
+        handle_interactive_prompt(input, chunk)
       rescue EOFError
         readers.delete(reader)
       end
@@ -127,6 +128,24 @@ module Kettle
 
         input.write("#{gem_signing_password}\n")
         input.flush
+      end
+
+      def handle_interactive_prompt(input, chunk)
+        if accept_confirmation_prompt?(chunk)
+          write_accept_response(input) if accept
+          return
+        end
+
+        write_signing_password(input, chunk)
+      end
+
+      def write_accept_response(input)
+        input.write("y\n")
+        input.flush
+      end
+
+      def accept_confirmation_prompt?(chunk)
+        chunk.match?(/\[[Yy]\/[Nn]\]\s*:?/)
       end
 
       def signing_password_prompt?(chunk)

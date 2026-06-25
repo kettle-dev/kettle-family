@@ -190,6 +190,24 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(input.string).to eq("secret\n")
   end
 
+  it "accepts confirmation prompts before signing password prompts" do
+    runner = described_class.new(gem_signing_password: "secret")
+    input = StringIO.new
+
+    runner.send(:handle_interactive_prompt, input, "Proceed with signing enabled? This may hang waiting for a PEM password. [y/N]: ")
+
+    expect(input.string).to eq("y\n")
+  end
+
+  it "waits for user input at confirmation prompts when accept is disabled" do
+    runner = described_class.new(accept: false, gem_signing_password: "secret")
+    input = StringIO.new
+
+    runner.send(:handle_interactive_prompt, input, "Proceed with signing enabled? This may hang waiting for a PEM password. [y/N]: ")
+
+    expect(input.string).to eq("")
+  end
+
   it "rejects unsupported command shapes" do
     member = member_at("alpha")
 

@@ -93,6 +93,8 @@ module Kettle
               --local-ci        Pass --local-ci through to kettle-release commands
               --continue-ci-failures
                                Set K_RELEASE_CI_CONTINUE=true for release commands
+              --accept         Answer yes to confirmation prompts in interactive commands (default)
+              --no-accept      Wait for user input at confirmation prompts
               --tag            Add release tag phase
               --push           Add release push phase
               --commit         Allow each templated member's kettle-jem run to commit (default)
@@ -122,6 +124,7 @@ module Kettle
           release_start_step: nil,
           release_local_ci: false,
           release_continue_ci_failures: false,
+          accept: true,
           tag: false,
           push: false,
           commit: true,
@@ -147,6 +150,8 @@ module Kettle
           parser.on("--start-step N", Integer) { |value| options[:release_start_step] = value }
           parser.on("--local-ci") { options[:release_local_ci] = true }
           parser.on("--continue-ci-failures") { options[:release_continue_ci_failures] = true }
+          parser.on("--accept") { options[:accept] = true }
+          parser.on("--no-accept") { options[:accept] = false }
           parser.on("--tag") { options[:tag] = true }
           parser.on("--push") { options[:push] = true }
           parser.on("--commit") { options[:commit] = true }
@@ -212,6 +217,7 @@ module Kettle
           config: config,
           members: members,
           execute: options[:execute],
+          accept: options[:accept],
           commit: options[:commit],
           allow_dirty: options[:allow_dirty],
           publish: options[:publish],

@@ -21,11 +21,12 @@ module Kettle
         "up" => [["pull", %w[git pull --rebase]], ["push", %w[git push]]]
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, gem_signing_password: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, gem_signing_password: nil)
         @command = command
         @config = config
         @members = members
         @execute = execute
+        @accept = accept
         @commit = commit
         @allow_dirty = allow_dirty
         @publish = publish
@@ -50,7 +51,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -61,7 +62,7 @@ module Kettle
       end
 
       def member_workflow_results(workflow_members)
-        runner = CommandRunner.new(execute: execute)
+        runner = CommandRunner.new(execute: execute, accept: accept)
         workflow_members.each_with_object([]) do |member, memo|
           if command == "template" && config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
@@ -139,6 +140,7 @@ module Kettle
           config: member_config,
           members: [member],
           execute: execute,
+          accept: accept,
           commit: commit,
           allow_dirty: allow_dirty,
           publish: publish,
@@ -203,7 +205,7 @@ module Kettle
       end
 
       def command_runner
-        CommandRunner.new(execute: execute, gem_signing_password: @gem_signing_password)
+        CommandRunner.new(execute: execute, accept: accept, gem_signing_password: @gem_signing_password)
       end
 
       def rediscovered_selected_members(selected_names)
