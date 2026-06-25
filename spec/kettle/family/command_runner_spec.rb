@@ -185,9 +185,27 @@ RSpec.describe Kettle::Family::CommandRunner do
     runner = described_class.new(gem_signing_password: "secret")
     input = StringIO.new
 
-    runner.send(:write_signing_password, input, "PEM password: ")
+    runner.send(:write_signing_password, input, "Enter PEM pass phrase: ")
 
     expect(input.string).to eq("secret\n")
+  end
+
+  it "does not write cached signing passwords for informational PEM text" do
+    runner = described_class.new(gem_signing_password: "secret")
+    input = StringIO.new
+
+    runner.send(:handle_interactive_prompt, input, "TIP: set SKIP_GEM_SIGNING=true to avoid PEM password prompts.\n")
+
+    expect(input.string).to eq("")
+  end
+
+  it "does not write cached signing passwords for RubyGems MFA prompts" do
+    runner = described_class.new(gem_signing_password: "secret")
+    input = StringIO.new
+
+    runner.send(:handle_interactive_prompt, input, "You have enabled multi-factor authentication. Please enter OTP code.\nCode: ")
+
+    expect(input.string).to eq("")
   end
 
   it "accepts confirmation prompts before signing password prompts" do
@@ -206,6 +224,16 @@ RSpec.describe Kettle::Family::CommandRunner do
     runner.send(:handle_interactive_prompt, input, "Proceed with signing enabled? This may hang waiting for a PEM password. [y/N]: ")
 
     expect(input.string).to eq("")
+  end
+
+  it "normalizes binary command output to UTF-8" do
+    runner = described_class.new
+    binary = "ok \xFF".b
+
+    normalized = runner.send(:normalize_output, binary)
+
+    expect(normalized.encoding).to eq(Encoding::UTF_8)
+    expect(normalized).to eq("ok ")
   end
 
   it "rejects unsupported command shapes" do

@@ -24,6 +24,8 @@ module Kettle
             Open3.capture3(process_env, *argv, chdir: member.root)
           end
         end
+        stdout = normalize_output(stdout)
+        stderr = normalize_output(stderr)
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         CommandResult.new(
           member_name: member.name,
@@ -131,6 +133,8 @@ module Kettle
       end
 
       def handle_interactive_prompt(input, chunk)
+        return if otp_prompt?(chunk)
+
         if accept_confirmation_prompt?(chunk)
           write_accept_response(input) if accept
           return
@@ -148,8 +152,17 @@ module Kettle
         chunk.match?(/\[[Yy]\/[Nn]\]\s*:?/)
       end
 
+      def otp_prompt?(chunk)
+        chunk.match?(/(?:multi-factor authentication|OTP code|one-time password|\bCode:\s*)/i)
+      end
+
       def signing_password_prompt?(chunk)
-        chunk.match?(/pass(?:\s|-)?phrase|PEM password|private key password/i)
+        chunk.match?(/(?:enter\s+)?(?:PEM\s+)?pass(?:\s|-)?phrase\s*(?:for\s+[^:]+)?[:?]\s*\z/i) ||
+          chunk.match?(/(?:PEM|private key) password\s*[:?]\s*\z/i)
+      end
+
+      def normalize_output(output)
+        output.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
       end
 
       def with_unbundled_environment

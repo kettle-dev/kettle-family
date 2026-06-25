@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Interactive release commands now leave RubyGems MFA/OTP prompts for the user
+  instead of sending cached signing passphrases to the `Code:` prompt.
+- Interactive command output is now normalized to UTF-8 before report rendering,
+  avoiding encoding crashes when a release command fails after PTY output.
+
 ### Security
 
 ## [0.1.18] - 2026-06-25
