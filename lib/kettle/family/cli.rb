@@ -6,8 +6,8 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan report metadata check test lint docs template install bump-version add-changelog release push pull up branch-lanes release-state].freeze
-      WORKFLOW_COMMANDS = %w[check test lint docs template release push pull up].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins install bump-version add-changelog release push pull up branch-lanes release-state].freeze
+      WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins release push pull up].freeze
       MAIN_BRANCH_SKIPPING_COMMANDS = %w[install release].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
@@ -61,6 +61,7 @@ module Kettle
               lint            Plan or execute configured lint command per member
               docs            Plan or execute configured docs command per member
               template        Plan or execute kettle-jem templating per member
+              gha-sha-pins    Plan or execute kettle-gha-sha-pins per member
               install         Build and install selected local family gems
               bump-version    Check, plan, or execute family version alignment
               add-changelog   Add an entry to an existing Unreleased changelog section
@@ -83,8 +84,9 @@ module Kettle
               --env KEY=VALUE  Override an environment variable for each member workflow command
               --section NAME   Changelog section for add-changelog
               --entry TEXT     Changelog entry for add-changelog
-              --check          Check whether bump-version would need edits
+              --check          Check whether bump-version or gha-sha-pins would need edits
               --from VERSION   Require selected members to currently match VERSION
+              --upgrade LEVEL  GitHub Actions SHA pin upgrade strategy: major, minor, patch
               --publish        Use publish release command instead of build command
               --build-only      Use build release command (default)
               --start-step N    Pass start_step=N through to kettle-release commands
@@ -115,6 +117,7 @@ module Kettle
           changelog_entry: nil,
           check: false,
           from_version: nil,
+          gha_sha_pins_upgrade: "patch",
           publish: false,
           release_start_step: nil,
           release_local_ci: false,
@@ -138,6 +141,7 @@ module Kettle
           parser.on("--entry TEXT") { |value| options[:changelog_entry] = value }
           parser.on("--check") { options[:check] = true }
           parser.on("--from VERSION") { |value| options[:from_version] = value }
+          parser.on("--upgrade LEVEL") { |value| options[:gha_sha_pins_upgrade] = parse_gha_sha_pins_upgrade(value) }
           parser.on("--publish") { options[:publish] = true }
           parser.on("--build-only") { options[:publish] = false }
           parser.on("--start-step N", Integer) { |value| options[:release_start_step] = value }
@@ -216,6 +220,8 @@ module Kettle
           start_step: options[:release_start_step],
           local_ci: options[:release_local_ci],
           continue_ci_failures: options[:release_continue_ci_failures],
+          gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],
+          gha_sha_pins_check: options[:check],
           env_overrides: options[:workflow_env]
         ).results
       end
@@ -307,6 +313,13 @@ module Kettle
         raise OptionParser::InvalidArgument, "invalid environment variable name #{key.inspect}" unless key.match?(/\A[A-Za-z_][A-Za-z0-9_]*\z/)
 
         env[key] = env_value
+      end
+
+      def parse_gha_sha_pins_upgrade(value)
+        normalized = value.to_s.downcase
+        return normalized if %w[major minor patch].include?(normalized)
+
+        raise OptionParser::InvalidArgument, "--upgrade must be one of: major, minor, patch"
       end
 
       def bump_version_results(members:, options:)

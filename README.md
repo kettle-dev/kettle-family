@@ -242,6 +242,15 @@ The release-state report lists each gem's current `version.rb`, latest published
 release, latest versioned `CHANGELOG.md` section, and whether pending changelog
 work exists in either `Unreleased` or an unpublished prepared release section.
 
+Plan or update GitHub Actions workflow SHA pins across the selected family
+members:
+
+```console
+kettle-family gha-sha-pins
+kettle-family gha-sha-pins --execute
+kettle-family gha-sha-pins --execute --upgrade minor
+```
+
 Run release prep/build phases without publishing:
 
 ```console

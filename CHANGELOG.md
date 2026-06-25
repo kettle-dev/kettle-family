@@ -22,6 +22,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `kettle-family push`, `kettle-family pull`, and `kettle-family up` now plan
   or execute family-wide git synchronization commands.
+- `kettle-family gha-sha-pins` now plans or executes
+  `kettle-gha-sha-pins` across family members, including branch stacks that
+  include `main`.
 - `kettle-family bump-version` now accepts the same relative bump targets as
   `kettle-bump` (`major`, `minor`, `patch`, and `pre`) and applies them per
   member from each member's current version.

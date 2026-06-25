@@ -44,6 +44,31 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["internal", "readiness"])
   end
 
+  it "plans GitHub Actions SHA pin writes with the default patch upgrade" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "gha-sha-pins", config: config, members: [member]).results
+
+    expect(results.first.phase).to eq("gha-sha-pins")
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-sha-pins --write --upgrade patch"])
+  end
+
+  it "plans GitHub Actions SHA pin checks with the selected upgrade level" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(
+      command: "gha-sha-pins",
+      config: config,
+      members: [member],
+      gha_sha_pins_check: true,
+      gha_sha_pins_upgrade: "minor"
+    ).results
+
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-sha-pins --check --upgrade minor"])
+  end
+
   it "plans member workflow commands across member-local target branches" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")

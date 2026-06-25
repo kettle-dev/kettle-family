@@ -203,6 +203,37 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("alpha template").size).to eq(2)
   end
 
+  it "includes main when planning GitHub Actions SHA pinning across configured release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - main
+          - r1_8-even-v0
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["gha-sha-pins", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("release targets: main, r1_8-even-v0")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha gha-sha-pins").size).to eq(2)
+    expect(out.string.scan("alpha commit_gha_sha_pins").size).to eq(2)
+  end
+
+  it "passes GitHub Actions SHA pin check and upgrade options through the CLI" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["gha-sha-pins", "--root", @tmpdir, "--check", "--upgrade", "minor", "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").first
+    expect(result.fetch("phase")).to eq("gha-sha-pins")
+    expect(result.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-gha-sha-pins --check --upgrade minor"])
+  end
+
   it "plans workflow environment overrides after mise" do
     write_gem("alpha")
     File.write(File.join(@tmpdir, "alpha", "mise.toml"), "[env]\nK_JEM_TEMPLATING = \"false\"\n")

@@ -12,7 +12,8 @@ module Kettle
         "template" => "bundle exec kettle-jem install",
         "test" => "bundle exec kettle-test",
         "lint" => "bundle exec rake rubocop_gradual",
-        "docs" => "bundle exec rake yard"
+        "docs" => "bundle exec rake yard",
+        "gha-sha-pins" => "bundle exec kettle-gha-sha-pins"
       }.freeze
       GIT_SYNC_COMMANDS = {
         "push" => [["push", %w[git push]]],
@@ -21,7 +22,7 @@ module Kettle
       }.freeze
       MAIN_BRANCH_SKIPPING_COMMANDS = %w[release].freeze
 
-      def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, env_overrides: {}, gem_signing_password: nil)
+      def initialize(command:, config:, members:, execute: false, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, gem_signing_password: nil)
         @command = command
         @config = config
         @members = members
@@ -34,6 +35,8 @@ module Kettle
         @start_step = start_step
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
+        @gha_sha_pins_upgrade = gha_sha_pins_upgrade
+        @gha_sha_pins_check = gha_sha_pins_check
         @env_overrides = env_overrides
         @gem_signing_password = gem_signing_password
       end
@@ -48,7 +51,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :env_overrides
+      attr_reader :command, :config, :members, :execute, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -72,6 +75,7 @@ module Kettle
           break memo unless result.ok?
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
+          commit_gha_sha_pins(member: member, runner: runner, memo: memo) if command == "gha-sha-pins"
         end
       end
 
@@ -141,6 +145,8 @@ module Kettle
           start_step: start_step,
           local_ci: local_ci,
           continue_ci_failures: continue_ci_failures,
+          gha_sha_pins_upgrade: gha_sha_pins_upgrade,
+          gha_sha_pins_check: gha_sha_pins_check,
           env_overrides: env_overrides,
           gem_signing_password: @gem_signing_password
         )
@@ -358,8 +364,32 @@ module Kettle
 
       def workflow_command(member = nil)
         return template_command(member) if command == "template"
+        return gha_sha_pins_command if command == "gha-sha-pins"
 
         command_for(command)
+      end
+
+      def gha_sha_pins_command
+        command_text = command_for(command)
+        args = []
+        args << (gha_sha_pins_check ? "--check" : "--write") unless command_includes_any?(command_text, %w[--check --write])
+        args.concat(["--upgrade", gha_sha_pins_upgrade]) unless command_includes_arg?(command_text, "--upgrade")
+        append_command_args(command_text, args)
+      end
+
+      def append_command_args(command_text, args)
+        return command_text if args.empty?
+        return [*command_text, *args] if command_text.is_a?(Array)
+
+        "#{command_text} #{args.join(" ")}"
+      end
+
+      def command_includes_any?(command_text, args)
+        args.any? { |arg| command_includes_arg?(command_text, arg) }
+      end
+
+      def command_includes_arg?(command_text, arg)
+        command_text.is_a?(Array) ? command_text.map(&:to_s).include?(arg) : command_text.to_s.include?(arg)
       end
 
       def command_for(name)
@@ -455,6 +485,21 @@ module Kettle
         else
           false
         end
+      end
+
+      def commit_gha_sha_pins(member:, runner:, memo:)
+        return if gha_sha_pins_check || !commit
+
+        result = runner.call(
+          member: member,
+          phase: "commit_gha_sha_pins",
+          command: [
+            "sh",
+            "-lc",
+            "if ! git diff --quiet -- .github/workflows; then git add -- .github/workflows && git commit -m '🔒 Pin GitHub Actions SHAs'; fi"
+          ]
+        )
+        memo << result
       end
 
       def family_member
