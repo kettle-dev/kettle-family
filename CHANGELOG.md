@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.1.17] - 2026-06-25
+
+- TAG: [v0.1.17][0.1.17t]
+- COVERAGE: 94.67% -- 1510/1595 lines in 21 files
+- BRANCH COVERAGE: 76.00% -- 532/700 branches in 21 files
+- 39.63% documented
+
+### Added
+
 - `kettle-family push`, `kettle-family pull`, and `kettle-family up` now plan
   or execute family-wide git synchronization commands.
 - `kettle-family gha-sha-pins` now plans or executes
@@ -30,12 +49,6 @@ Please file a bug if you notice a violation of semantic versioning.
   member from each member's current version.
 - Text output from `kettle-family` now starts with the loaded `kettle-family`
   version so local runs show which executable is active.
-
-### Changed
-
-### Deprecated
-
-### Removed
 
 ### Fixed
 
@@ -61,8 +74,6 @@ Please file a bug if you notice a violation of semantic versioning.
   branch.
 - Branch lane audits now run as part of `kettle-family check`, and
   `branch-lanes` is no longer advertised as a separate user-facing command.
-
-### Security
 
 ## [0.1.11] - 2026-06-23
 
@@ -308,7 +319,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.17...HEAD
+[0.1.17]: https://github.com/kettle-dev/kettle-family/compare/v0.1.11...v0.1.17
+[0.1.17t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.17
 [0.1.12]: https://github.com/kettle-dev/kettle-family/compare/v0.1.11...v0.1.12
 [0.1.12t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.12
 [0.1.11]: https://github.com/kettle-dev/kettle-family/compare/v0.1.10...v0.1.11

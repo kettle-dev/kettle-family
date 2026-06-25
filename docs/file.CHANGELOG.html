@@ -70,9 +70,32 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.11...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.17...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
+
+<h3 id="changed">Changed</h3>
+
+<h3 id="deprecated">Deprecated</h3>
+
+<h3 id="removed">Removed</h3>
+
+<h3 id="fixed">Fixed</h3>
+
+<h3 id="security">Security</h3>
+
+<h2 id="0117---2026-06-25">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.11...v0.1.17">0.1.17</a> - 2026-06-25</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.17">v0.1.17</a>
+</li>
+  <li>COVERAGE: 94.67% – 1510/1595 lines in 21 files</li>
+  <li>BRANCH COVERAGE: 76.00% – 532/700 branches in 21 files</li>
+  <li>39.63% documented</li>
+</ul>
+
+<h3 id="added-1">Added</h3>
 
 <ul>
   <li>
@@ -90,13 +113,7 @@ member from each member’s current version.</li>
 version so local runs show which executable is active.</li>
 </ul>
 
-<h3 id="changed">Changed</h3>
-
-<h3 id="deprecated">Deprecated</h3>
-
-<h3 id="removed">Removed</h3>
-
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed-1">Fixed</h3>
 
 <ul>
   <li>Branch-stack commands now allow <code>main</code> as a configured branch target for<br>
@@ -126,8 +143,6 @@ branch.</li>
 <code>branch-lanes</code> is no longer advertised as a separate user-facing command.</li>
 </ul>
 
-<h3 id="security">Security</h3>
-
 <h2 id="0111---2026-06-23">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.10...v0.1.11">0.1.11</a> - 2026-06-23</h2>
 
@@ -139,7 +154,7 @@ branch.</li>
   <li>40.40% documented</li>
 </ul>
 
-<h3 id="fixed-1">Fixed</h3>
+<h3 id="fixed-2">Fixed</h3>
 
 <ul>
   <li>Release reports now label plain <code>release</code> as build-only mode and<br>
@@ -166,7 +181,7 @@ resulting lockfile changes.</li>
   <li>40.14% documented</li>
 </ul>
 
-<h3 id="fixed-2">Fixed</h3>
+<h3 id="fixed-3">Fixed</h3>
 
 <ul>
   <li>Workflow commands now honor member-local <code>.kettle-family.yml</code> release target<br>
@@ -185,7 +200,7 @@ those member-local branch targets.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="fixed-3">Fixed</h3>
+<h3 id="fixed-4">Fixed</h3>
 
 <ul>
   <li>Member workflow commands now run with the parent Bundler environment removed,<br>
@@ -207,7 +222,7 @@ overrides.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="fixed-4">Fixed</h3>
+<h3 id="fixed-5">Fixed</h3>
 
 <ul>
   <li>
@@ -227,7 +242,7 @@ allowing mixed sibling workspaces to report stacked gems correctly.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-1">Added</h3>
+<h3 id="added-2">Added</h3>
 
 <ul>
   <li>
@@ -248,7 +263,7 @@ branch.</p>
   <li>Retemplated project metadata and CI/development automation with <code>kettle-jem</code> v7.0.0.</li>
 </ul>
 
-<h3 id="fixed-5">Fixed</h3>
+<h3 id="fixed-6">Fixed</h3>
 
 <ul>
   <li>Corrected OpenCollective funding metadata to use the <code>kettle-dev</code> collective.</li>
@@ -285,7 +300,7 @@ templating commit by default; use <code>--no-commit</code> to pass <code>--skip-
 member templating commands.</li>
 </ul>
 
-<h3 id="added-2">Added</h3>
+<h3 id="added-3">Added</h3>
 
 <ul>
   <li>Added <code>--env KEY=VALUE</code> workflow overrides so <code>kettle-family</code> commands can<br>
@@ -304,7 +319,7 @@ defaults have loaded.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-3">Added</h3>
+<h3 id="added-4">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family install</code> to build and install selected local family gems,<br>
@@ -329,7 +344,7 @@ including config-defined <code>install.local_dependencies</code> resolved relati
   <li>40.14% documented</li>
 </ul>
 
-<h3 id="added-4">Added</h3>
+<h3 id="added-5">Added</h3>
 
 <ul>
   <li>Added configurable readiness checks, root/shared changelog support, release<br>
@@ -337,7 +352,7 @@ environment overrides, and an optional family changelog release phase for<br>
 monorepo gem families whose members share root release metadata.</li>
 </ul>
 
-<h3 id="fixed-6">Fixed</h3>
+<h3 id="fixed-7">Fixed</h3>
 
 <ul>
   <li>Fixed the Ruby 3.2 CI appraisal so root changelog release-state checks have<br>
@@ -371,7 +386,7 @@ toolchain instead of depending on <code>kettle-dev</code> as a published runtime
 dependency.</li>
 </ul>
 
-<h3 id="fixed-7">Fixed</h3>
+<h3 id="fixed-8">Fixed</h3>
 
 <ul>
   <li>Fixed release-state checks to use the active <code>kettle-dev</code> API instead of each<br>
@@ -380,7 +395,7 @@ member’s potentially stale bundle.</li>
 <code>test/</code> directories are ignored.</li>
 </ul>
 
-<h3 id="added-5">Added</h3>
+<h3 id="added-6">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family metadata</code> to report each family member’s version, Ruby<br>
@@ -409,7 +424,7 @@ requirement, licenses, and authors.</li>
   <li>41.80% documented</li>
 </ul>
 
-<h3 id="added-6">Added</h3>
+<h3 id="added-7">Added</h3>
 
 <ul>
   <li>Added configurable member discovery excludes via <code>members.exclude</code> /<br>
@@ -424,7 +439,7 @@ family members using <code>kettle-changelog --release-state --json</code>.</li>
   <li>Retemplated generated project files with <code>kettle-dev</code> &gt;= 2.2.7.</li>
 </ul>
 
-<h3 id="fixed-8">Fixed</h3>
+<h3 id="fixed-9">Fixed</h3>
 
 <ul>
   <li>Member discovery now filters configured excludes and git-ignored paths before<br>
@@ -445,7 +460,7 @@ loading gemspecs, avoiding fixture load failures in family roots.</li>
   <li>42.34% documented</li>
 </ul>
 
-<h3 id="added-7">Added</h3>
+<h3 id="added-8">Added</h3>
 
 <ul>
   <li>Added the initial <code>kettle-family</code> CLI discovery slice with config loading, gemspec discovery, dependency ordering, selection, and JSON reports.</li>
@@ -459,7 +474,7 @@ loading gemspecs, avoiding fixture load failures in family roots.</li>
   <li>Added explicit runtime dependency wiring for extracted stdlib gems used by the CLI.</li>
 </ul>
 
-<h3 id="fixed-9">Fixed</h3>
+<h3 id="fixed-10">Fixed</h3>
 
 <ul>
   <li>Updated generated project metadata links to use the migrated <code>kettle-dev</code><br>
@@ -473,7 +488,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Thu Jun 25 01:36:47 2026 by
+  Generated on Thu Jun 25 02:07:33 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
