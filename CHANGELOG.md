@@ -20,9 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family release` now accepts `--accept` / `--no-accept` to control
-  whether interactive confirmation prompts are answered automatically.
-
 ### Changed
 
 ### Deprecated
@@ -31,11 +28,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [0.1.18] - 2026-06-25
+
+- TAG: [v0.1.18][0.1.18t]
+- COVERAGE: 94.72% -- 1524/1609 lines in 21 files
+- BRANCH COVERAGE: 76.14% -- 536/704 branches in 21 files
+- 39.63% documented
+
+### Added
+
+- `kettle-family release` now accepts `--accept` / `--no-accept` to control
+  whether interactive confirmation prompts are answered automatically.
+
+### Fixed
+
 - Interactive release commands now answer `[y/N]` confirmation prompts before
   writing cached PEM passphrases, preventing confirmation prompts from consuming
   the signing password as input.
-
-### Security
 
 ## [0.1.17] - 2026-06-25
 
@@ -326,7 +337,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.17...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.18...HEAD
+[0.1.18]: https://github.com/kettle-dev/kettle-family/compare/v0.1.17...v0.1.18
+[0.1.18t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.18
 [0.1.17]: https://github.com/kettle-dev/kettle-family/compare/v0.1.11...v0.1.17
 [0.1.17t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.17
 [0.1.12]: https://github.com/kettle-dev/kettle-family/compare/v0.1.11...v0.1.12
