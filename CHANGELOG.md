@@ -28,12 +28,21 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [0.1.19] - 2026-06-25
+
+- TAG: [v0.1.19][0.1.19t]
+- COVERAGE: 94.74% -- 1531/1616 lines in 21 files
+- BRANCH COVERAGE: 76.20% -- 538/706 branches in 21 files
+- 39.63% documented
+
+### Fixed
+
 - Interactive release commands now leave RubyGems MFA/OTP prompts for the user
   instead of sending cached signing passphrases to the `Code:` prompt.
 - Interactive command output is now normalized to UTF-8 before report rendering,
   avoiding encoding crashes when a release command fails after PTY output.
-
-### Security
 
 ## [0.1.18] - 2026-06-25
 
@@ -342,7 +351,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.18...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.19...HEAD
+[0.1.19]: https://github.com/kettle-dev/kettle-family/compare/v0.1.18...v0.1.19
+[0.1.19t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.19
 [0.1.18]: https://github.com/kettle-dev/kettle-family/compare/v0.1.17...v0.1.18
 [0.1.18t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.18
 [0.1.17]: https://github.com/kettle-dev/kettle-family/compare/v0.1.11...v0.1.17
