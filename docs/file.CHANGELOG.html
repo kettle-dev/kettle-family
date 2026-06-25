@@ -79,6 +79,10 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <code>kettle-family push</code>, <code>kettle-family pull</code>, and <code>kettle-family up</code> now plan<br>
 or execute family-wide git synchronization commands.</li>
   <li>
+<code>kettle-family gha-sha-pins</code> now plans or executes<br>
+<code>kettle-gha-sha-pins</code> across family members, including branch stacks that<br>
+include <code>main</code>.</li>
+  <li>
 <code>kettle-family bump-version</code> now accepts the same relative bump targets as<br>
 <code>kettle-bump</code> (<code>major</code>, <code>minor</code>, <code>patch</code>, and <code>pre</code>) and applies them per<br>
 member from each member’s current version.</li>
@@ -455,7 +459,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Wed Jun 24 16:27:40 2026 by
+  Generated on Wed Jun 24 18:15:21 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
