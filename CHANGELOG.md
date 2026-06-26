@@ -22,6 +22,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Local path environment suppression now uses `TSLP_DEV` for
+  `tree_sitter_language_pack` overrides instead of
+  `TREE_SITTER_LANGUAGE_PACK_DEV`.
+
 ### Deprecated
 
 ### Removed

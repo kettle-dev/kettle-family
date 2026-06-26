@@ -242,7 +242,7 @@ module Kettle
         %w[
           K_JEM_TEMPLATING
           SMORG_RB_DEV
-          TREE_SITTER_LANGUAGE_PACK_DEV
+          TSLP_DEV
           KETTLE_RB_DEV
           RUBOCOP_LTS_DEV
           PBOLING_DEV

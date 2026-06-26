@@ -181,7 +181,7 @@ RSpec.describe Kettle::Family::Workflow do
       "env",
       "K_JEM_TEMPLATING=false",
       "SMORG_RB_DEV=false",
-      "TREE_SITTER_LANGUAGE_PACK_DEV=false",
+      "TSLP_DEV=false",
       "KETTLE_RB_DEV=false",
       "RUBOCOP_LTS_DEV=false",
       "PBOLING_DEV=false",
