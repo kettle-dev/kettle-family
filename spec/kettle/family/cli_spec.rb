@@ -284,11 +284,18 @@ RSpec.describe Kettle::Family::CLI do
         File.join(@tmpdir, "alpha"),
         "--",
         "env",
+        "KETTLE_JEM_QUIET=true",
+        "KETTLE_JEM_DEBUG=false",
+        "KETTLE_DEV_DEBUG=false",
+        "DEBUG=false",
+        "BUNDLE_QUIET=true",
+        "BUNDLE_SILENCE_ROOT_WARNING=true",
+        "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
         "K_JEM_TEMPLATING=true",
         "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
         "sh",
         "-lc",
-        "kettle-jem install"
+        "kettle-jem install --quiet --json"
       ]
     )
   end

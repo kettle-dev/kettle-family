@@ -3,6 +3,8 @@
 require "io/console"
 require "json"
 require "net/http"
+require "etc"
+require "thread"
 require "uri"
 
 module Kettle
@@ -21,7 +23,7 @@ module Kettle
         "up" => [["pull", %w[git pull --rebase]], ["push", %w[git push]]]
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, gem_signing_password: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, gem_signing_password: nil, jobs: nil, progress_io: nil)
         @command = command
         @config = config
         @members = members
@@ -39,6 +41,8 @@ module Kettle
         @gha_sha_pins_check = gha_sha_pins_check
         @env_overrides = env_overrides
         @gem_signing_password = gem_signing_password
+        @jobs = jobs
+        @progress_io = progress_io
       end
 
       def results
@@ -51,7 +55,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :jobs, :progress_io
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -62,6 +66,8 @@ module Kettle
       end
 
       def member_workflow_results(workflow_members)
+        return template_member_workflow_results(workflow_members) if command == "template" && execute && template_jobs(workflow_members) > 1
+
         runner = CommandRunner.new(execute: execute, accept: accept)
         workflow_members.each_with_object([]) do |member, memo|
           if command == "template" && config.normalize_lockfiles?
@@ -77,6 +83,55 @@ module Kettle
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
           commit_gha_sha_pins(member: member, runner: runner, memo: memo) if command == "gha-sha-pins"
         end
+      end
+
+      def template_member_workflow_results(workflow_members)
+        queue = Queue.new
+        workflow_members.each_with_index { |member, index| queue << [index, member] }
+        ordered_results = Array.new(workflow_members.length)
+        mutex = Mutex.new
+        stop = false
+        emit_template_progress_start(workflow_members)
+        Array.new(template_jobs(workflow_members)) do
+          Thread.new do
+            loop do
+              break if mutex.synchronize { stop }
+              index, member = queue.pop(true)
+              member_results = template_results_for_member(member)
+              mutex.synchronize do
+                ordered_results[index] = member_results
+                stop = true unless member_results.all?(&:ok?)
+                emit_template_progress_mark(member_results)
+              end
+            rescue ThreadError
+              break
+            end
+          end
+        end.each(&:join)
+        flattened = ordered_results.compact.flatten
+        emit_template_progress_summary(flattened)
+        flattened
+      end
+
+      def template_results_for_member(member)
+        runner = CommandRunner.new(execute: execute, accept: accept)
+        [].tap do |memo|
+          if config.normalize_lockfiles?
+            normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
+            return memo unless memo.last.ok?
+          end
+
+          memo << runner.call(member: member, phase: command, command: workflow_command(member), env: workflow_env)
+          return memo unless memo.last.ok?
+
+          normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles")
+        end
+      end
+
+      def template_jobs(workflow_members)
+        requested = jobs || config.template_jobs
+        count = requested ? requested.to_i : [Etc.nprocessors, 4].min
+        [[count, 1].max, workflow_members.length].min
       end
 
       def check_results(workflow_members)
@@ -152,7 +207,9 @@ module Kettle
           gha_sha_pins_upgrade: gha_sha_pins_upgrade,
           gha_sha_pins_check: gha_sha_pins_check,
           env_overrides: env_overrides,
-          gem_signing_password: @gem_signing_password
+          gem_signing_password: @gem_signing_password,
+          jobs: jobs,
+          progress_io: progress_io
         )
       end
 
@@ -394,6 +451,7 @@ module Kettle
 
       def template_command(member)
         command_text = config.template_command || default_template_command(member)
+        command_text = append_template_family_args(command_text) if kettle_jem_template_command?(command_text)
         return command_text if commit
         return command_text if command_text.is_a?(Array) && command_text.include?("--skip-commit")
         return [*command_text, "--skip-commit"] if command_text.is_a?(Array)
@@ -421,9 +479,62 @@ module Kettle
           if command == "template"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
+            env["KETTLE_JEM_QUIET"] = "true"
+            env["KETTLE_JEM_DEBUG"] = "false"
+            env["KETTLE_DEV_DEBUG"] = "false"
+            env["DEBUG"] = "false"
+            env["BUNDLE_QUIET"] = "true"
+            env["BUNDLE_SILENCE_ROOT_WARNING"] = "true"
+            env["BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES"] = "true"
           end
           env.merge!(env_overrides)
         end
+      end
+
+      def kettle_jem_template_command?(command_text)
+        command_text.is_a?(Array) ? command_text.map(&:to_s).include?("kettle-jem") : command_text.to_s.include?("kettle-jem")
+      end
+
+      def append_template_family_args(command_text)
+        args = []
+        args << "--quiet" unless command_includes_arg?(command_text, "--quiet")
+        args << "--json" unless command_includes_arg?(command_text, "--json")
+        append_command_args(command_text, args)
+      end
+
+      def emit_template_progress_start(workflow_members)
+        return unless progress_io
+
+        progress_io.puts("templating #{workflow_members.length} member#{"s" unless workflow_members.length == 1} with #{template_jobs(workflow_members)} job#{"s" unless template_jobs(workflow_members) == 1}:")
+        progress_io.flush if progress_io.respond_to?(:flush)
+      end
+
+      def emit_template_progress_mark(member_results)
+        return unless progress_io
+
+        template_result = member_results.find { |result| result.phase == "template" } || member_results.last
+        progress_io.print(template_result.ok? ? "." : "F")
+        progress_io.flush if progress_io.respond_to?(:flush)
+      end
+
+      def emit_template_progress_summary(results)
+        return unless progress_io
+
+        template_results = results.select { |result| result.phase == "template" }
+        changed_files = template_results.sum { |result| template_changed_file_count(result) }
+        progress_io.puts
+        progress_io.puts("template summary: #{template_results.count(&:ok?)}/#{template_results.length} members ok, #{changed_files} file#{"s" unless changed_files == 1} changed")
+        progress_io.flush if progress_io.respond_to?(:flush)
+      end
+
+      def template_changed_file_count(result)
+        payload = JSON.parse(result.stdout.to_s)
+        return Array(payload["changed_files"] || payload[:changed_files]).length if payload.is_a?(Hash)
+      rescue JSON::ParserError
+        match = result.stdout.to_s.match(/(?:install|apply|prepare|template):\s+(\d+)\s+changed file/)
+        return match[1].to_i if match
+
+        0
       end
 
       def normalize_lockfiles(member:, runner:, memo:, phase:)

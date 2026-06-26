@@ -20,7 +20,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family template --execute` now runs member templating in parallel by
+  default, with `--jobs` and `template.jobs` controls plus compact live progress
+  and changed-file summaries.
+
 ### Changed
+
+- Family templating now invokes `kettle-jem` in quiet JSON mode and suppresses
+  noisy Bundler/debug environment by default.
 
 ### Deprecated
 

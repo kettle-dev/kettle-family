@@ -160,6 +160,10 @@ module Kettle
         fetch_path("template", "repository_topology")
       end
 
+      def template_jobs
+        fetch_path("template", "jobs")
+      end
+
       def normalize_lockfiles?
         fetch_path("template", "normalize_lockfiles") == true
       end

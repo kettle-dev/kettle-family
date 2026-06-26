@@ -77,14 +77,39 @@ module Kettle
         lines << "results:"
         results.each do |result|
           lines << "  #{result_state(result)} #{result.member_name} #{result.phase} #{result.reason || ""}".rstrip
-          append_indented_output(lines, result.stdout) unless result.stdout.to_s.empty?
+          append_indented_output(lines, result.stdout) unless suppress_success_output?(result)
           append_indented_output(lines, result.stderr) if !result.ok? && !result.stderr.to_s.empty?
           lines << "    resume: #{resume_hint_for(result)}" unless result.ok?
         end
+        append_template_summary(lines) if command == "template"
       end
 
       def append_indented_output(lines, output)
         output.to_s.each_line(chomp: true) { |line| lines << "    #{line}" }
+      end
+
+      def suppress_success_output?(result)
+        result.stdout.to_s.empty? || (command == "template" && result.ok?)
+      end
+
+      def append_template_summary(lines)
+        template_results = results.select { |result| result.phase == "template" }
+        return if template_results.empty?
+
+        changed_files = template_results.sum { |result| template_changed_file_count(result) }
+        lines << "template summary:"
+        lines << "  #{template_results.count(&:ok?)}/#{template_results.length} members ok"
+        lines << "  #{changed_files} file#{"s" unless changed_files == 1} changed"
+      end
+
+      def template_changed_file_count(result)
+        payload = JSON.parse(result.stdout.to_s)
+        return Array(payload["changed_files"] || payload[:changed_files]).length if payload.is_a?(Hash)
+      rescue JSON::ParserError
+        match = result.stdout.to_s.match(/(?:install|apply|prepare|template):\s+(\d+)\s+changed file/)
+        return match[1].to_i if match
+
+        0
       end
 
       def append_member_release_targets(lines)

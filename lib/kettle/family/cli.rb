@@ -81,6 +81,7 @@ module Kettle
               --report PATH    Write JSON report to PATH
               --execute        Execute external workflow commands
               --dry-run        Plan external workflow commands without running them (default)
+              --jobs N         Parallel jobs for executed family templating
               --env KEY=VALUE  Override an environment variable for each member workflow command
               --section NAME   Changelog section for add-changelog
               --entry TEXT     Changelog entry for add-changelog
@@ -114,6 +115,7 @@ module Kettle
           json: false,
           report: nil,
           execute: false,
+          jobs: nil,
           workflow_env: {},
           changelog_section: nil,
           changelog_entry: nil,
@@ -139,6 +141,7 @@ module Kettle
           parser.on("--report PATH") { |value| options[:report] = value }
           parser.on("--execute") { options[:execute] = true }
           parser.on("--dry-run") { options[:execute] = false }
+          parser.on("--jobs N", Integer) { |value| options[:jobs] = value }
           parser.on("--env KEY=VALUE") { |value| parse_env_override(value, options[:workflow_env]) }
           parser.on("--section NAME") { |value| options[:changelog_section] = value }
           parser.on("--entry TEXT") { |value| options[:changelog_entry] = value }
@@ -228,8 +231,18 @@ module Kettle
           continue_ci_failures: options[:release_continue_ci_failures],
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],
           gha_sha_pins_check: options[:check],
-          env_overrides: options[:workflow_env]
+          env_overrides: options[:workflow_env],
+          jobs: options[:jobs],
+          progress_io: progress_io(command, options)
         ).results
+      end
+
+      def progress_io(command, options)
+        return nil unless command == "template"
+        return nil unless options[:execute]
+        return nil if options[:json]
+
+        out
       end
 
       def branch_target_command?(command, config)
