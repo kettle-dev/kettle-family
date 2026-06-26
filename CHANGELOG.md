@@ -30,7 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Changed
 
 - Family templating now invokes `kettle-jem` in quiet JSON mode and suppresses
-  noisy Bundler/debug environment by default.
+  noisy Bundler/debug environment by default, overriding inherited debug
+  variables unless `--debug` is passed.
 
 ### Deprecated
 

@@ -92,15 +92,21 @@ RSpec.describe Kettle::Family::Workflow do
         "env",
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
+        "K_JEM_TEMPLATING=true",
+        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
         "KETTLE_JEM_QUIET=true",
         "KETTLE_JEM_DEBUG=false",
         "KETTLE_DEV_DEBUG=false",
+        "SMORG_RB_DEBUG=false",
         "DEBUG=false",
         "BUNDLE_QUIET=true",
+        "BUNDLE_DEBUG=false",
+        "BUNDLER_DEBUG=false",
+        "BUNDLE_VERBOSE=false",
+        "DEBUG_RESOLVER=false",
+        "BUNDLE_SILENCE_DEPRECATIONS=true",
         "BUNDLE_SILENCE_ROOT_WARNING=true",
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
-        "K_JEM_TEMPLATING=true",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
         "bundle",
         "exec",
         "kettle-jem",
@@ -108,6 +114,63 @@ RSpec.describe Kettle::Family::Workflow do
         "--quiet",
         "--json"
       ]
+    )
+  end
+
+  it "overrides noisy template debug environment unless debug is enabled" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nDEBUG = \"true\"\n")
+
+    quiet_results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      env_overrides: {
+        "DEBUG" => "true",
+        "BUNDLE_DEBUG" => "true",
+        "BUNDLER_DEBUG" => "true",
+        "DEBUG_RESOLVER" => "true",
+        "SMORG_RB_DEBUG" => "true"
+      }
+    ).results
+    debug_results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      env_overrides: {
+        "DEBUG" => "true",
+        "BUNDLE_DEBUG" => "true",
+        "BUNDLER_DEBUG" => "true",
+        "DEBUG_RESOLVER" => "true",
+        "SMORG_RB_DEBUG" => "true"
+      },
+      debug: true
+    ).results
+
+    quiet_env = quiet_results.find { |result| result.phase == "template" }.command.grep(/DEBUG|RESOLVER/)
+    debug_env = debug_results.find { |result| result.phase == "template" }.command.grep(/DEBUG|RESOLVER/)
+    expect(quiet_env).to include(
+      "DEBUG=false",
+      "BUNDLE_DEBUG=false",
+      "BUNDLER_DEBUG=false",
+      "DEBUG_RESOLVER=false",
+      "SMORG_RB_DEBUG=false"
+    )
+    expect(quiet_env).not_to include(
+      "DEBUG=true",
+      "BUNDLE_DEBUG=true",
+      "BUNDLER_DEBUG=true",
+      "DEBUG_RESOLVER=true",
+      "SMORG_RB_DEBUG=true"
+    )
+    expect(debug_env).to include(
+      "DEBUG=true",
+      "BUNDLE_DEBUG=true",
+      "BUNDLER_DEBUG=true",
+      "DEBUG_RESOLVER=true",
+      "SMORG_RB_DEBUG=true"
     )
   end
 

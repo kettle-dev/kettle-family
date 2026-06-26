@@ -284,20 +284,53 @@ RSpec.describe Kettle::Family::CLI do
         File.join(@tmpdir, "alpha"),
         "--",
         "env",
+        "K_JEM_TEMPLATING=true",
+        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
         "KETTLE_JEM_QUIET=true",
         "KETTLE_JEM_DEBUG=false",
         "KETTLE_DEV_DEBUG=false",
+        "SMORG_RB_DEBUG=false",
         "DEBUG=false",
         "BUNDLE_QUIET=true",
+        "BUNDLE_DEBUG=false",
+        "BUNDLER_DEBUG=false",
+        "BUNDLE_VERBOSE=false",
+        "DEBUG_RESOLVER=false",
+        "BUNDLE_SILENCE_DEPRECATIONS=true",
         "BUNDLE_SILENCE_ROOT_WARNING=true",
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
-        "K_JEM_TEMPLATING=true",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
         "sh",
         "-lc",
         "kettle-jem install --quiet --json"
       ]
     )
+  end
+
+  it "preserves template debug environment only when debug is enabled" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", "mise.toml"), "[env]\nDEBUG = \"false\"\n")
+    out = StringIO.new
+
+    status = described_class.call(
+      [
+        "template",
+        "--root",
+        @tmpdir,
+        "--env",
+        "DEBUG=true",
+        "--env",
+        "BUNDLE_DEBUG=true",
+        "--debug",
+        "--json"
+      ],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    command = JSON.parse(out.string).fetch("results").first.fetch("command")
+    expect(command).to include("DEBUG=true", "BUNDLE_DEBUG=true")
+    expect(command).not_to include("DEBUG=false", "BUNDLE_DEBUG=false")
   end
 
   it "rejects invalid workflow environment overrides" do

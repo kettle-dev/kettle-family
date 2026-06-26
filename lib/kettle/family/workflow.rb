@@ -23,8 +23,23 @@ module Kettle
         "pull" => [["pull", %w[git pull --rebase]]],
         "up" => [["pull", %w[git pull --rebase]], ["push", %w[git push]]]
       }.freeze
+      TEMPLATE_QUIET_ENV = {
+        "KETTLE_JEM_QUIET" => "true",
+        "KETTLE_JEM_DEBUG" => "false",
+        "KETTLE_DEV_DEBUG" => "false",
+        "SMORG_RB_DEBUG" => "false",
+        "DEBUG" => "false",
+        "BUNDLE_QUIET" => "true",
+        "BUNDLE_DEBUG" => "false",
+        "BUNDLER_DEBUG" => "false",
+        "BUNDLE_VERBOSE" => "false",
+        "DEBUG_RESOLVER" => "false",
+        "BUNDLE_SILENCE_DEPRECATIONS" => "true",
+        "BUNDLE_SILENCE_ROOT_WARNING" => "true",
+        "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
+      }.freeze
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, gem_signing_password: nil, jobs: nil, progress_io: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil)
         @command = command
         @config = config
         @members = members
@@ -41,6 +56,7 @@ module Kettle
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
         @gha_sha_pins_check = gha_sha_pins_check
         @env_overrides = env_overrides
+        @debug = debug
         @gem_signing_password = gem_signing_password
         @jobs = jobs
         @progress_io = progress_io
@@ -56,7 +72,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :jobs, :progress_io
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -577,15 +593,9 @@ module Kettle
           if command == "template"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
-            env["KETTLE_JEM_QUIET"] = "true"
-            env["KETTLE_JEM_DEBUG"] = "false"
-            env["KETTLE_DEV_DEBUG"] = "false"
-            env["DEBUG"] = "false"
-            env["BUNDLE_QUIET"] = "true"
-            env["BUNDLE_SILENCE_ROOT_WARNING"] = "true"
-            env["BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES"] = "true"
           end
           env.merge!(env_overrides)
+          env.merge!(TEMPLATE_QUIET_ENV) if command == "template" && !debug
         end
       end
 

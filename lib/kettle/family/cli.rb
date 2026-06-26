@@ -81,6 +81,7 @@ module Kettle
               --report PATH    Write JSON report to PATH
               --execute        Execute external workflow commands
               --dry-run        Plan external workflow commands without running them (default)
+              --debug          Preserve debug environment for workflow commands
               --jobs N         Parallel jobs for executed family templating or release
               --env KEY=VALUE  Override an environment variable for each member workflow command
               --section NAME   Changelog section for add-changelog
@@ -115,6 +116,7 @@ module Kettle
           json: false,
           report: nil,
           execute: false,
+          debug: false,
           jobs: nil,
           workflow_env: {},
           changelog_section: nil,
@@ -141,6 +143,7 @@ module Kettle
           parser.on("--report PATH") { |value| options[:report] = value }
           parser.on("--execute") { options[:execute] = true }
           parser.on("--dry-run") { options[:execute] = false }
+          parser.on("--debug") { options[:debug] = true }
           parser.on("--jobs N", Integer) { |value| options[:jobs] = value }
           parser.on("--env KEY=VALUE") { |value| parse_env_override(value, options[:workflow_env]) }
           parser.on("--section NAME") { |value| options[:changelog_section] = value }
@@ -232,6 +235,7 @@ module Kettle
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],
           gha_sha_pins_check: options[:check],
           env_overrides: options[:workflow_env],
+          debug: options[:debug],
           jobs: options[:jobs],
           progress_io: progress_io(command, options)
         ).results
