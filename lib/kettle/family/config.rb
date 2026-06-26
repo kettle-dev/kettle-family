@@ -208,6 +208,10 @@ module Kettle
         stringify_env(fetch_path("release", "env") || {})
       end
 
+      def release_jobs
+        fetch_path("release", "jobs")
+      end
+
       def release_family_changelog?
         fetch_path("release", "family_changelog", "enabled") == true
       end

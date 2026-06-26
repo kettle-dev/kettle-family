@@ -208,6 +208,36 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(input.string).to eq("")
   end
 
+  it "writes shared OTP responses through the coordinator for MFA prompts" do
+    otp_input = StringIO.new("123456\n")
+    otp_output = StringIO.new
+    coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output)
+    runner = described_class.new(gem_signing_password: "secret", otp_coordinator: coordinator)
+    child_input = StringIO.new
+
+    runner.send(:handle_interactive_prompt, child_input, "You have enabled multi-factor authentication.\nCode: ", member_name: "alpha")
+
+    expect(child_input.string).to eq("123456\n")
+    expect(otp_output.string).to include("[alpha] RubyGems MFA requested.")
+  end
+
+  it "reuses one queued OTP response for concurrent requests" do
+    otp_input = StringIO.new("654321\n")
+    otp_output = StringIO.new
+    coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output)
+    responses = Queue.new
+
+    threads = %w[alpha beta].map do |member_name|
+      Thread.new do
+        responses << coordinator.request(member_name: member_name, chunk: "Code: ")
+      end
+    end
+    threads.each(&:join)
+
+    expect(2.times.map { responses.pop }).to eq(%w[654321 654321])
+    expect(otp_output.string.scan("RubyGems MFA requested").size).to eq(1)
+  end
+
   it "accepts confirmation prompts before signing password prompts" do
     runner = described_class.new(gem_signing_password: "secret")
     input = StringIO.new

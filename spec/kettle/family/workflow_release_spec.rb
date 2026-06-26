@@ -259,6 +259,46 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(marker)).to eq("built")
   end
 
+  it "executes independent release members in parallel when jobs allow it" do
+    barrier = File.join(@tmpdir, "release-barrier")
+    script = <<~RUBY
+      barrier = ENV.fetch("RELEASE_BARRIER")
+      File.open("\#{barrier}.lock", "w") do |lock|
+        lock.flock(File::LOCK_EX)
+        count = File.file?(barrier) ? File.read(barrier).to_i : 0
+        File.write(barrier, (count + 1).to_s)
+      end
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+      until File.read(barrier).to_i >= 2 || Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+        sleep 0.05
+      end
+      exit(File.read(barrier).to_i >= 2 ? 0 : 7)
+    RUBY
+    write_release_config(
+      build_command: [RbConfig.ruby, "-e", script],
+      release_env: {"RELEASE_BARRIER" => barrier}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [ready_member("alpha"), ready_member("beta")]
+
+    results = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 2).results
+
+    expect(results).to all(be_ok)
+    expect(results.count { |result| result.phase == "release_build" }).to eq(2)
+  end
+
+  it "builds release waves from selected member dependencies" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta", dependencies: ["alpha"])
+    gamma = ready_member("gamma")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta, gamma], execute: true, jobs: 3)
+
+    waves = workflow.send(:release_waves, [alpha, beta, gamma])
+
+    expect(waves.map { |wave| wave.map(&:name) }).to eq([%w[alpha gamma], %w[beta]])
+  end
+
   it "stops before release commands when readiness fails" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -291,7 +331,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
-  def ready_member(name, changelog: true)
+  def ready_member(name, changelog: true, dependencies: [])
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))
     %w[Gemfile Rakefile README.md LICENSE.md].each do |path|
@@ -303,7 +343,7 @@ RSpec.describe Kettle::Family::Workflow do
       File.write(full_path, "#!/bin/sh\n")
       FileUtils.chmod("u+x", full_path)
     end
-    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: [])
+    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: dependencies)
   end
 
   def signed_member(name)

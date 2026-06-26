@@ -1,14 +1,80 @@
 # frozen_string_literal: true
 
 require "open3"
+require "io/console"
+require "thread"
 
 module Kettle
   module Family
     class CommandRunner
-      def initialize(execute: false, accept: true, gem_signing_password: nil)
+      class OtpCoordinator
+        DEFAULT_REUSE_SECONDS = 25
+
+        def initialize(input: $stdin, output: $stdout, reuse_seconds: DEFAULT_REUSE_SECONDS)
+          @input = input
+          @output = output
+          @reuse_seconds = reuse_seconds
+          @mutex = Mutex.new
+          @condition = ConditionVariable.new
+          @prompting = false
+          @response = nil
+          @response_expires_at = nil
+        end
+
+        def request(member_name:, chunk:)
+          @mutex.synchronize do
+            now = monotonic_time
+            return @response if @response && @response_expires_at && now <= @response_expires_at
+            return wait_for_response if @prompting
+
+            @prompting = true
+          end
+
+          response = read_response(member_name: member_name, chunk: chunk)
+          @mutex.synchronize do
+            @response = response
+            @response_expires_at = monotonic_time + @reuse_seconds
+            @prompting = false
+            @condition.broadcast
+            response
+          end
+        end
+
+        private
+
+        def wait_for_response
+          @condition.wait(@mutex) while @prompting
+          @response
+        end
+
+        def read_response(member_name:, chunk:)
+          @output.puts
+          @output.puts("[#{member_name}] RubyGems MFA requested.")
+          @output.print("#{otp_prompt_label(chunk)} ")
+          @output.flush if @output.respond_to?(:flush)
+          if @input.respond_to?(:noecho) && @input.tty?
+            @input.noecho(&:gets)&.chomp.to_s
+          else
+            @input.gets&.chomp.to_s
+          end
+        ensure
+          @output.puts if @output.respond_to?(:puts)
+        end
+
+        def otp_prompt_label(chunk)
+          chunk.to_s.lines.last&.strip.to_s.empty? ? "Code:" : chunk.to_s.lines.last.strip
+        end
+
+        def monotonic_time
+          Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        end
+      end
+
+      def initialize(execute: false, accept: true, gem_signing_password: nil, otp_coordinator: nil)
         @execute = execute
         @accept = accept
         @gem_signing_password = gem_signing_password
+        @otp_coordinator = otp_coordinator
       end
 
       def call(member:, phase:, command:, env: {}, interactive: false)
@@ -19,7 +85,7 @@ module Kettle
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         stdout, stderr, status = with_unbundled_environment do
           if interactive
-            run_interactive(env: process_env, argv: argv, chdir: member.root)
+            run_interactive(env: process_env, argv: argv, chdir: member.root, member_name: member.name)
           else
             Open3.capture3(process_env, *argv, chdir: member.root)
           end
@@ -44,29 +110,29 @@ module Kettle
 
       private
 
-      attr_reader :execute, :accept, :gem_signing_password
+      attr_reader :execute, :accept, :gem_signing_password, :otp_coordinator
 
-      def run_interactive(env:, argv:, chdir:)
-        return run_interactive_pty(env: env, argv: argv, chdir: chdir) if pty_available?
+      def run_interactive(env:, argv:, chdir:, member_name:)
+        return run_interactive_pty(env: env, argv: argv, chdir: chdir, member_name: member_name) if pty_available?
 
-        run_interactive_open3(env: env, argv: argv, chdir: chdir)
+        run_interactive_open3(env: env, argv: argv, chdir: chdir, member_name: member_name)
       end
 
-      def run_interactive_pty(env:, argv:, chdir:)
+      def run_interactive_pty(env:, argv:, chdir:, member_name:)
         stdout = +""
         status = nil
         PTY.spawn(env, *argv, chdir: chdir) do |output, input, pid|
           begin
             loop do
               readers = [output]
-              readers << $stdin if $stdin.tty?
+              readers << $stdin if $stdin.tty? && !otp_coordinator
               ready = IO.select(readers)
               ready.first.each do |reader|
                 if reader.equal?(output)
                   chunk = output.readpartial(1024)
                   stdout << chunk
                   $stdout.print(chunk)
-                  handle_interactive_prompt(input, chunk)
+                  handle_interactive_prompt(input, chunk, member_name: member_name)
                 else
                   input.write($stdin.readpartial(1024))
                 end
@@ -80,20 +146,20 @@ module Kettle
         [stdout, "", status]
       end
 
-      def run_interactive_open3(env:, argv:, chdir:)
+      def run_interactive_open3(env:, argv:, chdir:, member_name:)
         captured_stdout = +""
         captured_stderr = +""
         status = nil
         Open3.popen3(env, *argv, chdir: chdir) do |input, output, error, wait_thread|
           readers = [output, error]
-          readers << $stdin if $stdin.tty?
+          readers << $stdin if $stdin.tty? && !otp_coordinator
           until readers.empty?
             ready = IO.select(readers)
             ready.first.each do |reader|
               if reader.equal?($stdin)
                 input.write($stdin.readpartial(1024))
               else
-                read_interactive_stream(reader, output, input, captured_stdout, captured_stderr, readers)
+                read_interactive_stream(reader, output, input, captured_stdout, captured_stderr, readers, member_name: member_name)
               end
             end
           end
@@ -102,7 +168,7 @@ module Kettle
         [captured_stdout, captured_stderr, status]
       end
 
-      def read_interactive_stream(reader, output, input, captured_stdout, captured_stderr, readers)
+      def read_interactive_stream(reader, output, input, captured_stdout, captured_stderr, readers, member_name:)
         chunk = reader.readpartial(1024)
         if reader.equal?(output)
           captured_stdout << chunk
@@ -111,7 +177,7 @@ module Kettle
           captured_stderr << chunk
           $stderr.print(chunk)
         end
-        handle_interactive_prompt(input, chunk)
+        handle_interactive_prompt(input, chunk, member_name: member_name)
       rescue EOFError
         readers.delete(reader)
       end
@@ -132,8 +198,11 @@ module Kettle
         input.flush
       end
 
-      def handle_interactive_prompt(input, chunk)
-        return if otp_prompt?(chunk)
+      def handle_interactive_prompt(input, chunk, member_name: nil)
+        if otp_prompt?(chunk)
+          write_otp_response(input, chunk, member_name: member_name) if otp_coordinator && otp_response_prompt?(chunk)
+          return
+        end
 
         if accept_confirmation_prompt?(chunk)
           write_accept_response(input) if accept
@@ -148,12 +217,24 @@ module Kettle
         input.flush
       end
 
+      def write_otp_response(input, chunk, member_name:)
+        response = otp_coordinator.request(member_name: member_name || "release", chunk: chunk)
+        return if response.to_s.empty?
+
+        input.write("#{response}\n")
+        input.flush
+      end
+
       def accept_confirmation_prompt?(chunk)
         chunk.match?(/\[[Yy]\/[Nn]\]\s*:?/)
       end
 
       def otp_prompt?(chunk)
         chunk.match?(/(?:multi-factor authentication|OTP code|one-time password|\bCode:\s*)/i)
+      end
+
+      def otp_response_prompt?(chunk)
+        chunk.match?(/(?:OTP code|one-time password|\bCode:\s*)/i)
       end
 
       def signing_password_prompt?(chunk)

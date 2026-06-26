@@ -81,7 +81,7 @@ module Kettle
               --report PATH    Write JSON report to PATH
               --execute        Execute external workflow commands
               --dry-run        Plan external workflow commands without running them (default)
-              --jobs N         Parallel jobs for executed family templating
+              --jobs N         Parallel jobs for executed family templating or release
               --env KEY=VALUE  Override an environment variable for each member workflow command
               --section NAME   Changelog section for add-changelog
               --entry TEXT     Changelog entry for add-changelog

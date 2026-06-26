@@ -4,6 +4,7 @@ require "io/console"
 require "json"
 require "net/http"
 require "etc"
+require "open3"
 require "thread"
 require "uri"
 
@@ -214,27 +215,63 @@ module Kettle
       end
 
       def release_member_results(release_members, include_family_changelog: false)
-        runner = command_runner
+        runner = release_command_runner
         results = []
         append_family_changelog_result(runner: runner, memo: results) if include_family_changelog
         return results unless results.all?(&:ok?)
+        return parallel_release_member_results(release_members, results) if parallel_release_members?(release_members)
 
         release_members.each_with_object(results) do |member, memo|
+          memo.concat(release_results_for_member(member, runner: runner))
+          break memo unless memo.last.ok?
+        end
+      end
+
+      def parallel_release_member_results(release_members, initial_results)
+        results = initial_results.dup
+        release_waves(release_members).each do |wave|
+          wave_results = run_release_wave(wave)
+          results.concat(wave_results.flatten)
+          break unless wave_results.all? { |member_results| member_results.all?(&:ok?) }
+        end
+        results
+      end
+
+      def run_release_wave(wave)
+        queue = Queue.new
+        wave.each_with_index { |member, index| queue << [index, member] }
+        ordered_results = Array.new(wave.length)
+        Array.new(release_jobs(wave)) do
+          Thread.new do
+            runner = release_command_runner
+            loop do
+              index, member = queue.pop(true)
+              ordered_results[index] = release_results_for_member(member, runner: runner)
+            rescue ThreadError
+              break
+            end
+          end
+        end.each(&:join)
+        ordered_results.compact
+      end
+
+      def release_results_for_member(member, runner:)
+        [].tap do |memo|
           if skip_already_released?(member)
             memo << already_released_result(member)
-            next
+            return memo
           end
 
           if config.release_normalize_lockfiles?
             normalize_release_lockfiles(member: member, runner: runner, memo: memo)
-            break memo unless memo.last&.ok?
+            return memo unless memo.last&.ok?
 
             commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "release")
-            break memo unless memo.last&.ok?
+            return memo unless memo.last&.ok?
           end
 
           append_release_internal_checks(member: member, memo: memo)
-          break memo unless memo.last(2).all?(&:ok?)
+          return memo unless memo.last(2).all?(&:ok?)
 
           memo << runner.call(
             member: member,
@@ -243,10 +280,9 @@ module Kettle
             env: release_env,
             interactive: release_command_interactive?
           )
-          break memo unless memo.last.ok?
+          return memo unless memo.last.ok?
 
           append_release_git_phases(member: member, runner: runner, memo: memo)
-          break memo unless memo.last.ok?
         end
       end
 
@@ -263,6 +299,66 @@ module Kettle
 
       def command_runner
         CommandRunner.new(execute: execute, accept: accept, gem_signing_password: @gem_signing_password)
+      end
+
+      def release_command_runner
+        CommandRunner.new(
+          execute: execute,
+          accept: accept,
+          gem_signing_password: @gem_signing_password,
+          otp_coordinator: release_otp_coordinator
+        )
+      end
+
+      def release_otp_coordinator
+        return nil unless execute && release_command_interactive?
+
+        @release_otp_coordinator ||= CommandRunner::OtpCoordinator.new
+      end
+
+      def parallel_release_members?(release_members)
+        execute &&
+          release_jobs(release_members) > 1 &&
+          release_members.length > 1 &&
+          distinct_git_roots?(release_members)
+      end
+
+      def release_jobs(release_members)
+        requested = jobs || config.release_jobs
+        count = requested ? requested.to_i : [Etc.nprocessors, 4].min
+        [[count, 1].max, release_members.length].min
+      end
+
+      def release_waves(release_members)
+        by_name = release_members.to_h { |member| [member.name, member] }
+        pending = by_name.keys
+        completed = []
+        waves = []
+        until pending.empty?
+          wave_names = pending.select do |name|
+            selected_dependencies_for(by_name.fetch(name), by_name).all? { |dependency| completed.include?(dependency) }
+          end
+          raise Error, "cyclic release dependency order: #{pending.join(", ")}" if wave_names.empty?
+
+          waves << wave_names.map { |name| by_name.fetch(name) }
+          completed.concat(wave_names)
+          pending -= wave_names
+        end
+        waves
+      end
+
+      def selected_dependencies_for(member, by_name)
+        Array(member.dependencies).map(&:to_s).select { |dependency| by_name.key?(dependency) }
+      end
+
+      def distinct_git_roots?(release_members)
+        roots = release_members.map { |member| git_root_for(member) }
+        roots.uniq.length == roots.length
+      end
+
+      def git_root_for(member)
+        stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--show-toplevel", chdir: member.root)
+        status.success? ? stdout.strip : File.expand_path(member.root)
       end
 
       def rediscovered_selected_members(selected_names)

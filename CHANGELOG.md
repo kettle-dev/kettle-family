@@ -23,6 +23,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family template --execute` now runs member templating in parallel by
   default, with `--jobs` and `template.jobs` controls plus compact live progress
   and changed-file summaries.
+- `kettle-family release --execute` now runs dependency-safe member release
+  waves in parallel for distinct Git worktrees, using shared MFA code
+  coordination for concurrent RubyGems OTP prompts.
 
 ### Changed
 
