@@ -24,8 +24,8 @@ Please file a bug if you notice a violation of semantic versioning.
   default, with `--jobs` and `template.jobs` controls plus compact live progress
   and changed-file summaries.
 - `kettle-family release --execute` now runs dependency-safe member release
-  waves in parallel for distinct Git worktrees, using shared MFA code
-  coordination for concurrent RubyGems OTP prompts.
+  waves in parallel for distinct Git worktrees, coordinating concurrent
+  RubyGems MFA prompts.
 
 ### Changed
 
@@ -37,6 +37,10 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Removed
 
 ### Fixed
+
+- Parallel release MFA coordination now shares an entered OTP only with prompts
+  already queued at submission time, shows the live queued prompt count, and
+  asks again for later RubyGems OTP prompts.
 
 ### Security
 

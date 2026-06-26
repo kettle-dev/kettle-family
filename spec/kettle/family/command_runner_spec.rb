@@ -3,6 +3,7 @@
 require "fileutils"
 require "stringio"
 require "tmpdir"
+require "timeout"
 
 RSpec.describe Kettle::Family::CommandRunner do
   around do |example|
@@ -219,23 +220,60 @@ RSpec.describe Kettle::Family::CommandRunner do
 
     expect(child_input.string).to eq("123456\n")
     expect(otp_output.string).to include("[alpha] RubyGems MFA requested.")
+    expect(otp_output.string).to include("RubyGems MFA prompts queued: 1")
   end
 
   it "reuses one queued OTP response for concurrent requests" do
-    otp_input = StringIO.new("654321\n")
+    otp_input, otp_writer = IO.pipe
     otp_output = StringIO.new
     coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output)
     responses = Queue.new
 
-    threads = %w[alpha beta].map do |member_name|
-      Thread.new do
-        responses << coordinator.request(member_name: member_name, chunk: "Code: ")
-      end
+    first = Thread.new do
+      responses << coordinator.request(member_name: "alpha", chunk: "Code: ")
     end
+    wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 1") }
+
+    second = Thread.new do
+      responses << coordinator.request(member_name: "beta", chunk: "Code: ")
+    end
+    wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 2") }
+
+    otp_writer.write("654321\n")
+    threads = [first, second]
     threads.each(&:join)
 
     expect(2.times.map { responses.pop }).to eq(%w[654321 654321])
     expect(otp_output.string.scan("RubyGems MFA requested").size).to eq(1)
+  ensure
+    otp_writer&.close unless otp_writer&.closed?
+    otp_input&.close unless otp_input&.closed?
+  end
+
+  it "asks for a fresh OTP when a prompt arrives after the queued response was entered" do
+    otp_input, otp_writer = IO.pipe
+    otp_output = StringIO.new
+    coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output)
+
+    first = Thread.new do
+      coordinator.request(member_name: "alpha", chunk: "Code: ")
+    end
+    wait_until { otp_output.string.include?("[alpha] RubyGems MFA requested.") }
+    otp_writer.write("111111\n")
+    first_response = first.value
+
+    second = Thread.new do
+      coordinator.request(member_name: "beta", chunk: "Code: ")
+    end
+    wait_until { otp_output.string.include?("[beta] RubyGems MFA requested.") }
+    otp_writer.write("222222\n")
+
+    expect(first_response).to eq("111111")
+    expect(second.value).to eq("222222")
+    expect(otp_output.string.scan("RubyGems MFA requested").size).to eq(2)
+  ensure
+    otp_writer&.close unless otp_writer&.closed?
+    otp_input&.close unless otp_input&.closed?
   end
 
   it "accepts confirmation prompts before signing password prompts" do
@@ -277,5 +315,11 @@ RSpec.describe Kettle::Family::CommandRunner do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: File.join(root, "#{name}.gemspec"), version: "1.0.0", dependencies: [])
+  end
+
+  def wait_until
+    Timeout.timeout(2) do
+      sleep 0.01 until yield
+    end
   end
 end

@@ -8,33 +8,46 @@ module Kettle
   module Family
     class CommandRunner
       class OtpCoordinator
-        DEFAULT_REUSE_SECONDS = 25
-
-        def initialize(input: $stdin, output: $stdout, reuse_seconds: DEFAULT_REUSE_SECONDS)
+        def initialize(input: $stdin, output: $stdout)
           @input = input
           @output = output
-          @reuse_seconds = reuse_seconds
           @mutex = Mutex.new
           @condition = ConditionVariable.new
           @prompting = false
+          @queue_closed = false
+          @generation = 0
+          @completed_generation = nil
           @response = nil
-          @response_expires_at = nil
+          @queued_count = 0
         end
 
         def request(member_name:, chunk:)
+          generation = nil
           @mutex.synchronize do
-            now = monotonic_time
-            return @response if @response && @response_expires_at && now <= @response_expires_at
-            return wait_for_response if @prompting
+            @condition.wait(@mutex) while @prompting && @queue_closed
+
+            if @prompting
+              generation = @generation
+              @queued_count += 1
+              render_queue_status_locked
+              return wait_for_response(generation)
+            end
 
             @prompting = true
+            @queue_closed = false
+            @queued_count = 1
+            @generation += 1
+            generation = @generation
+            start_prompt_locked(member_name: member_name)
           end
 
-          response = read_response(member_name: member_name, chunk: chunk)
+          response = read_response(chunk: chunk)
+          close_queue
           @mutex.synchronize do
             @response = response
-            @response_expires_at = monotonic_time + @reuse_seconds
+            @completed_generation = generation
             @prompting = false
+            @queue_closed = false
             @condition.broadcast
             response
           end
@@ -42,14 +55,32 @@ module Kettle
 
         private
 
-        def wait_for_response
+        def wait_for_response(generation)
           @condition.wait(@mutex) while @prompting
-          @response
+          return @response if @completed_generation == generation
+
+          ""
         end
 
-        def read_response(member_name:, chunk:)
+        def close_queue
+          @mutex.synchronize do
+            @queue_closed = true
+          end
+        end
+
+        def start_prompt_locked(member_name:)
           @output.puts
           @output.puts("[#{member_name}] RubyGems MFA requested.")
+          render_queue_status_locked
+          @output.puts("Queued prompts at entry will share this code; later prompts will ask again.")
+        end
+
+        def render_queue_status_locked
+          @output.puts("RubyGems MFA prompts queued: #{@queued_count}")
+          @output.flush if @output.respond_to?(:flush)
+        end
+
+        def read_response(chunk:)
           @output.print("#{otp_prompt_label(chunk)} ")
           @output.flush if @output.respond_to?(:flush)
           if @input.respond_to?(:noecho) && @input.tty?
@@ -63,10 +94,6 @@ module Kettle
 
         def otp_prompt_label(chunk)
           chunk.to_s.lines.last&.strip.to_s.empty? ? "Code:" : chunk.to_s.lines.last.strip
-        end
-
-        def monotonic_time
-          Process.clock_gettime(Process::CLOCK_MONOTONIC)
         end
       end
 
