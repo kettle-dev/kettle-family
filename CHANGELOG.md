@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.1.20] - 2026-06-26
+
+- TAG: [v0.1.20][0.1.20t]
+- COVERAGE: 94.99% -- 1802/1897 lines in 21 files
+- BRANCH COVERAGE: 74.39% -- 613/824 branches in 21 files
+- 38.60% documented
+
+### Added
+
 - `kettle-family template --execute` now runs member templating in parallel by
   default, with `--jobs` and `template.jobs` controls plus compact live progress
   and changed-file summaries.
@@ -35,18 +54,12 @@ Please file a bug if you notice a violation of semantic versioning.
   noisy Bundler/debug environment by default, overriding inherited debug
   variables unless `--debug` is passed.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Parallel release MFA coordination now shares an entered OTP only with prompts
   already queued at submission time, shows the live queued prompt count as
   `N / Y` for the current release wave capacity, and asks again for later
   RubyGems OTP prompts.
-
-### Security
 
 ## [0.1.19] - 2026-06-25
 
@@ -369,7 +382,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.19...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.20...HEAD
+[0.1.20]: https://github.com/kettle-dev/kettle-family/compare/v0.1.19...v0.1.20
+[0.1.20t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.20
 [0.1.19]: https://github.com/kettle-dev/kettle-family/compare/v0.1.18...v0.1.19
 [0.1.19t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.19
 [0.1.18]: https://github.com/kettle-dev/kettle-family/compare/v0.1.17...v0.1.18

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  Class: Kettle::Family::CommandRunner::OtpCoordinator
+  
+    &mdash; Documentation by YARD 0.9.44
+  
+</title>
+
+  <link rel="stylesheet" href="../../../css/style.css" type="text/css">
+
+  <link rel="stylesheet" href="../../../css/common.css" type="text/css">
+
+<script type="text/javascript">
+  pathId = "Kettle::Family::CommandRunner::OtpCoordinator";
+  relpath = '../../../';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="../../../js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="../../../js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div id="main_progress" aria-hidden="true"></div>
+
+    <div class="nav_wrap">
+      <iframe id="nav" src="../../../class_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="../../../_index.html">Index (O)</a> &raquo;
+    <span class='title'><span class='object_link'><a href="../../../Kettle.html" title="Kettle (module)">Kettle</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../../Family.html" title="Kettle::Family (module)">Family</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../CommandRunner.html" title="Kettle::Family::CommandRunner (class)">CommandRunner</a></span></span>
+     &raquo; 
+    <span class="title">OtpCoordinator</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="../../../class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><h1>Class: Kettle::Family::CommandRunner::OtpCoordinator
+  
+  
+  
+</h1>
+<div class="box_info">
+  
+  <dl>
+    <dt>Inherits:</dt>
+    <dd>
+      <span class="inheritName">Object</span>
+      
+        <ul class="fullTree">
+          <li>Object</li>
+          
+            <li class="next">Kettle::Family::CommandRunner::OtpCoordinator</li>
+          
+        </ul>
+        <a href="#" class="inheritanceTree">show all</a>
+      
+    </dd>
+  </dl>
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+  <dl>
+    <dt>Defined in:</dt>
+    <dd>lib/kettle/family/command_runner.rb
+</dd>
+  </dl>
+  
+</div>
+
+
+
+
+
+
+
+
+  
+    <h2>
+      Instance Method Summary
+      <small><a href="#" class="summary_toggle">collapse</a></small>
+    </h2>
+
+    <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(input: $stdin, output: $stdout, queue_total: nil)  &#x21d2; OtpCoordinator </a>
+    
+
+    
+  </span>
+  
+  
+    <span class="note title constructor">constructor</span>
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>A new instance of OtpCoordinator.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#queue_total=-instance_method" title="#queue_total= (instance method)">#<strong>queue_total=</strong>(value)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#request-instance_method" title="#request (instance method)">#<strong>request</strong>(member_name:, chunk:)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+    </ul>
+    
+  
+
+<div id="constructor_details" class="method_details_list">
+  <h2>Constructor Details</h2>
+  
+    <div class="method_details first">
+  <h3 class="signature first" id="initialize-instance_method">
+  
+    #<strong>initialize</strong>(input: $stdin, output: $stdout, queue_total: nil)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::CommandRunner::OtpCoordinator (class)">OtpCoordinator</a></span></tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Returns a new instance of OtpCoordinator.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 10</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>input:</span> <span class='gvar'>$stdin</span><span class='comma'>,</span> <span class='label'>output:</span> <span class='gvar'>$stdout</span><span class='comma'>,</span> <span class='label'>queue_total:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
+  <span class='ivar'>@input</span> <span class='op'>=</span> <span class='id identifier rubyid_input'>input</span>
+  <span class='ivar'>@output</span> <span class='op'>=</span> <span class='id identifier rubyid_output'>output</span>
+  <span class='ivar'>@mutex</span> <span class='op'>=</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
+  <span class='ivar'>@condition</span> <span class='op'>=</span> <span class='const'>ConditionVariable</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
+  <span class='ivar'>@prompting</span> <span class='op'>=</span> <span class='kw'>false</span>
+  <span class='ivar'>@queue_closed</span> <span class='op'>=</span> <span class='kw'>false</span>
+  <span class='ivar'>@generation</span> <span class='op'>=</span> <span class='int'>0</span>
+  <span class='ivar'>@completed_generation</span> <span class='op'>=</span> <span class='kw'>nil</span>
+  <span class='ivar'>@response</span> <span class='op'>=</span> <span class='kw'>nil</span>
+  <span class='ivar'>@queued_count</span> <span class='op'>=</span> <span class='int'>0</span>
+  <span class='ivar'>@queue_total</span> <span class='op'>=</span> <span class='id identifier rubyid_queue_total'>queue_total</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+  
+</div>
+
+
+  <div id="instance_method_details" class="method_details_list">
+    <h2>Instance Method Details</h2>
+
+    
+      <div class="method_details first">
+  <h3 class="signature first" id="queue_total=-instance_method">
+  
+    #<strong>queue_total=</strong>(value)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+24
+25
+26
+27
+28</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 24</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_queue_total='>queue_total=</span><span class='lparen'>(</span><span class='id identifier rubyid_value'>value</span><span class='rparen'>)</span>
+  <span class='ivar'>@mutex</span><span class='period'>.</span><span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
+    <span class='ivar'>@queue_total</span> <span class='op'>=</span> <span class='id identifier rubyid_value'>value</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="request-instance_method">
+  
+    #<strong>request</strong>(member_name:, chunk:)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 30</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_request'>request</span><span class='lparen'>(</span><span class='label'>member_name:</span><span class='comma'>,</span> <span class='label'>chunk:</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_generation'>generation</span> <span class='op'>=</span> <span class='kw'>nil</span>
+  <span class='ivar'>@mutex</span><span class='period'>.</span><span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
+    <span class='ivar'>@condition</span><span class='period'>.</span><span class='id identifier rubyid_wait'>wait</span><span class='lparen'>(</span><span class='ivar'>@mutex</span><span class='rparen'>)</span> <span class='kw'>while</span> <span class='ivar'>@prompting</span> <span class='op'>&amp;&amp;</span> <span class='ivar'>@queue_closed</span>
+
+    <span class='kw'>if</span> <span class='ivar'>@prompting</span>
+      <span class='id identifier rubyid_generation'>generation</span> <span class='op'>=</span> <span class='ivar'>@generation</span>
+      <span class='ivar'>@queued_count</span> <span class='op'>+=</span> <span class='int'>1</span>
+      <span class='id identifier rubyid_render_queue_status_locked'>render_queue_status_locked</span>
+      <span class='kw'>return</span> <span class='id identifier rubyid_wait_for_response'>wait_for_response</span><span class='lparen'>(</span><span class='id identifier rubyid_generation'>generation</span><span class='rparen'>)</span>
+    <span class='kw'>end</span>
+
+    <span class='ivar'>@prompting</span> <span class='op'>=</span> <span class='kw'>true</span>
+    <span class='ivar'>@queue_closed</span> <span class='op'>=</span> <span class='kw'>false</span>
+    <span class='ivar'>@queued_count</span> <span class='op'>=</span> <span class='int'>1</span>
+    <span class='ivar'>@generation</span> <span class='op'>+=</span> <span class='int'>1</span>
+    <span class='id identifier rubyid_generation'>generation</span> <span class='op'>=</span> <span class='ivar'>@generation</span>
+    <span class='id identifier rubyid_start_prompt_locked'>start_prompt_locked</span><span class='lparen'>(</span><span class='label'>member_name:</span> <span class='id identifier rubyid_member_name'>member_name</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_response'>response</span> <span class='op'>=</span> <span class='id identifier rubyid_read_response'>read_response</span><span class='lparen'>(</span><span class='label'>chunk:</span> <span class='id identifier rubyid_chunk'>chunk</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_close_queue'>close_queue</span>
+  <span class='ivar'>@mutex</span><span class='period'>.</span><span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
+    <span class='ivar'>@response</span> <span class='op'>=</span> <span class='id identifier rubyid_response'>response</span>
+    <span class='ivar'>@completed_generation</span> <span class='op'>=</span> <span class='id identifier rubyid_generation'>generation</span>
+    <span class='ivar'>@prompting</span> <span class='op'>=</span> <span class='kw'>false</span>
+    <span class='ivar'>@queue_closed</span> <span class='op'>=</span> <span class='kw'>false</span>
+    <span class='ivar'>@condition</span><span class='period'>.</span><span class='id identifier rubyid_broadcast'>broadcast</span>
+    <span class='id identifier rubyid_response'>response</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+  </div>
+
+</div>
+
+      <div id="footer">
+  Generated on Fri Jun 26 06:33:52 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.44 (ruby-4.0.5).
+</div>
+
+    </div>
+  </body>
+</html>
