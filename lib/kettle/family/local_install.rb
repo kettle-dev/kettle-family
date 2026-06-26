@@ -1,23 +1,27 @@
 # frozen_string_literal: true
 
+require "etc"
 require "fileutils"
 require "json"
 require "open3"
+require "thread"
 require "time"
 
 module Kettle
   module Family
     class LocalInstall
-      def initialize(config:, members:, execute: false)
+      def initialize(config:, members:, execute: false, jobs: nil)
         @config = config
         @members = members
         @execute = execute
+        @jobs = jobs
       end
 
       def results
-        results = install_members.each_with_object([]) do |member, memo|
-          memo << install_member(member)
-          break memo unless memo.last.ok?
+        results = if execute && install_jobs(install_members) > 1
+          parallel_install_results
+        else
+          sequential_install_results(install_members)
         end
         write_local_install_marker if execute && results.all?(&:ok?)
         results
@@ -25,11 +29,26 @@ module Kettle
 
       private
 
-      attr_reader :config, :members, :execute
+      attr_reader :config, :members, :execute, :jobs
 
       def install_members
+        @install_members ||= unique_members(local_dependency_members + members)
+      end
+
+      def local_dependency_members
+        @local_dependency_members ||= unique_members(
+          config.install_local_dependencies.map { |path| member_from_path(path) }
+        )
+      end
+
+      def selected_install_members
+        local_dependency_names = local_dependency_members.map(&:name)
+        unique_members(members).reject { |member| local_dependency_names.include?(member.name) }
+      end
+
+      def unique_members(candidate_members)
         seen = {}
-        (local_dependency_members + members).each_with_object([]) do |member, memo|
+        candidate_members.each_with_object([]) do |member, memo|
           next if seen.key?(member.name)
 
           seen[member.name] = true
@@ -37,8 +56,66 @@ module Kettle
         end
       end
 
-      def local_dependency_members
-        config.install_local_dependencies.map { |path| member_from_path(path) }
+      def sequential_install_results(candidate_members)
+        candidate_members.each_with_object([]) do |member, memo|
+          memo << install_member(member)
+          break memo unless memo.last.ok?
+        end
+      end
+
+      def parallel_install_results
+        [local_dependency_members, selected_install_members].each_with_object([]) do |group, memo|
+          dependency_waves(group).each do |wave|
+            wave_results = run_install_wave(wave)
+            memo.concat(wave_results)
+            break unless wave_results.all?(&:ok?)
+          end
+          break memo unless memo.all?(&:ok?)
+        end
+      end
+
+      def run_install_wave(wave)
+        queue = Queue.new
+        wave.each_with_index { |member, index| queue << [index, member] }
+        ordered_results = Array.new(wave.length)
+        Array.new(install_jobs(wave)) do
+          Thread.new do
+            loop do
+              index, member = queue.pop(true)
+              ordered_results[index] = install_member(member)
+            rescue ThreadError
+              break
+            end
+          end
+        end.each(&:join)
+        ordered_results.compact
+      end
+
+      def dependency_waves(candidate_members)
+        by_name = candidate_members.to_h { |member| [member.name, member] }
+        pending = by_name.keys
+        completed = []
+        waves = []
+        until pending.empty?
+          wave_names = pending.select do |name|
+            selected_dependencies_for(by_name.fetch(name), by_name).all? { |dependency| completed.include?(dependency) }
+          end
+          raise Error, "cyclic install dependency order: #{pending.join(", ")}" if wave_names.empty?
+
+          waves << wave_names.map { |name| by_name.fetch(name) }
+          completed.concat(wave_names)
+          pending -= wave_names
+        end
+        waves
+      end
+
+      def selected_dependencies_for(member, by_name)
+        Array(member.dependencies).map(&:to_s).select { |dependency| by_name.key?(dependency) }
+      end
+
+      def install_jobs(candidate_members)
+        count = jobs ? jobs.to_i : [Etc.nprocessors, 4].min
+        [[count, 1].max, candidate_members.length].min
       end
 
       def member_from_path(path)

@@ -26,6 +26,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family release --execute` now runs dependency-safe member release
   waves in parallel for distinct Git worktrees, coordinating concurrent
   RubyGems MFA prompts.
+- `kettle-family install --execute` now installs independent local gems in
+  dependency-safe waves, using `--jobs` for parallelism.
 
 ### Changed
 

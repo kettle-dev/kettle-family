@@ -82,7 +82,7 @@ module Kettle
               --execute        Execute external workflow commands
               --dry-run        Plan external workflow commands without running them (default)
               --debug          Preserve debug environment for workflow commands
-              --jobs N         Parallel jobs for executed family templating or release
+              --jobs N         Parallel jobs for executed family templating, release, or install
               --env KEY=VALUE  Override an environment variable for each member workflow command
               --section NAME   Changelog section for add-changelog
               --entry TEXT     Changelog entry for add-changelog
@@ -418,7 +418,7 @@ module Kettle
       end
 
       def install_results(config:, members:, options:)
-        LocalInstall.new(config: config, members: members, execute: options[:execute]).results
+        LocalInstall.new(config: config, members: members, execute: options[:execute], jobs: options[:jobs]).results
       end
 
       def release_state_results(config:, members:)

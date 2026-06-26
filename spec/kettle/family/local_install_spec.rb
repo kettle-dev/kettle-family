@@ -22,7 +22,7 @@ RSpec.describe Kettle::Family::LocalInstall do
     members = [member_from_root(File.join(@tmpdir, "alpha"))]
     allow_successful_commands
 
-    results = described_class.new(config: config, members: members, execute: true).results
+    results = described_class.new(config: config, members: members, execute: true, jobs: 1).results
 
     expect(results.map(&:member_name)).to eq(["token-resolver", "alpha"])
     expect(results).to all(be_ok)
@@ -54,12 +54,54 @@ RSpec.describe Kettle::Family::LocalInstall do
     failure = instance_double(Process::Status, success?: false, exitstatus: 17)
     allow(Open3).to receive(:capture3).and_return(["", "build failed", failure])
 
-    results = described_class.new(config: config, members: members, execute: true).results
+    results = described_class.new(config: config, members: members, execute: true, jobs: 1).results
 
     expect(results.map(&:member_name)).to eq(["alpha"])
     expect(results.first).not_to be_ok
     expect(results.first.reason).to eq("command failed")
     expect(File).not_to exist(File.join(@tmpdir, ".kettle-family", "local-install.json"))
+  end
+
+  it "executes independent selected member installs in parallel when jobs allow it" do
+    write_gem("alpha")
+    write_gem("beta")
+    config = write_config
+    members = %w[alpha beta].map { |name| member_from_root(File.join(@tmpdir, name)) }
+    installer = described_class.new(config: config, members: members, execute: true, jobs: 2)
+    barrier = Queue.new
+    release = Queue.new
+
+    allow(installer).to receive(:install_member) do |member|
+      barrier << member.name
+      release.pop
+      successful_result(member)
+    end
+
+    worker = Thread.new { installer.results }
+    expect(2.times.map { barrier.pop }.sort).to eq(%w[alpha beta])
+    2.times { release << true }
+    results = worker.value
+
+    expect(results.map(&:member_name).sort).to eq(%w[alpha beta])
+  end
+
+  it "waits for install dependencies before running dependent selected members" do
+    write_gem("beta")
+    write_gem("alpha", dependencies: ["beta"])
+    config = write_config
+    members = %w[alpha beta].map { |name| member_from_root(File.join(@tmpdir, name)) }
+    installer = described_class.new(config: config, members: members, execute: true, jobs: 2)
+    started = Queue.new
+
+    allow(installer).to receive(:install_member) do |member|
+      started << member.name
+      successful_result(member)
+    end
+
+    results = installer.results
+
+    expect(results.map(&:member_name)).to eq(%w[beta alpha])
+    expect(2.times.map { started.pop }).to eq(%w[beta alpha])
   end
 
   it "reports install command failures after a successful build" do
@@ -128,20 +170,24 @@ RSpec.describe Kettle::Family::LocalInstall do
     Kettle::Family::Config.load(root: @tmpdir)
   end
 
-  def write_gem(name, required_ruby_version: nil)
-    write_gem_at(File.join(@tmpdir, name), name, required_ruby_version: required_ruby_version)
+  def write_gem(name, required_ruby_version: nil, dependencies: [])
+    write_gem_at(File.join(@tmpdir, name), name, required_ruby_version: required_ruby_version, dependencies: dependencies)
   end
 
-  def write_gem_at(root, name, required_ruby_version: nil)
+  def write_gem_at(root, name, required_ruby_version: nil, dependencies: [])
     FileUtils.mkdir_p(File.join(root, "lib", name))
     File.write(File.join(root, "lib", name, "version.rb"), %(module #{name.split("-").map(&:capitalize).join} ; VERSION = "1.0.0" ; end\n))
     gemspec = File.join(root, "#{name}.gemspec")
     required_ruby_line = required_ruby_version ? %(spec.required_ruby_version = "#{required_ruby_version}") : ""
+    dependency_lines = dependencies
+      .map { |dependency| %(  spec.add_dependency "#{dependency}") }
+      .join("\n")
     File.write(gemspec, <<~RUBY)
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "1.0.0"
         #{required_ruby_line}
+        #{dependency_lines}
       end
     RUBY
     gemspec
@@ -160,6 +206,22 @@ RSpec.describe Kettle::Family::LocalInstall do
       spec.required_ruby_version.to_s,
       Array(spec.licenses),
       Array(spec.authors)
+    )
+  end
+
+  def successful_result(member)
+    Kettle::Family::CommandResult.new(
+      member_name: member.name,
+      phase: "install",
+      command: ["gem", "install"],
+      workdir: member.root,
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.0,
+      skipped: false,
+      reason: nil
     )
   end
 end
