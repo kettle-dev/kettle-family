@@ -241,7 +241,9 @@ module Kettle
         queue = Queue.new
         wave.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(wave.length)
-        Array.new(release_jobs(wave)) do
+        wave_jobs = release_jobs(wave)
+        release_otp_coordinator&.queue_total = wave_jobs
+        Array.new(wave_jobs) do
           Thread.new do
             runner = release_command_runner
             loop do

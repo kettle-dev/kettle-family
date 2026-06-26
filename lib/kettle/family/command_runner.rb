@@ -8,7 +8,7 @@ module Kettle
   module Family
     class CommandRunner
       class OtpCoordinator
-        def initialize(input: $stdin, output: $stdout)
+        def initialize(input: $stdin, output: $stdout, queue_total: nil)
           @input = input
           @output = output
           @mutex = Mutex.new
@@ -19,6 +19,13 @@ module Kettle
           @completed_generation = nil
           @response = nil
           @queued_count = 0
+          @queue_total = queue_total
+        end
+
+        def queue_total=(value)
+          @mutex.synchronize do
+            @queue_total = value
+          end
         end
 
         def request(member_name:, chunk:)
@@ -76,7 +83,8 @@ module Kettle
         end
 
         def render_queue_status_locked
-          @output.puts("RubyGems MFA prompts queued: #{@queued_count}")
+          suffix = @queue_total ? " / #{@queue_total}" : ""
+          @output.puts("RubyGems MFA prompts queued: #{@queued_count}#{suffix}")
           @output.flush if @output.respond_to?(:flush)
         end
 

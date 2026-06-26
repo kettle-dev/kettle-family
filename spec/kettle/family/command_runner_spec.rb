@@ -226,18 +226,18 @@ RSpec.describe Kettle::Family::CommandRunner do
   it "reuses one queued OTP response for concurrent requests" do
     otp_input, otp_writer = IO.pipe
     otp_output = StringIO.new
-    coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output)
+    coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output, queue_total: 2)
     responses = Queue.new
 
     first = Thread.new do
       responses << coordinator.request(member_name: "alpha", chunk: "Code: ")
     end
-    wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 1") }
+    wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 1 / 2") }
 
     second = Thread.new do
       responses << coordinator.request(member_name: "beta", chunk: "Code: ")
     end
-    wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 2") }
+    wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 2 / 2") }
 
     otp_writer.write("654321\n")
     threads = [first, second]

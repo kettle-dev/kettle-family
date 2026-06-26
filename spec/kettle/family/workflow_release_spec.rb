@@ -287,6 +287,46 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.count { |result| result.phase == "release_build" }).to eq(2)
   end
 
+  it "sets the release MFA queue total to the active wave job count" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [ready_member("alpha"), ready_member("beta"), ready_member("gamma")]
+    workflow = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 2)
+    coordinator = Class.new do
+      attr_reader :queue_totals
+
+      def initialize
+        @queue_totals = []
+      end
+
+      def queue_total=(value)
+        @queue_totals << value
+      end
+    end.new
+
+    allow(workflow).to receive(:release_otp_coordinator).and_return(coordinator)
+    allow(workflow).to receive(:release_results_for_member) do |member, runner:|
+      [
+        Kettle::Family::CommandResult.new(
+          member_name: member.name,
+          phase: "release_build",
+          command: ["release"],
+          workdir: member.root,
+          status: 0,
+          success: true,
+          stdout: "",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: nil
+        )
+      ]
+    end
+
+    workflow.send(:run_release_wave, members)
+
+    expect(coordinator.queue_totals).to eq([2])
+  end
+
   it "builds release waves from selected member dependencies" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member("alpha")

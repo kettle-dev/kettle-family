@@ -39,8 +39,9 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 - Parallel release MFA coordination now shares an entered OTP only with prompts
-  already queued at submission time, shows the live queued prompt count, and
-  asks again for later RubyGems OTP prompts.
+  already queued at submission time, shows the live queued prompt count as
+  `N / Y` for the current release wave capacity, and asks again for later
+  RubyGems OTP prompts.
 
 ### Security
 
