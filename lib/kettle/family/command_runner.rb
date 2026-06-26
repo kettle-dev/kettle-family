@@ -2,7 +2,6 @@
 
 require "open3"
 require "io/console"
-require "thread"
 
 module Kettle
   module Family

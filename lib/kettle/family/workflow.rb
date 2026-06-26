@@ -5,7 +5,6 @@ require "json"
 require "net/http"
 require "etc"
 require "open3"
-require "thread"
 require "uri"
 
 module Kettle
@@ -637,7 +636,7 @@ module Kettle
 
       def template_changed_file_count(result)
         payload = JSON.parse(result.stdout.to_s)
-        return Array(payload["changed_files"] || payload[:changed_files]).length if payload.is_a?(Hash)
+        Array(payload["changed_files"] || payload[:changed_files]).length if payload.is_a?(Hash)
       rescue JSON::ParserError
         match = result.stdout.to_s.match(/(?:install|apply|prepare|template):\s+(\d+)\s+changed file/)
         return match[1].to_i if match

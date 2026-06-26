@@ -4,7 +4,6 @@ require "etc"
 require "fileutils"
 require "json"
 require "open3"
-require "thread"
 require "time"
 
 module Kettle
