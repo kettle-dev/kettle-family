@@ -3,7 +3,7 @@
     [81, 11, 10, "ThreadSafety/NewThread: Avoid starting new threads.", 3411682361],
     [117, 9, 46, "Style/ComparableClamp: Use `Comparable#clamp` instead.", 2470481234]
   ],
-  "lib/kettle/family/workflow.rb:4000929864": [
+  "lib/kettle/family/workflow.rb:1035109400": [
     [112, 11, 10, "ThreadSafety/NewThread: Avoid starting new threads.", 3411682361],
     [150, 9, 45, "Style/ComparableClamp: Use `Comparable#clamp` instead.", 1055890964],
     [262, 11, 10, "ThreadSafety/NewThread: Avoid starting new threads.", 3411682361],
@@ -18,8 +18,8 @@
   "spec/kettle/family/local_install_spec.rb:550218900": [
     [80, 14, 10, "ThreadSafety/NewThread: Avoid starting new threads.", 3411682361]
   ],
-  "spec/kettle/family/workflow_template_spec.rb:1070065304": [
-    [57, 3, 589, "RSpec/RepeatedExample: Don't repeat examples within an example group. Repeated on line(s) 259.", 945101185],
-    [259, 3, 559, "RSpec/RepeatedExample: Don't repeat examples within an example group. Repeated on line(s) 57.", 2773588769]
+  "spec/kettle/family/workflow_template_spec.rb:3141014964": [
+    [57, 3, 589, "RSpec/RepeatedExample: Don't repeat examples within an example group. Repeated on line(s) 271.", 945101185],
+    [271, 3, 559, "RSpec/RepeatedExample: Don't repeat examples within an example group. Repeated on line(s) 57.", 2773588769]
   ]
 }
