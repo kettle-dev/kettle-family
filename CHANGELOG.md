@@ -32,6 +32,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release failure reports now suggest rerunning the full executed release command,
+  preserving publish mode, instead of a `--start-at` hint that can skip
+  unreleased siblings from a failed parallel wave.
+
 ### Security
 
 ## [0.1.20] - 2026-06-26

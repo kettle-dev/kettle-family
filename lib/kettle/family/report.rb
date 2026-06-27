@@ -217,7 +217,15 @@ module Kettle
       end
 
       def resume_hint_for(result)
+        return release_resume_hint if command == "release"
+
         "kettle-family #{command} --start-at #{result.member_name}"
+      end
+
+      def release_resume_hint
+        hint = "kettle-family release --execute"
+        hint = "#{hint} --publish" if release_mode == "publish"
+        hint
       end
     end
   end

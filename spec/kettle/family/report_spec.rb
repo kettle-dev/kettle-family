@@ -67,4 +67,34 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_text).to include("member release targets:\n  rubocop-lts: r1, r2")
     expect(report.to_h.fetch("member_release_target_branches")).to eq("rubocop-lts" => %w[r1 r2])
   end
+
+  it "uses a full release resume hint for failed publish releases" do
+    result = Kettle::Family::CommandResult.new(
+      "rubocop-ruby3_2",
+      "release_publish",
+      ["bundle", "exec", "kettle-release"],
+      "/repo/rubocop-ruby3_2",
+      1,
+      false,
+      "",
+      "CI failed",
+      1.0,
+      false,
+      "Workflow failed"
+    )
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [result]
+    )
+
+    expect(report.to_text).to include("resume: kettle-family release --execute --publish")
+    expect(report.to_text).not_to include("--start-at rubocop-ruby3_2")
+    expect(report.to_h.fetch("resume_hint")).to eq("kettle-family release --execute --publish")
+  end
 end
