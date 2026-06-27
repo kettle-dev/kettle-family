@@ -84,6 +84,7 @@ RSpec.describe Kettle::Family::CLI do
     write_gem("alpha")
 
     stdout, stderr, status = Open3.capture3(
+      clean_entrypoint_env,
       RbConfig.ruby,
       "-Ilib",
       "exe/kettle-family",
@@ -860,5 +861,17 @@ RSpec.describe Kettle::Family::CLI do
     raise "git #{args.join(" ")} failed: #{stderr}#{stdout}" unless status.success?
 
     stdout
+  end
+
+  def clean_entrypoint_env
+    {
+      "DEBUG" => nil,
+      "DEBUG_RESOLVER" => nil,
+      "DEBUG_RESOLVER_TREE" => nil,
+      "BUNDLER_DEBUG_RESOLVER" => nil,
+      "BUNDLER_DEBUG_RESOLVER_TREE" => nil,
+      "DEBUG_COMPACT_INDEX" => nil,
+      "MOLINILLO_DEBUG" => nil
+    }
   end
 end
