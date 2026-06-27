@@ -292,7 +292,11 @@ module Kettle
         argv = normalize_command(command)
         return argv unless mise_configured?(member)
 
-        injected_env = env.flat_map { |key, value| value.nil? ? ["-u", key.to_s] : "#{key}=#{value}" }
+        unset_env, set_env = env.partition { |_key, value| value.nil? }
+        injected_env = [
+          *unset_env.flat_map { |key, _value| ["-u", key.to_s] },
+          *set_env.map { |key, value| "#{key}=#{value}" }
+        ]
         mise_argv = ["mise", "exec", "-C", member.root, "--"]
         return [*mise_argv, *argv] if injected_env.empty?
 

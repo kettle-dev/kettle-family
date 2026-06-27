@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family` now renders `env -u` unset options before environment
+  assignments so quiet release commands run correctly through `mise exec`.
+
 ### Security
 
 ## [0.1.24] - 2026-06-27

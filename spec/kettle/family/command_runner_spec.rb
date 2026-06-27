@@ -61,6 +61,43 @@ RSpec.describe Kettle::Family::CommandRunner do
     )
   end
 
+  it "places env unset options before env assignments" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    result = described_class.new.call(
+      member: member,
+      phase: "release_normalize_lockfiles",
+      command: ["bundle", "update", "nomono"],
+      env: {
+        "KETTLE_JEM_QUIET" => "true",
+        "DEBUG" => nil,
+        "BUNDLE_QUIET" => "true",
+        "DEBUG_RESOLVER" => nil
+      }
+    )
+
+    expect(result.command).to eq(
+      [
+        "mise",
+        "exec",
+        "-C",
+        member.root,
+        "--",
+        "env",
+        "-u",
+        "DEBUG",
+        "-u",
+        "DEBUG_RESOLVER",
+        "KETTLE_JEM_QUIET=true",
+        "BUNDLE_QUIET=true",
+        "bundle",
+        "update",
+        "nomono"
+      ]
+    )
+  end
+
   it "wraps commands with mise when a member has .tool-versions" do
     member = member_at("alpha")
     File.write(File.join(member.root, ".tool-versions"), "ruby 4.0.5\n")
