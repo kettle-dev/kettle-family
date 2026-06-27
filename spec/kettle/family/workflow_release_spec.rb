@@ -260,6 +260,36 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
+  it "lets explicit release environment overrides win during lockfile normalization" do
+    write_release_config(
+      build_command: [RbConfig.ruby, "-e", "puts 'build'"],
+      template: {
+        "normalize_lockfiles" => true,
+        "normalize_lockfiles_command" => %w[bundle update nomono --bundler]
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nSMORG_RB_DEV = \"true\"\nRUBOCOP_LTS_LOCAL = \"false\"\n")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      env_overrides: {
+        "RUBOCOP_LTS_LOCAL" => "/workspace/rubocop-lts",
+        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems"
+      }
+    ).results
+
+    expect(results.first.command).to include(
+      "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
+      "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems"
+    )
+    expect(results.first.command).not_to include("SMORG_RB_DEV=false")
+    expect(results.first.command).to include("KETTLE_RB_DEV=false")
+  end
+
   it "skips already published versions during executed publish releases" do
     write_release_config(publish_command: [RbConfig.ruby, "-e", "abort 'should not run'"])
     config = Kettle::Family::Config.load(root: @tmpdir)

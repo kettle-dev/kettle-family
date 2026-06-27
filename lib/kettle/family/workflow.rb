@@ -454,6 +454,12 @@ module Kettle
       end
 
       def release_env
+        env = base_release_env
+        env.merge!(env_overrides)
+        env
+      end
+
+      def base_release_env
         env = config.release_env.dup
         env.merge!(TEMPLATE_QUIET_ENV) unless debug
         env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures
@@ -668,7 +674,9 @@ module Kettle
       end
 
       def release_lockfile_env
-        release_env.merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
+        base_release_env
+          .merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
+          .merge(env_overrides)
       end
 
       def commit_normalized_lockfiles(branch_members:, runner:, memo:, reason: command)

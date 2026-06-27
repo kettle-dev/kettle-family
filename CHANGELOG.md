@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family release --env KEY=VALUE` now applies explicit environment
+  overrides to release commands and release lockfile normalization.
+
 ### Security
 
 ## [0.1.22] - 2026-06-27
