@@ -455,6 +455,7 @@ module Kettle
 
       def release_env
         env = config.release_env.dup
+        env.merge!(TEMPLATE_QUIET_ENV) unless debug
         env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures
         env
       end

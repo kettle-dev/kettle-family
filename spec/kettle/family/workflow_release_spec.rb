@@ -99,6 +99,59 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 --local-ci"])
   end
 
+  it "disables noisy Bundler and debug environment for release commands" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nDEBUG = \"true\"\n")
+
+    results = described_class.new(command: "release", config: config, members: [member]).results
+
+    release_command = results.find { |result| result.phase == "release_build" }.command
+    expect(release_command).to include(
+      "DEBUG=false",
+      "BUNDLE_QUIET=true",
+      "BUNDLE_DEBUG=false",
+      "BUNDLER_DEBUG=false",
+      "BUNDLE_VERBOSE=false",
+      "DEBUG_RESOLVER=false",
+      "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true"
+    )
+    expect(release_command).not_to include(
+      "DEBUG=true",
+      "BUNDLE_DEBUG=true",
+      "BUNDLER_DEBUG=true",
+      "BUNDLE_VERBOSE=true",
+      "DEBUG_RESOLVER=true"
+    )
+  end
+
+  it "preserves release debug environment when debug is enabled" do
+    write_release_config(
+      release_env: {
+        "DEBUG" => "true",
+        "BUNDLE_DEBUG" => "true",
+        "BUNDLER_DEBUG" => "true",
+        "BUNDLE_VERBOSE" => "true",
+        "DEBUG_RESOLVER" => "true"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nDEBUG = \"false\"\n")
+
+    results = described_class.new(command: "release", config: config, members: [member], debug: true).results
+
+    release_command = results.find { |result| result.phase == "release_build" }.command
+    expect(release_command).to include(
+      "DEBUG=true",
+      "BUNDLE_DEBUG=true",
+      "BUNDLER_DEBUG=true",
+      "BUNDLE_VERBOSE=true",
+      "DEBUG_RESOLVER=true"
+    )
+  end
+
   it "prompts once for gem signing before executed build releases" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -179,6 +232,19 @@ RSpec.describe Kettle::Family::Workflow do
       member.root,
       "--",
       "env",
+      "KETTLE_JEM_QUIET=true",
+      "KETTLE_JEM_DEBUG=false",
+      "KETTLE_DEV_DEBUG=false",
+      "SMORG_RB_DEBUG=false",
+      "DEBUG=false",
+      "BUNDLE_QUIET=true",
+      "BUNDLE_DEBUG=false",
+      "BUNDLER_DEBUG=false",
+      "BUNDLE_VERBOSE=false",
+      "DEBUG_RESOLVER=false",
+      "BUNDLE_SILENCE_DEPRECATIONS=true",
+      "BUNDLE_SILENCE_ROOT_WARNING=true",
+      "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
       "K_JEM_TEMPLATING=false",
       "SMORG_RB_DEV=false",
       "TSLP_DEV=false",

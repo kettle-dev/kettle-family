@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `kettle-family template` now preserves template environment overrides during
   lockfile normalization so local path families remain active.
+- `kettle-family release` now suppresses inherited Bundler/debug verbosity for
+  member release commands unless `--debug` is enabled.
 
 ### Security
 
