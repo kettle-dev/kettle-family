@@ -20,9 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family release --skip-steps LIST` now passes `skip_steps=LIST`
-  through to `kettle-release` commands for recovery releases.
-
 ### Changed
 
 ### Deprecated
@@ -32,6 +29,18 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.1.26] - 2026-06-27
+
+- TAG: [v0.1.26][0.1.26t]
+- COVERAGE: 95.08% -- 1836/1931 lines in 21 files
+- BRANCH COVERAGE: 74.47% -- 627/842 branches in 21 files
+- 38.60% documented
+
+### Added
+
+- `kettle-family release --skip-steps LIST` now passes `skip_steps=LIST`
+  through to `kettle-release` commands for recovery releases.
 
 ## [0.1.25] - 2026-06-27
 
@@ -456,7 +465,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.25...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.26...HEAD
+[0.1.26]: https://github.com/kettle-dev/kettle-family/compare/v0.1.25...v0.1.26
+[0.1.26t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.26
 [0.1.25]: https://github.com/kettle-dev/kettle-family/compare/v0.1.24...v0.1.25
 [0.1.25t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.25
 [0.1.24]: https://github.com/kettle-dev/kettle-family/compare/v0.1.23...v0.1.24

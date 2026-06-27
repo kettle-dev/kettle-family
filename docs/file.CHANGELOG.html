@@ -70,7 +70,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.25...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.26...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
 
@@ -83,6 +83,25 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="fixed">Fixed</h3>
 
 <h3 id="security">Security</h3>
+
+<h2 id="0126---2026-06-27">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.25...v0.1.26">0.1.26</a> - 2026-06-27</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.26">v0.1.26</a>
+</li>
+  <li>COVERAGE: 95.08% – 1836/1931 lines in 21 files</li>
+  <li>BRANCH COVERAGE: 74.47% – 627/842 branches in 21 files</li>
+  <li>38.60% documented</li>
+</ul>
+
+<h3 id="added-1">Added</h3>
+
+<ul>
+  <li>
+<code>kettle-family release --skip-steps LIST</code> now passes <code>skip_steps=LIST</code><br>
+through to <code>kettle-release</code> commands for recovery releases.</li>
+</ul>
 
 <h2 id="0125---2026-06-27">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.24...v0.1.25">0.1.25</a> - 2026-06-27</h2>
@@ -203,7 +222,7 @@ unreleased siblings from a failed parallel wave.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="added-1">Added</h3>
+<h3 id="added-2">Added</h3>
 
 <ul>
   <li>
@@ -267,7 +286,7 @@ avoiding encoding crashes when a release command fails after PTY output.</li>
   <li>39.63% documented</li>
 </ul>
 
-<h3 id="added-2">Added</h3>
+<h3 id="added-3">Added</h3>
 
 <ul>
   <li>
@@ -294,7 +313,7 @@ the signing password as input.</li>
   <li>39.63% documented</li>
 </ul>
 
-<h3 id="added-3">Added</h3>
+<h3 id="added-4">Added</h3>
 
 <ul>
   <li>
@@ -441,7 +460,7 @@ allowing mixed sibling workspaces to report stacked gems correctly.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-4">Added</h3>
+<h3 id="added-5">Added</h3>
 
 <ul>
   <li>
@@ -499,7 +518,7 @@ templating commit by default; use <code>--no-commit</code> to pass <code>--skip-
 member templating commands.</li>
 </ul>
 
-<h3 id="added-5">Added</h3>
+<h3 id="added-6">Added</h3>
 
 <ul>
   <li>Added <code>--env KEY=VALUE</code> workflow overrides so <code>kettle-family</code> commands can<br>
@@ -518,7 +537,7 @@ defaults have loaded.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-6">Added</h3>
+<h3 id="added-7">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family install</code> to build and install selected local family gems,<br>
@@ -543,7 +562,7 @@ including config-defined <code>install.local_dependencies</code> resolved relati
   <li>40.14% documented</li>
 </ul>
 
-<h3 id="added-7">Added</h3>
+<h3 id="added-8">Added</h3>
 
 <ul>
   <li>Added configurable readiness checks, root/shared changelog support, release<br>
@@ -594,7 +613,7 @@ member’s potentially stale bundle.</li>
 <code>test/</code> directories are ignored.</li>
 </ul>
 
-<h3 id="added-8">Added</h3>
+<h3 id="added-9">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family metadata</code> to report each family member’s version, Ruby<br>
@@ -623,7 +642,7 @@ requirement, licenses, and authors.</li>
   <li>41.80% documented</li>
 </ul>
 
-<h3 id="added-9">Added</h3>
+<h3 id="added-10">Added</h3>
 
 <ul>
   <li>Added configurable member discovery excludes via <code>members.exclude</code> /<br>
@@ -659,7 +678,7 @@ loading gemspecs, avoiding fixture load failures in family roots.</li>
   <li>42.34% documented</li>
 </ul>
 
-<h3 id="added-10">Added</h3>
+<h3 id="added-11">Added</h3>
 
 <ul>
   <li>Added the initial <code>kettle-family</code> CLI discovery slice with config loading, gemspec discovery, dependency ordering, selection, and JSON reports.</li>
@@ -687,7 +706,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Sat Jun 27 08:55:57 2026 by
+  Generated on Sat Jun 27 11:35:29 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

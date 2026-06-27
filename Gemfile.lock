@@ -8,7 +8,7 @@ GIT
 PATH
   remote: .
   specs:
-    kettle-family (0.1.25)
+    kettle-family (0.1.26)
       tsort (~> 0.2)
       version_gem (~> 1.1, >= 1.1.13)
 
@@ -29,18 +29,7 @@ PATH
   remote: /home/pboling/src/my/rubocop-lts/rubocop-lts
   specs:
     rubocop-lts (4.3.2)
-      rubocop-ruby1_8 (~> 2.0, >= 2.0.1)
-      standard-rubocop-lts (~> 2.0, >= 2.0.3)
-      version_gem (~> 1.1, >= 1.1.13)
-
-PATH
-  remote: /home/pboling/src/my/rubocop-lts/rubocop-ruby1_8
-  specs:
-    rubocop-ruby1_8 (2.0.5)
-      rubocop-gradual (~> 0.3, >= 0.3.6)
-      rubocop-md (~> 2.0, >= 2.0.4)
-      rubocop-rake (~> 0.7, >= 0.7.1)
-      rubocop-thread_safety (~> 0.7, >= 0.7.3)
+      rubocop-ruby3_2 (~> 3.0, >= 3.0.1)
       standard-rubocop-lts (~> 2.0, >= 2.0.3)
       version_gem (~> 1.1, >= 1.1.13)
 
@@ -143,9 +132,11 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     json (2.20.0)
-    kettle-dev (2.2.19)
+    kettle-dev (2.2.20)
+      kettle-rb (~> 0.1, >= 0.1.0)
       kettle-test (~> 2.0, >= 2.0.4)
       version_gem (~> 1.1, >= 1.1.13)
+    kettle-rb (0.1.0)
     kettle-soup-cover (3.0.0.rc5)
       simplecov (>= 1.0.pre)
       simplecov-cobertura (>= 4.0.pre)
@@ -401,7 +392,7 @@ DEPENDENCIES
   gem_bench (~> 2.0, >= 2.0.5)
   gitmoji-regex (~> 2.0, >= 2.0.3)
   irb (~> 1.17)
-  kettle-dev (~> 2.2, >= 2.2.19)
+  kettle-dev (~> 2.2, >= 2.2.20)
   kettle-family!
   kettle-soup-cover (~> 3.0.a, >= 3.0.0.rc5)
   kettle-test (~> 2.0, >= 2.0.8)
@@ -420,7 +411,6 @@ DEPENDENCIES
   rubocop-minitest (~> 0.38, >= 0.38.1)
   rubocop-on-rbs (~> 2.0, >= 2.0.0)
   rubocop-packaging (~> 0.6, >= 0.6.0)
-  rubocop-ruby1_8!
   rubocop-ruby3_2!
   ruby-progressbar (~> 1.13)
   simplecov!
@@ -472,8 +462,9 @@ CHECKSUMS
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
   irb (1.18.0) sha256=de9454a0703a54704b9811a5ef31a60c86949fbf4013fcf244fabc7c775248e3
   json (2.20.0) sha256=9362bc6e55a952b056abf9167cf053358181c904cb70cd6eee0808ea830fc32b
-  kettle-dev (2.2.19) sha256=19966fef0c968467100c037a956d569fe726a239967f4db0e40b80cd477f45b1
-  kettle-family (0.1.25)
+  kettle-dev (2.2.20) sha256=eca2eacbb7b2cade58d2d9b49a434e9da8edbf1b7575070e927c35824971cc05
+  kettle-family (0.1.26)
+  kettle-rb (0.1.0) sha256=b6b0b6e15fb42a897ef7208e28fe30b3b98be06d09f4512a6728bc71d0817320
   kettle-soup-cover (3.0.0.rc5) sha256=3c8e5551a1c900fb95503d69f815205a1138f168500acdd4559c3a5ef1817da5
   kettle-test (2.0.8) sha256=1b404fa8a6bfcb3456b6d222b1b31a39122fc3e713abc0fdc58db873a61de575
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
@@ -530,7 +521,6 @@ CHECKSUMS
   rubocop-rspec (3.10.2) sha256=0b3e2ecc592cd10ecbf0095bb58d1e357905276e069643523cc19eb7495f65e2
   rubocop-rspec-extra (0.3.0) sha256=ee4b6484d0332a0d23c4a465eeb607e41888eb3d4ed479f850b9f5212514f787
   rubocop-rspec_rails (2.32.0) sha256=4a0d641c72f6ebb957534f539d9d0a62c47abd8ce0d0aeee1ef4701e892a9100
-  rubocop-ruby1_8 (2.0.5)
   rubocop-ruby3_2 (3.0.6)
   rubocop-thread_safety (0.7.3) sha256=067cdd52fbf5deffc18995437e45b5194236eaff4f71de3375a1f6052e48f431
   ruby-progressbar (1.13.0) sha256=80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33

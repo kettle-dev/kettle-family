@@ -3,12 +3,12 @@
 RSpec.describe Kettle::Family::Report do
   it "prints the loaded kettle-family version in text reports" do
     report = described_class.new(
-      :family_name => "rubocop-lts",
-      :order_mode => "dependency",
-      :members => [],
-      :selected_members => [],
-      :config_path => nil,
-      :command => "discover"
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "discover"
     )
 
     expect(report.to_text.lines.first).to eq("kettle-family: #{Kettle::Family::VERSION}\n")
@@ -16,15 +16,15 @@ RSpec.describe Kettle::Family::Report do
 
   it "renders release-state results with a branch column when branches are present" do
     result = Kettle::Family::ReleaseStateResult.new(
-      :member_name => "rubocop-lts",
-      :command => ["internal", "release-state"],
-      :workdir => "/repo/rubocop-lts",
-      :status => 0,
-      :success => true,
-      :stdout => "",
-      :stderr => "",
-      :elapsed_seconds => 0.1,
-      :state => {
+      member_name: "rubocop-lts",
+      command: ["internal", "release-state"],
+      workdir: "/repo/rubocop-lts",
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.1,
+      state: {
         "gem_name" => "rubocop-lts",
         "version" => "24.2.0",
         "latest_released" => "24.2.0",
@@ -33,17 +33,17 @@ RSpec.describe Kettle::Family::Report do
         "prepared_release_pending" => true,
         "pending_release" => true
       },
-      :branch => "r3_2-even-v24"
+      branch: "r3_2-even-v24"
     )
 
     report = described_class.new(
-      :family_name => "rubocop-lts",
-      :order_mode => "dependency",
-      :members => [],
-      :selected_members => [],
-      :config_path => nil,
-      :command => "release-state",
-      :results => [result]
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "release-state",
+      results: [result]
     )
 
     text = report.to_text
@@ -55,13 +55,13 @@ RSpec.describe Kettle::Family::Report do
 
   it "renders member-local release target branches" do
     report = described_class.new(
-      :family_name => "rubocop-lts",
-      :order_mode => "dependency",
-      :members => [],
-      :selected_members => [],
-      :config_path => nil,
-      :command => "release",
-      :member_release_target_branches => {"rubocop-lts" => ["r1", "r2"]}
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "release",
+      member_release_target_branches: {"rubocop-lts" => ["r1", "r2"]}
     )
 
     expect(report.to_text).to include("member release targets:\n  rubocop-lts: r1, r2")
@@ -83,14 +83,14 @@ RSpec.describe Kettle::Family::Report do
       "Workflow failed"
     )
     report = described_class.new(
-      :family_name => "rubocop-lts",
-      :order_mode => "dependency",
-      :members => [],
-      :selected_members => [],
-      :config_path => nil,
-      :command => "release",
-      :release_mode => "publish",
-      :results => [result]
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [result]
     )
 
     expect(report.to_text).to include("resume: kettle-family release --execute --publish")
