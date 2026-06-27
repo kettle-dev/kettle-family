@@ -92,6 +92,7 @@ module Kettle
               --publish        Use publish release command instead of build command
               --build-only      Use build release command (default)
               --start-step N    Pass start_step=N through to kettle-release commands
+              --skip-steps LIST Pass skip_steps=LIST through to kettle-release commands
               --local-ci        Pass --local-ci through to kettle-release commands
               --continue-ci-failures
                                Set K_RELEASE_CI_CONTINUE=true for release commands
@@ -126,6 +127,7 @@ module Kettle
           gha_sha_pins_upgrade: "patch",
           publish: false,
           release_start_step: nil,
+          release_skip_steps: nil,
           release_local_ci: false,
           release_continue_ci_failures: false,
           accept: true,
@@ -154,6 +156,7 @@ module Kettle
           parser.on("--publish") { options[:publish] = true }
           parser.on("--build-only") { options[:publish] = false }
           parser.on("--start-step N", Integer) { |value| options[:release_start_step] = value }
+          parser.on("--skip-steps LIST") { |value| options[:release_skip_steps] = value }
           parser.on("--local-ci") { options[:release_local_ci] = true }
           parser.on("--continue-ci-failures") { options[:release_continue_ci_failures] = true }
           parser.on("--accept") { options[:accept] = true }
@@ -230,6 +233,7 @@ module Kettle
           push: options[:push],
           tag: options[:tag],
           start_step: options[:release_start_step],
+          skip_steps: options[:release_skip_steps],
           local_ci: options[:release_local_ci],
           continue_ci_failures: options[:release_continue_ci_failures],
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],

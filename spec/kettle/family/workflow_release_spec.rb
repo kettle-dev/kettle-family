@@ -92,11 +92,12 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       publish: true,
       start_step: 10,
+      skip_steps: "10",
       local_ci: true,
       continue_ci_failures: true
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 --local-ci"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --local-ci"])
   end
 
   it "disables noisy Bundler and debug environment for release commands" do

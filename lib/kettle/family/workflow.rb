@@ -43,7 +43,7 @@ module Kettle
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil)
         @command = command
         @config = config
         @members = members
@@ -55,6 +55,7 @@ module Kettle
         @push = push
         @tag = tag
         @start_step = start_step
+        @skip_steps = skip_steps
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
@@ -76,7 +77,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -223,6 +224,7 @@ module Kettle
           push: push,
           tag: tag,
           start_step: start_step,
+          skip_steps: skip_steps,
           local_ci: local_ci,
           continue_ci_failures: continue_ci_failures,
           gha_sha_pins_upgrade: gha_sha_pins_upgrade,
@@ -452,6 +454,7 @@ module Kettle
       def append_kettle_release_args(command)
         args = []
         args << "start_step=#{start_step}" if start_step
+        args << "skip_steps=#{skip_steps}" if skip_steps && !skip_steps.to_s.empty?
         args << "--local-ci" if local_ci
         return command if args.empty?
 

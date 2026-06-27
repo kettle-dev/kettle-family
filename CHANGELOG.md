@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family release --skip-steps LIST` now passes `skip_steps=LIST`
+  through to `kettle-release` commands for recovery releases.
+
 ### Changed
 
 ### Deprecated
