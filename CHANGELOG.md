@@ -22,21 +22,32 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Local path environment suppression now uses `TSLP_DEV` for
-  `tree_sitter_language_pack` overrides instead of
-  `TREE_SITTER_LANGUAGE_PACK_DEV`.
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
+### Security
+
+## [0.1.21] - 2026-06-26
+
+- TAG: [v0.1.21][0.1.21t]
+- COVERAGE: 95.01% -- 1807/1902 lines in 21 files
+- BRANCH COVERAGE: 74.52% -- 617/828 branches in 21 files
+- 38.60% documented
+
+### Changed
+
+- Local path environment suppression now uses `TSLP_DEV` for
+  `tree_sitter_language_pack` overrides instead of
+  `TREE_SITTER_LANGUAGE_PACK_DEV`.
+
+### Fixed
+
 - Release failure reports now suggest rerunning the full executed release command,
   preserving publish mode, instead of a `--start-at` hint that can skip
   unreleased siblings from a failed parallel wave.
-
-### Security
 
 ## [0.1.20] - 2026-06-26
 
@@ -390,7 +401,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.20...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.21...HEAD
+[0.1.21]: https://github.com/kettle-dev/kettle-family/compare/v0.1.20...v0.1.21
+[0.1.21t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.21
 [0.1.20]: https://github.com/kettle-dev/kettle-family/compare/v0.1.19...v0.1.20
 [0.1.20t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.20
 [0.1.19]: https://github.com/kettle-dev/kettle-family/compare/v0.1.18...v0.1.19
