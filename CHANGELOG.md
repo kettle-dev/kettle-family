@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family template` now preserves template environment overrides during
+  lockfile normalization so local path families remain active.
+
 ### Security
 
 ## [0.1.21] - 2026-06-26

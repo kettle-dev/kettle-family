@@ -78,7 +78,8 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       env_overrides: {
         "K_JEM_TEMPLATING" => "true",
-        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems"
+        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems",
+        "RUBOCOP_LTS_LOCAL" => "/workspace/rubocop-lts"
       }
     ).results
 
@@ -94,6 +95,7 @@ RSpec.describe Kettle::Family::Workflow do
         "KJ_REPOSITORY_TOPOLOGY=standalone",
         "K_JEM_TEMPLATING=true",
         "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
         "KETTLE_JEM_QUIET=true",
         "KETTLE_JEM_DEBUG=false",
         "KETTLE_DEV_DEBUG=false",
@@ -115,6 +117,16 @@ RSpec.describe Kettle::Family::Workflow do
         "--json"
       ]
     )
+
+    [results.fetch(0), results.fetch(2)].each do |result|
+      expect(result.command).to include(
+        "K_JEM_TEMPLATING=true",
+        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
+        "BUNDLE_QUIET=true"
+      )
+      expect(result.command.last(3)).to eq([RbConfig.ruby, "-e", "puts 'normalized'"])
+    end
   end
 
   it "overrides noisy template debug environment unless debug is enabled" do

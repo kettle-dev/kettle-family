@@ -650,7 +650,8 @@ module Kettle
         result = runner.call(
           member: member,
           phase: phase,
-          command: config.normalize_lockfiles_command
+          command: config.normalize_lockfiles_command,
+          env: workflow_env
         )
         memo << result
       end
