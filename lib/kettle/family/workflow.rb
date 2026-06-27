@@ -27,12 +27,17 @@ module Kettle
         "KETTLE_JEM_DEBUG" => "false",
         "KETTLE_DEV_DEBUG" => "false",
         "SMORG_RB_DEBUG" => "false",
-        "DEBUG" => "false",
+        "DEBUG" => nil,
         "BUNDLE_QUIET" => "true",
         "BUNDLE_DEBUG" => "false",
         "BUNDLER_DEBUG" => "false",
         "BUNDLE_VERBOSE" => "false",
-        "DEBUG_RESOLVER" => "false",
+        "DEBUG_RESOLVER" => nil,
+        "DEBUG_RESOLVER_TREE" => nil,
+        "BUNDLER_DEBUG_RESOLVER" => nil,
+        "BUNDLER_DEBUG_RESOLVER_TREE" => nil,
+        "DEBUG_COMPACT_INDEX" => nil,
+        "MOLINILLO_DEBUG" => nil,
         "BUNDLE_SILENCE_DEPRECATIONS" => "true",
         "BUNDLE_SILENCE_ROOT_WARNING" => "true",
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
@@ -405,7 +410,7 @@ module Kettle
       end
 
       def append_release_internal_checks(member:, memo:)
-        memo << ReadinessCheck.call(member: member, config: config)
+        memo << ReadinessCheck.call(member: member, config: config, allowed_local_path_roots: release_allowed_local_path_roots)
         memo << ChangelogCheck.call(member: member, config: config) if memo.last.ok?
       end
 
@@ -677,6 +682,15 @@ module Kettle
         base_release_env
           .merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
           .merge(env_overrides)
+      end
+
+      def release_allowed_local_path_roots
+        env_overrides.filter_map do |key, value|
+          next unless key.end_with?("_LOCAL", "_DEV")
+          next if value.to_s.empty? || value.to_s.casecmp("false").zero?
+
+          value
+        end
       end
 
       def commit_normalized_lockfiles(branch_members:, runner:, memo:, reason: command)

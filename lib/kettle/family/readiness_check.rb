@@ -6,13 +6,14 @@ module Kettle
       REQUIRED_FILES = %w[Gemfile Rakefile README.md CHANGELOG.md LICENSE.md].freeze
       REQUIRED_BINS = %w[bin/rake bin/rspec].freeze
 
-      def self.call(member:, config: nil)
-        new(member: member, config: config).call
+      def self.call(member:, config: nil, allowed_local_path_roots: [])
+        new(member: member, config: config, allowed_local_path_roots: allowed_local_path_roots).call
       end
 
-      def initialize(member:, config: nil)
+      def initialize(member:, config: nil, allowed_local_path_roots: [])
         @member = member
         @config = config
+        @allowed_local_path_roots = allowed_local_path_roots.filter_map { |path| normalized_path(path) }
       end
 
       def call
@@ -29,7 +30,7 @@ module Kettle
 
       private
 
-      attr_reader :member, :config
+      attr_reader :member, :config, :allowed_local_path_roots
 
       def missing_required_files
         required_files.filter_map do |path|
@@ -100,9 +101,28 @@ module Kettle
 
         File.readlines(lockfile).filter_map.with_index(1) do |line, index|
           next unless line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+          next if allowed_local_path?(line)
 
           "release lockfile has local path remote at Gemfile.lock:#{index}"
         end
+      end
+
+      def allowed_local_path?(line)
+        remote = line.split("remote:", 2).last.to_s.strip
+        remote_path = normalized_path(remote, base: member.root)
+        return false unless remote_path
+
+        allowed_local_path_roots.any? { |root| remote_path == root || remote_path.start_with?("#{root}/") }
+      end
+
+      def normalized_path(path, base: nil)
+        text = path.to_s
+        return nil if text.empty? || text.casecmp("false").zero?
+
+        expanded = File.expand_path(text, base)
+        File.realpath(expanded)
+      rescue Errno::ENOENT
+        expanded
       end
 
       def required_files

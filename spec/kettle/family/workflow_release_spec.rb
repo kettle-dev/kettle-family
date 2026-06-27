@@ -109,20 +109,24 @@ RSpec.describe Kettle::Family::Workflow do
 
     release_command = results.find { |result| result.phase == "release_build" }.command
     expect(release_command).to include(
-      "DEBUG=false",
+      "-u",
+      "DEBUG",
       "BUNDLE_QUIET=true",
       "BUNDLE_DEBUG=false",
       "BUNDLER_DEBUG=false",
       "BUNDLE_VERBOSE=false",
-      "DEBUG_RESOLVER=false",
+      "-u",
+      "DEBUG_RESOLVER",
       "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true"
     )
     expect(release_command).not_to include(
       "DEBUG=true",
+      "DEBUG=false",
       "BUNDLE_DEBUG=true",
       "BUNDLER_DEBUG=true",
       "BUNDLE_VERBOSE=true",
-      "DEBUG_RESOLVER=true"
+      "DEBUG_RESOLVER=true",
+      "DEBUG_RESOLVER=false"
     )
   end
 
@@ -236,12 +240,24 @@ RSpec.describe Kettle::Family::Workflow do
       "KETTLE_JEM_DEBUG=false",
       "KETTLE_DEV_DEBUG=false",
       "SMORG_RB_DEBUG=false",
-      "DEBUG=false",
+      "-u",
+      "DEBUG",
       "BUNDLE_QUIET=true",
       "BUNDLE_DEBUG=false",
       "BUNDLER_DEBUG=false",
       "BUNDLE_VERBOSE=false",
-      "DEBUG_RESOLVER=false",
+      "-u",
+      "DEBUG_RESOLVER",
+      "-u",
+      "DEBUG_RESOLVER_TREE",
+      "-u",
+      "BUNDLER_DEBUG_RESOLVER",
+      "-u",
+      "BUNDLER_DEBUG_RESOLVER_TREE",
+      "-u",
+      "DEBUG_COMPACT_INDEX",
+      "-u",
+      "MOLINILLO_DEBUG",
       "BUNDLE_SILENCE_DEPRECATIONS=true",
       "BUNDLE_SILENCE_ROOT_WARNING=true",
       "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
@@ -288,6 +304,26 @@ RSpec.describe Kettle::Family::Workflow do
     )
     expect(results.first.command).not_to include("SMORG_RB_DEV=false")
     expect(results.first.command).to include("KETTLE_RB_DEV=false")
+  end
+
+  it "allows release readiness to use explicitly requested local source roots" do
+    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    local_root = File.join(@tmpdir, "rubocop-lts")
+    FileUtils.mkdir_p(File.join(local_root, "rubocop-ruby3_2"))
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(local_root, "rubocop-ruby3_2")}\n")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      env_overrides: {
+        "RUBOCOP_LTS_LOCAL" => local_root
+      }
+    ).results
+
+    expect(results.find { |result| result.phase == "check" }).to be_ok
   end
 
   it "skips already published versions during executed publish releases" do

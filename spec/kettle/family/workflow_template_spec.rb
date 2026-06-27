@@ -100,12 +100,24 @@ RSpec.describe Kettle::Family::Workflow do
         "KETTLE_JEM_DEBUG=false",
         "KETTLE_DEV_DEBUG=false",
         "SMORG_RB_DEBUG=false",
-        "DEBUG=false",
+        "-u",
+        "DEBUG",
         "BUNDLE_QUIET=true",
         "BUNDLE_DEBUG=false",
         "BUNDLER_DEBUG=false",
         "BUNDLE_VERBOSE=false",
-        "DEBUG_RESOLVER=false",
+        "-u",
+        "DEBUG_RESOLVER",
+        "-u",
+        "DEBUG_RESOLVER_TREE",
+        "-u",
+        "BUNDLER_DEBUG_RESOLVER",
+        "-u",
+        "BUNDLER_DEBUG_RESOLVER_TREE",
+        "-u",
+        "DEBUG_COMPACT_INDEX",
+        "-u",
+        "MOLINILLO_DEBUG",
         "BUNDLE_SILENCE_DEPRECATIONS=true",
         "BUNDLE_SILENCE_ROOT_WARNING=true",
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
@@ -161,20 +173,25 @@ RSpec.describe Kettle::Family::Workflow do
       debug: true
     ).results
 
-    quiet_env = quiet_results.find { |result| result.phase == "template" }.command.grep(/DEBUG|RESOLVER/)
+    quiet_command = quiet_results.find { |result| result.phase == "template" }.command
+    quiet_env = quiet_command.grep(/DEBUG|RESOLVER/)
     debug_env = debug_results.find { |result| result.phase == "template" }.command.grep(/DEBUG|RESOLVER/)
-    expect(quiet_env).to include(
-      "DEBUG=false",
+    expect(quiet_command).to include(
+      "-u",
+      "DEBUG",
+      "-u",
+      "DEBUG_RESOLVER",
       "BUNDLE_DEBUG=false",
       "BUNDLER_DEBUG=false",
-      "DEBUG_RESOLVER=false",
       "SMORG_RB_DEBUG=false"
     )
     expect(quiet_env).not_to include(
       "DEBUG=true",
+      "DEBUG=false",
       "BUNDLE_DEBUG=true",
       "BUNDLER_DEBUG=true",
       "DEBUG_RESOLVER=true",
+      "DEBUG_RESOLVER=false",
       "SMORG_RB_DEBUG=true"
     )
     expect(debug_env).to include(

@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family release --env NAME_LOCAL=/path` now allows release readiness
+  checks to use matching local source lockfile paths for recovery releases.
+- Quiet template and release commands now unset Bundler/RubyGems debug
+  environment variables whose presence enables resolver/debug output.
+
 ### Security
 
 ## [0.1.23] - 2026-06-27
