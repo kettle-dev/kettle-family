@@ -20,10 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Added `kettle-family bup [GEM]` for family-wide `bundle update --all` or
-  targeted `bundle update GEM`, and `kettle-family bupb` for family-wide
-  `bundle update --bundler`.
-
 ### Changed
 
 ### Deprecated
@@ -33,6 +29,19 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.1.27] - 2026-06-28
+
+- TAG: [v0.1.27][0.1.27t]
+- COVERAGE: 95.11% -- 1849/1944 lines in 21 files
+- BRANCH COVERAGE: 74.68% -- 634/849 branches in 21 files
+- 38.60% documented
+
+### Added
+
+- Added `kettle-family bup [GEM]` for family-wide `bundle update --all` or
+  targeted `bundle update GEM`, and `kettle-family bupb` for family-wide
+  `bundle update --bundler`.
 
 ## [0.1.26] - 2026-06-27
 
@@ -469,7 +478,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.26...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.27...HEAD
+[0.1.27]: https://github.com/kettle-dev/kettle-family/compare/v0.1.26...v0.1.27
+[0.1.27t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.27
 [0.1.26]: https://github.com/kettle-dev/kettle-family/compare/v0.1.25...v0.1.26
 [0.1.26t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.26
 [0.1.25]: https://github.com/kettle-dev/kettle-family/compare/v0.1.24...v0.1.25
