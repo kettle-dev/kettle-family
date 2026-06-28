@@ -31,7 +31,7 @@ module Kettle
         index = selected.index { |candidate| candidate.name == start_at }
         raise Error, "unknown member #{start_at.inspect}" unless index
 
-        selected[index..]
+        selected.drop(index)
       end
     end
   end

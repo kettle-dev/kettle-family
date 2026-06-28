@@ -117,7 +117,7 @@ module Kettle
         stop = false
         emit_template_progress_start(workflow_members)
         Array.new(template_jobs(workflow_members)) do
-          Thread.new do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- family templating intentionally runs independent members concurrently.
             loop do
               break if mutex.synchronize { stop }
               index, member = queue.pop(true)
@@ -155,7 +155,7 @@ module Kettle
       def template_jobs(workflow_members)
         requested = jobs || config.template_jobs
         count = requested ? requested.to_i : [Etc.nprocessors, 4].min
-        [[count, 1].max, workflow_members.length].min
+        count.clamp(1, workflow_members.length)
       end
 
       def check_results(workflow_members)
@@ -269,7 +269,7 @@ module Kettle
         wave_jobs = release_jobs(wave)
         release_otp_coordinator&.queue_total = wave_jobs
         Array.new(wave_jobs) do
-          Thread.new do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- family release intentionally runs independent members concurrently.
             runner = release_command_runner
             loop do
               index, member = queue.pop(true)
@@ -353,7 +353,7 @@ module Kettle
       def release_jobs(release_members)
         requested = jobs || config.release_jobs
         count = requested ? requested.to_i : [Etc.nprocessors, 4].min
-        [[count, 1].max, release_members.length].min
+        count.clamp(1, release_members.length)
       end
 
       def release_waves(release_members)

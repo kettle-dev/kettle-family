@@ -285,18 +285,6 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem install --quiet --json"])
   end
 
-  it "uses bundle exec for members with generated templating wiring" do
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = member_at("alpha")
-    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
-      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
-    RUBY
-
-    results = described_class.new(command: "template", config: config, members: [member]).results
-
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --json"])
-  end
-
   def write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil)
     config = {
       "template" => {

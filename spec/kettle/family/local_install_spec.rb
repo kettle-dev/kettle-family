@@ -77,7 +77,7 @@ RSpec.describe Kettle::Family::LocalInstall do
       successful_result(member)
     end
 
-    worker = Thread.new { installer.results }
+    worker = Thread.new { installer.results } # rubocop:disable ThreadSafety/NewThread -- this spec verifies parallel install scheduling.
     expect(2.times.map { barrier.pop }.sort).to eq(%w[alpha beta])
     2.times { release << true }
     results = worker.value

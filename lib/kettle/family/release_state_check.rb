@@ -142,13 +142,15 @@ module Kettle
         stdout, stderr, status = Open3.capture3("git", "tag", "--list", "v*", chdir: root)
         raise Error, "could not list release tags for #{root}: #{stderr}" unless status.success?
 
-        stdout.lines.filter_map do |line|
+        stdout.lines.each_with_object([]) do |line, memo|
           tag = line.strip
           next unless tag.start_with?("v")
 
-          gem_version(tag.delete_prefix("v"))
-        rescue ArgumentError
-          nil
+          begin
+            memo << gem_version(tag.delete_prefix("v"))
+          rescue ArgumentError
+            nil
+          end
         end
       end
 
@@ -218,7 +220,7 @@ module Kettle
         start = lines.index { |line| line.start_with?("## [Unreleased]") }
         return false unless start
 
-        following = lines[(start + 1)..] || []
+        following = lines.drop(start + 1)
         block = following.take_while { |line| !line.start_with?("## [") }
         block.any? { |line| line.match?(/\S/) && !line.match?(/\A###? /) }
       end

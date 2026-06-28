@@ -78,7 +78,7 @@ module Kettle
         wave.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(wave.length)
         Array.new(install_jobs(wave)) do
-          Thread.new do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- family install intentionally runs independent members concurrently.
             loop do
               index, member = queue.pop(true)
               ordered_results[index] = install_member(member)
@@ -114,7 +114,7 @@ module Kettle
 
       def install_jobs(candidate_members)
         count = jobs ? jobs.to_i : [Etc.nprocessors, 4].min
-        [[count, 1].max, candidate_members.length].min
+        count.clamp(1, candidate_members.length)
       end
 
       def member_from_path(path)

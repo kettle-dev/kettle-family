@@ -262,55 +262,59 @@ RSpec.describe Kettle::Family::CommandRunner do
 
   it "reuses one queued OTP response for concurrent requests" do
     otp_input, otp_writer = IO.pipe
-    otp_output = StringIO.new
-    coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output, queue_total: 2)
-    responses = Queue.new
+    begin
+      otp_output = StringIO.new
+      coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output, queue_total: 2)
+      responses = Queue.new
 
-    first = Thread.new do
-      responses << coordinator.request(member_name: "alpha", chunk: "Code: ")
+      first = Thread.new do # rubocop:disable ThreadSafety/NewThread -- this spec verifies concurrent OTP queueing.
+        responses << coordinator.request(member_name: "alpha", chunk: "Code: ")
+      end
+      wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 1 / 2") }
+
+      second = Thread.new do # rubocop:disable ThreadSafety/NewThread -- this spec verifies concurrent OTP queueing.
+        responses << coordinator.request(member_name: "beta", chunk: "Code: ")
+      end
+      wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 2 / 2") }
+
+      otp_writer.write("654321\n")
+      threads = [first, second]
+      threads.each(&:join)
+
+      expect(2.times.map { responses.pop }).to eq(%w[654321 654321])
+      expect(otp_output.string.scan("RubyGems MFA requested").size).to eq(1)
+    ensure
+      otp_writer&.close unless otp_writer&.closed?
+      otp_input&.close unless otp_input&.closed?
     end
-    wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 1 / 2") }
-
-    second = Thread.new do
-      responses << coordinator.request(member_name: "beta", chunk: "Code: ")
-    end
-    wait_until { otp_output.string.include?("RubyGems MFA prompts queued: 2 / 2") }
-
-    otp_writer.write("654321\n")
-    threads = [first, second]
-    threads.each(&:join)
-
-    expect(2.times.map { responses.pop }).to eq(%w[654321 654321])
-    expect(otp_output.string.scan("RubyGems MFA requested").size).to eq(1)
-  ensure
-    otp_writer&.close unless otp_writer&.closed?
-    otp_input&.close unless otp_input&.closed?
   end
 
   it "asks for a fresh OTP when a prompt arrives after the queued response was entered" do
     otp_input, otp_writer = IO.pipe
-    otp_output = StringIO.new
-    coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output)
+    begin
+      otp_output = StringIO.new
+      coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output)
 
-    first = Thread.new do
-      coordinator.request(member_name: "alpha", chunk: "Code: ")
+      first = Thread.new do # rubocop:disable ThreadSafety/NewThread -- this spec verifies fresh OTP prompts across sequential threads.
+        coordinator.request(member_name: "alpha", chunk: "Code: ")
+      end
+      wait_until { otp_output.string.include?("[alpha] RubyGems MFA requested.") }
+      otp_writer.write("111111\n")
+      first_response = first.value
+
+      second = Thread.new do # rubocop:disable ThreadSafety/NewThread -- this spec verifies fresh OTP prompts across sequential threads.
+        coordinator.request(member_name: "beta", chunk: "Code: ")
+      end
+      wait_until { otp_output.string.include?("[beta] RubyGems MFA requested.") }
+      otp_writer.write("222222\n")
+
+      expect(first_response).to eq("111111")
+      expect(second.value).to eq("222222")
+      expect(otp_output.string.scan("RubyGems MFA requested").size).to eq(2)
+    ensure
+      otp_writer&.close unless otp_writer&.closed?
+      otp_input&.close unless otp_input&.closed?
     end
-    wait_until { otp_output.string.include?("[alpha] RubyGems MFA requested.") }
-    otp_writer.write("111111\n")
-    first_response = first.value
-
-    second = Thread.new do
-      coordinator.request(member_name: "beta", chunk: "Code: ")
-    end
-    wait_until { otp_output.string.include?("[beta] RubyGems MFA requested.") }
-    otp_writer.write("222222\n")
-
-    expect(first_response).to eq("111111")
-    expect(second.value).to eq("222222")
-    expect(otp_output.string.scan("RubyGems MFA requested").size).to eq(2)
-  ensure
-    otp_writer&.close unless otp_writer&.closed?
-    otp_input&.close unless otp_input&.closed?
   end
 
   it "accepts confirmation prompts before signing password prompts" do
