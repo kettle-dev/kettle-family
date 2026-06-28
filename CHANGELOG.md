@@ -28,16 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- `kettle-family bup` and `bupb` now commit bundle lockfile changes after a
-  successful member update so branch-stack runs can continue to the next branch.
-
 ### Security
 
 ## [0.1.27] - 2026-06-28
 
 - TAG: [v0.1.27][0.1.27t]
-- COVERAGE: 95.11% -- 1849/1944 lines in 21 files
-- BRANCH COVERAGE: 74.68% -- 634/849 branches in 21 files
+- COVERAGE: 95.13% -- 1854/1949 lines in 21 files
+- BRANCH COVERAGE: 74.79% -- 638/853 branches in 21 files
 - 38.60% documented
 
 ### Added
@@ -45,6 +42,11 @@ Please file a bug if you notice a violation of semantic versioning.
 - Added `kettle-family bup [GEM]` for family-wide `bundle update --all` or
   targeted `bundle update GEM`, and `kettle-family bupb` for family-wide
   `bundle update --bundler`.
+
+### Fixed
+
+- `kettle-family bup` and `bupb` now commit bundle lockfile changes after a
+  successful member update so branch-stack runs can continue to the next branch.
 
 ## [0.1.26] - 2026-06-27
 
