@@ -6,8 +6,8 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins install bump-version add-changelog release push pull up branch-lanes release-state].freeze
-      WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins release push pull up].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb install bump-version add-changelog release push pull up branch-lanes release-state].freeze
+      WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb release push pull up].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
         new(argv, out: out, err: err).call
@@ -27,9 +27,11 @@ module Kettle
 
         target_version = argv.shift if command == "bump-version"
         raise Error, "bump-version requires VERSION, major, minor, patch, or pre" if command == "bump-version" && !target_version
+        bup_args = parse_bup_args(command)
 
         options = parse_options
         options[:target_version] = target_version
+        options[:bup_args] = bup_args
         return help if options.delete(:help)
 
         report = build_report(command, options)
@@ -51,6 +53,7 @@ module Kettle
 
           Usage: kettle-family COMMAND [options]
                  kettle-family bump-version VERSION|major|minor|patch|pre [options]
+                 kettle-family bup [GEM] [options]
 
           Commands:
               discover        Discover family members and print selected order
@@ -63,6 +66,8 @@ module Kettle
               docs            Plan or execute configured docs command per member
               template        Plan or execute kettle-jem templating per member
               gha-sha-pins    Plan or execute kettle-gha-sha-pins per member
+              bup             Plan or execute bundle update --all, or bundle update GEM
+              bupb            Plan or execute bundle update --bundler
               install         Build and install selected local family gems
               bump-version    Check, plan, or execute family version alignment
               add-changelog   Add an entry to an existing Unreleased changelog section
@@ -241,8 +246,17 @@ module Kettle
           env_overrides: options[:workflow_env],
           debug: options[:debug],
           jobs: options[:jobs],
-          progress_io: progress_io(command, options)
+          progress_io: progress_io(command, options),
+          bup_args: options[:bup_args]
         ).results
+      end
+
+      def parse_bup_args(command)
+        return [] unless command == "bup"
+
+        args = []
+        args << argv.shift while argv.first && !argv.first.start_with?("-")
+        args
       end
 
       def progress_io(command, options)

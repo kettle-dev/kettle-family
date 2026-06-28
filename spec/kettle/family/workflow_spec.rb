@@ -54,6 +54,35 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-sha-pins --write --upgrade patch"])
   end
 
+  it "plans full bundle updates by default" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "bup", config: config, members: [member]).results
+
+    expect(results.first.phase).to eq("bup")
+    expect(results.first.command).to eq(%w[bundle update --all])
+  end
+
+  it "plans named bundle updates when bup args are provided" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "bup", config: config, members: [member], bup_args: ["rake"]).results
+
+    expect(results.first.command).to eq(%w[bundle update rake])
+  end
+
+  it "plans bundler updates" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "bupb", config: config, members: [member]).results
+
+    expect(results.first.phase).to eq("bupb")
+    expect(results.first.command).to eq(%w[bundle update --bundler])
+  end
+
   it "plans GitHub Actions SHA pin checks with the selected upgrade level" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")

@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Added `kettle-family bup [GEM]` for family-wide `bundle update --all` or
+  targeted `bundle update GEM`, and `kettle-family bupb` for family-wide
+  `bundle update --bundler`.
+
 ### Changed
 
 ### Deprecated

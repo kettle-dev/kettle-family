@@ -110,6 +110,42 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("pass --execute")
   end
 
+  it "plans full bundle updates with bup" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["bup", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").first
+    expect(result.fetch("phase")).to eq("bup")
+    expect(result.fetch("command")).to eq(%w[bundle update --all])
+  end
+
+  it "plans named bundle updates with bup ARG" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["bup", "rake", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").first
+    expect(result.fetch("phase")).to eq("bup")
+    expect(result.fetch("command")).to eq(%w[bundle update rake])
+  end
+
+  it "plans bundler updates with bupb" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["bupb", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").first
+    expect(result.fetch("phase")).to eq("bupb")
+    expect(result.fetch("command")).to eq(%w[bundle update --bundler])
+  end
+
   it "plans local dependency installs before selected family members" do
     write_gem("alpha")
     dep_root = File.join(@tmpdir, "deps", "token-resolver")

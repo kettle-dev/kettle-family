@@ -15,7 +15,8 @@ module Kettle
         "test" => "bundle exec kettle-test",
         "lint" => "bundle exec rake rubocop_gradual",
         "docs" => "bundle exec rake yard",
-        "gha-sha-pins" => "bundle exec kettle-gha-sha-pins"
+        "gha-sha-pins" => "bundle exec kettle-gha-sha-pins",
+        "bupb" => %w[bundle update --bundler]
       }.freeze
       GIT_SYNC_COMMANDS = {
         "push" => [["push", %w[git push]]],
@@ -43,7 +44,7 @@ module Kettle
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [])
         @command = command
         @config = config
         @members = members
@@ -65,6 +66,7 @@ module Kettle
         @gem_signing_password = gem_signing_password
         @jobs = jobs
         @progress_io = progress_io
+        @bup_args = bup_args
       end
 
       def results
@@ -77,7 +79,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -232,7 +234,8 @@ module Kettle
           env_overrides: env_overrides,
           gem_signing_password: @gem_signing_password,
           jobs: jobs,
-          progress_io: progress_io
+          progress_io: progress_io,
+          bup_args: bup_args
         )
       end
 
@@ -545,8 +548,16 @@ module Kettle
       def workflow_command(member = nil)
         return template_command(member) if command == "template"
         return gha_sha_pins_command if command == "gha-sha-pins"
+        return bup_command if command == "bup"
 
         command_for(command)
+      end
+
+      def bup_command
+        args = Array(bup_args).map(&:to_s).reject(&:empty?)
+        return ["bundle", "update", "--all"] if args.empty?
+
+        ["bundle", "update", *args]
       end
 
       def gha_sha_pins_command
