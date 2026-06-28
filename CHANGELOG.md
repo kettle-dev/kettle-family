@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family bup` and `bupb` now commit bundle lockfile changes after a
+  successful member update so branch-stack runs can continue to the next branch.
+
 ### Security
 
 ## [0.1.27] - 2026-06-28

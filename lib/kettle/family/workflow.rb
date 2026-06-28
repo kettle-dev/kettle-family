@@ -106,6 +106,7 @@ module Kettle
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
           commit_gha_sha_pins(member: member, runner: runner, memo: memo) if command == "gha-sha-pins"
+          commit_bundle_update(member: member, runner: runner, memo: memo) if %w[bup bupb].include?(command)
         end
       end
 
@@ -748,6 +749,22 @@ module Kettle
             "sh",
             "-lc",
             "if ! git diff --quiet -- .github/workflows; then git add -- .github/workflows && git commit -m '🔒 Pin GitHub Actions SHAs'; fi"
+          ]
+        )
+        memo << result
+      end
+
+      def commit_bundle_update(member:, runner:, memo:)
+        return unless commit
+
+        result = runner.call(
+          member: member,
+          phase: "commit_bundle_update",
+          command: [
+            "sh",
+            "-lc",
+            "files=$(git ls-files --modified --others --exclude-standard -- Gemfile.lock '*.lock' '**/*.lock'); " \
+              "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔒 Update bundle'; fi"
           ]
         )
         memo << result
