@@ -20,9 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family --start-at MEMBER@BRANCH` now resumes member-local and family
-  branch-stack workflows at a specific release target branch.
-
 ### Changed
 
 ### Deprecated
@@ -32,6 +29,18 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.1.28] - 2026-06-28
+
+- TAG: [v0.1.28][0.1.28t]
+- COVERAGE: 95.24% -- 1899/1994 lines in 21 files
+- BRANCH COVERAGE: 74.86% -- 658/879 branches in 21 files
+- 38.37% documented
+
+### Added
+
+- `kettle-family --start-at MEMBER@BRANCH` now resumes member-local and family
+  branch-stack workflows at a specific release target branch.
 
 ## [0.1.27] - 2026-06-28
 
@@ -486,7 +495,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.27...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.28...HEAD
+[0.1.28]: https://github.com/kettle-dev/kettle-family/compare/v0.1.27...v0.1.28
+[0.1.28t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.28
 [0.1.27]: https://github.com/kettle-dev/kettle-family/compare/v0.1.26...v0.1.27
 [0.1.27t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.27
 [0.1.26]: https://github.com/kettle-dev/kettle-family/compare/v0.1.25...v0.1.26
