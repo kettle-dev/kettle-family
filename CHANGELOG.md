@@ -20,9 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family --only` now accepts comma-separated member names for subset
-  workflows.
-
 ### Changed
 
 ### Deprecated
@@ -31,10 +28,24 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [0.1.29] - 2026-06-28
+
+- TAG: [v0.1.29][0.1.29t]
+- COVERAGE: 95.25% -- 1907/2002 lines in 21 files
+- BRANCH COVERAGE: 75.14% -- 665/885 branches in 21 files
+- 38.37% documented
+
+### Added
+
+- `kettle-family --only` now accepts comma-separated member names for subset
+  workflows.
+
+### Fixed
+
 - Parallel `kettle-family release` waves now stop assigning queued releases as
   soon as any member fails.
-
-### Security
 
 ## [0.1.28] - 2026-06-28
 
@@ -501,7 +512,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.28...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.29...HEAD
+[0.1.29]: https://github.com/kettle-dev/kettle-family/compare/v0.1.28...v0.1.29
+[0.1.29t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.29
 [0.1.28]: https://github.com/kettle-dev/kettle-family/compare/v0.1.27...v0.1.28
 [0.1.28t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.28
 [0.1.27]: https://github.com/kettle-dev/kettle-family/compare/v0.1.26...v0.1.27
