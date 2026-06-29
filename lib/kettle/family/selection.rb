@@ -21,10 +21,13 @@ module Kettle
       attr_reader :members
 
       def select_only(selected, only)
-        member = selected.find { |candidate| candidate.name == only }
-        raise Error, "unknown member #{only.inspect}" unless member
+        names = only.split(",").map(&:strip).reject(&:empty?)
+        raise Error, "--only requires at least one member" if names.empty?
 
-        [member]
+        unknown = names - members.map(&:name)
+        raise Error, "unknown member(s): #{unknown.join(", ")}" unless unknown.empty?
+
+        selected.select { |candidate| names.include?(candidate.name) }
       end
 
       def select_start_at(selected, start_at)

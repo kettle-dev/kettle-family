@@ -80,7 +80,7 @@ module Kettle
           Options:
               --root PATH      Workspace or family root (default: current directory)
               --config PATH    Family config path
-              --only MEMBER    Select exactly one member
+              --only MEMBERS   Select comma-separated members
               --start-at NAME  Select from member through the end of order; use MEMBER@BRANCH for branch stacks
               --json           Print JSON report to stdout
               --report PATH    Write JSON report to PATH

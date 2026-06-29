@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family --only` now accepts comma-separated member names for subset
+  workflows.
+
 ### Changed
 
 ### Deprecated

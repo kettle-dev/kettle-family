@@ -110,6 +110,24 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("pass --execute")
   end
 
+  it "plans releases for comma-separated only members" do
+    write_ready_gem("alpha")
+    write_ready_gem("beta")
+    write_ready_gem("gamma")
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "gamma,alpha"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("* alpha")
+    expect(out.string).to include("- beta")
+    expect(out.string).to include("* gamma")
+    expect(out.string.scan("release_build").size).to eq(2)
+    expect(out.string).to include("skipped alpha release_build")
+    expect(out.string).not_to include("skipped beta release_build")
+    expect(out.string).to include("skipped gamma release_build")
+  end
+
   it "plans full bundle updates with bup" do
     write_gem("alpha")
     out = StringIO.new
