@@ -281,13 +281,21 @@ module Kettle
         wave.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(wave.length)
         wave_jobs = release_jobs(wave)
+        mutex = Mutex.new
+        stop = false
         release_otp_coordinator&.queue_total = wave_jobs
         Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- family release intentionally runs independent members concurrently.
             runner = release_command_runner
             loop do
+              break if mutex.synchronize { stop }
+
               index, member = queue.pop(true)
-              ordered_results[index] = release_results_for_member(member, runner: runner)
+              member_results = release_results_for_member(member, runner: runner)
+              mutex.synchronize do
+                ordered_results[index] = member_results
+                stop = true unless member_results.all?(&:ok?)
+              end
             rescue ThreadError
               break
             end

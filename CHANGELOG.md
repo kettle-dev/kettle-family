@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Parallel `kettle-family release` waves now stop assigning queued releases as
+  soon as any member fails.
+
 ### Security
 
 ## [0.1.28] - 2026-06-28

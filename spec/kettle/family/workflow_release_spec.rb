@@ -476,6 +476,38 @@ RSpec.describe Kettle::Family::Workflow do
     expect(coordinator.queue_totals).to eq([2])
   end
 
+  it "stops assigning queued parallel release members after the first failure" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = %w[alpha beta gamma].map { |name| ready_member(name) }
+    workflow = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 1)
+    released = []
+
+    allow(workflow).to receive(:release_results_for_member) do |member, runner:|
+      released << member.name
+      [
+        Kettle::Family::CommandResult.new(
+          member_name: member.name,
+          phase: "release_build",
+          command: ["release"],
+          workdir: member.root,
+          status: member.name == "alpha" ? 1 : 0,
+          success: member.name != "alpha",
+          stdout: "",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: member.name == "alpha" ? "command failed" : nil
+        )
+      ]
+    end
+
+    results = workflow.send(:run_release_wave, members)
+
+    expect(released).to eq(["alpha"])
+    expect(results.flatten.map(&:member_name)).to eq(["alpha"])
+    expect(results.flatten.first).not_to be_ok
+  end
+
   it "builds release waves from selected member dependencies" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member("alpha")
