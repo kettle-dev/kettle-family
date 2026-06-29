@@ -55,6 +55,9 @@ Gem::Specification.new do |spec|
 
   # Specify which files are part of the released package.
   spec.files = [
+    # Root license files
+    "LICENSE.md",
+    "AGPL-3.0-only.md",
     # Code / tasks / data (NOTE: exe/ is specified via spec.bindir and spec.executables below)
     *enumerate_package_files.call("lib"),
     # Executables and executable support scripts
@@ -112,7 +115,7 @@ Gem::Specification.new do |spec|
   #       and preferably a modular one (see gemfiles/modular/*.gemfile).
 
   # Dev, Test, & Release Tasks
-  spec.add_development_dependency("kettle-dev", "~> 2.2", ">= 2.2.23")     # ruby >= 3.2.0
+  spec.add_development_dependency("kettle-dev", "~> 2.2", ">= 2.2.24")     # ruby >= 3.2.0
 
   # Security
   spec.add_development_dependency("bundler-audit", "~> 0.9.3")                      # ruby >= 2.0.0

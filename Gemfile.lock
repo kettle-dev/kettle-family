@@ -72,6 +72,7 @@ GEM
       dry-inflector (~> 1.0)
       dry-logic (~> 1.4)
       zeitwerk (~> 2.6)
+    emoji_regex (15.0.0)
     erb (6.0.4)
     gem_bench (2.0.5)
       bundler (>= 1.14)
@@ -91,11 +92,13 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     json (2.20.0)
-    kettle-dev (2.2.23)
+    kettle-dev (2.2.24)
+      emoji_regex (>= 15.0)
       kettle-rb (~> 0.1, >= 0.1.0)
       kettle-test (~> 2.0, >= 2.0.4)
+      ruby-progressbar (~> 1.13)
       version_gem (~> 1.1, >= 1.1.13)
-    kettle-rb (0.1.0)
+    kettle-rb (0.1.1)
     kettle-soup-cover (3.0.0.rc5)
       simplecov (>= 1.0.pre)
       simplecov-cobertura (>= 4.0.pre)
@@ -308,7 +311,7 @@ GEM
       rubocop-factory_bot (~> 2.27)
       rubocop-rspec (~> 3.9)
       rubocop-rspec_rails (~> 2.31)
-    standard-rubocop-lts (2.0.8)
+    standard-rubocop-lts (2.0.9)
       standard (~> 1.54, >= 1.54.0)
       standard-custom (~> 1.0, >= 1.0.2)
       standard-performance (~> 1.9, >= 1.9.0)
@@ -376,7 +379,7 @@ DEPENDENCIES
   gem_bench (~> 2.0, >= 2.0.5)
   gitmoji-regex (~> 2.0, >= 2.0.3)
   irb (~> 1.17)
-  kettle-dev (~> 2.2, >= 2.2.23)
+  kettle-dev (~> 2.2, >= 2.2.24)
   kettle-family!
   kettle-soup-cover (~> 3.0.a, >= 3.0.0.rc5)
   kettle-test (~> 2.0, >= 2.0.8)
@@ -390,8 +393,8 @@ DEPENDENCIES
   reek (~> 6.5, >= 6.5.0)
   require_bench (~> 1.0, >= 1.0.4)
   rubocop-gradual (~> 0.4, >= 0.4.0)
-  rubocop-lts (~> 24.2, >= 24.2.0)
-  rubocop-lts-rspec (~> 1.0, >= 1.0.3)
+  rubocop-lts (~> 24.2, >= 24.2.1)
+  rubocop-lts-rspec (~> 1.0, >= 1.0.4)
   rubocop-minitest (~> 0.38, >= 0.38.1)
   rubocop-on-rbs (~> 2.0, >= 2.0.0)
   rubocop-packaging (~> 0.6, >= 0.6.0)
@@ -437,6 +440,7 @@ CHECKSUMS
   dry-logic (1.6.0) sha256=da6fedbc0f90fc41f9b0cc7e6f05f5d529d1efaef6c8dcc8e0733f685745cea2
   dry-schema (1.16.0) sha256=cd3aaeabc0f1af66ec82a29096d4c4fb92a0a58b9dae29a22b1bbceb78985727
   dry-types (1.9.1) sha256=baebeecdb9f8395d6c9d227b62011279440943e3ef2468fe8ccc1ba11467f178
+  emoji_regex (15.0.0) sha256=a508b2c0bee561169564e0aec96085020c900520d335e5533fd8e78e59493829
   erb (6.0.4) sha256=38e3803694be357fe2bfe312487c74beaf9fb4e5beb3e22498952fe1645b95d9
   gem_bench (2.0.5) sha256=0dc0fb44a5a5eb7b2f5c1c68a5b0164d72007132822c012bac3abe976b199ead
   geom2d (0.4.1) sha256=ea0998ea90c4f2752e24fe13d85a4f89bee689d151316140ebcc6369bf634ed9
@@ -445,9 +449,9 @@ CHECKSUMS
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
   irb (1.18.0) sha256=de9454a0703a54704b9811a5ef31a60c86949fbf4013fcf244fabc7c775248e3
   json (2.20.0) sha256=9362bc6e55a952b056abf9167cf053358181c904cb70cd6eee0808ea830fc32b
-  kettle-dev (2.2.23) sha256=ef657a787b3961c7907165f0858287496ed013a3b26609e26ac461d985d5a5fe
+  kettle-dev (2.2.24) sha256=572e150530ce39c01c4e11032be9e9ae2b4634d2922a0b0ee821c17ebc49925f
   kettle-family (0.1.30)
-  kettle-rb (0.1.0) sha256=b6b0b6e15fb42a897ef7208e28fe30b3b98be06d09f4512a6728bc71d0817320
+  kettle-rb (0.1.1) sha256=2e793d817f5150339770c547a2c72ed0c1a23b5e5a3ef46f462500dcb10dec4d
   kettle-soup-cover (3.0.0.rc5) sha256=3c8e5551a1c900fb95503d69f815205a1138f168500acdd4559c3a5ef1817da5
   kettle-test (2.0.8) sha256=1b404fa8a6bfcb3456b6d222b1b31a39122fc3e713abc0fdc58db873a61de575
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
@@ -493,8 +497,8 @@ CHECKSUMS
   rubocop-env (0.1.0) sha256=5ab9a259e71822bf514c8e900a9b68cc2f74ccc87d5493efcd03213f3068e718
   rubocop-factory_bot (2.28.0) sha256=4b17fc02124444173317e131759d195b0d762844a71a29fe8139c1105d92f0cb
   rubocop-gradual (0.4.0) sha256=9c7e584e6fef6c2539266a193a4572c970c22f99046fd6b0305bdde6228f96ad
-  rubocop-lts (24.2.1)
-  rubocop-lts-rspec (1.0.4)
+  rubocop-lts (24.2.1) sha256=fbebae021d2400b9a9e261e992e0e43e942f35ab0f384af9a89ad7f5cf313409
+  rubocop-lts-rspec (1.0.4) sha256=7698f5a2298f7384b888cc1dbca9d2796926e6660a86e7dd0ce7e8515b766dab
   rubocop-md (2.0.4) sha256=0d076b6b5e99dea2ddc928c4bd702497decb9a8400da7808091e02ebcafcfb93
   rubocop-minitest (0.39.1) sha256=998398d6da4026d297f0f9bf709a1eac5f2b6947c24431f94af08138510cf7ed
   rubocop-on-rbs (2.0.0) sha256=ce74d1b3d5daead19f4b611623656c185821dfc9aed9c7079bb1e5d7d7c464be
@@ -504,7 +508,7 @@ CHECKSUMS
   rubocop-rspec (3.10.2) sha256=0b3e2ecc592cd10ecbf0095bb58d1e357905276e069643523cc19eb7495f65e2
   rubocop-rspec-extra (0.3.0) sha256=ee4b6484d0332a0d23c4a465eeb607e41888eb3d4ed479f850b9f5212514f787
   rubocop-rspec_rails (2.32.0) sha256=4a0d641c72f6ebb957534f539d9d0a62c47abd8ce0d0aeee1ef4701e892a9100
-  rubocop-ruby3_2 (3.0.6)
+  rubocop-ruby3_2 (3.0.6) sha256=a04660089ddd29529058d1edcfcbf2ba0bca2eb140a281b8161c8987812aa685
   rubocop-thread_safety (0.7.3) sha256=067cdd52fbf5deffc18995437e45b5194236eaff4f71de3375a1f6052e48f431
   ruby-progressbar (1.13.0) sha256=80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33
   ruby_engine (2.0.3) sha256=ca2ae7def8cfcdc2bfb6a186d36d5d59c8b403245dc0256c3802b767fa278aaa
@@ -519,7 +523,7 @@ CHECKSUMS
   standard-custom (1.0.2) sha256=424adc84179a074f1a2a309bb9cf7cd6bfdb2b6541f20c6bf9436c0ba22a652b
   standard-performance (1.9.0) sha256=49483d31be448292951d80e5e67cdcb576c2502103c7b40aec6f1b6e9c88e3f2
   standard-rspec (0.5.0) sha256=64d396524a65af47f5331b423d8cdd313e0267401647bb7892489ca89dad2973
-  standard-rubocop-lts (2.0.8)
+  standard-rubocop-lts (2.0.9) sha256=878245e4d1ddc0ee6bad8bf65c43ac11ba29af1034d96e6e1739578558558b43
   stone_checksums (1.0.4) sha256=68847da535912bf119cebb120fc47773a948461928fd686114718d690331dcf3
   stringio (3.2.0) sha256=c37cb2e58b4ffbd33fe5cd948c05934af997b36e0b6ca6fdf43afa234cf222e1
   strscan (3.1.8) sha256=aae2db611a225559f21ffbb71765c9a4e60fd262534a9ea84f4f11c7f32f679e
