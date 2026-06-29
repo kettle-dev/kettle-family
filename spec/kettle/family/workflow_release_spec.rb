@@ -490,13 +490,13 @@ RSpec.describe Kettle::Family::Workflow do
           phase: "release_build",
           command: ["release"],
           workdir: member.root,
-          status: member.name == "alpha" ? 1 : 0,
+          status: (member.name == "alpha") ? 1 : 0,
           success: member.name != "alpha",
           stdout: "",
           stderr: "",
           elapsed_seconds: 0.0,
           skipped: false,
-          reason: member.name == "alpha" ? "command failed" : nil
+          reason: (member.name == "alpha") ? "command failed" : nil
         )
       ]
     end
