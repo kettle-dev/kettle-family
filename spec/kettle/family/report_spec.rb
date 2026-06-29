@@ -68,6 +68,50 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("member_release_target_branches")).to eq("rubocop-lts" => ["r1", "r2"])
   end
 
+  it "renders release wave markers separately from command results" do
+    wave = Kettle::Family::CommandResult.new(
+      "wave 1",
+      "release_wave",
+      ["internal", "release-wave"],
+      "/repo",
+      0,
+      true,
+      "alpha, gamma",
+      "",
+      0.0,
+      false,
+      "jobs=2 total=2"
+    )
+    release = Kettle::Family::CommandResult.new(
+      "alpha",
+      "release_build",
+      ["bundle", "exec", "kettle-release"],
+      "/repo/alpha",
+      0,
+      true,
+      "",
+      "",
+      1.0,
+      false,
+      nil
+    )
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "release",
+      results: [wave, release]
+    )
+
+    text = report.to_text
+
+    expect(text).to include("release waves:\n  wave 1: alpha, gamma (jobs=2 total=2)")
+    expect(text).to include("results:\n  ok alpha release_build")
+    expect(text).not_to include("ok wave 1 release_wave")
+  end
+
   it "uses a full release resume hint for failed publish releases" do
     result = Kettle::Family::CommandResult.new(
       "rubocop-ruby3_2",

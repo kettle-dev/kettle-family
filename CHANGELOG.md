@@ -41,6 +41,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `kettle-family --only` now accepts comma-separated member names for subset
   workflows.
+- Parallel `kettle-family release` output now includes derived release waves so
+  dependency-safe release groups are visible.
 
 ### Fixed
 

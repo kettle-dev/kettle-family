@@ -268,7 +268,9 @@ module Kettle
 
       def parallel_release_member_results(release_members, initial_results)
         results = initial_results.dup
-        release_waves(release_members).each do |wave|
+        waves = release_waves(release_members)
+        waves.each_with_index do |wave, index|
+          results << release_wave_result(wave, index: index, total: waves.length)
           wave_results = run_release_wave(wave)
           results.concat(wave_results.flatten)
           break unless wave_results.all? { |member_results| member_results.all?(&:ok?) }
@@ -302,6 +304,22 @@ module Kettle
           end
         end.each(&:join)
         ordered_results.compact
+      end
+
+      def release_wave_result(wave, index:, total:)
+        CommandResult.new(
+          member_name: "wave #{index + 1}",
+          phase: "release_wave",
+          command: ["internal", "release-wave"],
+          workdir: config.root,
+          status: 0,
+          success: true,
+          stdout: wave.map(&:name).join(", "),
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: "jobs=#{release_jobs(wave)} total=#{total}"
+        )
       end
 
       def release_results_for_member(member, runner:)

@@ -59,6 +59,7 @@ module Kettle
           marker = selected_names.include?(member.name) ? "*" : "-"
           lines << "  #{marker} #{member.name} #{member.version} #{member.root}"
         end
+        append_release_waves(lines)
         append_results(lines)
         lines.join("\n")
       end
@@ -74,14 +75,31 @@ module Kettle
         return if results.empty?
         return append_release_state_results(lines) if command == "release-state"
 
+        visible_results = results.reject { |result| release_wave_result?(result) }
+        return if visible_results.empty?
+
         lines << "results:"
-        results.each do |result|
+        visible_results.each do |result|
           lines << "  #{result_state(result)} #{result.member_name} #{result.phase} #{result.reason || ""}".rstrip
           append_indented_output(lines, result.stdout) unless suppress_success_output?(result)
           append_indented_output(lines, result.stderr) if !result.ok? && !result.stderr.to_s.empty?
           lines << "    resume: #{resume_hint_for(result)}" unless result.ok?
         end
         append_template_summary(lines) if command == "template"
+      end
+
+      def append_release_waves(lines)
+        wave_results = results.select { |result| release_wave_result?(result) }
+        return if wave_results.empty?
+
+        lines << "release waves:"
+        wave_results.each do |result|
+          lines << "  #{result.member_name}: #{result.stdout} (#{result.reason})"
+        end
+      end
+
+      def release_wave_result?(result)
+        result.phase == "release_wave"
       end
 
       def append_indented_output(lines, output)

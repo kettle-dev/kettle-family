@@ -436,6 +436,40 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.count { |result| result.phase == "release_build" }).to eq(2)
   end
 
+  it "emits release wave markers for parallel release groups" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta", dependencies: ["alpha"])
+    gamma = ready_member("gamma")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta, gamma], execute: true, jobs: 3)
+
+    allow(workflow).to receive(:release_results_for_member) do |member, runner:|
+      [
+        Kettle::Family::CommandResult.new(
+          member_name: member.name,
+          phase: "release_build",
+          command: ["release"],
+          workdir: member.root,
+          status: 0,
+          success: true,
+          stdout: "",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: nil
+        )
+      ]
+    end
+
+    results = workflow.results
+    wave_results = results.select { |result| result.phase == "release_wave" }
+
+    expect(wave_results.map(&:stdout)).to eq(["alpha, gamma", "beta"])
+    expect(wave_results.map(&:reason)).to eq(["jobs=2 total=2", "jobs=1 total=2"])
+    expect(results.map(&:phase)).to start_with("release_wave")
+  end
+
   it "sets the release MFA queue total to the active wave job count" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     members = [ready_member("alpha"), ready_member("beta"), ready_member("gamma")]
