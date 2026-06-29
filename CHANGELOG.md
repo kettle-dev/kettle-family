@@ -20,10 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Family root configs can now set `release.member_target_branches` to override
-  branch-stack targets for specific members while leaving other member-local
-  branch configs inherited.
-
 ### Changed
 
 ### Deprecated
@@ -33,6 +29,19 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.1.30] - 2026-06-29
+
+- TAG: [v0.1.30][0.1.30t]
+- COVERAGE: 95.32% -- 1934/2029 lines in 21 files
+- BRANCH COVERAGE: 75.31% -- 674/895 branches in 21 files
+- 37.71% documented
+
+### Added
+
+- Family root configs can now set `release.member_target_branches` to override
+  branch-stack targets for specific members while leaving other member-local
+  branch configs inherited.
 
 ## [0.1.29] - 2026-06-28
 
@@ -518,7 +527,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.29...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.30...HEAD
+[0.1.30]: https://github.com/kettle-dev/kettle-family/compare/v0.1.29...v0.1.30
+[0.1.30t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.30
 [0.1.29]: https://github.com/kettle-dev/kettle-family/compare/v0.1.28...v0.1.29
 [0.1.29t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.29
 [0.1.28]: https://github.com/kettle-dev/kettle-family/compare/v0.1.27...v0.1.28

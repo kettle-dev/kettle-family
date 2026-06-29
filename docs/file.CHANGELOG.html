@@ -70,7 +70,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.29...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.30...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
 
@@ -84,6 +84,25 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="security">Security</h3>
 
+<h2 id="0130---2026-06-29">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.29...v0.1.30">0.1.30</a> - 2026-06-29</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.30">v0.1.30</a>
+</li>
+  <li>COVERAGE: 95.32% – 1934/2029 lines in 21 files</li>
+  <li>BRANCH COVERAGE: 75.31% – 674/895 branches in 21 files</li>
+  <li>37.71% documented</li>
+</ul>
+
+<h3 id="added-1">Added</h3>
+
+<ul>
+  <li>Family root configs can now set <code>release.member_target_branches</code> to override<br>
+branch-stack targets for specific members while leaving other member-local<br>
+branch configs inherited.</li>
+</ul>
+
 <h2 id="0129---2026-06-28">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.28...v0.1.29">0.1.29</a> - 2026-06-28</h2>
 
@@ -95,7 +114,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>38.37% documented</li>
 </ul>
 
-<h3 id="added-1">Added</h3>
+<h3 id="added-2">Added</h3>
 
 <ul>
   <li>
@@ -123,7 +142,7 @@ soon as any member fails.</li>
   <li>38.37% documented</li>
 </ul>
 
-<h3 id="added-2">Added</h3>
+<h3 id="added-3">Added</h3>
 
 <ul>
   <li>
@@ -142,7 +161,7 @@ branch-stack workflows at a specific release target branch.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="added-3">Added</h3>
+<h3 id="added-4">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family bup [GEM]</code> for family-wide <code>bundle update --all</code> or<br>
@@ -169,7 +188,7 @@ successful member update so branch-stack runs can continue to the next branch.</
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="added-4">Added</h3>
+<h3 id="added-5">Added</h3>
 
 <ul>
   <li>
@@ -296,7 +315,7 @@ unreleased siblings from a failed parallel wave.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="added-5">Added</h3>
+<h3 id="added-6">Added</h3>
 
 <ul>
   <li>
@@ -360,7 +379,7 @@ avoiding encoding crashes when a release command fails after PTY output.</li>
   <li>39.63% documented</li>
 </ul>
 
-<h3 id="added-6">Added</h3>
+<h3 id="added-7">Added</h3>
 
 <ul>
   <li>
@@ -387,7 +406,7 @@ the signing password as input.</li>
   <li>39.63% documented</li>
 </ul>
 
-<h3 id="added-7">Added</h3>
+<h3 id="added-8">Added</h3>
 
 <ul>
   <li>
@@ -534,7 +553,7 @@ allowing mixed sibling workspaces to report stacked gems correctly.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-8">Added</h3>
+<h3 id="added-9">Added</h3>
 
 <ul>
   <li>
@@ -592,7 +611,7 @@ templating commit by default; use <code>--no-commit</code> to pass <code>--skip-
 member templating commands.</li>
 </ul>
 
-<h3 id="added-9">Added</h3>
+<h3 id="added-10">Added</h3>
 
 <ul>
   <li>Added <code>--env KEY=VALUE</code> workflow overrides so <code>kettle-family</code> commands can<br>
@@ -611,7 +630,7 @@ defaults have loaded.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-10">Added</h3>
+<h3 id="added-11">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family install</code> to build and install selected local family gems,<br>
@@ -636,7 +655,7 @@ including config-defined <code>install.local_dependencies</code> resolved relati
   <li>40.14% documented</li>
 </ul>
 
-<h3 id="added-11">Added</h3>
+<h3 id="added-12">Added</h3>
 
 <ul>
   <li>Added configurable readiness checks, root/shared changelog support, release<br>
@@ -687,7 +706,7 @@ member’s potentially stale bundle.</li>
 <code>test/</code> directories are ignored.</li>
 </ul>
 
-<h3 id="added-12">Added</h3>
+<h3 id="added-13">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family metadata</code> to report each family member’s version, Ruby<br>
@@ -716,7 +735,7 @@ requirement, licenses, and authors.</li>
   <li>41.80% documented</li>
 </ul>
 
-<h3 id="added-13">Added</h3>
+<h3 id="added-14">Added</h3>
 
 <ul>
   <li>Added configurable member discovery excludes via <code>members.exclude</code> /<br>
@@ -752,7 +771,7 @@ loading gemspecs, avoiding fixture load failures in family roots.</li>
   <li>42.34% documented</li>
 </ul>
 
-<h3 id="added-14">Added</h3>
+<h3 id="added-15">Added</h3>
 
 <ul>
   <li>Added the initial <code>kettle-family</code> CLI discovery slice with config loading, gemspec discovery, dependency ordering, selection, and JSON reports.</li>
@@ -780,7 +799,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Sun Jun 28 22:33:23 2026 by
+  Generated on Mon Jun 29 00:13:18 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
