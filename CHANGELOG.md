@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family --start-at MEMBER@BRANCH` now resumes member-local and family
+  branch-stack workflows at a specific release target branch.
+
 ### Changed
 
 ### Deprecated

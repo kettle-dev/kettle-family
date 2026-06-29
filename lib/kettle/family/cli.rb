@@ -81,7 +81,7 @@ module Kettle
               --root PATH      Workspace or family root (default: current directory)
               --config PATH    Family config path
               --only MEMBER    Select exactly one member
-              --start-at NAME  Select from member through the end of order
+              --start-at NAME  Select from member through the end of order; use MEMBER@BRANCH for branch stacks
               --json           Print JSON report to stdout
               --report PATH    Write JSON report to PATH
               --execute        Execute external workflow commands
@@ -145,7 +145,7 @@ module Kettle
           parser.on("--root PATH") { |value| options[:root] = value }
           parser.on("--config PATH") { |value| options[:config] = value }
           parser.on("--only MEMBER") { |value| options[:only] = value }
-          parser.on("--start-at MEMBER") { |value| options[:start_at] = value }
+          parser.on("--start-at MEMBER[@BRANCH]") { |value| options[:start_at] = value }
           parser.on("--json") { options[:json] = true }
           parser.on("--report PATH") { |value| options[:report] = value }
           parser.on("--execute") { options[:execute] = true }
@@ -180,6 +180,7 @@ module Kettle
 
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
+        start_at = parse_start_at(options[:start_at])
         members = Discovery.new(config: config).members
         ordered = if command == "install"
           install_order(members, config)
@@ -188,13 +189,13 @@ module Kettle
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
-        selected = Selection.new(members: ordered).apply(only: options[:only], start_at: options[:start_at])
+        selected = Selection.new(members: ordered).apply(only: options[:only], start_at: start_at.member)
         result_members = if command == "branch-lanes"
           ordered
         else
           selected
         end
-        results = command_results(command: command, config: config, members: result_members, options: options)
+        results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
         Report.new(
           family_name: config.family_name,
           family_mode: config.family_mode,
@@ -203,22 +204,24 @@ module Kettle
           selected_members: selected,
           config_path: config.path,
           branch_lanes: config.branch_lanes,
-          release_target_branches: BranchTargetConfig.branch_targets_for(command, config.release_target_branches),
-          member_release_target_branches: member_release_target_branches(command: command, members: selected, config: config),
+          release_target_branches: release_target_branches(command: command, config: config, start_at: start_at),
+          member_release_target_branches: member_release_target_branches(command: command, members: selected, config: config, start_at: start_at),
           release_mode: release_mode(command: command, options: options),
           command: command,
           results: results
         )
       end
 
-      def command_results(command:, config:, members:, options:)
-        return branch_target_command_results(command: command, config: config, members: members, options: options) if branch_target_command?(command, config)
-        return member_local_branch_target_command_results(command: command, config: config, members: members, options: options) if member_local_branch_target_command?(command, config, members)
+      StartAt = Struct.new(:member, :branch)
 
-        command_results_for_current_branch(command: command, config: config, members: members, options: options)
+      def command_results(command:, config:, members:, options:, start_at:)
+        return branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if branch_target_command?(command, config)
+        return member_local_branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if member_local_branch_target_command?(command, config, members)
+
+        command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at)
       end
 
-      def command_results_for_current_branch(command:, config:, members:, options:)
+      def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))
         return bump_version_results(members: members, options: options) if command == "bump-version"
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
@@ -247,7 +250,9 @@ module Kettle
           debug: options[:debug],
           jobs: options[:jobs],
           progress_io: progress_io(command, options),
-          bup_args: options[:bup_args]
+          bup_args: options[:bup_args],
+          start_member: start_at.member,
+          start_branch: start_at.branch
         ).results
       end
 
@@ -283,20 +288,23 @@ module Kettle
         members.any? { |member| member_local_release_config(member: member, config: config) }
       end
 
-      def branch_target_command_results(command:, config:, members:, options:)
+      def branch_target_command_results(command:, config:, members:, options:, start_at:)
         runner = CommandRunner.new(execute: options[:execute])
         selected_names = members.map(&:name)
-        BranchTargetConfig.branch_targets_for(command, config.release_target_branches).each_with_object([]) do |branch, memo|
+        release_target_branches(command: command, config: config, start_at: start_at).each_with_object([]) do |branch, memo|
           memo << runner.call(
             member: family_member(config),
             phase: "release_checkout",
             command: ["git", "checkout", branch]
           )
+          memo.last.branch = branch
           break memo unless memo.last.ok?
 
           branch_members = rediscovered_selected_members(config: config, selected_names: selected_names, command: command)
           branch_members = members if branch_members.empty?
-          memo.concat(command_results_for_current_branch(command: command, config: config, members: branch_members, options: options))
+          branch_results = command_results_for_current_branch(command: command, config: config, members: branch_members, options: options)
+          branch_results.each { |result| result.branch = branch if result.respond_to?(:branch=) }
+          memo.concat(branch_results)
           break memo unless memo.last&.ok?
 
           commit_changelog_entries(branch_members: branch_members, runner: runner, memo: memo) if command == "add-changelog"
@@ -304,7 +312,7 @@ module Kettle
         end
       end
 
-      def member_local_branch_target_command_results(command:, config:, members:, options:)
+      def member_local_branch_target_command_results(command:, config:, members:, options:, start_at:)
         runner = CommandRunner.new(execute: options[:execute])
         members.each_with_object([]) do |member, memo|
           member_config = member_local_release_config(member: member, config: config)
@@ -314,17 +322,20 @@ module Kettle
             next
           end
 
-          BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches).each do |branch|
+          member_branch_targets(command: command, member: member, member_config: member_config, start_at: start_at).each do |branch|
             memo << runner.call(
               member: member,
               phase: "release_checkout",
               command: ["git", "checkout", branch]
             )
+            memo.last.branch = branch
             break unless memo.last.ok?
 
             branch_members = rediscovered_selected_members(config: member_config, selected_names: [member.name], command: command)
             branch_members = [member] if branch_members.empty?
-            memo.concat(command_results_for_current_branch(command: command, config: member_config, members: branch_members, options: options))
+            branch_results = command_results_for_current_branch(command: command, config: member_config, members: branch_members, options: options)
+            branch_results.each { |result| result.branch = branch if result.respond_to?(:branch=) }
+            memo.concat(branch_results)
             break unless memo.last&.ok?
           end
           break memo unless memo.last&.ok?
@@ -361,6 +372,16 @@ module Kettle
         return normalized if %w[major minor patch].include?(normalized)
 
         raise OptionParser::InvalidArgument, "--upgrade must be one of: major, minor, patch"
+      end
+
+      def parse_start_at(value)
+        return StartAt.new(nil, nil) unless value
+
+        member, branch = value.split("@", 2)
+        raise Error, "--start-at requires MEMBER before @BRANCH" if member.to_s.empty?
+        raise Error, "--start-at requires BRANCH after MEMBER@" if value.include?("@") && branch.to_s.empty?
+
+        StartAt.new(member, branch)
       end
 
       def bump_version_results(members:, options:)
@@ -449,11 +470,34 @@ module Kettle
         options[:publish] ? "publish" : "build-only"
       end
 
-      def member_release_target_branches(command:, members:, config:)
+      def release_target_branches(command:, config:, start_at:)
+        branch_targets = BranchTargetConfig.branch_targets_for(command, config.release_target_branches)
+        return branch_targets if branch_targets.empty?
+
+        slice_branch_targets(branch_targets, start_at.branch)
+      end
+
+      def member_release_target_branches(command:, members:, config:, start_at:)
         members.each_with_object({}) do |member, memo|
           member_config = member_local_release_config(member: member, config: config)
-          memo[member.name] = BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches) if member_config
+          memo[member.name] = member_branch_targets(command: command, member: member, member_config: member_config, start_at: start_at) if member_config
         end
+      end
+
+      def member_branch_targets(command:, member:, member_config:, start_at:)
+        branch_targets = BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches)
+        return branch_targets unless start_at.branch && start_at.member == member.name
+
+        slice_branch_targets(branch_targets, start_at.branch)
+      end
+
+      def slice_branch_targets(branch_targets, start_branch)
+        return branch_targets unless start_branch
+
+        index = branch_targets.index(start_branch)
+        raise Error, "unknown branch target #{start_branch.inspect}" unless index
+
+        branch_targets.drop(index)
       end
 
       def member_local_release_config(member:, config:)

@@ -81,6 +81,22 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
+  it "starts configured target branch releases at the requested branch" do
+    write_release_config(target_branches: %w[r1_8-even-v0 r1_9-even-v2 r2_0-even-v4])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], start_branch: "r1_9-even-v2")
+    allow(workflow).to receive(:rediscovered_selected_members).and_return([member])
+
+    results = workflow.results
+
+    expect(results.select { |result| result.phase == "release_checkout" }.map(&:command)).to eq([
+      ["git", "checkout", "r1_9-even-v2"],
+      ["git", "checkout", "r2_0-even-v4"]
+    ])
+    expect(results.map(&:branch).uniq).to eq(%w[r1_9-even-v2 r2_0-even-v4])
+  end
+
   it "passes kettle-release resume and local-ci options through release commands" do
     write_release_config(publish_command: "bundle exec kettle-release")
     config = Kettle::Family::Config.load(root: @tmpdir)

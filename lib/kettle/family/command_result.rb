@@ -13,11 +13,13 @@ module Kettle
       :stderr,
       :elapsed_seconds,
       :skipped,
-      :reason
+      :reason,
+      :branch
     ) do
       def to_h
         {
           "member" => member_name,
+          "branch" => branch,
           "phase" => phase,
           "command" => command,
           "workdir" => workdir,

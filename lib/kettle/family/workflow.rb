@@ -44,7 +44,7 @@ module Kettle
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [])
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], start_member: nil, start_branch: nil)
         @command = command
         @config = config
         @members = members
@@ -67,6 +67,8 @@ module Kettle
         @jobs = jobs
         @progress_io = progress_io
         @bup_args = bup_args
+        @start_member = start_member
+        @start_branch = start_branch
       end
 
       def results
@@ -79,7 +81,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :start_member, :start_branch
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -175,10 +177,13 @@ module Kettle
 
           branch_members = rediscovered_selected_members(selected_names)
           branch_members = members if branch_members.empty?
-          memo.concat(current_branch_results(branch_members))
+          branch_results = current_branch_results(branch_members)
+          tag_branch_results(branch_results, branch)
+          memo.concat(branch_results)
           break memo unless memo.last&.ok?
 
           commit_normalized_lockfiles(branch_members: branch_members, runner: runner, memo: memo)
+          tag_branch_results(memo.last(1), branch)
           break memo unless memo.last&.ok?
         end
       end
@@ -236,8 +241,16 @@ module Kettle
           gem_signing_password: @gem_signing_password,
           jobs: jobs,
           progress_io: progress_io,
-          bup_args: bup_args
+          bup_args: bup_args,
+          start_member: start_member,
+          start_branch: start_branch_for_member(member)
         )
+      end
+
+      def start_branch_for_member(member)
+        return unless member.name == start_member
+
+        start_branch
       end
 
       def release_member_results(release_members, include_family_changelog: false)
@@ -400,7 +413,17 @@ module Kettle
       end
 
       def branch_targets
-        BranchTargetConfig.branch_targets_for(command, config.release_target_branches)
+        targets = BranchTargetConfig.branch_targets_for(command, config.release_target_branches)
+        slice_branch_targets(targets, start_branch)
+      end
+
+      def slice_branch_targets(targets, branch)
+        return targets unless branch
+
+        index = targets.index(branch)
+        raise Error, "unknown branch target #{branch.inspect}" unless index
+
+        targets.drop(index)
       end
 
       def member_local_release_config(member)
@@ -408,11 +431,17 @@ module Kettle
       end
 
       def checkout_branch_result(branch:, runner:)
-        runner.call(
+        result = runner.call(
           member: family_member,
           phase: "release_checkout",
           command: ["git", "checkout", branch]
         )
+        result.branch = branch
+        result
+      end
+
+      def tag_branch_results(results, branch)
+        results.each { |result| result.branch = branch if result.respond_to?(:branch=) }
       end
 
       def append_release_internal_checks(member:, memo:)

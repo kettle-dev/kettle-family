@@ -748,6 +748,41 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("alpha release_build").size).to eq(2)
   end
 
+  it "starts member-local release target branches at MEMBER@BRANCH" do
+    write_ready_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1_8-even-v0
+          - r1_9-even-v2
+          - r2_0-even-v4
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--start-at", "alpha@r1_9-even-v2"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("alpha: r1_9-even-v2, r2_0-even-v4")
+    expect(out.string).not_to include("git checkout r1_8-even-v0")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha release_build").size).to eq(2)
+  end
+
+  it "rejects unknown member-local start branches" do
+    write_ready_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - r1_8-even-v0
+    YAML
+    err = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--start-at", "alpha@missing"], out: StringIO.new, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("unknown branch target \"missing\"")
+  end
+
   it "passes release resume options through the CLI" do
     write_ready_gem("alpha")
     out = StringIO.new
