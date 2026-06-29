@@ -538,6 +538,28 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("alpha install").size).to eq(2)
   end
 
+  it "plans local installs across root member release target branches" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        member_target_branches:
+          alpha:
+            - main
+            - r1
+            - r2
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["install", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("member release targets:")
+    expect(out.string).to include("alpha: r1, r2")
+    expect(out.string).not_to include("git checkout main")
+    expect(out.string.scan("release_checkout").size).to eq(2)
+    expect(out.string.scan("alpha install").size).to eq(2)
+  end
+
   it "plans local installs from member-local release target config on another branch" do
     write_gem("alpha")
     initialize_git_repo(@tmpdir)

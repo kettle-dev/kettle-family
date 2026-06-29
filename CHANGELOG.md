@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Family root configs can now set `release.member_target_branches` to override
+  branch-stack targets for specific members while leaving other member-local
+  branch configs inherited.
+
 ### Changed
 
 ### Deprecated

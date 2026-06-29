@@ -16,6 +16,23 @@ module Kettle
         branches.reject { |branch| branch == "main" }
       end
 
+      def member_release_config(member:, config:)
+        member_configured_release_config(member: member, config: config) ||
+          member_local_release_config(member: member, config: config)
+      end
+
+      def member_configured_release_config(member:, config:)
+        return unless config&.respond_to?(:member_release_target_branches)
+
+        branches = config.member_release_target_branches.fetch(member.name, nil)
+        return if branches.nil? || branches.empty?
+
+        data = config.data.merge(
+          "release" => config.data.fetch("release", {}).merge("target_branches" => branches)
+        )
+        Config.new(root: member.root, path: config.path, data: data)
+      end
+
       def member_local_release_config(member:, config:)
         member_config = Config.load(root: member.root)
         member_config = member_local_release_config_from_branch(member) || member_config unless member_config.path

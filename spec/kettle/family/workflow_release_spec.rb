@@ -396,6 +396,30 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
+  it "lets root member target branches override member-local target branches" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        member_target_branches:
+          alpha:
+            - root-r1
+            - root-r2
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, ".kettle-family.yml"), <<~YAML)
+      release:
+        target_branches:
+          - local-r1
+    YAML
+
+    results = described_class.new(command: "release", config: config, members: [member]).results
+
+    expect(results.select { |result| result.phase == "release_checkout" }.map(&:command)).to eq([
+      ["git", "checkout", "root-r1"],
+      ["git", "checkout", "root-r2"]
+    ])
+  end
+
   it "executes configured build command after checks" do
     marker = File.join(@tmpdir, "built")
     write_release_config(build_command: [RbConfig.ruby, "-e", "File.write(#{marker.dump}, 'built')"])

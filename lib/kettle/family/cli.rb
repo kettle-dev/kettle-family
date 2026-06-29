@@ -285,7 +285,7 @@ module Kettle
         return false if !config.release_target_branches.empty?
         return false unless %w[bump-version install add-changelog].include?(command)
 
-        members.any? { |member| member_local_release_config(member: member, config: config) }
+        members.any? { |member| member_release_config(member: member, config: config) }
       end
 
       def branch_target_command_results(command:, config:, members:, options:, start_at:)
@@ -315,7 +315,7 @@ module Kettle
       def member_local_branch_target_command_results(command:, config:, members:, options:, start_at:)
         runner = CommandRunner.new(execute: options[:execute])
         members.each_with_object([]) do |member, memo|
-          member_config = member_local_release_config(member: member, config: config)
+          member_config = member_release_config(member: member, config: config)
           unless member_config
             memo.concat(command_results_for_current_branch(command: command, config: config, members: [member], options: options))
             break memo unless memo.last&.ok?
@@ -479,7 +479,7 @@ module Kettle
 
       def member_release_target_branches(command:, members:, config:, start_at:)
         members.each_with_object({}) do |member, memo|
-          member_config = member_local_release_config(member: member, config: config)
+          member_config = member_release_config(member: member, config: config)
           memo[member.name] = member_branch_targets(command: command, member: member, member_config: member_config, start_at: start_at) if member_config
         end
       end
@@ -500,8 +500,8 @@ module Kettle
         branch_targets.drop(index)
       end
 
-      def member_local_release_config(member:, config:)
-        BranchTargetConfig.member_local_release_config(member: member, config: config)
+      def member_release_config(member:, config:)
+        BranchTargetConfig.member_release_config(member: member, config: config)
       end
 
       def install_order(members, config)

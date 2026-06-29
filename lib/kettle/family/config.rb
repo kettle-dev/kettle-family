@@ -232,6 +232,13 @@ module Kettle
         fetch_path("release", "target_branches") || fetch_path("branches", "release_targets") || []
       end
 
+      def member_release_target_branches
+        targets = fetch_path("release", "member_target_branches") || {}
+        targets.to_h do |member_name, branches|
+          [member_name.to_s, Array(branches).map(&:to_s)]
+        end
+      end
+
       def branch_lanes
         fetch_path("branch_lanes") || fetch_path("branches", "lanes") || {}
       end

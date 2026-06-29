@@ -112,6 +112,25 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_target_branches).to eq(["r3_2-even-v24"])
   end
 
+  it "loads member-specific release target branches from release config" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        member_target_branches:
+          alpha:
+            - r1
+            - r2
+          beta:
+            - main
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.member_release_target_branches).to eq(
+      "alpha" => %w[r1 r2],
+      "beta" => ["main"]
+    )
+  end
+
   it "resolves install local dependencies relative to the config file" do
     FileUtils.mkdir_p(File.join(@tmpdir, "config"))
     File.write(File.join(@tmpdir, "config", "family.yml"), <<~YAML)

@@ -158,6 +158,27 @@ members:
     - "**/vendor/**"
 ```
 
+Member branch-stack releases can be configured in the member repository itself:
+
+```yaml
+release:
+  target_branches:
+    - r1_8-even-v0
+    - r1_9-even-v2
+```
+
+Family root configs can override a member's branch targets explicitly by member
+name. Members not listed here still inherit their member-local branch target
+config when present.
+
+```yaml
+release:
+  member_target_branches:
+    rubocop-lts:
+      - r1_8-even-v0
+      - r1_9-even-v2
+```
+
 Monorepo families whose member gems share release metadata from the repository
 root can configure readiness and changelog ownership explicitly:
 

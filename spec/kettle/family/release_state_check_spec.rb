@@ -114,6 +114,27 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(check.results).to eq([branch_result])
   end
 
+  it "uses root member release target branches before member-local release target branches" do
+    member = member("alpha")
+    parent_config = Kettle::Family::Config.new(
+      root: @tmpdir,
+      path: File.join(@tmpdir, ".kettle-family.yml"),
+      data: {
+        "release" => {
+          "member_target_branches" => {
+            "alpha" => %w[root-r1 root-r2]
+          }
+        }
+      }
+    )
+    check = described_class.new(config: parent_config, members: [member])
+
+    member_config = check.send(:member_local_release_config, member)
+
+    expect(member_config.release_target_branches).to eq(%w[root-r1 root-r2])
+    expect(member_config.root).to eq(member.root)
+  end
+
   it "loads member-local release target branches from another local branch when the active branch lacks config" do
     repo = File.join(@tmpdir, "repo")
     member_root = File.join(repo, "alpha")

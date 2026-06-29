@@ -290,7 +290,7 @@ module Kettle
       end
 
       def member_local_release_config(member)
-        BranchTargetConfig.member_local_release_config(member: member, config: config)
+        BranchTargetConfig.member_release_config(member: member, config: config)
       end
 
       def shared_changelog?
