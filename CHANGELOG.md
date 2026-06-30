@@ -32,6 +32,10 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 - Package configured license files in gem release file lists.
+- `kettle-family release --publish` now fails instead of skipping when the
+  selected member version is already published but local `HEAD` is not the
+  matching release tag, preventing unreleased commits from being hidden by an
+  already-published version number.
 
 ### Security
 

@@ -357,6 +357,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.stdout).to include("already published")
   end
 
+  it "fails published-version skips when local HEAD is newer than the release tag" do
+    write_release_config(publish_command: [RbConfig.ruby, "-e", "abort 'should not run'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).with("alpha", "1.0.0").and_return(true)
+    allow(workflow).to receive(:git_work_tree?).with(member.root).and_return(true)
+    allow(workflow).to receive(:git_rev_parse).with(member.root, "refs/tags/v1.0.0^{}").and_return("tag-sha")
+    allow(workflow).to receive(:git_rev_parse).with(member.root, "HEAD").and_return("head-sha")
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(["release_skip"])
+    expect(results.first).not_to be_ok
+    expect(results.first.stdout).to include("current HEAD is not v1.0.0")
+    expect(results.first.stdout).to include("bump-version patch --execute --only alpha")
+  end
+
   it "rediscovers member metadata after each target branch checkout" do
     write_release_config(target_branches: %w[r1 r2])
     config = Kettle::Family::Config.load(root: @tmpdir)

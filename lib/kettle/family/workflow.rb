@@ -558,19 +558,52 @@ module Kettle
       end
 
       def already_released_result(member)
+        tag = release_tag_name(member.version)
+        current_release_head = released_version_current_head?(member, tag)
+        if current_release_head
+          stdout = "#{member.name} #{member.version} is already published and current HEAD matches #{tag}; skipping release"
+          reason = "already released"
+        else
+          stdout = "#{member.name} #{member.version} is already published, but current HEAD is not #{tag}. " \
+            "Bump the version with `kettle-family bump-version patch --execute --only #{member.name}` before releasing."
+          reason = "published version does not match current HEAD"
+        end
+
         CommandResult.new(
           member_name: member.name,
           phase: "release_skip",
           command: ["internal", "released-version-check", member.version],
           workdir: member.root,
-          status: 0,
-          success: true,
-          stdout: "#{member.name} #{member.version} is already published; skipping release",
+          status: current_release_head ? 0 : 1,
+          success: current_release_head,
+          stdout: stdout,
           stderr: "",
           elapsed_seconds: 0.0,
-          skipped: true,
-          reason: "already released"
+          skipped: current_release_head,
+          reason: reason
         )
+      end
+
+      def release_tag_name(version)
+        "v#{version}"
+      end
+
+      def released_version_current_head?(member, tag)
+        return true unless git_work_tree?(member.root)
+
+        tag_sha = git_rev_parse(member.root, "refs/tags/#{tag}^{}")
+        head_sha = git_rev_parse(member.root, "HEAD")
+        !tag_sha.to_s.empty? && tag_sha == head_sha
+      end
+
+      def git_work_tree?(root)
+        _stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--is-inside-work-tree", chdir: root)
+        status.success?
+      end
+
+      def git_rev_parse(root, ref)
+        stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--verify", ref, chdir: root)
+        status.success? ? stdout.strip : nil
       end
 
       def gem_signing_required?
