@@ -44,7 +44,7 @@ module Kettle
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], start_member: nil, start_branch: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil)
         @command = command
         @config = config
         @members = members
@@ -67,6 +67,7 @@ module Kettle
         @jobs = jobs
         @progress_io = progress_io
         @bup_args = bup_args
+        @bex_args = bex_args
         @start_member = start_member
         @start_branch = start_branch
       end
@@ -81,7 +82,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -109,6 +110,7 @@ module Kettle
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
           commit_gha_sha_pins(member: member, runner: runner, memo: memo) if command == "gha-sha-pins"
           commit_bundle_update(member: member, runner: runner, memo: memo) if %w[bup bupb].include?(command)
+          commit_bex_changes(member: member, runner: runner, memo: memo) if command == "bex"
         end
       end
 
@@ -242,6 +244,7 @@ module Kettle
           jobs: jobs,
           progress_io: progress_io,
           bup_args: bup_args,
+          bex_args: bex_args,
           start_member: start_member,
           start_branch: start_branch_for_member(member)
         )
@@ -605,6 +608,7 @@ module Kettle
         return template_command(member) if command == "template"
         return gha_sha_pins_command if command == "gha-sha-pins"
         return bup_command if command == "bup"
+        return bex_command if command == "bex"
 
         command_for(command)
       end
@@ -614,6 +618,10 @@ module Kettle
         return ["bundle", "update", "--all"] if args.empty?
 
         ["bundle", "update", *args]
+      end
+
+      def bex_command
+        ["bundle", "exec", *Array(bex_args).map(&:to_s)]
       end
 
       def gha_sha_pins_command
@@ -820,6 +828,22 @@ module Kettle
             "-lc",
             "files=$(git ls-files --modified --others --exclude-standard -- Gemfile.lock '*.lock' '**/*.lock'); " \
               "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔒 Update bundle'; fi"
+          ]
+        )
+        memo << result
+      end
+
+      def commit_bex_changes(member:, runner:, memo:)
+        return unless commit
+
+        result = runner.call(
+          member: member,
+          phase: "commit_bex",
+          command: [
+            "sh",
+            "-lc",
+            "files=$(git ls-files --modified --others --exclude-standard); " \
+              "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔧 Run bundle exec command'; fi"
           ]
         )
         memo << result

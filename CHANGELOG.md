@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family bex` runs `bundle exec COMMAND` across selected family members,
+  preserving command arguments after `--` and committing member changes by default.
+
 ### Changed
 
 ### Deprecated

@@ -164,6 +164,38 @@ RSpec.describe Kettle::Family::CLI do
     expect(result.fetch("command")).to eq(%w[bundle update --bundler])
   end
 
+  it "plans bundle exec commands with bex" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["bex", "rake", "spec", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").first
+    expect(result.fetch("phase")).to eq("bex")
+    expect(result.fetch("command")).to eq(%w[bundle exec rake spec])
+  end
+
+  it "preserves bundle exec command flags after the option separator" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["bex", "--root", @tmpdir, "--json", "--", "rake", "spec", "--trace"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").first
+    expect(result.fetch("command")).to eq(%w[bundle exec rake spec --trace])
+  end
+
+  it "rejects bex without a command" do
+    err = StringIO.new
+
+    status = described_class.call(["bex", "--root", @tmpdir], out: StringIO.new, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("bex requires COMMAND")
+  end
+
   it "plans local dependency installs before selected family members" do
     write_gem("alpha")
     dep_root = File.join(@tmpdir, "deps", "token-resolver")

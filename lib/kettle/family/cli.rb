@@ -6,8 +6,8 @@ require "optparse"
 module Kettle
   module Family
     class CLI
-      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb install bump-version add-changelog release push pull up branch-lanes release-state].freeze
-      WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb release push pull up].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb bex install bump-version add-changelog release push pull up branch-lanes release-state].freeze
+      WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb bex release push pull up].freeze
 
       def self.call(argv, out: $stdout, err: $stderr)
         new(argv, out: out, err: err).call
@@ -28,10 +28,15 @@ module Kettle
         target_version = argv.shift if command == "bump-version"
         raise Error, "bump-version requires VERSION, major, minor, patch, or pre" if command == "bump-version" && !target_version
         bup_args = parse_bup_args(command)
+        bex_args = parse_bex_args_with_separator(command)
 
-        options = parse_options
+        options = parse_options(allow_remainder: command == "bex" && bex_args.empty?)
+        bex_args = argv.shift(argv.length) if command == "bex" && bex_args.empty?
+        raise Error, "bex requires COMMAND [ARGS]" if command == "bex" && bex_args.empty?
+
         options[:target_version] = target_version
         options[:bup_args] = bup_args
+        options[:bex_args] = bex_args
         return help if options.delete(:help)
 
         report = build_report(command, options)
@@ -54,6 +59,7 @@ module Kettle
           Usage: kettle-family COMMAND [options]
                  kettle-family bump-version VERSION|major|minor|patch|pre [options]
                  kettle-family bup [GEM] [options]
+                 kettle-family bex [options] -- COMMAND [ARGS]
 
           Commands:
               discover        Discover family members and print selected order
@@ -68,6 +74,7 @@ module Kettle
               gha-sha-pins    Plan or execute kettle-gha-sha-pins per member
               bup             Plan or execute bundle update --all, or bundle update GEM
               bupb            Plan or execute bundle update --bundler
+              bex             Plan or execute bundle exec COMMAND per member
               install         Build and install selected local family gems
               bump-version    Check, plan, or execute family version alignment
               add-changelog   Add an entry to an existing Unreleased changelog section
@@ -105,15 +112,15 @@ module Kettle
               --no-accept      Wait for user input at confirmation prompts
               --tag            Add release tag phase
               --push           Add release push phase
-              --commit         Allow each templated member's kettle-jem run to commit (default)
-              --no-commit      Pass --skip-commit to each templated member's kettle-jem run
+              --commit         Allow workflow commands that change files to commit (default)
+              --no-commit      Skip automatic commits after mutating workflow commands
               --allow-dirty    Reserved for compatibility; member repos manage their own commit safety
               --help           Print this help
         HELP
         0
       end
 
-      def parse_options
+      def parse_options(allow_remainder: false)
         options = {
           root: Dir.pwd,
           config: nil,
@@ -173,6 +180,8 @@ module Kettle
           parser.on("--allow-dirty") { options[:allow_dirty] = true }
           parser.on("--help") { options[:help] = true }
         end.parse!(argv)
+        return options if allow_remainder
+
         raise OptionParser::InvalidArgument, "unexpected argument(s): #{argv.join(" ")}" unless argv.empty?
 
         options
@@ -251,6 +260,7 @@ module Kettle
           jobs: options[:jobs],
           progress_io: progress_io(command, options),
           bup_args: options[:bup_args],
+          bex_args: options[:bex_args],
           start_member: start_at.member,
           start_branch: start_at.branch
         ).results
@@ -261,6 +271,17 @@ module Kettle
 
         args = []
         args << argv.shift while argv.first && !argv.first.start_with?("-")
+        args
+      end
+
+      def parse_bex_args_with_separator(command)
+        return [] unless command == "bex"
+
+        separator_index = argv.index("--")
+        return [] unless separator_index
+
+        args = argv[(separator_index + 1)..] || []
+        argv.slice!(separator_index..)
         args
       end
 

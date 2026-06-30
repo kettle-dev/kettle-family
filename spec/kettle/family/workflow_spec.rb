@@ -94,6 +94,26 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).phase).to eq("commit_bundle_update")
   end
 
+  it "plans bundle exec commands with provided args" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "bex", config: config, members: [member], bex_args: %w[rake spec]).results
+
+    expect(results.first.phase).to eq("bex")
+    expect(results.first.command).to eq(%w[bundle exec rake spec])
+    expect(results.fetch(1).phase).to eq("commit_bex")
+  end
+
+  it "skips bundle exec commits when commits are disabled" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "bex", config: config, members: [member], bex_args: %w[rake spec], commit: false).results
+
+    expect(results.map(&:phase)).to eq(["bex"])
+  end
+
   it "plans GitHub Actions SHA pin checks with the selected upgrade level" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
