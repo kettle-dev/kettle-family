@@ -20,9 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family bex` runs `bundle exec COMMAND` across selected family members,
-  preserving command arguments after `--` and committing member changes by default.
-
 ### Changed
 
 ### Deprecated
@@ -31,13 +28,27 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [0.1.31] - 2026-06-30
+
+- TAG: [v0.1.31][0.1.31t]
+- COVERAGE: 95.32% -- 1974/2071 lines in 21 files
+- BRANCH COVERAGE: 75.73% -- 696/919 branches in 21 files
+- 37.71% documented
+
+### Added
+
+- `kettle-family bex` runs `bundle exec COMMAND` across selected family members,
+  preserving command arguments after `--` and committing member changes by default.
+
+### Fixed
+
 - Package configured license files in gem release file lists.
 - `kettle-family release --publish` now fails instead of skipping when the
   selected member version is already published but local `HEAD` is not the
   matching release tag, preventing unreleased commits from being hidden by an
   already-published version number.
-
-### Security
 
 ## [0.1.30] - 2026-06-29
 
@@ -536,7 +547,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.30...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.31...HEAD
+[0.1.31]: https://github.com/kettle-dev/kettle-family/compare/v0.1.30...v0.1.31
+[0.1.31t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.31
 [0.1.30]: https://github.com/kettle-dev/kettle-family/compare/v0.1.29...v0.1.30
 [0.1.30t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.30
 [0.1.29]: https://github.com/kettle-dev/kettle-family/compare/v0.1.28...v0.1.29
