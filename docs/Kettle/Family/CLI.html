@@ -71,10 +71,12 @@
   <dl>
     <dt>Inherits:</dt>
     <dd>
-      <span class="inheritName">Object</span>
+      <span class="inheritName">CommandKit::Command</span>
       
         <ul class="fullTree">
           <li>Object</li>
+          
+            <li class="next">CommandKit::Command</li>
           
             <li class="next">Kettle::Family::CLI</li>
           
@@ -88,6 +90,11 @@
   
   
   
+  
+  <dl>
+      <dt>Includes:</dt>
+      <dd>CommandKit::Commands, <span class='object_link'><a href="CLI/ReturningMain.html" title="Kettle::Family::CLI::ReturningMain (module)">ReturningMain</a></span></dd>
+  </dl>
   
   
 
@@ -106,9 +113,11 @@
 <p class="children">
   
     
+      <strong class="modules">Modules:</strong> <span class='object_link'><a href="CLI/CommitOptions.html" title="Kettle::Family::CLI::CommitOptions (module)">CommitOptions</a></span>, <span class='object_link'><a href="CLI/ExecutionOptions.html" title="Kettle::Family::CLI::ExecutionOptions (module)">ExecutionOptions</a></span>, <span class='object_link'><a href="CLI/ReturningMain.html" title="Kettle::Family::CLI::ReturningMain (module)">ReturningMain</a></span>, <span class='object_link'><a href="CLI/SelectionOptions.html" title="Kettle::Family::CLI::SelectionOptions (module)">SelectionOptions</a></span>, <span class='object_link'><a href="CLI/SharedOptions.html" title="Kettle::Family::CLI::SharedOptions (module)">SharedOptions</a></span>, <span class='object_link'><a href="CLI/WorkflowOptions.html" title="Kettle::Family::CLI::WorkflowOptions (module)">WorkflowOptions</a></span>
+    
   
     
-      <strong class="classes">Classes:</strong> <span class='object_link'><a href="CLI/StartAt.html" title="Kettle::Family::CLI::StartAt (class)">StartAt</a></span>
+      <strong class="classes">Classes:</strong> <span class='object_link'><a href="CLI/AddChangelog.html" title="Kettle::Family::CLI::AddChangelog (class)">AddChangelog</a></span>, <span class='object_link'><a href="CLI/BaseCommand.html" title="Kettle::Family::CLI::BaseCommand (class)">BaseCommand</a></span>, <span class='object_link'><a href="CLI/Bex.html" title="Kettle::Family::CLI::Bex (class)">Bex</a></span>, <span class='object_link'><a href="CLI/BranchLanes.html" title="Kettle::Family::CLI::BranchLanes (class)">BranchLanes</a></span>, <span class='object_link'><a href="CLI/BumpVersion.html" title="Kettle::Family::CLI::BumpVersion (class)">BumpVersion</a></span>, <span class='object_link'><a href="CLI/Bup.html" title="Kettle::Family::CLI::Bup (class)">Bup</a></span>, <span class='object_link'><a href="CLI/Bupb.html" title="Kettle::Family::CLI::Bupb (class)">Bupb</a></span>, <span class='object_link'><a href="CLI/Check.html" title="Kettle::Family::CLI::Check (class)">Check</a></span>, <span class='object_link'><a href="CLI/Discover.html" title="Kettle::Family::CLI::Discover (class)">Discover</a></span>, <span class='object_link'><a href="CLI/Docs.html" title="Kettle::Family::CLI::Docs (class)">Docs</a></span>, <span class='object_link'><a href="CLI/GhaShaPins.html" title="Kettle::Family::CLI::GhaShaPins (class)">GhaShaPins</a></span>, <span class='object_link'><a href="CLI/Install.html" title="Kettle::Family::CLI::Install (class)">Install</a></span>, <span class='object_link'><a href="CLI/Lint.html" title="Kettle::Family::CLI::Lint (class)">Lint</a></span>, <span class='object_link'><a href="CLI/Metadata.html" title="Kettle::Family::CLI::Metadata (class)">Metadata</a></span>, <span class='object_link'><a href="CLI/Plan.html" title="Kettle::Family::CLI::Plan (class)">Plan</a></span>, <span class='object_link'><a href="CLI/Pull.html" title="Kettle::Family::CLI::Pull (class)">Pull</a></span>, <span class='object_link'><a href="CLI/Push.html" title="Kettle::Family::CLI::Push (class)">Push</a></span>, <span class='object_link'><a href="CLI/Release.html" title="Kettle::Family::CLI::Release (class)">Release</a></span>, <span class='object_link'><a href="CLI/ReleaseState.html" title="Kettle::Family::CLI::ReleaseState (class)">ReleaseState</a></span>, <span class='object_link'><a href="CLI/ReportCommand.html" title="Kettle::Family::CLI::ReportCommand (class)">ReportCommand</a></span>, <span class='object_link'><a href="CLI/StartAt.html" title="Kettle::Family::CLI::StartAt (class)">StartAt</a></span>, <span class='object_link'><a href="CLI/Template.html" title="Kettle::Family::CLI::Template (class)">Template</a></span>, <span class='object_link'><a href="CLI/Test.html" title="Kettle::Family::CLI::Test (class)">Test</a></span>, <span class='object_link'><a href="CLI/Up.html" title="Kettle::Family::CLI::Up (class)">Up</a></span>, <span class='object_link'><a href="CLI/WorkflowCommand.html" title="Kettle::Family::CLI::WorkflowCommand (class)">WorkflowCommand</a></span>
     
   
 </p>
@@ -184,7 +193,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#call-instance_method" title="#call (instance method)">#<strong>call</strong>  &#x21d2; Object </a>
+      <a href="#on_unknown_command-instance_method" title="#on_unknown_command (instance method)">#<strong>on_unknown_command</strong>(name, _argv = [])  &#x21d2; Object </a>
     
 
     
@@ -207,14 +216,35 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(argv, out:, err:)  &#x21d2; CLI </a>
+      <a href="#run-instance_method" title="#run (instance method)">#<strong>run</strong>(command = nil, *argv)  &#x21d2; Object </a>
     
 
     
   </span>
   
   
-    <span class="note title constructor">constructor</span>
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#run_command-instance_method" title="#run_command (instance method)">#<strong>run_command</strong>(command, options)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
   
   
   
@@ -223,7 +253,7 @@
   
 
   
-    <span class="summary_desc"><div class='inline'><p>A new instance of CLI.</p>
+    <span class="summary_desc"><div class='inline'>
 </div></span>
   
 </li>
@@ -233,55 +263,21 @@
     
   
 
-<div id="constructor_details" class="method_details_list">
-  <h2>Constructor Details</h2>
-  
-    <div class="method_details first">
-  <h3 class="signature first" id="initialize-instance_method">
-  
-    #<strong>initialize</strong>(argv, out:, err:)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::CLI (class)">CLI</a></span></tt> 
-  
 
   
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <h3 class="inherited">Methods included from <span class='object_link'><a href="CLI/ReturningMain.html" title="Kettle::Family::CLI::ReturningMain (module)">ReturningMain</a></span></h3>
+  <p class="inherited"><span class='object_link'><a href="CLI/ReturningMain.html#main-instance_method" title="Kettle::Family::CLI::ReturningMain#main (method)">#main</a></span></p>
 
   
-</h3><div class="docstring">
-  <div class="discussion">
-    <p>Returns a new instance of CLI.</p>
-
-
-  </div>
-</div>
-<div class="tags">
-  
-
-</div><table class="source_code">
-  <tr>
-    <td>
-      <pre class="lines">
-
-
-16
-17
-18
-19
-20</pre>
-    </td>
-    <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 16</span>
-
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='id identifier rubyid_argv'>argv</span><span class='comma'>,</span> <span class='label'>out:</span><span class='comma'>,</span> <span class='label'>err:</span><span class='rparen'>)</span>
-  <span class='ivar'>@argv</span> <span class='op'>=</span> <span class='id identifier rubyid_argv'>argv</span><span class='period'>.</span><span class='id identifier rubyid_dup'>dup</span>
-  <span class='ivar'>@out</span> <span class='op'>=</span> <span class='id identifier rubyid_out'>out</span>
-  <span class='ivar'>@err</span> <span class='op'>=</span> <span class='id identifier rubyid_err'>err</span>
-<span class='kw'>end</span></pre>
-    </td>
-  </tr>
-</table>
-</div>
-  
-</div>
-
 
   <div id="class_method_details" class="method_details_list">
     <h2>Class Method Details</h2>
@@ -302,15 +298,15 @@
       <pre class="lines">
 
 
-12
-13
-14</pre>
+25
+26
+27</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 12</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 25</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='id identifier rubyid_argv'>argv</span><span class='comma'>,</span> <span class='label'>out:</span> <span class='gvar'>$stdout</span><span class='comma'>,</span> <span class='label'>err:</span> <span class='gvar'>$stderr</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='id identifier rubyid_argv'>argv</span><span class='comma'>,</span> <span class='label'>out:</span> <span class='id identifier rubyid_out'>out</span><span class='comma'>,</span> <span class='label'>err:</span> <span class='id identifier rubyid_err'>err</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span>
+  <span class='id identifier rubyid_main'>main</span><span class='lparen'>(</span><span class='id identifier rubyid_argv'>argv</span><span class='comma'>,</span> <span class='label'>stdout:</span> <span class='id identifier rubyid_out'>out</span><span class='comma'>,</span> <span class='label'>stderr:</span> <span class='id identifier rubyid_err'>err</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -324,9 +320,9 @@
 
     
       <div class="method_details first">
-  <h3 class="signature first" id="call-instance_method">
+  <h3 class="signature first" id="on_unknown_command-instance_method">
   
-    #<strong>call</strong>  &#x21d2; <tt>Object</tt> 
+    #<strong>on_unknown_command</strong>(name, _argv = [])  &#x21d2; <tt>Object</tt> 
   
 
   
@@ -338,64 +334,94 @@
       <pre class="lines">
 
 
-22
-23
-24
-25
-26
-27
-28
-29
-30
-31
-32
-33
-34
-35
-36
-37
-38
-39
-40
-41
-42
-43
-44
-45
-46
-47
-48
-49</pre>
+479
+480
+481
+482</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 22</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 479</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
-  <span class='id identifier rubyid_command'>command</span> <span class='op'>=</span> <span class='id identifier rubyid_argv'>argv</span><span class='period'>.</span><span class='id identifier rubyid_shift'>shift</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>help</span><span class='tstring_end'>&quot;</span></span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_help'>help</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>help</span><span class='tstring_end'>&quot;</span></span> <span class='op'>||</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>--help</span><span class='tstring_end'>&quot;</span></span> <span class='op'>||</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>-h</span><span class='tstring_end'>&quot;</span></span>
+<span class='kw'>def</span> <span class='id identifier rubyid_on_unknown_command'>on_unknown_command</span><span class='lparen'>(</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='id identifier rubyid__argv'>_argv</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_stderr'>stderr</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family: unknown command </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_inspect'>inspect</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='int'>1</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="run-instance_method">
+  
+    #<strong>run</strong>(command = nil, *argv)  &#x21d2; <tt>Object</tt> 
+  
 
-  <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="Error.html" title="Kettle::Family::Error (class)">Error</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>unknown command </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_command'>command</span><span class='period'>.</span><span class='id identifier rubyid_inspect'>inspect</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>unless</span> <span class='const'><span class='object_link'><a href="#COMMANDS-constant" title="Kettle::Family::CLI::COMMANDS (constant)">COMMANDS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
+  
 
-  <span class='id identifier rubyid_target_version'>target_version</span> <span class='op'>=</span> <span class='id identifier rubyid_argv'>argv</span><span class='period'>.</span><span class='id identifier rubyid_shift'>shift</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump-version</span><span class='tstring_end'>&quot;</span></span>
-  <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="Error.html" title="Kettle::Family::Error (class)">Error</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump-version requires VERSION, major, minor, patch, or pre</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump-version</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_target_version'>target_version</span>
-  <span class='id identifier rubyid_bup_args'>bup_args</span> <span class='op'>=</span> <span class='id identifier rubyid_parse_bup_args'>parse_bup_args</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_bex_args'>bex_args</span> <span class='op'>=</span> <span class='id identifier rubyid_parse_bex_args_with_separator'>parse_bex_args_with_separator</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
 
-  <span class='id identifier rubyid_options'>options</span> <span class='op'>=</span> <span class='id identifier rubyid_parse_options'>parse_options</span><span class='lparen'>(</span><span class='label'>allow_remainder:</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bex</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_bex_args'>bex_args</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_bex_args'>bex_args</span> <span class='op'>=</span> <span class='id identifier rubyid_argv'>argv</span><span class='period'>.</span><span class='id identifier rubyid_shift'>shift</span><span class='lparen'>(</span><span class='id identifier rubyid_argv'>argv</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span><span class='rparen'>)</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bex</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_bex_args'>bex_args</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
-  <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="Error.html" title="Kettle::Family::Error (class)">Error</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bex requires COMMAND [ARGS]</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bex</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_bex_args'>bex_args</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
 
-  <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:target_version</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_target_version'>target_version</span>
-  <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:bup_args</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_bup_args'>bup_args</span>
-  <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:bex_args</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_bex_args'>bex_args</span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_help'>help</span> <span class='kw'>if</span> <span class='id identifier rubyid_options'>options</span><span class='period'>.</span><span class='id identifier rubyid_delete'>delete</span><span class='lparen'>(</span><span class='symbol'>:help</span><span class='rparen'>)</span>
+472
+473
+474
+475
+476
+477</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 472</span>
 
+<span class='kw'>def</span> <span class='id identifier rubyid_run'>run</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_invoke'>invoke</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='rparen'>)</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span>
+
+  <span class='id identifier rubyid_help'>help</span>
+  <span class='int'>0</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="run_command-instance_method">
+  
+    #<strong>run_command</strong>(command, options)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+484
+485
+486
+487
+488
+489
+490
+491
+492</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 484</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_run_command'>run_command</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_report'>report</span> <span class='op'>=</span> <span class='id identifier rubyid_build_report'>build_report</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_write_report'>write_report</span><span class='lparen'>(</span><span class='id identifier rubyid_report'>report</span><span class='comma'>,</span> <span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_out'>out</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:json</span><span class='rbracket'>]</span> <span class='op'>?</span> <span class='id identifier rubyid_report'>report</span><span class='period'>.</span><span class='id identifier rubyid_to_json'>to_json</span> <span class='op'>:</span> <span class='id identifier rubyid_report'>report</span><span class='period'>.</span><span class='id identifier rubyid_to_text'>to_text</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_stdout'>stdout</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:json</span><span class='rbracket'>]</span> <span class='op'>?</span> <span class='id identifier rubyid_report'>report</span><span class='period'>.</span><span class='id identifier rubyid_to_json'>to_json</span> <span class='op'>:</span> <span class='id identifier rubyid_report'>report</span><span class='period'>.</span><span class='id identifier rubyid_to_text'>to_text</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_report'>report</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span> <span class='op'>?</span> <span class='int'>0</span> <span class='op'>:</span> <span class='int'>1</span>
 <span class='kw'>rescue</span> <span class='const'><span class='object_link'><a href="Error.html" title="Kettle::Family::Error (class)">Error</a></span></span><span class='comma'>,</span> <span class='const'>OptionParser</span><span class='op'>::</span><span class='const'>ParseError</span> <span class='op'>=&gt;</span> <span class='id identifier rubyid_error'>error</span>
-  <span class='id identifier rubyid_err'>err</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_stderr'>stderr</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
   <span class='int'>1</span>
 <span class='kw'>end</span></pre>
     </td>
@@ -408,7 +434,7 @@
 </div>
 
       <div id="footer">
-  Generated on Tue Jun 30 01:46:35 2026 by
+  Generated on Wed Jul  1 01:41:42 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

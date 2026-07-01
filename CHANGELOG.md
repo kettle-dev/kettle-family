@@ -20,11 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family` now supports `--exclude` anywhere member selection is
-  available, selecting all members except the comma-separated exclusions.
-- `kettle-family` now uses command-specific option parsing and help powered by
-  `command_kit`, keeping naked help focused on global options.
-
 ### Changed
 
 ### Deprecated
@@ -34,6 +29,20 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.1.32] - 2026-07-01
+
+- TAG: [v0.1.32][0.1.32t]
+- COVERAGE: 95.34% -- 2168/2274 lines in 21 files
+- BRANCH COVERAGE: 75.44% -- 688/912 branches in 21 files
+- 29.96% documented
+
+### Added
+
+- `kettle-family` now supports `--exclude` anywhere member selection is
+  available, selecting all members except the comma-separated exclusions.
+- `kettle-family` now uses command-specific option parsing and help powered by
+  `command_kit`, keeping naked help focused on global options.
 
 ## [0.1.31] - 2026-06-30
 
@@ -552,7 +561,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.31...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.32...HEAD
+[0.1.32]: https://github.com/kettle-dev/kettle-family/compare/v0.1.31...v0.1.32
+[0.1.32t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.32
 [0.1.31]: https://github.com/kettle-dev/kettle-family/compare/v0.1.30...v0.1.31
 [0.1.31t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.31
 [0.1.30]: https://github.com/kettle-dev/kettle-family/compare/v0.1.29...v0.1.30
