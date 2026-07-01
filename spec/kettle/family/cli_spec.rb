@@ -59,7 +59,14 @@ RSpec.describe Kettle::Family::CLI do
 
     expect(status).to eq(0)
     expect(out.string).to include("Usage: kettle-family")
-    expect(out.string).not_to include("branch-lanes")
+    expect(out.string).to include("--root")
+    expect(out.string).to include("--config")
+    expect(out.string).to include("--json")
+    expect(out.string).to include("--report")
+    expect(out.string).to include("branch-lanes")
+    expect(out.string).not_to include("--only")
+    expect(out.string).not_to include("--execute")
+    expect(out.string).not_to include("--section")
   end
 
   it "rejects unknown commands" do
@@ -126,6 +133,36 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("skipped alpha release_build")
     expect(out.string).not_to include("skipped beta release_build")
     expect(out.string).to include("skipped gamma release_build")
+  end
+
+  it "plans releases excluding comma-separated members" do
+    write_ready_gem("alpha")
+    write_ready_gem("beta")
+    write_ready_gem("gamma")
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--exclude", "beta,gamma"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("* alpha")
+    expect(out.string).to include("- beta")
+    expect(out.string).to include("- gamma")
+    expect(out.string.scan("release_build").size).to eq(1)
+    expect(out.string).to include("skipped alpha release_build")
+    expect(out.string).not_to include("skipped beta release_build")
+    expect(out.string).not_to include("skipped gamma release_build")
+  end
+
+  it "prints command-specific help for member selection options" do
+    out = StringIO.new
+
+    status = described_class.call(["release", "--help"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("--only")
+    expect(out.string).to include("--exclude")
+    expect(out.string).to include("--execute")
+    expect(out.string).to include("--publish")
   end
 
   it "plans full bundle updates with bup" do

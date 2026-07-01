@@ -98,6 +98,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Utilities
+  spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
+  spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("version_gem", "~> 1.1", ">= 1.1.13")              # ruby >= 2.2.0
 

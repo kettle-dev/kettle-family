@@ -17,6 +17,12 @@ RSpec.describe Kettle::Family::Selection do
     expect(selected.map(&:name)).to eq(%w[alpha gamma])
   end
 
+  it "excludes comma-separated members from the family order" do
+    selected = described_class.new(members: [member("alpha"), member("beta"), member("gamma")]).apply(exclude: "beta, gamma")
+
+    expect(selected.map(&:name)).to eq(["alpha"])
+  end
+
   it "rejects unknown only selections" do
     selection = described_class.new(members: [member("alpha")])
 
@@ -27,6 +33,18 @@ RSpec.describe Kettle::Family::Selection do
     selection = described_class.new(members: [member("alpha")])
 
     expect { selection.apply(only: ",") }.to raise_error(Kettle::Family::Error, /--only requires at least one member/)
+  end
+
+  it "rejects unknown exclude selections" do
+    selection = described_class.new(members: [member("alpha")])
+
+    expect { selection.apply(exclude: "missing,beta") }.to raise_error(Kettle::Family::Error, /unknown member\(s\): missing, beta/)
+  end
+
+  it "rejects empty exclude selections" do
+    selection = described_class.new(members: [member("alpha")])
+
+    expect { selection.apply(exclude: ",") }.to raise_error(Kettle::Family::Error, /--exclude requires at least one member/)
   end
 
   it "rejects unknown start-at selections" do

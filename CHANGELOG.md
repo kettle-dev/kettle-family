@@ -20,6 +20,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family` now supports `--exclude` anywhere member selection is
+  available, selecting all members except the comma-separated exclusions.
+- `kettle-family` now uses command-specific option parsing and help powered by
+  `command_kit`, keeping naked help focused on global options.
+
 ### Changed
 
 ### Deprecated

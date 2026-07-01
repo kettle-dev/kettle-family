@@ -1,191 +1,497 @@
 # frozen_string_literal: true
 
+require "command_kit"
+require "command_kit/commands"
 require "fileutils"
 require "optparse"
 
 module Kettle
   module Family
-    class CLI
+    class CLI < CommandKit::Command
+      include CommandKit::Commands
+
       COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb bex install bump-version add-changelog release push pull up branch-lanes release-state].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb bex release push pull up].freeze
 
+      command_name "kettle-family"
+      usage "[options] COMMAND [ARGS...]"
+      description "Coordinate related Ruby gems as one family."
+
+      option :root, value: {type: String, usage: "PATH"}, desc: "Workspace or family root"
+      option :config, value: {type: String, usage: "PATH"}, desc: "Family config path"
+      option :json, desc: "Print JSON report to stdout"
+      option :report, value: {type: String, usage: "PATH"}, desc: "Write JSON report to PATH"
+
       def self.call(argv, out: $stdout, err: $stderr)
-        new(argv, out: out, err: err).call
+        main(argv, stdout: out, stderr: err)
       end
 
-      def initialize(argv, out:, err:)
-        @argv = argv.dup
-        @out = out
-        @err = err
+      module SharedOptions
+        def self.included(base)
+          base.option :root, value: {type: String, usage: "PATH"}, desc: "Workspace or family root"
+          base.option :config, value: {type: String, usage: "PATH"}, desc: "Family config path"
+          base.option :json, desc: "Print JSON report to stdout"
+          base.option :report, value: {type: String, usage: "PATH"}, desc: "Write JSON report to PATH"
+        end
       end
 
-      def call
-        command = argv.shift || "help"
-        return help if command == "help" || command == "--help" || command == "-h"
+      module SelectionOptions
+        def self.included(base)
+          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members"
+          base.option :exclude, value: {type: String, usage: "MEMBERS"}, desc: "Exclude comma-separated members"
+          base.option :start_at, long: "--start-at", value: {type: String, usage: "MEMBER[@BRANCH]"}, desc: "Select from member through the end of order"
+        end
+      end
 
-        raise Error, "unknown command #{command.inspect}" unless COMMANDS.include?(command)
+      module ExecutionOptions
+        def self.included(base)
+          base.option :execute, desc: "Execute external workflow commands"
+          base.option :dry_run, long: "--dry-run", desc: "Plan external workflow commands without running them" do
+            options[:execute] = false
+          end
+        end
+      end
 
-        target_version = argv.shift if command == "bump-version"
-        raise Error, "bump-version requires VERSION, major, minor, patch, or pre" if command == "bump-version" && !target_version
-        bup_args = parse_bup_args(command)
-        bex_args = parse_bex_args_with_separator(command)
+      module CommitOptions
+        def self.included(base)
+          base.option :commit, desc: "Allow workflow commands that change files to commit"
+          base.option :no_commit, long: "--no-commit", desc: "Skip automatic commits after mutating workflow commands" do
+            options[:commit] = false
+          end
+          base.option :allow_dirty, long: "--allow-dirty", desc: "Reserved for compatibility; member repos manage their own commit safety"
+        end
+      end
 
-        options = parse_options(allow_remainder: command == "bex" && bex_args.empty?)
-        bex_args = argv.shift(argv.length) if command == "bex" && bex_args.empty?
-        raise Error, "bex requires COMMAND [ARGS]" if command == "bex" && bex_args.empty?
+      module WorkflowOptions
+        def self.included(base)
+          base.option :debug, desc: "Preserve debug environment for workflow commands"
+          base.option :jobs, value: {type: Integer, usage: "N"}, desc: "Parallel jobs for supported executed workflows"
+          base.option :env, value: {type: String, usage: "KEY=VALUE"}, desc: "Override an environment variable for each member workflow command" do |value|
+            parse_env_override(value, workflow_env)
+          end
+        end
+      end
 
-        options[:target_version] = target_version
-        options[:bup_args] = bup_args
-        options[:bex_args] = bex_args
-        return help if options.delete(:help)
+      module ReturningMain
+        def main(argv = [])
+          args = parse_options(argv)
+          return 1 unless valid_argument_count?(args)
 
+          run(*args)
+        rescue SystemExit => error
+          error.status
+        rescue Error, OptionParser::ParseError => error
+          stderr.puts("kettle-family: #{error.message}")
+          1
+        end
+
+        private
+
+        def valid_argument_count?(args)
+          required_args = self.class.arguments.each_value.count(&:required?)
+          optional_args = self.class.arguments.each_value.count(&:optional?)
+          has_repeats_arg = self.class.arguments.each_value.any?(&:repeats?)
+          return true if args.length >= required_args && (has_repeats_arg || args.length <= (required_args + optional_args))
+
+          message = if args.length < required_args
+            "insufficient number of arguments"
+          else
+            "unexpected argument(s): #{args[(required_args + optional_args)..].join(" ")}"
+          end
+          stderr.puts("kettle-family: #{message}")
+          help_usage
+          false
+        end
+
+        def on_parse_error(error)
+          raise error
+        end
+      end
+
+      class BaseCommand < CommandKit::Command
+        prepend ReturningMain
+
+        include SharedOptions
+        include SelectionOptions
+
+        def initialize(**kwargs)
+          super
+          @workflow_env = {}
+        end
+
+        private
+
+        attr_reader :workflow_env
+
+        def family_options(overrides = {})
+          {
+            root: options[:root] || Dir.pwd,
+            config: options[:config],
+            only: options[:only],
+            exclude: options[:exclude],
+            start_at: options[:start_at],
+            json: truthy_option?(:json),
+            report: options[:report],
+            execute: truthy_option?(:execute),
+            debug: truthy_option?(:debug),
+            jobs: options[:jobs],
+            workflow_env: workflow_env,
+            changelog_section: nil,
+            changelog_entry: nil,
+            check: truthy_option?(:check),
+            from_version: nil,
+            gha_sha_pins_upgrade: "patch",
+            publish: false,
+            release_start_step: nil,
+            release_skip_steps: nil,
+            release_local_ci: false,
+            release_continue_ci_failures: false,
+            accept: true,
+            tag: false,
+            push: false,
+            commit: !options.key?(:commit) || options[:commit],
+            allow_dirty: truthy_option?(:allow_dirty),
+            target_version: nil,
+            bup_args: [],
+            bex_args: []
+          }.merge(overrides)
+        end
+
+        def run_family(command, overrides = {})
+          Kettle::Family::CLI.new(stdout: stdout, stderr: stderr).run_command(command, family_options(overrides))
+        end
+
+        def truthy_option?(name)
+          options.key?(name) && !!options[name]
+        end
+
+        def parse_env_override(value, env)
+          key, env_value = value.split("=", 2)
+          raise OptionParser::InvalidArgument, "--env requires KEY=VALUE" if key.to_s.empty? || env_value.nil?
+          raise OptionParser::InvalidArgument, "invalid environment variable name #{key.inspect}" unless key.match?(/\A[A-Za-z_][A-Za-z0-9_]*\z/)
+
+          env[key] = env_value
+        end
+
+        def parse_gha_sha_pins_upgrade(value)
+          normalized = value.to_s.downcase
+          return normalized if %w[major minor patch].include?(normalized)
+
+          raise OptionParser::InvalidArgument, "--upgrade must be one of: major, minor, patch"
+        end
+
+        def unexpected_arguments!(args)
+          raise OptionParser::InvalidArgument, "unexpected argument(s): #{args.join(" ")}" unless args.empty?
+        end
+      end
+
+      class Discover < BaseCommand
+        command_name "discover"
+        usage "[options]"
+        description "Discover family members and print selected order."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("discover")
+        end
+      end
+
+      class Plan < Discover
+        command_name "plan"
+        description "Alias for discover while execution workflows are built."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("plan")
+        end
+      end
+
+      class ReportCommand < Discover
+        command_name "report"
+        description "Print family discovery and configuration report."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("report")
+        end
+      end
+
+      class Metadata < BaseCommand
+        command_name "metadata"
+        usage "[options]"
+        description "Print version, Ruby floor, license, and author metadata."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("metadata")
+        end
+      end
+
+      class BranchLanes < BaseCommand
+        command_name "branch-lanes"
+        usage "[options]"
+        description "Audit configured branch lanes."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("branch-lanes")
+        end
+      end
+
+      class ReleaseState < BaseCommand
+        command_name "release-state"
+        usage "[options]"
+        description "Report changelog release state for family members."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("release-state")
+        end
+      end
+
+      class WorkflowCommand < BaseCommand
+        include ExecutionOptions
+        include WorkflowOptions
+        include CommitOptions
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family(self.class.command_name)
+        end
+      end
+
+      class Check < WorkflowCommand
+        command_name "check"
+        usage "[options]"
+        description "Run internal read-only readiness checks."
+      end
+
+      class Test < WorkflowCommand
+        command_name "test"
+        usage "[options]"
+        description "Plan or execute configured test command per member."
+      end
+
+      class Lint < WorkflowCommand
+        command_name "lint"
+        usage "[options]"
+        description "Plan or execute configured lint command per member."
+      end
+
+      class Docs < WorkflowCommand
+        command_name "docs"
+        usage "[options]"
+        description "Plan or execute configured docs command per member."
+      end
+
+      class Template < WorkflowCommand
+        command_name "template"
+        usage "[options]"
+        description "Plan or execute kettle-jem templating per member."
+      end
+
+      class GhaShaPins < WorkflowCommand
+        command_name "gha-sha-pins"
+        usage "[options]"
+        description "Plan or execute kettle-gha-sha-pins per member."
+
+        option :check, desc: "Check whether SHA pins would need edits"
+        option :upgrade, value: {type: String, usage: "LEVEL"}, desc: "SHA pin upgrade strategy: major, minor, patch" do |value|
+          options[:upgrade] = parse_gha_sha_pins_upgrade(value)
+        end
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("gha-sha-pins", gha_sha_pins_upgrade: options[:upgrade] || "patch")
+        end
+      end
+
+      class Bup < WorkflowCommand
+        command_name "bup"
+        usage "[options] [GEM]"
+        description "Plan or execute bundle update --all, or bundle update GEM."
+        argument :gems, required: false, repeats: true, usage: "GEM", desc: "Gem name(s) to update"
+
+        def run(*bup_args)
+          run_family("bup", bup_args: bup_args)
+        end
+      end
+
+      class Bupb < WorkflowCommand
+        command_name "bupb"
+        usage "[options]"
+        description "Plan or execute bundle update --bundler."
+      end
+
+      class Bex < WorkflowCommand
+        command_name "bex"
+        usage "[options] -- COMMAND [ARGS...]"
+        description "Plan or execute bundle exec COMMAND per member."
+        argument :command, required: false, repeats: true, usage: "COMMAND [ARGS...]", desc: "Command and arguments to run through bundle exec"
+
+        def run(*bex_args)
+          raise Error, "bex requires COMMAND [ARGS]" if bex_args.empty?
+
+          run_family("bex", bex_args: bex_args)
+        end
+      end
+
+      class Install < BaseCommand
+        include ExecutionOptions
+
+        command_name "install"
+        usage "[options]"
+        description "Build and install selected local family gems."
+
+        option :jobs, value: {type: Integer, usage: "N"}, desc: "Parallel jobs for executed installs"
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("install")
+        end
+      end
+
+      class BumpVersion < BaseCommand
+        include ExecutionOptions
+        include CommitOptions
+
+        command_name "bump-version"
+        usage "[options] VERSION|major|minor|patch|pre"
+        description "Check, plan, or execute family version alignment."
+        argument :target_version, required: false, usage: "VERSION|major|minor|patch|pre", desc: "Version or bump target"
+
+        option :check, desc: "Check whether version bumps would need edits"
+        option :from, value: {type: String, usage: "VERSION"}, desc: "Require selected members to currently match VERSION"
+
+        def run(target_version = nil)
+          raise Error, "bump-version requires VERSION, major, minor, patch, or pre" unless target_version
+
+          run_family("bump-version", target_version: target_version, from_version: options[:from])
+        end
+      end
+
+      class AddChangelog < BaseCommand
+        include ExecutionOptions
+
+        command_name "add-changelog"
+        usage "[options]"
+        description "Add an entry to an existing Unreleased changelog section."
+
+        option :section, value: {type: String, usage: "NAME"}, desc: "Changelog section"
+        option :entry, value: {type: String, usage: "TEXT"}, desc: "Changelog entry"
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("add-changelog", changelog_section: options[:section], changelog_entry: options[:entry])
+        end
+      end
+
+      class Release < BaseCommand
+        include ExecutionOptions
+        include WorkflowOptions
+        include CommitOptions
+
+        command_name "release"
+        usage "[options]"
+        description "Plan or execute release build/publish phases."
+
+        option :publish, desc: "Use publish release command instead of build command"
+        option :build_only, long: "--build-only", desc: "Use build release command" do
+          options[:publish] = false
+        end
+        option :start_step, long: "--start-step", value: {type: Integer, usage: "N"}, desc: "Pass start_step=N through to kettle-release commands"
+        option :skip_steps, long: "--skip-steps", value: {type: String, usage: "LIST"}, desc: "Pass skip_steps=LIST through to kettle-release commands"
+        option :local_ci, long: "--local-ci", desc: "Pass --local-ci through to kettle-release commands"
+        option :continue_ci_failures, long: "--continue-ci-failures", desc: "Set K_RELEASE_CI_CONTINUE=true for release commands"
+        option :accept, desc: "Answer yes to confirmation prompts in interactive commands"
+        option :no_accept, long: "--no-accept", desc: "Wait for user input at confirmation prompts" do
+          options[:accept] = false
+        end
+        option :tag, desc: "Add release tag phase"
+        option :push, desc: "Add release push phase"
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family(
+            "release",
+            publish: truthy_option?(:publish),
+            release_start_step: options[:start_step],
+            release_skip_steps: options[:skip_steps],
+            release_local_ci: truthy_option?(:local_ci),
+            release_continue_ci_failures: truthy_option?(:continue_ci_failures),
+            accept: !options.key?(:accept) || options[:accept],
+            tag: truthy_option?(:tag),
+            push: truthy_option?(:push)
+          )
+        end
+      end
+
+      class Push < WorkflowCommand
+        command_name "push"
+        usage "[options]"
+        description "Plan or execute git push per member."
+      end
+
+      class Pull < WorkflowCommand
+        command_name "pull"
+        usage "[options]"
+        description "Plan or execute git pull --rebase per member."
+      end
+
+      class Up < WorkflowCommand
+        command_name "up"
+        usage "[options]"
+        description "Plan or execute git pull --rebase then git push per member."
+      end
+
+      command Discover
+      command Plan
+      command "report", ReportCommand
+      command Metadata
+      command Check
+      command Test
+      command Lint
+      command Docs
+      command Template
+      command GhaShaPins
+      command Bup
+      command Bupb
+      command Bex
+      command Install
+      command BumpVersion
+      command AddChangelog
+      command Release
+      command Push
+      command Pull
+      command Up
+      command BranchLanes
+      command ReleaseState
+
+      prepend ReturningMain
+
+      def run(command = nil, *argv)
+        return invoke(command, *argv) if command
+
+        help
+        0
+      end
+
+      def on_unknown_command(name, _argv = [])
+        stderr.puts("kettle-family: unknown command #{name.inspect}")
+        1
+      end
+
+      def run_command(command, options)
         report = build_report(command, options)
         write_report(report, options)
-        out.puts(options[:json] ? report.to_json : report.to_text)
+        stdout.puts(options[:json] ? report.to_json : report.to_text)
         report.success? ? 0 : 1
       rescue Error, OptionParser::ParseError => error
-        err.puts("kettle-family: #{error.message}")
+        stderr.puts("kettle-family: #{error.message}")
         1
       end
 
       private
-
-      attr_reader :argv, :out, :err
-
-      def help
-        out.puts(<<~HELP)
-          kettle-family: #{Kettle::Family::VERSION}
-
-          Usage: kettle-family COMMAND [options]
-                 kettle-family bump-version VERSION|major|minor|patch|pre [options]
-                 kettle-family bup [GEM] [options]
-                 kettle-family bex [options] -- COMMAND [ARGS]
-
-          Commands:
-              discover        Discover family members and print selected order
-              plan            Alias for discover while execution workflows are built
-              report          Print family discovery and configuration report
-              metadata        Print version, Ruby floor, license, and author metadata
-              check           Run internal read-only readiness checks
-              test            Plan or execute configured test command per member
-              lint            Plan or execute configured lint command per member
-              docs            Plan or execute configured docs command per member
-              template        Plan or execute kettle-jem templating per member
-              gha-sha-pins    Plan or execute kettle-gha-sha-pins per member
-              bup             Plan or execute bundle update --all, or bundle update GEM
-              bupb            Plan or execute bundle update --bundler
-              bex             Plan or execute bundle exec COMMAND per member
-              install         Build and install selected local family gems
-              bump-version    Check, plan, or execute family version alignment
-              add-changelog   Add an entry to an existing Unreleased changelog section
-              release         Plan or execute release build/publish phases
-              push            Plan or execute git push per member
-              pull            Plan or execute git pull --rebase per member
-              up              Plan or execute git pull --rebase then git push per member
-              release-state   Report changelog release state for family members
-
-          Options:
-              --root PATH      Workspace or family root (default: current directory)
-              --config PATH    Family config path
-              --only MEMBERS   Select comma-separated members
-              --start-at NAME  Select from member through the end of order; use MEMBER@BRANCH for branch stacks
-              --json           Print JSON report to stdout
-              --report PATH    Write JSON report to PATH
-              --execute        Execute external workflow commands
-              --dry-run        Plan external workflow commands without running them (default)
-              --debug          Preserve debug environment for workflow commands
-              --jobs N         Parallel jobs for executed family templating, release, or install
-              --env KEY=VALUE  Override an environment variable for each member workflow command
-              --section NAME   Changelog section for add-changelog
-              --entry TEXT     Changelog entry for add-changelog
-              --check          Check whether bump-version or gha-sha-pins would need edits
-              --from VERSION   Require selected members to currently match VERSION
-              --upgrade LEVEL  GitHub Actions SHA pin upgrade strategy: major, minor, patch
-              --publish        Use publish release command instead of build command
-              --build-only      Use build release command (default)
-              --start-step N    Pass start_step=N through to kettle-release commands
-              --skip-steps LIST Pass skip_steps=LIST through to kettle-release commands
-              --local-ci        Pass --local-ci through to kettle-release commands
-              --continue-ci-failures
-                               Set K_RELEASE_CI_CONTINUE=true for release commands
-              --accept         Answer yes to confirmation prompts in interactive commands (default)
-              --no-accept      Wait for user input at confirmation prompts
-              --tag            Add release tag phase
-              --push           Add release push phase
-              --commit         Allow workflow commands that change files to commit (default)
-              --no-commit      Skip automatic commits after mutating workflow commands
-              --allow-dirty    Reserved for compatibility; member repos manage their own commit safety
-              --help           Print this help
-        HELP
-        0
-      end
-
-      def parse_options(allow_remainder: false)
-        options = {
-          root: Dir.pwd,
-          config: nil,
-          only: nil,
-          start_at: nil,
-          json: false,
-          report: nil,
-          execute: false,
-          debug: false,
-          jobs: nil,
-          workflow_env: {},
-          changelog_section: nil,
-          changelog_entry: nil,
-          check: false,
-          from_version: nil,
-          gha_sha_pins_upgrade: "patch",
-          publish: false,
-          release_start_step: nil,
-          release_skip_steps: nil,
-          release_local_ci: false,
-          release_continue_ci_failures: false,
-          accept: true,
-          tag: false,
-          push: false,
-          commit: true,
-          allow_dirty: false
-        }
-        OptionParser.new do |parser|
-          parser.on("--root PATH") { |value| options[:root] = value }
-          parser.on("--config PATH") { |value| options[:config] = value }
-          parser.on("--only MEMBER") { |value| options[:only] = value }
-          parser.on("--start-at MEMBER[@BRANCH]") { |value| options[:start_at] = value }
-          parser.on("--json") { options[:json] = true }
-          parser.on("--report PATH") { |value| options[:report] = value }
-          parser.on("--execute") { options[:execute] = true }
-          parser.on("--dry-run") { options[:execute] = false }
-          parser.on("--debug") { options[:debug] = true }
-          parser.on("--jobs N", Integer) { |value| options[:jobs] = value }
-          parser.on("--env KEY=VALUE") { |value| parse_env_override(value, options[:workflow_env]) }
-          parser.on("--section NAME") { |value| options[:changelog_section] = value }
-          parser.on("--entry TEXT") { |value| options[:changelog_entry] = value }
-          parser.on("--check") { options[:check] = true }
-          parser.on("--from VERSION") { |value| options[:from_version] = value }
-          parser.on("--upgrade LEVEL") { |value| options[:gha_sha_pins_upgrade] = parse_gha_sha_pins_upgrade(value) }
-          parser.on("--publish") { options[:publish] = true }
-          parser.on("--build-only") { options[:publish] = false }
-          parser.on("--start-step N", Integer) { |value| options[:release_start_step] = value }
-          parser.on("--skip-steps LIST") { |value| options[:release_skip_steps] = value }
-          parser.on("--local-ci") { options[:release_local_ci] = true }
-          parser.on("--continue-ci-failures") { options[:release_continue_ci_failures] = true }
-          parser.on("--accept") { options[:accept] = true }
-          parser.on("--no-accept") { options[:accept] = false }
-          parser.on("--tag") { options[:tag] = true }
-          parser.on("--push") { options[:push] = true }
-          parser.on("--commit") { options[:commit] = true }
-          parser.on("--no-commit") { options[:commit] = false }
-          parser.on("--allow-dirty") { options[:allow_dirty] = true }
-          parser.on("--help") { options[:help] = true }
-        end.parse!(argv)
-        return options if allow_remainder
-
-        raise OptionParser::InvalidArgument, "unexpected argument(s): #{argv.join(" ")}" unless argv.empty?
-
-        options
-      end
 
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
@@ -198,12 +504,8 @@ module Kettle
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
-        selected = Selection.new(members: ordered).apply(only: options[:only], start_at: start_at.member)
-        result_members = if command == "branch-lanes"
-          ordered
-        else
-          selected
-        end
+        selected = Selection.new(members: ordered).apply(only: options[:only], exclude: options[:exclude], start_at: start_at.member)
+        result_members = selected
         results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
         Report.new(
           family_name: config.family_name,
@@ -266,31 +568,12 @@ module Kettle
         ).results
       end
 
-      def parse_bup_args(command)
-        return [] unless command == "bup"
-
-        args = []
-        args << argv.shift while argv.first && !argv.first.start_with?("-")
-        args
-      end
-
-      def parse_bex_args_with_separator(command)
-        return [] unless command == "bex"
-
-        separator_index = argv.index("--")
-        return [] unless separator_index
-
-        args = argv[(separator_index + 1)..] || []
-        argv.slice!(separator_index..)
-        args
-      end
-
       def progress_io(command, options)
         return nil unless command == "template"
         return nil unless options[:execute]
         return nil if options[:json]
 
-        out
+        stdout
       end
 
       def branch_target_command?(command, config)
@@ -378,21 +661,6 @@ module Kettle
           version: nil,
           dependencies: []
         )
-      end
-
-      def parse_env_override(value, env)
-        key, env_value = value.split("=", 2)
-        raise OptionParser::InvalidArgument, "--env requires KEY=VALUE" if key.to_s.empty? || env_value.nil?
-        raise OptionParser::InvalidArgument, "invalid environment variable name #{key.inspect}" unless key.match?(/\A[A-Za-z_][A-Za-z0-9_]*\z/)
-
-        env[key] = env_value
-      end
-
-      def parse_gha_sha_pins_upgrade(value)
-        normalized = value.to_s.downcase
-        return normalized if %w[major minor patch].include?(normalized)
-
-        raise OptionParser::InvalidArgument, "--upgrade must be one of: major, minor, patch"
       end
 
       def parse_start_at(value)
