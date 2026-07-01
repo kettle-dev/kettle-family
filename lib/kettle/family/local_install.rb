@@ -124,7 +124,7 @@ module Kettle
           name: spec.name,
           root: File.dirname(gemspec),
           gemspec_path: gemspec,
-          version_file: version_file(File.dirname(gemspec)),
+          version_file: version_file(File.dirname(gemspec), spec.name),
           version: spec.version.to_s,
           dependencies: spec.runtime_dependencies.map(&:name).sort,
           required_ruby_version: required_ruby_version(spec),
@@ -158,7 +158,10 @@ module Kettle
         raise Error, "could not load gemspec #{path}: #{error.message}"
       end
 
-      def version_file(root)
+      def version_file(root, gem_name)
+        canonical = File.join(root, "lib", gem_name.tr("-", "_"), "version.rb")
+        return canonical if File.file?(canonical)
+
         Dir.glob(File.join(root, "lib", "**", "version.rb")).min
       end
 

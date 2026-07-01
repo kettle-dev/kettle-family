@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family bump-version` now prefers `lib/<gem_name>/version.rb` over
+  alphabetically earlier compatibility namespace version files when discovering
+  each member's editable version file.
+
 ### Security
 
 ## [0.1.32] - 2026-07-01

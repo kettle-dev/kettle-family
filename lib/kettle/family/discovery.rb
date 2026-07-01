@@ -61,7 +61,7 @@ module Kettle
           name: spec.name,
           root: File.dirname(path),
           gemspec_path: path,
-          version_file: version_file(File.dirname(path)),
+          version_file: version_file(File.dirname(path), spec.name),
           version: spec.version.to_s,
           dependencies: spec.runtime_dependencies.map(&:name).sort,
           required_ruby_version: required_ruby_version(spec),
@@ -85,7 +85,10 @@ module Kettle
         Array(spec.authors).compact.map(&:to_s).map(&:strip).reject(&:empty?)
       end
 
-      def version_file(root)
+      def version_file(root, gem_name)
+        canonical = File.join(root, "lib", gem_name.tr("-", "_"), "version.rb")
+        return canonical if File.file?(canonical)
+
         candidates = Dir.glob(File.join(root, "lib", "**", "version.rb"))
         candidates.min
       end

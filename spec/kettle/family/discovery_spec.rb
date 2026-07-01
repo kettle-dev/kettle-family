@@ -214,6 +214,39 @@ RSpec.describe Kettle::Family::Discovery do
     expect(members.map(&:name)).to eq(["relative-load"])
   end
 
+  it "prefers the canonical gem-name version file over compatibility namespace version files" do
+    root = File.join(@tmpdir, "stone_checksums")
+    FileUtils.mkdir_p(File.join(root, "lib", "gem_checksums"))
+    FileUtils.mkdir_p(File.join(root, "lib", "stone_checksums"))
+    canonical = File.join(root, "lib", "stone_checksums", "version.rb")
+    File.write(canonical, <<~RUBY)
+      module StoneChecksums
+        module Version
+          VERSION = "1.0.0"
+        end
+      end
+    RUBY
+    File.write(File.join(root, "lib", "gem_checksums", "version.rb"), <<~RUBY)
+      require_relative "../stone_checksums/version"
+      module GemChecksums
+        module Version
+          VERSION = StoneChecksums::Version::VERSION
+        end
+      end
+    RUBY
+    File.write(File.join(root, "stone_checksums.gemspec"), <<~RUBY)
+      Gem::Specification.new do |spec|
+        spec.name = "stone_checksums"
+        spec.version = "1.0.0"
+      end
+    RUBY
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = described_class.new(config: config).members.fetch(0)
+
+    expect(member.version_file).to eq(canonical)
+  end
+
   it "excludes gemspecs ignored by git before loading members" do
     system("git", "init", "--quiet", chdir: @tmpdir)
     write_gem("alpha")
