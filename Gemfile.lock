@@ -11,6 +11,7 @@ PATH
     kettle-family (0.1.32)
       command_kit (~> 0.6)
       command_kit-completion (~> 0.1)
+      kettle-dev (~> 2.2, >= 2.2.25)
       tsort (~> 0.2)
       version_gem (~> 1.1, >= 1.1.13)
 
@@ -396,7 +397,6 @@ DEPENDENCIES
   gem_bench (~> 2.0, >= 2.0.5)
   gitmoji-regex (~> 2.0, >= 2.0.3)
   irb (~> 1.17)
-  kettle-dev (~> 2.2, >= 2.2.25)
   kettle-family!
   kettle-soup-cover (~> 3.0.a, >= 3.0.0.rc5)
   kettle-test (~> 2.0, >= 2.0.9)

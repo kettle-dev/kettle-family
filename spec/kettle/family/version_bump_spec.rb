@@ -44,6 +44,8 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(results.first.stdout).not_to include("would update")
     expect(File.read(alpha.version_file)).to include('VERSION = "1.1.0"')
     expect(File.read(beta.version_file)).to include('VERSION = "1.1.0"')
+    expect(File.read(alpha.gemspec_path)).to include('spec.version = "1.1.0"')
+    expect(File.read(beta.gemspec_path)).to include('spec.version = "1.1.0"')
     expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.1.0"')
   end
 

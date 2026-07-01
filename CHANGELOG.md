@@ -22,6 +22,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- `kettle-family bump-version` now delegates per-member version file,
+  gemspec-version, and relative bump target handling to `kettle-dev`'s shared
+  `kettle-bump` engine, leaving `kettle-family` responsible only for
+  family-specific dependency pin updates and reporting.
+- `kettle-dev` is now a runtime dependency because `kettle-family` reuses its
+  version bump engine directly.
+
 ### Deprecated
 
 ### Removed
