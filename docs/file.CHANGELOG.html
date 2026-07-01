@@ -90,8 +90,8 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.32">v0.1.32</a>
 </li>
-  <li>COVERAGE: 95.45% – 2224/2330 lines in 21 files</li>
-  <li>BRANCH COVERAGE: 75.91% – 712/938 branches in 21 files</li>
+  <li>COVERAGE: 95.46% – 2227/2333 lines in 21 files</li>
+  <li>BRANCH COVERAGE: 75.96% – 714/940 branches in 21 files</li>
   <li>29.82% documented</li>
 </ul>
 
@@ -110,9 +110,16 @@ available, selecting all members except the comma-separated exclusions.</li>
 
 <ul>
   <li>
-<code>kettle-family</code> reports a final summary for every command, including selected<br>
+    <p><code>kettle-family</code> reports a final summary for every command, including selected<br>
 release members left pending when parallel release execution stops after a<br>
-failure.</li>
+failure.</p>
+  </li>
+  <li>
+    <p><code>kettle-family release --execute</code> runs release members sequentially on<br>
+TruffleRuby to avoid a TruffleRuby 24.2 internal <code>ENV.replace</code> crash from<br>
+<code>Bundler.with_unbundled_env</code> inside parallel release threads<br>
+(<a href="https://github.com/truffleruby/truffleruby/issues/4352">truffleruby/truffleruby#4352</a>).</p>
+  </li>
 </ul>
 
 <h2 id="0131---2026-06-30">
@@ -860,7 +867,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Wed Jul  1 02:29:04 2026 by
+  Generated on Wed Jul  1 02:58:43 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

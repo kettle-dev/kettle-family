@@ -28,18 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- `kettle-family release --execute` runs release members sequentially on
-  TruffleRuby to avoid a TruffleRuby 24.2 internal `ENV.replace` crash from
-  `Bundler.with_unbundled_env` inside parallel release threads
-  ([truffleruby/truffleruby#4352](https://github.com/truffleruby/truffleruby/issues/4352)).
-
 ### Security
 
 ## [0.1.32] - 2026-07-01
 
 - TAG: [v0.1.32][0.1.32t]
-- COVERAGE: 95.45% -- 2224/2330 lines in 21 files
-- BRANCH COVERAGE: 75.91% -- 712/938 branches in 21 files
+- COVERAGE: 95.46% -- 2227/2333 lines in 21 files
+- BRANCH COVERAGE: 75.96% -- 714/940 branches in 21 files
 - 29.82% documented
 
 ### Added
@@ -54,6 +49,11 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family` reports a final summary for every command, including selected
   release members left pending when parallel release execution stops after a
   failure.
+
+- `kettle-family release --execute` runs release members sequentially on
+  TruffleRuby to avoid a TruffleRuby 24.2 internal `ENV.replace` crash from
+  `Bundler.with_unbundled_env` inside parallel release threads
+  ([truffleruby/truffleruby#4352](https://github.com/truffleruby/truffleruby/issues/4352)).
 
 ## [0.1.31] - 2026-06-30
 
