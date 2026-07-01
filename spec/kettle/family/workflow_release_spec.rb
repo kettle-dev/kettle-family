@@ -473,7 +473,10 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     members = [ready_member("alpha"), ready_member("beta")]
 
-    results = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 2).results
+    workflow = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 2)
+    allow(workflow).to receive(:truffleruby?).and_return(false)
+
+    results = workflow.results
 
     expect(results).to all(be_ok)
     expect(results.count { |result| result.phase == "release_build" }).to eq(2)
@@ -487,6 +490,7 @@ RSpec.describe Kettle::Family::Workflow do
     gamma = ready_member("gamma")
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta, gamma], execute: true, jobs: 3)
 
+    allow(workflow).to receive(:truffleruby?).and_return(false)
     allow(workflow).to receive(:release_results_for_member) do |member, runner:|
       [
         Kettle::Family::CommandResult.new(
@@ -530,6 +534,7 @@ RSpec.describe Kettle::Family::Workflow do
     end.new
 
     allow(workflow).to receive(:release_otp_coordinator).and_return(coordinator)
+    allow(workflow).to receive(:truffleruby?).and_return(false)
     allow(workflow).to receive(:release_results_for_member) do |member, runner:|
       [
         Kettle::Family::CommandResult.new(
