@@ -394,9 +394,16 @@ module Kettle
       end
 
       def release_jobs(release_members)
+        # TruffleRuby issue: https://github.com/truffleruby/truffleruby/issues/4352
+        return 1 if truffleruby?
+
         requested = jobs || config.release_jobs
         count = requested ? requested.to_i : [Etc.nprocessors, 4].min
         count.clamp(1, release_members.length)
+      end
+
+      def truffleruby?
+        RUBY_ENGINE == "truffleruby"
       end
 
       def release_waves(release_members)

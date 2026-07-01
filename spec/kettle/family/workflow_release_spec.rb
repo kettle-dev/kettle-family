@@ -553,6 +553,17 @@ RSpec.describe Kettle::Family::Workflow do
     expect(coordinator.queue_totals).to eq([2])
   end
 
+  it "runs release members sequentially on TruffleRuby" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [ready_member("alpha"), ready_member("beta")]
+    workflow = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 2)
+
+    allow(workflow).to receive(:truffleruby?).and_return(true)
+
+    expect(workflow.send(:release_jobs, members)).to eq(1)
+    expect(workflow.send(:parallel_release_members?, members)).to be(false)
+  end
+
   it "stops assigning queued parallel release members after the first failure" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     members = %w[alpha beta gamma].map { |name| ready_member(name) }
