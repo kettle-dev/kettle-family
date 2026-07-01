@@ -28,18 +28,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- `kettle-family` reports a final summary for every command, including selected
-  release members left pending when parallel release execution stops after a
-  failure.
-
 ### Security
 
 ## [0.1.32] - 2026-07-01
 
 - TAG: [v0.1.32][0.1.32t]
-- COVERAGE: 95.34% -- 2168/2274 lines in 21 files
-- BRANCH COVERAGE: 75.44% -- 688/912 branches in 21 files
-- 29.96% documented
+- COVERAGE: 95.45% -- 2224/2330 lines in 21 files
+- BRANCH COVERAGE: 75.91% -- 712/938 branches in 21 files
+- 29.82% documented
 
 ### Added
 
@@ -47,6 +43,12 @@ Please file a bug if you notice a violation of semantic versioning.
   available, selecting all members except the comma-separated exclusions.
 - `kettle-family` now uses command-specific option parsing and help powered by
   `command_kit`, keeping naked help focused on global options.
+
+### Fixed
+
+- `kettle-family` reports a final summary for every command, including selected
+  release members left pending when parallel release execution stops after a
+  failure.
 
 ## [0.1.31] - 2026-06-30
 
