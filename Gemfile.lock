@@ -118,7 +118,7 @@ GEM
       simplecov-rcov (~> 0.3, >= 0.3.7)
       simplecov_lcov_formatter (~> 0.9, >= 0.9.0)
       version_gem (~> 1.1, >= 1.1.13)
-    kettle-test (2.0.8)
+    kettle-test (2.0.9)
       appraisal2 (~> 3.0, >= 3.0.6)
       backports (~> 3.0)
       rspec (~> 3.0)
@@ -144,7 +144,8 @@ GEM
     mutex_m (0.3.0)
     nokogiri (1.19.4-x86_64-linux-gnu)
       racc (~> 1.4)
-    nomono (1.0.6)
+    nomono (1.0.7)
+      version_gem (~> 1.1, >= 1.1.13)
     openssl (4.0.2)
     ostruct (0.6.3)
     parallel (1.28.0)
@@ -474,7 +475,7 @@ CHECKSUMS
   kettle-family (0.1.32)
   kettle-rb (0.1.1) sha256=2e793d817f5150339770c547a2c72ed0c1a23b5e5a3ef46f462500dcb10dec4d
   kettle-soup-cover (3.0.0.rc5) sha256=3c8e5551a1c900fb95503d69f815205a1138f168500acdd4559c3a5ef1817da5
-  kettle-test (2.0.8) sha256=1b404fa8a6bfcb3456b6d222b1b31a39122fc3e713abc0fdc58db873a61de575
+  kettle-test (2.0.9) sha256=df8e8aa70a497ab636391c65d08f617c34e4cdfcb8d0e03907d38854e1465758
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-parser-gfm (1.1.0) sha256=fb39745516427d2988543bf01fc4cf0ab1149476382393e0e9c48592f6581729
   language_server-protocol (3.17.0.5) sha256=fd1e39a51a28bf3eec959379985a72e296e9f9acfce46f6a79d31ca8760803cc
@@ -483,7 +484,7 @@ CHECKSUMS
   mister_bin (0.9.0) sha256=624fe401db4faf1978e84c17e0b320827697a13a6cba4fe656001269079be7d3
   mutex_m (0.3.0) sha256=cfcb04ac16b69c4813777022fdceda24e9f798e48092a2b817eb4c0a782b0751
   nokogiri (1.19.4-x86_64-linux-gnu) sha256=379fae440b28915e3f19d752ce2dcf8465ed2b2fbefd2a7ca0dd497bc981a06a
-  nomono (1.0.6) sha256=93f9f5e113f641f942e84755c1e7b9bd6d375fa31ed6205da1b9ad0276b9b3a0
+  nomono (1.0.7) sha256=8ed5cdba4ec39fdfc604c73c80c8dbb5bcdc6d20cac92480cb490ccb0e12f9cf
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2
   ostruct (0.6.3) sha256=95a2ed4a4bd1d190784e666b47b2d3f078e4a9efda2fccf18f84ddc6538ed912
   parallel (1.28.0) sha256=33e6de1484baf2524792d178b0913fc8eb94c628d6cfe45599ad4458c638c970
