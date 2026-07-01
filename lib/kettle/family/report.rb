@@ -5,6 +5,26 @@ require "json"
 module Kettle
   module Family
     class Report
+      MEMBER_RESULT_COMMANDS = %w[
+        add-changelog
+        bex
+        bump-version
+        bup
+        bupb
+        check
+        docs
+        gha-sha-pins
+        install
+        lint
+        pull
+        push
+        release
+        release-state
+        template
+        test
+        up
+      ].freeze
+
       attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode
 
       def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [])
@@ -36,6 +56,7 @@ module Kettle
           "release_mode" => release_mode,
           "command" => command,
           "results" => results.map(&:to_h),
+          "summary" => summary,
           "resume_hint" => resume_hint
         }
       end
@@ -61,11 +82,12 @@ module Kettle
         end
         append_release_waves(lines)
         append_results(lines)
+        append_summary(lines)
         lines.join("\n")
       end
 
       def success?
-        results.all?(&:ok?)
+        results.all?(&:ok?) && summary_pending.empty?
       end
 
       private
@@ -88,6 +110,32 @@ module Kettle
         append_template_summary(lines) if command == "template"
       end
 
+      def append_summary(lines)
+        data = summary
+        lines << "summary:"
+        lines << "  outcome: #{data.fetch("outcome")}"
+        lines << "  selected: #{data.fetch("selected_count")}"
+        lines << "  results: #{data.fetch("result_count")}"
+        lines << "  succeeded: #{summary_list(data.fetch("succeeded"))}"
+        lines << "  skipped: #{summary_list(data.fetch("skipped"))}"
+        lines << "  failed: #{summary_list(data.fetch("failed").map { |entry| summary_entry(entry) })}"
+        lines << "  pending: #{summary_list(data.fetch("pending").map { |entry| summary_entry(entry) })}"
+        lines << "  resume: #{data.fetch("resume_hint")}" if data.fetch("resume_hint")
+      end
+
+      def summary
+        {
+          "outcome" => success? ? "success" : "failure",
+          "selected_count" => selected_members.length,
+          "result_count" => visible_results.length,
+          "succeeded" => summary_succeeded,
+          "skipped" => summary_skipped,
+          "failed" => summary_failed,
+          "pending" => summary_pending,
+          "resume_hint" => resume_hint
+        }
+      end
+
       def append_release_waves(lines)
         wave_results = results.select { |result| release_wave_result?(result) }
         return if wave_results.empty?
@@ -100,6 +148,10 @@ module Kettle
 
       def release_wave_result?(result)
         result.phase == "release_wave"
+      end
+
+      def visible_results
+        results.reject { |result| release_wave_result?(result) }
       end
 
       def append_indented_output(lines, output)
@@ -144,6 +196,85 @@ module Kettle
         return "ok" if result.success
 
         "failed"
+      end
+
+      def member_result_command?
+        MEMBER_RESULT_COMMANDS.include?(command)
+      end
+
+      def selected_names
+        selected_members.map(&:name)
+      end
+
+      def selected_member_results
+        return {} unless member_result_command?
+
+        visible_results.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |result, memo|
+          next unless selected_names.include?(result.member_name)
+
+          memo[result.member_name] << result
+        end
+      end
+
+      def summary_succeeded
+        selected_member_results.filter_map do |member_name, member_results|
+          next if member_results.empty?
+          next if member_results.any? { |result| !result.ok? }
+          next if member_results.all?(&:skipped)
+
+          member_name
+        end
+      end
+
+      def summary_skipped
+        selected_member_results.filter_map do |member_name, member_results|
+          next if member_results.empty?
+          next unless member_results.all?(&:skipped)
+
+          member_name
+        end
+      end
+
+      def summary_failed
+        visible_results.reject(&:ok?).map do |result|
+          {
+            "member" => result.member_name,
+            "phase" => result.phase,
+            "reason" => result.reason || "command failed"
+          }
+        end
+      end
+
+      def summary_pending
+        return [] unless member_result_command?
+        return [] if visible_results.empty?
+
+        ran = selected_member_results.keys
+        reason = pending_reason
+        (selected_names - ran).map do |member_name|
+          {
+            "member" => member_name,
+            "phase" => command,
+            "reason" => reason
+          }
+        end
+      end
+
+      def pending_reason
+        if visible_results.any? { |result| !result.ok? }
+          "not run after earlier failure"
+        else
+          "no command result recorded"
+        end
+      end
+
+      def summary_list(values)
+        values.empty? ? "none" : values.join(", ")
+      end
+
+      def summary_entry(entry)
+        reason = entry.fetch("reason")
+        "#{entry.fetch("member")} #{entry.fetch("phase")} (#{reason})"
       end
 
       def append_metadata_results(lines)

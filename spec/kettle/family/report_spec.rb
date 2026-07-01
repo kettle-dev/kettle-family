@@ -1,6 +1,26 @@
 # frozen_string_literal: true
 
 RSpec.describe Kettle::Family::Report do
+  def member(name)
+    Kettle::Family::Member.new(name: name, root: "/repo/#{name}", gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: [])
+  end
+
+  def result(member_name, phase: "release_publish", success: true, skipped: false, reason: nil)
+    Kettle::Family::CommandResult.new(
+      member_name,
+      phase,
+      ["release"],
+      "/repo/#{member_name}",
+      success ? 0 : 1,
+      success,
+      "",
+      "",
+      1.0,
+      skipped,
+      reason
+    )
+  end
+
   it "prints the loaded kettle-family version in text reports" do
     report = described_class.new(
       family_name: "rubocop-lts",
@@ -140,5 +160,51 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_text).to include("resume: kettle-family release --execute --publish")
     expect(report.to_text).not_to include("--start-at rubocop-ruby3_2")
     expect(report.to_h.fetch("resume_hint")).to eq("kettle-family release --execute --publish")
+  end
+
+  it "renders a final summary for successful commands" do
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [member("alpha")],
+      selected_members: [member("alpha")],
+      config_path: nil,
+      command: "test",
+      results: [result("alpha", phase: "test")]
+    )
+
+    expect(report.to_text).to include("summary:")
+    expect(report.to_text).to include("outcome: success")
+    expect(report.to_text).to include("succeeded: alpha")
+    expect(report.to_h.fetch("summary").fetch("outcome")).to eq("success")
+  end
+
+  it "renders failed and pending members in the final summary" do
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [member("alpha"), member("beta"), member("gamma")],
+      selected_members: [member("alpha"), member("beta"), member("gamma")],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [
+        result("alpha", phase: "release_publish", success: false, reason: "Workflow failed"),
+        result("beta", phase: "release_publish")
+      ]
+    )
+
+    text = report.to_text
+    summary = report.to_h.fetch("summary")
+
+    expect(report).not_to be_success
+    expect(text).to include("outcome: failure")
+    expect(text).to include("succeeded: beta")
+    expect(text).to include("failed: alpha release_publish (Workflow failed)")
+    expect(text).to include("pending: gamma release (not run after earlier failure)")
+    expect(text).to include("resume: kettle-family release --execute --publish")
+    expect(summary.fetch("pending")).to eq([
+      {"member" => "gamma", "phase" => "release", "reason" => "not run after earlier failure"}
+    ])
   end
 end

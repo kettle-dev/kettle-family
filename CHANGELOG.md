@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family` reports a final summary for every command, including selected
+  release members left pending when parallel release execution stops after a
+  failure.
+
 ### Security
 
 ## [0.1.32] - 2026-07-01
