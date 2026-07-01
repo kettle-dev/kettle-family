@@ -533,8 +533,7 @@ RSpec.describe Kettle::Family::Workflow do
       end
     end.new
 
-    allow(workflow).to receive(:release_otp_coordinator).and_return(coordinator)
-    allow(workflow).to receive(:truffleruby?).and_return(false)
+    allow(workflow).to receive_messages(release_otp_coordinator: coordinator, truffleruby?: false)
     allow(workflow).to receive(:release_results_for_member) do |member, runner:|
       [
         Kettle::Family::CommandResult.new(
