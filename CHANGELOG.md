@@ -22,6 +22,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.2.0] - 2026-07-02
+
+- TAG: [v0.2.0][0.2.0t]
+- COVERAGE: 95.56% -- 2173/2274 lines in 21 files
+- BRANCH COVERAGE: 76.50% -- 700/915 branches in 21 files
+- 29.96% documented
+
+### Changed
+
 - `kettle-family bump-version` now delegates per-member version file,
   gemspec-version, and relative bump target handling to `kettle-dev`'s shared
   `kettle-bump` engine, leaving `kettle-family` responsible only for
@@ -30,17 +47,11 @@ Please file a bug if you notice a violation of semantic versioning.
   version bump engine directly.
 - Runtime dependency `kettle-dev` now requires 2.3.0 or newer.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - `kettle-family bump-version` now prefers `lib/<gem_name>/version.rb` over
   alphabetically earlier compatibility namespace version files when discovering
   each member's editable version file.
-
-### Security
 
 ## [0.1.32] - 2026-07-01
 
@@ -584,7 +595,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.1.32...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/kettle-dev/kettle-family/compare/v0.1.32...v0.2.0
+[0.2.0t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.0
 [0.1.32]: https://github.com/kettle-dev/kettle-family/compare/v0.1.31...v0.1.32
 [0.1.32t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.1.32
 [0.1.31]: https://github.com/kettle-dev/kettle-family/compare/v0.1.30...v0.1.31
