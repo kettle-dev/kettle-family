@@ -276,6 +276,44 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
+  it "fails before templating when member target branch checkout would be blocked by local changes" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_template_config(root: member.root, release_target_branches: %w[r1 r2])
+    initialize_git_repo(member.root, branches: %w[r1 r2])
+    File.write(File.join(member.root, "Gemfile.lock"), "dirty\n")
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results.map(&:phase)).to eq(["release_checkout_preflight"])
+    expect(results.first).not_to be_ok
+    expect(results.first.member_name).to eq("alpha")
+    expect(results.first.stderr).to include("local changes would block release target branch checkout")
+    expect(results.first.stderr).to include("Gemfile.lock")
+  end
+
+  it "allows dirty member target branch checkout preflight when explicitly requested" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_template_config(root: member.root, release_target_branches: %w[r1 r2])
+    initialize_git_repo(member.root, branches: %w[r1 r2])
+    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      execute: true,
+      allow_dirty: true
+    ).results
+
+    expect(results.map(&:phase)).to include("release_checkout")
+    expect(results.map(&:phase)).not_to include("release_checkout_preflight")
+    expect(results).to all(be_ok)
+  end
+
   it "bootstraps legacy members without bundle exec when templating wiring is absent" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -285,7 +323,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem install --quiet --json"])
   end
 
-  def write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil)
+  def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil)
     config = {
       "template" => {
         "command" => command,
@@ -297,7 +335,7 @@ RSpec.describe Kettle::Family::Workflow do
     }
     config["release"] = {"target_branches" => release_target_branches} if release_target_branches
     File.write(
-      File.join(@tmpdir, ".kettle-family.yml"),
+      File.join(root, ".kettle-family.yml"),
       YAML.dump(config)
     )
   end
@@ -306,5 +344,19 @@ RSpec.describe Kettle::Family::Workflow do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: File.join(root, "#{name}.gemspec"), version: "1.0.0", dependencies: [])
+  end
+
+  def initialize_git_repo(root, branches:)
+    run_git(root, "init", "--quiet")
+    run_git(root, "config", "user.email", "kettle-family@example.test")
+    run_git(root, "config", "user.name", "Kettle Family")
+    File.write(File.join(root, "Gemfile.lock"), "clean\n")
+    run_git(root, "add", ".")
+    run_git(root, "commit", "--quiet", "-m", "Initial")
+    branches.each { |branch| run_git(root, "branch", branch) }
+  end
+
+  def run_git(root, *args)
+    system("git", *args, chdir: root, exception: true)
   end
 end

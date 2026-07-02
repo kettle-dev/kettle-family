@@ -73,6 +73,9 @@ module Kettle
       end
 
       def results
+        preflight = branch_checkout_dirty_preflight_results
+        return preflight unless preflight.empty?
+
         prompt_for_gem_signing_password if command == "release" && execute && release_signing_prompt_required?
         return branch_target_results unless config.release_target_branches.empty?
         return member_local_branch_target_results if member_local_branch_targets?
@@ -202,6 +205,52 @@ module Kettle
           end
           break memo unless memo.last&.ok?
         end
+      end
+
+      def branch_checkout_dirty_preflight_results
+        return [] unless execute
+        return [] if allow_dirty
+        return [] unless branch_checkout_preflight_required?
+
+        branch_checkout_preflight_members.filter_map do |member|
+          dirty_paths = GitStatus.dirty_paths(member.root)
+          next if dirty_paths.empty?
+
+          branch_checkout_dirty_result(member, dirty_paths)
+        end
+      end
+
+      def branch_checkout_preflight_required?
+        !config.release_target_branches.empty? || member_local_branch_targets?
+      end
+
+      def branch_checkout_preflight_members
+        members_with_targets = members.select { |member| member_local_release_config(member) }
+        members_with_targets = [family_member] if !config.release_target_branches.empty?
+        members_with_targets
+      end
+
+      def branch_checkout_dirty_result(member, dirty_paths)
+        CommandResult.new(
+          member_name: member.name,
+          phase: "release_checkout_preflight",
+          command: ["git", "status", "--short"],
+          workdir: member.root,
+          status: 1,
+          success: false,
+          stdout: "",
+          stderr: branch_checkout_dirty_message(dirty_paths),
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: "dirty worktree blocks release target branch checkout"
+        )
+      end
+
+      def branch_checkout_dirty_message(dirty_paths)
+        [
+          "local changes would block release target branch checkout; commit or stash them before running kettle-family",
+          *dirty_paths
+        ].join("\n")
       end
 
       def release_member_local_branch_target_results

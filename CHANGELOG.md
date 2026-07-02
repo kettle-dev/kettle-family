@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Branch-target workflows now fail before doing member work when a dirty
+  worktree would block `git checkout` for configured release target branches.
+
 ### Security
 
 ## [0.2.1] - 2026-07-02
