@@ -49,6 +49,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family release --execute --publish` now skips already-published
+  members whose release-state reports no pending release, even when current
+  `HEAD` no longer matches the release tag.
 - `kettle-family bump-version` now prefers `lib/<gem_name>/version.rb` over
   alphabetically earlier compatibility namespace version files when discovering
   each member's editable version file.
