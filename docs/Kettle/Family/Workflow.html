@@ -344,12 +344,18 @@
 78
 79
 80
-81</pre>
+81
+82
+83
+84</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 75</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
+  <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>=</span> <span class='id identifier rubyid_branch_checkout_dirty_preflight_results'>branch_checkout_dirty_preflight_results</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_preflight'>preflight</span> <span class='kw'>unless</span> <span class='id identifier rubyid_preflight'>preflight</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
   <span class='id identifier rubyid_prompt_for_gem_signing_password'>prompt_for_gem_signing_password</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_execute'>execute</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_release_signing_prompt_required?'>release_signing_prompt_required?</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_target_results'>branch_target_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_member_local_branch_target_results'>member_local_branch_target_results</span> <span class='kw'>if</span> <span class='id identifier rubyid_member_local_branch_targets?'>member_local_branch_targets?</span>
@@ -366,7 +372,7 @@
 </div>
 
       <div id="footer">
-  Generated on Tue Jun 30 01:46:36 2026 by
+  Generated on Thu Jul  2 16:38:07 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
