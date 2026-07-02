@@ -28,6 +28,7 @@ Please file a bug if you notice a violation of semantic versioning.
   family-specific dependency pin updates and reporting.
 - `kettle-dev` is now a runtime dependency because `kettle-family` reuses its
   version bump engine directly.
+- Runtime dependency `kettle-dev` now requires 2.3.0 or newer.
 
 ### Deprecated
 
