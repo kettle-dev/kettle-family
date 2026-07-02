@@ -70,7 +70,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.2.0...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.2.1...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
 
@@ -83,6 +83,17 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="fixed">Fixed</h3>
 
 <h3 id="security">Security</h3>
+
+<h2 id="021---2026-07-02">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v0.2.0...v0.2.1">0.2.1</a> - 2026-07-02</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.1">v0.2.1</a>
+</li>
+  <li>COVERAGE: 95.45% – 2180/2284 lines in 21 files</li>
+  <li>BRANCH COVERAGE: 76.39% – 702/919 branches in 21 files</li>
+  <li>29.96% documented</li>
+</ul>
 
 <h2 id="020---2026-07-02">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v0.1.32...v0.2.0">0.2.0</a> - 2026-07-02</h2>
@@ -112,6 +123,10 @@ version bump engine directly.</li>
 <h3 id="fixed-1">Fixed</h3>
 
 <ul>
+  <li>
+<code>kettle-family release --execute --publish</code> now skips already-published<br>
+members whose release-state reports no pending release, even when current<br>
+<code>HEAD</code> no longer matches the release tag.</li>
   <li>
 <code>kettle-family bump-version</code> now prefers <code>lib/&lt;gem_name&gt;/version.rb</code> over<br>
 alphabetically earlier compatibility namespace version files when discovering<br>
@@ -901,7 +916,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Thu Jul  2 00:34:30 2026 by
+  Generated on Thu Jul  2 02:02:58 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>
