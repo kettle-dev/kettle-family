@@ -28,6 +28,7 @@ module Kettle
         return if branches.nil? || branches.empty?
 
         data = config.data.merge(
+          "members" => config.data.fetch("members", {}).merge("roots" => ["."]),
           "release" => config.data.fetch("release", {}).merge("target_branches" => branches)
         )
         Config.new(root: member.root, path: config.path, data: data)

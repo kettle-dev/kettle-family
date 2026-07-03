@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Root-configured member branch target commands now rediscover the checked-out
+  member repository before version bumping, preventing old release lines from
+  being bumped to the current branch's version.
+
 ### Security
 
 ## [0.2.2] - 2026-07-02

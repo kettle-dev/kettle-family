@@ -96,14 +96,26 @@ module Kettle
       def load_gemspec(path)
         # Some legacy gemspecs use root-relative Kernel.load calls, and RubyGems
         # evaluates gemspecs relative to the current process directory.
+        # Gem::Specification.load caches by path, which is wrong for branch-stack
+        # workflows that checkout different contents at the same path.
         # rubocop:disable ThreadSafety/DirChdir
-        spec = Dir.chdir(File.dirname(path)) { Gem::Specification.load(path) }
+        spec = Dir.chdir(File.dirname(path)) { eval_gemspec(path) }
         # rubocop:enable ThreadSafety/DirChdir
         raise Error, "could not load gemspec #{path}" unless spec
 
         spec
       rescue => error
         raise Error, "could not load gemspec #{path}: #{error.message}"
+      end
+
+      def eval_gemspec(path)
+        return unless File.file?(path)
+
+        code = Gem.open_file(path, "r:UTF-8:-", &:read)
+        spec = eval(code, binding, path) # rubocop:disable Security/Eval -- Mirrors RubyGems gemspec loading without its path cache.
+        return spec if spec.is_a?(Gem::Specification)
+
+        raise Error, "#{path} is not a Gem::Specification"
       end
 
       def excluded_gemspec?(path)

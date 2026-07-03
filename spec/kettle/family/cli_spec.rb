@@ -629,6 +629,47 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("alpha install").size).to eq(2)
   end
 
+  it "patch-bumps root-configured member target branches from each checked-out branch version", :prism do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        mode: sibling_repos
+      members:
+        roots:
+          - alpha
+      release:
+        member_target_branches:
+          alpha:
+            - r1
+            - r2
+    YAML
+    alpha_root = File.join(@tmpdir, "alpha")
+    initialize_git_repo(alpha_root, branches: %w[r1 r2])
+    set_gem_version(alpha_root, "alpha", "10.0.0")
+    run_git(alpha_root, "add", ".")
+    run_git(alpha_root, "commit", "--quiet", "-m", "Set main version")
+    run_git(alpha_root, "switch", "--quiet", "r1")
+    set_gem_version(alpha_root, "alpha", "0.1.0")
+    run_git(alpha_root, "add", ".")
+    run_git(alpha_root, "commit", "--quiet", "-m", "Set r1 version")
+    run_git(alpha_root, "switch", "--quiet", "r2")
+    set_gem_version(alpha_root, "alpha", "2.3.4")
+    run_git(alpha_root, "add", ".")
+    run_git(alpha_root, "commit", "--quiet", "-m", "Set r2 version")
+    run_git(alpha_root, "switch", "--quiet", "main")
+    out = StringIO.new
+
+    status = described_class.call(["bump-version", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("0.1.0 -> 0.1.1")
+    expect(out.string).to include("2.3.4 -> 2.3.5")
+    expect(out.string).not_to include("10.0.0 -> 10.0.1")
+    expect(run_git(alpha_root, "show", "r1:lib/alpha/version.rb")).to include('VERSION = "0.1.1"')
+    expect(run_git(alpha_root, "show", "r2:lib/alpha/version.rb")).to include('VERSION = "2.3.5"')
+    expect(run_git(alpha_root, "show", "main:lib/alpha/version.rb")).to include('VERSION = "10.0.0"')
+  end
+
   it "plans local installs from member-local release target config on another branch" do
     write_gem("alpha")
     initialize_git_repo(@tmpdir)
@@ -1008,6 +1049,20 @@ RSpec.describe Kettle::Family::CLI do
         spec.version = "1.0.0"
         #{dependencies.map { |dependency| %(spec.add_dependency "#{dependency}") }.join("\n")}
         #{metadata_lines.join("\n")}
+      end
+    RUBY
+  end
+
+  def set_gem_version(root, name, version)
+    File.write(File.join(root, "lib", name, "version.rb"), <<~RUBY)
+      module #{name.capitalize}
+        VERSION = "#{version}"
+      end
+    RUBY
+    File.write(File.join(root, "#{name}.gemspec"), <<~RUBY)
+      Gem::Specification.new do |spec|
+        spec.name = "#{name}"
+        spec.version = "#{version}"
       end
     RUBY
   end
