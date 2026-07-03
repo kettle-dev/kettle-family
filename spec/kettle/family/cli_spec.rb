@@ -645,9 +645,10 @@ RSpec.describe Kettle::Family::CLI do
     YAML
     alpha_root = File.join(@tmpdir, "alpha")
     initialize_git_repo(alpha_root, branches: %w[r1 r2])
+    default_branch = run_git(alpha_root, "branch", "--show-current").strip
     set_gem_version(alpha_root, "alpha", "10.0.0")
     run_git(alpha_root, "add", ".")
-    run_git(alpha_root, "commit", "--quiet", "-m", "Set main version")
+    run_git(alpha_root, "commit", "--quiet", "-m", "Set default branch version")
     run_git(alpha_root, "switch", "--quiet", "r1")
     set_gem_version(alpha_root, "alpha", "0.1.0")
     run_git(alpha_root, "add", ".")
@@ -656,7 +657,7 @@ RSpec.describe Kettle::Family::CLI do
     set_gem_version(alpha_root, "alpha", "2.3.4")
     run_git(alpha_root, "add", ".")
     run_git(alpha_root, "commit", "--quiet", "-m", "Set r2 version")
-    run_git(alpha_root, "switch", "--quiet", "main")
+    run_git(alpha_root, "switch", "--quiet", default_branch)
     out = StringIO.new
 
     status = described_class.call(["bump-version", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
@@ -667,7 +668,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).not_to include("10.0.0 -> 10.0.1")
     expect(run_git(alpha_root, "show", "r1:lib/alpha/version.rb")).to include('VERSION = "0.1.1"')
     expect(run_git(alpha_root, "show", "r2:lib/alpha/version.rb")).to include('VERSION = "2.3.5"')
-    expect(run_git(alpha_root, "show", "main:lib/alpha/version.rb")).to include('VERSION = "10.0.0"')
+    expect(run_git(alpha_root, "show", "#{default_branch}:lib/alpha/version.rb")).to include('VERSION = "10.0.0"')
   end
 
   it "plans local installs from member-local release target config on another branch" do
