@@ -422,6 +422,7 @@ RSpec.describe Kettle::Family::CLI do
         "DEBUG_COMPACT_INDEX",
         "-u",
         "MOLINILLO_DEBUG",
+        "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV=#{@tmpdir}",
         "K_JEM_TEMPLATING=true",
         "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
         "KETTLE_JEM_QUIET=true",

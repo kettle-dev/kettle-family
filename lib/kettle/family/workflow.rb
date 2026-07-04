@@ -493,6 +493,8 @@ module Kettle
         return unless auto_dependency_floors
         return if dependent_members.empty?
 
+        require_relative "dependency_floor"
+
         floor_results = DependencyFloor.new(
           released_members: released_members,
           dependent_members: dependent_members,
@@ -630,7 +632,7 @@ module Kettle
       end
 
       def base_release_env
-        env = config.release_env.dup
+        env = config.family_local_path_env.merge(config.release_env)
         env.merge!(TEMPLATE_QUIET_ENV) unless debug
         env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures
         env
@@ -825,6 +827,7 @@ module Kettle
 
       def workflow_env
         {}.tap do |env|
+          env.merge!(config.family_local_path_env)
           if command == "template"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
@@ -904,12 +907,12 @@ module Kettle
 
       def release_lockfile_env
         base_release_env
-          .merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
           .merge(env_overrides)
+          .merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
       end
 
       def release_allowed_local_path_roots
-        env_overrides.filter_map do |key, value|
+        config.family_local_path_env.merge(env_overrides).filter_map do |key, value|
           next unless key.end_with?("_LOCAL", "_DEV")
           next if value.to_s.empty? || value.to_s.casecmp("false").zero?
 

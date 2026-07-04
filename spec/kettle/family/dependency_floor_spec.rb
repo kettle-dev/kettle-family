@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "tmpdir"
+require "kettle/family/dependency_floor"
 
 RSpec.describe Kettle::Family::DependencyFloor, :prism do
   around do |example|

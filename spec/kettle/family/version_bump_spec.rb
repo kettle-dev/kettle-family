@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "tmpdir"
+require "kettle/family/version_bump"
 
 RSpec.describe Kettle::Family::VersionBump, :prism do
   around do |example|

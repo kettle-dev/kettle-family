@@ -40,6 +40,26 @@ module Kettle
         fetch_path("family", "name") || File.basename(root)
       end
 
+      def family_local_path_env_name
+        configured = fetch_path("family", "local_path_env")
+        return nil if configured == false
+        return configured.to_s unless configured.to_s.empty?
+
+        "#{family_name.gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV"
+      end
+
+      def family_local_path_root
+        configured = fetch_path("family", "local_path_root")
+        configured ? expand_config_relative_path(configured) : root
+      end
+
+      def family_local_path_env
+        name = family_local_path_env_name
+        return {} unless name
+
+        {name => family_local_path_root}
+      end
+
       def family_mode
         fetch_path("family", "mode") || "monorepo"
       end
@@ -250,7 +270,7 @@ module Kettle
       private
 
       def default_release_disable_local_path_env
-        %w[
+        local_envs = %w[
           K_JEM_TEMPLATING
           SMORG_RB_DEV
           TSLP_DEV
@@ -260,6 +280,7 @@ module Kettle
           GALTZO_FLOSS_DEV
           UR_BRAIN_DEV
         ]
+        [family_local_path_env_name, *local_envs].compact
       end
 
       def expand_config_relative_path(value)

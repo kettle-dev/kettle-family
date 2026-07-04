@@ -16,6 +16,9 @@ RSpec.describe Kettle::Family::Config do
 
     expect(config.path).to be_nil
     expect(config.family_name).to eq(File.basename(@tmpdir))
+    expect(config.family_local_path_env_name).to eq("#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV")
+    expect(config.family_local_path_root).to eq(@tmpdir)
+    expect(config.family_local_path_env).to eq(config.family_local_path_env_name => @tmpdir)
     expect(config.members_root).to eq(@tmpdir)
     expect(config.discover_members?).to be(true)
     expect(config.member_exclude_patterns).to eq([
@@ -30,6 +33,33 @@ RSpec.describe Kettle::Family::Config do
     ])
     expect(config.order_mode).to eq("dependency")
     expect(config.order_hints).to be_empty
+  end
+
+  it "loads configured family local path environment" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        name: ruby-oauth
+        local_path_env: RUBY_OAUTH_DEV
+        local_path_root: families/oauth
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.family_local_path_env_name).to eq("RUBY_OAUTH_DEV")
+    expect(config.family_local_path_root).to eq(File.join(@tmpdir, "families", "oauth"))
+    expect(config.family_local_path_env).to eq("RUBY_OAUTH_DEV" => File.join(@tmpdir, "families", "oauth"))
+  end
+
+  it "allows family local path environment injection to be disabled" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        local_path_env: false
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.family_local_path_env_name).to be_nil
+    expect(config.family_local_path_env).to eq({})
   end
 
   it "loads configured values and stringifies keys" do
@@ -186,7 +216,7 @@ RSpec.describe Kettle::Family::Config do
 
     expect(config.release_normalize_lockfiles?).to be(true)
     expect(config.release_normalize_lockfiles_command).to eq(%w[bundle update nomono --bundler])
-    expect(config.release_disable_local_path_env).to include("SMORG_RB_DEV", "K_JEM_TEMPLATING")
+    expect(config.release_disable_local_path_env).to include(config.family_local_path_env_name, "SMORG_RB_DEV", "K_JEM_TEMPLATING")
   end
 
   it "allows release lockfile normalization overrides" do

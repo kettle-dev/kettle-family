@@ -126,6 +126,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     release_command = results.find { |result| result.phase == "release_build" }.command
     expect(release_command).to include(
+      "#{family_local_env_name}=#{@tmpdir}",
       "-u",
       "DEBUG",
       "BUNDLE_QUIET=true",
@@ -267,6 +268,7 @@ RSpec.describe Kettle::Family::Workflow do
       "DEBUG_COMPACT_INDEX",
       "-u",
       "MOLINILLO_DEBUG",
+      "#{family_local_env_name}=false",
       "KETTLE_JEM_QUIET=true",
       "KETTLE_JEM_DEBUG=false",
       "KETTLE_DEV_DEBUG=false",
@@ -293,7 +295,7 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
-  it "lets explicit release environment overrides win during lockfile normalization" do
+  it "forces configured local path envs off during lockfile normalization" do
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],
       template: {
@@ -311,15 +313,18 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       env_overrides: {
         "RUBOCOP_LTS_LOCAL" => "/workspace/rubocop-lts",
-        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems"
+        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems",
+        family_local_env_name => "/workspace/family"
       }
     ).results
 
     expect(results.first.command).to include(
       "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
-      "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems"
+      "#{family_local_env_name}=false",
+      "SMORG_RB_DEV=false"
     )
-    expect(results.first.command).not_to include("SMORG_RB_DEV=false")
+    expect(results.first.command).not_to include("#{family_local_env_name}=/workspace/family")
+    expect(results.first.command).not_to include("SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems")
     expect(results.first.command).to include("KETTLE_RB_DEV=false")
   end
 
@@ -729,6 +734,10 @@ RSpec.describe Kettle::Family::Workflow do
     gemspec = File.join(member.root, "#{name}.gemspec")
     File.write(gemspec, "Gem::Specification.new do |spec|\n  spec.signing_key = 'key.pem'\nend\n")
     Kettle::Family::Member.new(name: name, root: member.root, gemspec_path: gemspec, version_file: nil, version: member.version, dependencies: [])
+  end
+
+  def family_local_env_name
+    "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV"
   end
 
   def member_with_version(name, version)

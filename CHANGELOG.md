@@ -20,7 +20,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Family workflows now inject a derived local family path environment variable
+  by default, such as `RUBY_OAUTH_DEV=/path/to/ruby-oauth`, so in-flight family
+  members can resolve unreleased sibling gems during orchestration.
+
 ### Changed
+
+- `require "kettle/family"` no longer loads `version_gem` by default; require
+  `kettle/family/version_gem` for the optional `VersionGem::Basic` extension.
+- Release lockfile normalization now forces configured local path environment
+  variables off after caller overrides so release locks are cleaned
+  deterministically.
 
 ### Deprecated
 

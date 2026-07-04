@@ -679,6 +679,8 @@ module Kettle
       end
 
       def bump_version_results(members:, options:)
+        require_relative "version_bump"
+
         results = VersionBump.new(
           members: members,
           target_version: options[:target_version],

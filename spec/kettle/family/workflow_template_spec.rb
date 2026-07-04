@@ -105,6 +105,7 @@ RSpec.describe Kettle::Family::Workflow do
         "DEBUG_COMPACT_INDEX",
         "-u",
         "MOLINILLO_DEBUG",
+        "#{family_local_env_name}=#{@tmpdir}",
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
         "K_JEM_TEMPLATING=true",
@@ -133,6 +134,7 @@ RSpec.describe Kettle::Family::Workflow do
     [results.fetch(0), results.fetch(2)].each do |result|
       expect(result.command).to include(
         "K_JEM_TEMPLATING=true",
+        "#{family_local_env_name}=#{@tmpdir}",
         "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
         "BUNDLE_QUIET=true"
@@ -338,6 +340,10 @@ RSpec.describe Kettle::Family::Workflow do
       File.join(root, ".kettle-family.yml"),
       YAML.dump(config)
     )
+  end
+
+  def family_local_env_name
+    "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV"
   end
 
   def member_at(name)
