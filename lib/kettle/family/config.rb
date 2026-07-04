@@ -212,6 +212,10 @@ module Kettle
         fetch_path("release", "jobs")
       end
 
+      def release_auto_dependency_floors?
+        fetch_path("release", "auto_dependency_floors") != false
+      end
+
       def release_family_changelog?
         fetch_path("release", "family_changelog", "enabled") == true
       end

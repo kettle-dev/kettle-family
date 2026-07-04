@@ -590,6 +590,33 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:parallel_release_members?, members)).to be(false)
   end
 
+  it "plans family dependency floor updates between sequential releases" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+
+    results = described_class.new(command: "release", config: config, members: [alpha, beta]).results
+
+    expect(results.map(&:phase)).to eq(%w[
+      check release_changelog release_build dependency_floor
+      check release_changelog release_build
+    ])
+    expect(results.find { |result| result.phase == "dependency_floor" }.stdout).to include("would update")
+    expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.0.0"')
+  end
+
+  it "skips family dependency floor updates when disabled" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+
+    results = described_class.new(command: "release", config: config, members: [alpha, beta], auto_dependency_floors: false).results
+
+    expect(results.map(&:phase)).not_to include("dependency_floor")
+  end
+
   it "stops assigning queued parallel release members after the first failure" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     members = %w[alpha beta gamma].map { |name| ready_member(name) }
@@ -679,6 +706,22 @@ RSpec.describe Kettle::Family::Workflow do
       FileUtils.chmod("u+x", full_path)
     end
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: dependencies)
+  end
+
+  def ready_member_with_gemspec(name, version: "1.0.0", dependencies: {})
+    member = ready_member(name, dependencies: dependencies.keys)
+    dependency_lines = dependencies.map do |dependency, requirements|
+      %(  spec.add_dependency #{dependency.inspect}, #{Array(requirements).map(&:inspect).join(", ")})
+    end
+    gemspec = File.join(member.root, "#{name}.gemspec")
+    File.write(gemspec, <<~RUBY)
+      Gem::Specification.new do |spec|
+        spec.name = #{name.inspect}
+        spec.version = #{version.inspect}
+      #{dependency_lines.join("\n")}
+      end
+    RUBY
+    Kettle::Family::Member.new(name: name, root: member.root, gemspec_path: gemspec, version_file: nil, version: version, dependencies: dependencies.keys)
   end
 
   def signed_member(name)

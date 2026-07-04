@@ -961,6 +961,17 @@ RSpec.describe Kettle::Family::CLI do
     expect(Kettle::Family::Workflow).to have_received(:new).with(hash_including(accept: false))
   end
 
+  it "passes release dependency floor opt-out through release workflows" do
+    write_ready_gem("alpha")
+    workflow = instance_double(Kettle::Family::Workflow, results: [])
+    allow(Kettle::Family::Workflow).to receive(:new).and_return(workflow)
+
+    status = described_class.call(["release", "--root", @tmpdir, "--no-auto-floors"], out: StringIO.new, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(Kettle::Family::Workflow).to have_received(:new).with(hash_including(auto_dependency_floors: false))
+  end
+
   it "prints a release-state table" do
     write_gem("alpha")
     result = Kettle::Family::ReleaseStateResult.new(

@@ -44,7 +44,7 @@ module Kettle
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil)
         @command = command
         @config = config
         @members = members
@@ -59,6 +59,7 @@ module Kettle
         @skip_steps = skip_steps
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
+        @auto_dependency_floors = auto_dependency_floors.nil? ? config.release_auto_dependency_floors? : auto_dependency_floors
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
         @gha_sha_pins_check = gha_sha_pins_check
         @env_overrides = env_overrides
@@ -85,7 +86,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -286,6 +287,7 @@ module Kettle
           skip_steps: skip_steps,
           local_ci: local_ci,
           continue_ci_failures: continue_ci_failures,
+          auto_dependency_floors: auto_dependency_floors,
           gha_sha_pins_upgrade: gha_sha_pins_upgrade,
           gha_sha_pins_check: gha_sha_pins_check,
           env_overrides: env_overrides,
@@ -315,17 +317,27 @@ module Kettle
         release_members.each_with_object(results) do |member, memo|
           memo.concat(release_results_for_member(member, runner: runner))
           break memo unless memo.last.ok?
+
+          remaining_members = release_members.drop(release_members.index(member) + 1)
+          append_dependency_floor_results(released_members: [member], dependent_members: remaining_members, runner: runner, memo: memo)
+          break memo unless memo.last&.ok?
         end
       end
 
       def parallel_release_member_results(release_members, initial_results)
         results = initial_results.dup
         waves = release_waves(release_members)
+        completed_members = []
         waves.each_with_index do |wave, index|
           results << release_wave_result(wave, index: index, total: waves.length)
           wave_results = run_release_wave(wave)
           results.concat(wave_results.flatten)
           break unless wave_results.all? { |member_results| member_results.all?(&:ok?) }
+
+          completed_members.concat(wave)
+          remaining_members = release_members - completed_members
+          append_dependency_floor_results(released_members: wave, dependent_members: remaining_members, runner: release_command_runner, memo: results)
+          break unless results.last&.ok?
         end
         results
       end
@@ -475,6 +487,38 @@ module Kettle
 
       def selected_dependencies_for(member, by_name)
         Array(member.dependencies).map(&:to_s).select { |dependency| by_name.key?(dependency) }
+      end
+
+      def append_dependency_floor_results(released_members:, dependent_members:, runner:, memo:)
+        return unless auto_dependency_floors
+        return if dependent_members.empty?
+
+        floor_results = DependencyFloor.new(
+          released_members: released_members,
+          dependent_members: dependent_members,
+          mode: execute ? :execute : :dry_run
+        ).results
+        memo.concat(floor_results)
+        return unless floor_results.any? && floor_results.all?(&:ok?)
+
+        commit_dependency_floor_changes(dependent_members: floor_results.map(&:member_name), runner: runner, memo: memo) if execute && commit
+      end
+
+      def commit_dependency_floor_changes(dependent_members:, runner:, memo:)
+        by_name = members.to_h { |member| [member.name, member] }
+        dependent_members.each do |member_name|
+          member = by_name.fetch(member_name)
+          memo << runner.call(
+            member: member,
+            phase: "commit_dependency_floor",
+            command: [
+              "sh",
+              "-lc",
+              "if ! git diff --quiet -- '*.gemspec'; then git add -- '*.gemspec' && git commit -m '⬆️ Raise family dependency floors'; fi"
+            ]
+          )
+          break unless memo.last.ok?
+        end
       end
 
       def distinct_git_roots?(release_members)

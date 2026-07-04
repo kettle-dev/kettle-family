@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Family releases now raise downstream family dependency floors after each
+  member release by default, with `--no-auto-floors` and
+  `release.auto_dependency_floors: false` opt-outs.
+
 ### Changed
 
 ### Deprecated

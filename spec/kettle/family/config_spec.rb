@@ -154,6 +154,23 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_publish_command).to eq("bundle exec kettle-release")
   end
 
+  it "enables release dependency floor updates by default" do
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_auto_dependency_floors?).to be(true)
+  end
+
+  it "allows release dependency floor updates to be disabled" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        auto_dependency_floors: false
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_auto_dependency_floors?).to be(false)
+  end
+
   it "defaults release lockfile normalization to template normalization" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       template:

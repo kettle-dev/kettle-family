@@ -403,6 +403,9 @@ module Kettle
         option :skip_steps, long: "--skip-steps", value: {type: String, usage: "LIST"}, desc: "Pass skip_steps=LIST through to kettle-release commands"
         option :local_ci, long: "--local-ci", desc: "Pass --local-ci through to kettle-release commands"
         option :continue_ci_failures, long: "--continue-ci-failures", desc: "Set K_RELEASE_CI_CONTINUE=true for release commands"
+        option :no_auto_floors, long: "--no-auto-floors", desc: "Do not raise family dependency floors between member releases" do
+          options[:no_auto_floors] = true
+        end
         option :accept, desc: "Answer yes to confirmation prompts in interactive commands"
         option :no_accept, long: "--no-accept", desc: "Wait for user input at confirmation prompts" do
           options[:accept] = false
@@ -419,6 +422,7 @@ module Kettle
             release_skip_steps: options[:skip_steps],
             release_local_ci: truthy_option?(:local_ci),
             release_continue_ci_failures: truthy_option?(:continue_ci_failures),
+            release_auto_dependency_floors: !truthy_option?(:no_auto_floors),
             accept: !options.key?(:accept) || options[:accept],
             tag: truthy_option?(:tag),
             push: truthy_option?(:push)
@@ -555,6 +559,7 @@ module Kettle
           skip_steps: options[:release_skip_steps],
           local_ci: options[:release_local_ci],
           continue_ci_failures: options[:release_continue_ci_failures],
+          auto_dependency_floors: options[:release_auto_dependency_floors],
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],
           gha_sha_pins_check: options[:check],
           env_overrides: options[:workflow_env],
