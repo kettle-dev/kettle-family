@@ -38,7 +38,7 @@ module Kettle
           stderr: "",
           elapsed_seconds: 0.0,
           skipped: mode != :execute,
-          reason: mode == :execute ? nil : "dry-run; pass --execute to write"
+          reason: (mode == :execute) ? nil : "dry-run; pass --execute to write"
         )
       end
 
@@ -99,7 +99,7 @@ module Kettle
       end
 
       def edit_summary(member:, edits:)
-        verb = mode == :execute ? "updated" : "would update"
+        verb = (mode == :execute) ? "updated" : "would update"
         ["#{verb} #{edits.length} family dependency floor(s) for #{member.name}", *edits.map { |edit| "#{verb} #{edit.fetch(:path)}" }.uniq].join("\n")
       end
 

@@ -20,10 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Family releases now raise downstream family dependency floors after each
-  member release by default, with `--no-auto-floors` and
-  `release.auto_dependency_floors: false` opt-outs.
-
 ### Changed
 
 ### Deprecated
@@ -33,6 +29,19 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [0.2.4] - 2026-07-04
+
+- TAG: [v0.2.4][0.2.4t]
+- COVERAGE: 95.33% -- 2288/2400 lines in 22 files
+- BRANCH COVERAGE: 76.42% -- 752/984 branches in 22 files
+- 30.04% documented
+
+### Added
+
+- Family releases now raise downstream family dependency floors after each
+  member release by default, with `--no-auto-floors` and
+  `release.auto_dependency_floors: false` opt-outs.
 
 ## [0.2.3] - 2026-07-03
 
@@ -634,7 +643,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/kettle-dev/kettle-family/compare/v0.2.3...v0.2.4
+[0.2.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.4
 [0.2.3]: https://github.com/kettle-dev/kettle-family/compare/v0.2.2...v0.2.3
 [0.2.3t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.3
 [0.2.2]: https://github.com/kettle-dev/kettle-family/compare/v0.2.1...v0.2.2
