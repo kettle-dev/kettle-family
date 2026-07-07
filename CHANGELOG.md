@@ -23,6 +23,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Family workflows now inject a derived local family path environment variable
   by default, such as `RUBY_OAUTH_DEV=/path/to/ruby-oauth`, so in-flight family
   members can resolve unreleased sibling gems during orchestration.
+- Family configs now expose `pre_release.image_url_skip_patterns` and pass the
+  active config path to release commands so `kettle-pre-release` can skip
+  project-specific volatile image URLs.
 
 ### Changed
 

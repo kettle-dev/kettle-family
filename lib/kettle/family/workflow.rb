@@ -633,6 +633,7 @@ module Kettle
 
       def base_release_env
         env = config.family_local_path_env.merge(config.release_env)
+        env["KETTLE_FAMILY_CONFIG"] = config.path if config.path
         env.merge!(TEMPLATE_QUIET_ENV) unless debug
         env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures
         env

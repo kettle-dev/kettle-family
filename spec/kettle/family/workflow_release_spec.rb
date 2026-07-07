@@ -127,6 +127,7 @@ RSpec.describe Kettle::Family::Workflow do
     release_command = results.find { |result| result.phase == "release_build" }.command
     expect(release_command).to include(
       "#{family_local_env_name}=#{@tmpdir}",
+      "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
       "-u",
       "DEBUG",
       "BUNDLE_QUIET=true",
@@ -269,6 +270,7 @@ RSpec.describe Kettle::Family::Workflow do
       "-u",
       "MOLINILLO_DEBUG",
       "#{family_local_env_name}=false",
+      "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
       "KETTLE_JEM_QUIET=true",
       "KETTLE_JEM_DEBUG=false",
       "KETTLE_DEV_DEBUG=false",

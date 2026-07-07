@@ -158,6 +158,17 @@ members:
     - "**/vendor/**"
 ```
 
+Pre-release checks can skip project-specific volatile image URLs with
+shell-style URL patterns. Family release commands pass the active config path
+to member release commands so this setting works when releases run from member
+directories.
+
+```yaml
+pre_release:
+  image_url_skip_patterns:
+    - https://assets.example.com/generated/*
+```
+
 Member branch-stack releases can be configured in the member repository itself:
 
 ```yaml

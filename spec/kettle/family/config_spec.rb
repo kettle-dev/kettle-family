@@ -255,6 +255,9 @@ RSpec.describe Kettle::Family::Config do
           - kettle-jem
         readme_links:
           CHANGELOG.md: CHANGELOG.md
+      pre_release:
+        image_url_skip_patterns:
+          - https://assets.example.com/generated/*
       changelog:
         mode: root
         path: CHANGELOG.md
@@ -277,6 +280,7 @@ RSpec.describe Kettle::Family::Config do
     expect(config.check_forbidden_tracked_member_dirs).to eq([".github"])
     expect(config.check_forbidden_tracked_member_dirs_except).to eq(["kettle-jem"])
     expect(config.check_readme_links).to eq("CHANGELOG.md" => "CHANGELOG.md")
+    expect(config.pre_release_image_url_skip_patterns).to eq(["https://assets.example.com/generated/*"])
     expect(config.shared_changelog?).to be(true)
     expect(config.changelog_full_path(double(root: File.join(@tmpdir, "gems", "alpha")))).to eq(File.join(@tmpdir, "CHANGELOG.md"))
     expect(config.changelog_env).to eq("K_CHANGELOG_VERSION_FILE" => "gems/tree_haver/lib/tree_haver/version.rb")

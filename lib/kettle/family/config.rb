@@ -138,6 +138,10 @@ module Kettle
         fetch_path("check", "readme_links") || {}
       end
 
+      def pre_release_image_url_skip_patterns
+        Array(fetch_path("pre_release", "image_url_skip_patterns")).map(&:to_s)
+      end
+
       def changelog_mode
         fetch_path("changelog", "mode") || "member"
       end
