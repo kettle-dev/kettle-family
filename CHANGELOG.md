@@ -26,6 +26,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Family configs now expose `pre_release.image_url_skip_patterns` and pass the
   active config path to release commands so `kettle-pre-release` can skip
   project-specific volatile image URLs.
+- `kettle-family release --skip-bundle-audit` now forwards
+  `--skip-bundle-audit` and `KETTLE_DEV_SKIP_BUNDLE_AUDIT=true` to downstream
+  `kettle-release` commands.
 
 ### Changed
 

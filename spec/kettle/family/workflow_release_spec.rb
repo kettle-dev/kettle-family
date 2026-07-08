@@ -110,10 +110,28 @@ RSpec.describe Kettle::Family::Workflow do
       start_step: 10,
       skip_steps: "10",
       local_ci: true,
-      continue_ci_failures: true
+      continue_ci_failures: true,
+      skip_bundle_audit: true
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --local-ci"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --local-ci --skip-bundle-audit"])
+  end
+
+  it "passes bundle audit skip through release command environment" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true,
+      skip_bundle_audit: true
+    ).results
+
+    expect(results.last.command).to include("KETTLE_DEV_SKIP_BUNDLE_AUDIT=true")
   end
 
   it "disables noisy Bundler and debug environment for release commands" do
