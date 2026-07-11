@@ -100,6 +100,7 @@ Gem::Specification.new do |spec|
   # Utilities
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
+  spec.add_dependency("kettle-dev", "~> 2.3", ">= 2.3.0")                 # ruby >= 3.2.0
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("version_gem", "~> 1.1", ">= 1.1.13")              # ruby >= 2.2.0
 
@@ -116,11 +117,6 @@ Gem::Specification.new do |spec|
   #       Development dependencies that require strictly newer Ruby versions should be in a "gemfile",
   #       and preferably a modular one (see gemfiles/modular/*.gemfile).
 
-  # Utilities
-  spec.add_dependency("kettle-dev", "~> 2.3", ">= 2.3.0")                 # ruby >= 3.2.0
-
-  # Dev, Test, & Release Tasks
-
   # Security
   spec.add_development_dependency("bundler-audit", "~> 0.9.3")                      # ruby >= 2.0.0
 
@@ -131,14 +127,14 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency("require_bench", "~> 1.0", ">= 1.0.4")            # ruby >= 2.2.0
 
   # Testing
-  spec.add_development_dependency("appraisal2", "~> 3.1", ">= 3.1.3")               # ruby >= 1.8.7, for testing against multiple versions of dependencies
-  spec.add_development_dependency("kettle-test", "~> 2.0", ">= 2.0.9")             # ruby >= 3.2.0
-  spec.add_development_dependency("turbo_tests2", "~> 3.1", ">= 3.1.5")            # ruby >= 2.4.0, default kettle-test runner
+  spec.add_development_dependency("appraisal2", "~> 3.1", ">= 3.1.4")               # ruby >= 1.8.7, for testing against multiple versions of dependencies
+  spec.add_development_dependency("kettle-test", "~> 2.0", ">= 2.0.10")            # ruby >= 3.2.0
+  spec.add_development_dependency("turbo_tests2", "~> 3.1", ">= 3.1.6")            # ruby >= 2.4.0, default kettle-test runner
 
   # Releasing
   spec.add_development_dependency("ruby-progressbar", "~> 1.13")                    # ruby >= 0
-  spec.add_development_dependency("stone_checksums", "~> 1.0", ">= 1.0.4")          # ruby >= 2.2.0
+  spec.add_development_dependency("stone_checksums", "~> 1.0", ">= 1.0.5")          # ruby >= 2.2.0
 
   # spec.add_development_dependency("erb", ">= 2.2")                                  # ruby >= 2.3.0, not SemVer, old rubies get dropped in a patch.
-  spec.add_development_dependency("gitmoji-regex", "~> 2.0", ">= 2.0.3")            # ruby >= 2.4
+  spec.add_development_dependency("gitmoji-regex", "~> 2.0", ">= 2.0.4")            # ruby >= 2.4
 end
