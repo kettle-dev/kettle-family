@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.2.5] - 2026-07-11
+
+- TAG: [v0.2.5][0.2.5t]
+- COVERAGE: 95.22% -- 2309/2425 lines in 23 files
+- BRANCH COVERAGE: 76.75% -- 766/998 branches in 23 files
+- 29.54% documented
+
+### Added
+
 - Family workflows now inject a derived local family path environment variable
   by default, such as `RUBY_OAUTH_DEV=/path/to/ruby-oauth`, so in-flight family
   members can resolve unreleased sibling gems during orchestration.
@@ -37,14 +56,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Release lockfile normalization now forces configured local path environment
   variables off after caller overrides so release locks are cleaned
   deterministically.
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.2.4] - 2026-07-04
 
@@ -659,7 +670,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/kettle-dev/kettle-family/compare/v0.2.4...v0.2.5
+[0.2.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.5
 [0.2.4]: https://github.com/kettle-dev/kettle-family/compare/v0.2.3...v0.2.4
 [0.2.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.4
 [0.2.3]: https://github.com/kettle-dev/kettle-family/compare/v0.2.2...v0.2.3
