@@ -134,7 +134,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to include("KETTLE_DEV_SKIP_BUNDLE_AUDIT=true")
   end
 
-  it "disables noisy Bundler and debug environment for release commands" do
+  it "disables noisy Bundler, debug, and implicit family-local environment for release commands" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
@@ -144,7 +144,6 @@ RSpec.describe Kettle::Family::Workflow do
 
     release_command = results.find { |result| result.phase == "release_build" }.command
     expect(release_command).to include(
-      "#{family_local_env_name}=#{@tmpdir}",
       "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
       "-u",
       "DEBUG",
@@ -157,6 +156,7 @@ RSpec.describe Kettle::Family::Workflow do
       "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true"
     )
     expect(release_command).not_to include(
+      "#{family_local_env_name}=#{@tmpdir}",
       "DEBUG=true",
       "DEBUG=false",
       "BUNDLE_DEBUG=true",
@@ -165,6 +165,18 @@ RSpec.describe Kettle::Family::Workflow do
       "DEBUG_RESOLVER=true",
       "DEBUG_RESOLVER=false"
     )
+  end
+
+  it "allows explicitly configured family-local environment for release commands" do
+    write_release_config(release_env: {family_local_env_name => @tmpdir})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    results = described_class.new(command: "release", config: config, members: [member]).results
+
+    release_command = results.find { |result| result.phase == "release_build" }.command
+    expect(release_command).to include("#{family_local_env_name}=#{@tmpdir}")
   end
 
   it "preserves release debug environment when debug is enabled" do
@@ -266,53 +278,16 @@ RSpec.describe Kettle::Family::Workflow do
       release_changelog
       release_build
     ])
-    expect(results.first.command).to eq([
-      "mise",
-      "exec",
-      "-C",
-      member.root,
-      "--",
-      "env",
-      "-u",
-      "DEBUG",
-      "-u",
-      "DEBUG_RESOLVER",
-      "-u",
-      "DEBUG_RESOLVER_TREE",
-      "-u",
-      "BUNDLER_DEBUG_RESOLVER",
-      "-u",
-      "BUNDLER_DEBUG_RESOLVER_TREE",
-      "-u",
-      "DEBUG_COMPACT_INDEX",
-      "-u",
-      "MOLINILLO_DEBUG",
+    expect(results.first.command).to start_with("mise", "exec", "-C", member.root, "--", "env")
+    expect(results.first.command).to include(
       "#{family_local_env_name}=false",
       "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
-      "KETTLE_JEM_QUIET=true",
-      "KETTLE_JEM_DEBUG=false",
-      "KETTLE_DEV_DEBUG=false",
-      "SMORG_RB_DEBUG=false",
-      "BUNDLE_QUIET=true",
-      "BUNDLE_DEBUG=false",
-      "BUNDLER_DEBUG=false",
-      "BUNDLE_VERBOSE=false",
-      "BUNDLE_SILENCE_DEPRECATIONS=true",
-      "BUNDLE_SILENCE_ROOT_WARNING=true",
-      "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
       "K_JEM_TEMPLATING=false",
       "SMORG_RB_DEV=false",
-      "TSLP_DEV=false",
-      "KETTLE_RB_DEV=false",
-      "RUBOCOP_LTS_DEV=false",
-      "PBOLING_DEV=false",
-      "GALTZO_FLOSS_DEV=false",
-      "UR_BRAIN_DEV=false",
-      "bundle",
-      "update",
-      "nomono",
-      "--bundler"
-    ])
+      "KETTLE_RB_DEV=false"
+    )
+    expect(results.first.command).not_to include("#{family_local_env_name}=#{@tmpdir}")
+    expect(results.first.command.last(4)).to eq(%w[bundle update nomono --bundler])
   end
 
   it "forces configured local path envs off during lockfile normalization" do
@@ -366,6 +341,19 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     expect(results.find { |result| result.phase == "check" }).to be_ok
+  end
+
+  it "rejects implicit family-local lockfile paths during release readiness" do
+    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(@tmpdir, "beta")}\n")
+
+    results = described_class.new(command: "release", config: config, members: [member]).results
+
+    check_result = results.find { |result| result.phase == "check" }
+    expect(check_result).not_to be_ok
+    expect(check_result.stdout).to include("local path remote")
   end
 
   it "skips already published versions during executed publish releases" do

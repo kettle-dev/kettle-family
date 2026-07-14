@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family release commands no longer receive the implicit family local path
+  environment variable by default, preventing `kettle-release` from committing
+  sibling path sources into release lockfiles.
+
 ### Security
 
 ## [0.2.5] - 2026-07-11

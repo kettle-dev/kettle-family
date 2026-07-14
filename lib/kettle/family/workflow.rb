@@ -635,7 +635,7 @@ module Kettle
       end
 
       def base_release_env
-        env = config.family_local_path_env.merge(config.release_env)
+        env = config.release_env
         env["KETTLE_FAMILY_CONFIG"] = config.path if config.path
         env.merge!(TEMPLATE_QUIET_ENV) unless debug
         env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures
@@ -917,7 +917,7 @@ module Kettle
       end
 
       def release_allowed_local_path_roots
-        config.family_local_path_env.merge(env_overrides).filter_map do |key, value|
+        config.release_env.merge(env_overrides).filter_map do |key, value|
           next unless key.end_with?("_LOCAL", "_DEV")
           next if value.to_s.empty? || value.to_s.casecmp("false").zero?
 

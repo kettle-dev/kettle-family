@@ -76,11 +76,16 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(File.read(prerelease.version_file)).to include('VERSION = "1.2.3.rc2"')
   end
 
-  it "rejects patch bumps for non-numeric release versions" do
+  it "patch-bumps prerelease versions to their matching full release" do
     alpha = write_gem("alpha", version: "1.0.0.rc1")
+    beta = write_gem("beta", version: "3.0.pre", dependencies: {"alpha" => "= 1.0.0.rc1"})
 
-    expect { described_class.new(members: [alpha], target_version: "patch").results }
-      .to raise_error(Kettle::Family::Error, /cannot patch-bump non-numeric version/)
+    results = described_class.new(members: [alpha, beta], target_version: "patch", mode: :execute).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(alpha.version_file)).to include('VERSION = "1.0.0"')
+    expect(File.read(beta.version_file)).to include('VERSION = "3.0.0"')
+    expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.0.0"')
   end
 
   it "enforces --from versions" do
