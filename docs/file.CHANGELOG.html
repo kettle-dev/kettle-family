@@ -70,7 +70,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.2.5...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v0.2.6...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
 
@@ -82,13 +82,26 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="fixed">Fixed</h3>
 
+<h3 id="security">Security</h3>
+
+<h2 id="026---2026-07-14">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v0.2.5...v0.2.6">0.2.6</a> - 2026-07-14</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.6">v0.2.6</a>
+</li>
+  <li>COVERAGE: 95.22% – 2309/2425 lines in 23 files</li>
+  <li>BRANCH COVERAGE: 76.95% – 768/998 branches in 23 files</li>
+  <li>29.54% documented</li>
+</ul>
+
+<h3 id="fixed-1">Fixed</h3>
+
 <ul>
   <li>Family release commands no longer receive the implicit family local path<br>
 environment variable by default, preventing <code>kettle-release</code> from committing<br>
 sibling path sources into release lockfiles.</li>
 </ul>
-
-<h3 id="security">Security</h3>
 
 <h2 id="025---2026-07-11">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v0.2.4...v0.2.5">0.2.5</a> - 2026-07-11</h2>
@@ -157,7 +170,7 @@ member release by default, with <code>--no-auto-floors</code> and<br>
   <li>29.82% documented</li>
 </ul>
 
-<h3 id="fixed-1">Fixed</h3>
+<h3 id="fixed-2">Fixed</h3>
 
 <ul>
   <li>Root-configured member branch target commands now rediscover the checked-out<br>
@@ -176,7 +189,7 @@ being bumped to the current branch’s version.</li>
   <li>29.82% documented</li>
 </ul>
 
-<h3 id="fixed-2">Fixed</h3>
+<h3 id="fixed-3">Fixed</h3>
 
 <ul>
   <li>Branch-target workflows now fail before doing member work when a dirty<br>
@@ -219,7 +232,7 @@ version bump engine directly.</li>
   <li>Runtime dependency <code>kettle-dev</code> now requires 2.3.0 or newer.</li>
 </ul>
 
-<h3 id="fixed-3">Fixed</h3>
+<h3 id="fixed-4">Fixed</h3>
 
 <ul>
   <li>
@@ -254,7 +267,7 @@ available, selecting all members except the comma-separated exclusions.</li>
 <code>command_kit</code>, keeping naked help focused on global options.</li>
 </ul>
 
-<h3 id="fixed-4">Fixed</h3>
+<h3 id="fixed-5">Fixed</h3>
 
 <ul>
   <li>
@@ -289,7 +302,7 @@ TruffleRuby to avoid a TruffleRuby 24.2 internal <code>ENV.replace</code> crash 
 preserving command arguments after <code>--</code> and committing member changes by default.</li>
 </ul>
 
-<h3 id="fixed-5">Fixed</h3>
+<h3 id="fixed-6">Fixed</h3>
 
 <ul>
   <li>Package configured license files in gem release file lists.</li>
@@ -340,7 +353,7 @@ workflows.</li>
 dependency-safe release groups are visible.</li>
 </ul>
 
-<h3 id="fixed-6">Fixed</h3>
+<h3 id="fixed-7">Fixed</h3>
 
 <ul>
   <li>Parallel <code>kettle-family release</code> waves now stop assigning queued releases as<br>
@@ -385,7 +398,7 @@ targeted <code>bundle update GEM</code>, and <code>kettle-family bupb</code> for
 <code>bundle update --bundler</code>.</li>
 </ul>
 
-<h3 id="fixed-7">Fixed</h3>
+<h3 id="fixed-8">Fixed</h3>
 
 <ul>
   <li>
@@ -423,7 +436,7 @@ through to <code>kettle-release</code> commands for recovery releases.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="fixed-8">Fixed</h3>
+<h3 id="fixed-9">Fixed</h3>
 
 <ul>
   <li>
@@ -442,7 +455,7 @@ assignments so quiet release commands run correctly through <code>mise exec</cod
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="fixed-9">Fixed</h3>
+<h3 id="fixed-10">Fixed</h3>
 
 <ul>
   <li>
@@ -463,7 +476,7 @@ environment variables whose presence enables resolver/debug output.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="fixed-10">Fixed</h3>
+<h3 id="fixed-11">Fixed</h3>
 
 <ul>
   <li>
@@ -482,7 +495,7 @@ overrides to release commands and release lockfile normalization.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="fixed-11">Fixed</h3>
+<h3 id="fixed-12">Fixed</h3>
 
 <ul>
   <li>
@@ -512,7 +525,7 @@ member release commands unless <code>--debug</code> is enabled.</li>
 <code>TREE_SITTER_LANGUAGE_PACK_DEV</code>.</li>
 </ul>
 
-<h3 id="fixed-12">Fixed</h3>
+<h3 id="fixed-13">Fixed</h3>
 
 <ul>
   <li>Release failure reports now suggest rerunning the full executed release command,<br>
@@ -555,7 +568,7 @@ noisy Bundler/debug environment by default, overriding inherited debug<br>
 variables unless <code>--debug</code> is passed.</li>
 </ul>
 
-<h3 id="fixed-13">Fixed</h3>
+<h3 id="fixed-14">Fixed</h3>
 
 <ul>
   <li>Parallel release MFA coordination now shares an entered OTP only with prompts<br>
@@ -575,7 +588,7 @@ RubyGems OTP prompts.</li>
   <li>39.63% documented</li>
 </ul>
 
-<h3 id="fixed-14">Fixed</h3>
+<h3 id="fixed-15">Fixed</h3>
 
 <ul>
   <li>Interactive release commands now leave RubyGems MFA/OTP prompts for the user<br>
@@ -603,7 +616,7 @@ avoiding encoding crashes when a release command fails after PTY output.</li>
 whether interactive confirmation prompts are answered automatically.</li>
 </ul>
 
-<h3 id="fixed-15">Fixed</h3>
+<h3 id="fixed-16">Fixed</h3>
 
 <ul>
   <li>Interactive release commands now answer <code>[y/N]</code> confirmation prompts before<br>
@@ -640,7 +653,7 @@ member from each member’s current version.</li>
 version so local runs show which executable is active.</li>
 </ul>
 
-<h3 id="fixed-16">Fixed</h3>
+<h3 id="fixed-17">Fixed</h3>
 
 <ul>
   <li>Branch-stack commands now allow <code>main</code> as a configured branch target for<br>
@@ -681,7 +694,7 @@ branch.</li>
   <li>40.40% documented</li>
 </ul>
 
-<h3 id="fixed-17">Fixed</h3>
+<h3 id="fixed-18">Fixed</h3>
 
 <ul>
   <li>Release reports now label plain <code>release</code> as build-only mode and<br>
@@ -708,7 +721,7 @@ resulting lockfile changes.</li>
   <li>40.14% documented</li>
 </ul>
 
-<h3 id="fixed-18">Fixed</h3>
+<h3 id="fixed-19">Fixed</h3>
 
 <ul>
   <li>Workflow commands now honor member-local <code>.kettle-family.yml</code> release target<br>
@@ -727,7 +740,7 @@ those member-local branch targets.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="fixed-19">Fixed</h3>
+<h3 id="fixed-20">Fixed</h3>
 
 <ul>
   <li>Member workflow commands now run with the parent Bundler environment removed,<br>
@@ -749,7 +762,7 @@ overrides.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="fixed-20">Fixed</h3>
+<h3 id="fixed-21">Fixed</h3>
 
 <ul>
   <li>
@@ -790,7 +803,7 @@ branch.</p>
   <li>Retemplated project metadata and CI/development automation with <code>kettle-jem</code> v7.0.0.</li>
 </ul>
 
-<h3 id="fixed-21">Fixed</h3>
+<h3 id="fixed-22">Fixed</h3>
 
 <ul>
   <li>Corrected OpenCollective funding metadata to use the <code>kettle-dev</code> collective.</li>
@@ -879,7 +892,7 @@ environment overrides, and an optional family changelog release phase for<br>
 monorepo gem families whose members share root release metadata.</li>
 </ul>
 
-<h3 id="fixed-22">Fixed</h3>
+<h3 id="fixed-23">Fixed</h3>
 
 <ul>
   <li>Fixed the Ruby 3.2 CI appraisal so root changelog release-state checks have<br>
@@ -913,7 +926,7 @@ toolchain instead of depending on <code>kettle-dev</code> as a published runtime
 dependency.</li>
 </ul>
 
-<h3 id="fixed-23">Fixed</h3>
+<h3 id="fixed-24">Fixed</h3>
 
 <ul>
   <li>Fixed release-state checks to use the active <code>kettle-dev</code> API instead of each<br>
@@ -966,7 +979,7 @@ family members using <code>kettle-changelog --release-state --json</code>.</li>
   <li>Retemplated generated project files with <code>kettle-dev</code> &gt;= 2.2.7.</li>
 </ul>
 
-<h3 id="fixed-24">Fixed</h3>
+<h3 id="fixed-25">Fixed</h3>
 
 <ul>
   <li>Member discovery now filters configured excludes and git-ignored paths before<br>
@@ -1001,7 +1014,7 @@ loading gemspecs, avoiding fixture load failures in family roots.</li>
   <li>Added explicit runtime dependency wiring for extracted stdlib gems used by the CLI.</li>
 </ul>
 
-<h3 id="fixed-25">Fixed</h3>
+<h3 id="fixed-26">Fixed</h3>
 
 <ul>
   <li>Updated generated project metadata links to use the migrated <code>kettle-dev</code><br>
@@ -1015,7 +1028,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Tue Jul 14 00:04:46 2026 by
+  Generated on Tue Jul 14 00:08:36 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [0.2.6] - 2026-07-14
+
+- TAG: [v0.2.6][0.2.6t]
+- COVERAGE: 95.22% -- 2309/2425 lines in 23 files
+- BRANCH COVERAGE: 76.95% -- 768/998 branches in 23 files
+- 29.54% documented
+
+### Fixed
+
 - Family release commands no longer receive the implicit family local path
   environment variable by default, preventing `kettle-release` from committing
   sibling path sources into release lockfiles.
-
-### Security
 
 ## [0.2.5] - 2026-07-11
 
@@ -674,7 +683,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/kettle-dev/kettle-family/compare/v0.2.5...v0.2.6
+[0.2.6t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.6
 [0.2.5]: https://github.com/kettle-dev/kettle-family/compare/v0.2.4...v0.2.5
 [0.2.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.5
 [0.2.4]: https://github.com/kettle-dev/kettle-family/compare/v0.2.3...v0.2.4
