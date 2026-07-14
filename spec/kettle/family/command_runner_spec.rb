@@ -157,6 +157,24 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.stdout).to eq("[\"#{File.join(member.root, "Gemfile")}\", false]\n")
   end
 
+  it "uses an unbundled child env without mutating the parent Bundler env" do
+    member = member_at("alpha")
+    allow(Bundler).to receive(:with_unbundled_env).and_raise("global ENV mutation is unsafe")
+
+    result = described_class.new(execute: true).call(
+      member: member,
+      phase: "test",
+      command: [
+        RbConfig.ruby,
+        "-e",
+        "puts ENV['RUBYOPT'].to_s.include?('bundler/setup')"
+      ]
+    )
+
+    expect(result).to be_ok
+    expect(result.stdout).to eq("false\n")
+  end
+
   it "captures failing commands" do
     member = member_at("alpha")
 

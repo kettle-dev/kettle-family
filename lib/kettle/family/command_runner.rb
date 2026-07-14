@@ -114,15 +114,14 @@ module Kettle
       def call(member:, phase:, command:, env: {}, interactive: false)
         argv = command_argv(member: member, command: command, env: env)
         process_env = process_env(member: member, env: env)
+        spawn_options = process_options
         return skipped_result(member: member, phase: phase, argv: argv) unless execute
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        stdout, stderr, status = with_unbundled_environment do
-          if interactive
-            run_interactive(env: process_env, argv: argv, chdir: member.root, member_name: member.name)
-          else
-            Open3.capture3(process_env, *argv, chdir: member.root)
-          end
+        stdout, stderr, status = if interactive
+          run_interactive(env: process_env, argv: argv, chdir: member.root, member_name: member.name, process_options: spawn_options)
+        else
+          Open3.capture3(process_env, *argv, chdir: member.root, **spawn_options)
         end
         stdout = normalize_output(stdout)
         stderr = normalize_output(stderr)
@@ -146,16 +145,16 @@ module Kettle
 
       attr_reader :execute, :accept, :gem_signing_password, :otp_coordinator
 
-      def run_interactive(env:, argv:, chdir:, member_name:)
-        return run_interactive_pty(env: env, argv: argv, chdir: chdir, member_name: member_name) if pty_available?
+      def run_interactive(env:, argv:, chdir:, member_name:, process_options:)
+        return run_interactive_pty(env: env, argv: argv, chdir: chdir, member_name: member_name, process_options: process_options) if pty_available?
 
-        run_interactive_open3(env: env, argv: argv, chdir: chdir, member_name: member_name)
+        run_interactive_open3(env: env, argv: argv, chdir: chdir, member_name: member_name, process_options: process_options)
       end
 
-      def run_interactive_pty(env:, argv:, chdir:, member_name:)
+      def run_interactive_pty(env:, argv:, chdir:, member_name:, process_options:)
         stdout = +""
         status = nil
-        PTY.spawn(env, *argv, chdir: chdir) do |output, input, pid|
+        PTY.spawn(env, *argv, chdir: chdir, **process_options) do |output, input, pid|
           begin
             loop do
               readers = [output]
@@ -180,11 +179,11 @@ module Kettle
         [stdout, "", status]
       end
 
-      def run_interactive_open3(env:, argv:, chdir:, member_name:)
+      def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:)
         captured_stdout = +""
         captured_stderr = +""
         status = nil
-        Open3.popen3(env, *argv, chdir: chdir) do |input, output, error, wait_thread|
+        Open3.popen3(env, *argv, chdir: chdir, **process_options) do |input, output, error, wait_thread|
           readers = [output, error]
           readers << $stdin if $stdin.tty? && !otp_coordinator
           until readers.empty?
@@ -280,14 +279,6 @@ module Kettle
         output.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
       end
 
-      def with_unbundled_environment
-        if defined?(Bundler)
-          Bundler.with_unbundled_env { yield }
-        else
-          yield
-        end
-      end
-
       def command_argv(member:, command:, env: {})
         argv = normalize_command(command)
         return argv unless mise_configured?(member)
@@ -304,7 +295,21 @@ module Kettle
       end
 
       def process_env(member:, env:)
-        return env unless mise_configured?(member)
+        base_env = unbundled_process_env
+        return base_env.merge(env) unless mise_configured?(member)
+
+        base_env
+      end
+
+      def unbundled_process_env
+        return Bundler.original_env if defined?(Bundler) && Bundler.respond_to?(:original_env)
+        return Bundler.unbundled_env if defined?(Bundler) && Bundler.respond_to?(:unbundled_env)
+
+        {}
+      end
+
+      def process_options
+        return {unsetenv_others: true} if defined?(Bundler)
 
         {}
       end

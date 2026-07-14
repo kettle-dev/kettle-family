@@ -98,6 +98,9 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="fixed-1">Fixed</h3>
 
 <ul>
+  <li>Command runner child processes now use a per-child unbundled environment<br>
+instead of mutating global <code>ENV</code>, avoiding threaded release crashes on<br>
+TruffleRuby.</li>
   <li>Family release commands no longer receive the implicit family local path<br>
 environment variable by default, preventing <code>kettle-release</code> from committing<br>
 sibling path sources into release lockfiles.</li>
@@ -1028,7 +1031,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Tue Jul 14 00:08:36 2026 by
+  Generated on Tue Jul 14 00:15:25 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.44 (ruby-4.0.5).
 </div>

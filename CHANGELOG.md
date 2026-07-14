@@ -39,6 +39,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Command runner child processes now use a per-child unbundled environment
+  instead of mutating global `ENV`, avoiding threaded release crashes on
+  TruffleRuby.
 - Family release commands no longer receive the implicit family local path
   environment variable by default, preventing `kettle-release` from committing
   sibling path sources into release lockfiles.
