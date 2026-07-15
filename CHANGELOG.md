@@ -22,6 +22,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Promoted the gems that provide built-in `kettle-family` workflow commands to
+  runtime dependencies: `kettle-dev` for release/changelog/SHA-pin/version
+  tooling, `kettle-jem` for templating, and `kettle-test` for test runs.
+- Raised the runtime Ruby floor to 4.0.0 to match the `kettle-jem` templating
+  dependency required by the shipped `template` command.
+
 ### Deprecated
 
 ### Removed
