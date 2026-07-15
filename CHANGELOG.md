@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family release now waits for just-published prerequisite family gems to appear
+  in the gem server registry before continuing dependent lockfile normalization
+  and release steps.
+
 ### Security
 
 ## [0.2.6] - 2026-07-14

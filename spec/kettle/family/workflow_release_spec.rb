@@ -619,6 +619,65 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.0.0"')
   end
 
+  it "waits for just-published family dependencies before releasing dependents" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+    alpha_checks = 0
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?) do |gem_name, _version|
+      next false if gem_name == "beta"
+
+      alpha_checks += 1
+      alpha_checks >= 4
+    end
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[
+      check release_changelog release_publish dependency_floor release_wait_for_registry
+      check release_changelog release_publish
+    ])
+    wait = results.find { |result| result.phase == "release_wait_for_registry" }
+    expect(wait).to be_ok
+    expect(wait.stdout).to include("alpha 1.2.3")
+    expect(wait.stdout).to include("after 3 check(s)")
+    expect(workflow).to have_received(:sleep).with(15).twice
+  end
+
+  it "times out waiting for just-published family dependencies before lockfile normalization" do
+    write_release_config(
+      template: {
+        "normalize_lockfiles" => true,
+        "normalize_lockfiles_command" => [RbConfig.ruby, "-e", "puts 'normalized'"]
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).and_return(false)
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[
+      release_normalize_lockfiles check release_changelog release_publish
+      dependency_floor release_wait_for_registry
+    ])
+    wait = results.last
+    expect(wait.phase).to eq("release_wait_for_registry")
+    expect(wait).not_to be_ok
+    expect(wait.stdout).to include("timed out waiting for alpha 1.2.3 after 15 check(s)")
+    expect(workflow).to have_received(:sleep).with(15).exactly(14).times
+  end
+
   it "skips family dependency floor updates when disabled" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

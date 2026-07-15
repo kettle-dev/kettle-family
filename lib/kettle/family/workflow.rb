@@ -43,6 +43,8 @@ module Kettle
         "BUNDLE_SILENCE_ROOT_WARNING" => "true",
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
+      REGISTRY_WAIT_ATTEMPTS = 15
+      REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
       def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, skip_bundle_audit: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil)
         @command = command
@@ -497,15 +499,33 @@ module Kettle
 
         require_relative "dependency_floor"
 
+        affected_dependent_members = dependent_members_depending_on(released_members: released_members, dependent_members: dependent_members)
         floor_results = DependencyFloor.new(
           released_members: released_members,
           dependent_members: dependent_members,
           mode: execute ? :execute : :dry_run
         ).results
         memo.concat(floor_results)
-        return unless floor_results.any? && floor_results.all?(&:ok?)
+        return if floor_results.any? && !floor_results.all?(&:ok?)
 
-        commit_dependency_floor_changes(dependent_members: floor_results.map(&:member_name), runner: runner, memo: memo) if execute && commit
+        commit_dependency_floor_changes(dependent_members: floor_results.map(&:member_name), runner: runner, memo: memo) if floor_results.any? && execute && commit
+        return if memo.any? && !memo.last.ok?
+
+        append_registry_wait_result(released_members: released_members, dependent_members: affected_dependent_members, memo: memo)
+      end
+
+      def dependent_members_depending_on(released_members:, dependent_members:)
+        released_names = released_members.map(&:name)
+        dependent_members.select do |member|
+          Array(member.dependencies).map(&:to_s).any? { |dependency| released_names.include?(dependency) }
+        end
+      end
+
+      def append_registry_wait_result(released_members:, dependent_members:, memo:)
+        return unless execute && publish
+        return if dependent_members.empty?
+
+        memo << wait_for_registry_result(released_members: released_members, dependent_members: dependent_members)
       end
 
       def commit_dependency_floor_changes(dependent_members:, runner:, memo:)
@@ -662,6 +682,50 @@ module Kettle
         JSON.parse(response.body).any? { |entry| entry["number"].to_s == version.to_s }
       rescue JSON::ParserError => error
         raise Error, "could not parse published versions for #{gem_name}: #{error.message}"
+      end
+
+      def wait_for_registry_result(released_members:, dependent_members:)
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        missing = []
+        attempts = 0
+        REGISTRY_WAIT_ATTEMPTS.times do |index|
+          attempts = index + 1
+          missing = released_members.reject { |member| released_version?(member.name, member.version) }
+          break if missing.empty?
+
+          sleep(REGISTRY_WAIT_INTERVAL_SECONDS) if attempts < REGISTRY_WAIT_ATTEMPTS
+        end
+        elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+        dependency_names = dependent_members.map(&:name).join(", ")
+        if missing.empty?
+          CommandResult.new(
+            member_name: dependency_names,
+            phase: "release_wait_for_registry",
+            command: ["internal", "wait-for-registry", released_members.map { |member| "#{member.name}-#{member.version}" }.join(",")],
+            workdir: config.root,
+            status: 0,
+            success: true,
+            stdout: "registry contains #{released_members.map { |member| "#{member.name} #{member.version}" }.join(", ")} after #{attempts} check(s)",
+            stderr: "",
+            elapsed_seconds: elapsed,
+            skipped: false,
+            reason: "dependent members: #{dependency_names}"
+          )
+        else
+          CommandResult.new(
+            member_name: dependency_names,
+            phase: "release_wait_for_registry",
+            command: ["internal", "wait-for-registry", released_members.map { |member| "#{member.name}-#{member.version}" }.join(",")],
+            workdir: config.root,
+            status: 1,
+            success: false,
+            stdout: "timed out waiting for #{missing.map { |member| "#{member.name} #{member.version}" }.join(", ")} after #{attempts} check(s)",
+            stderr: "",
+            elapsed_seconds: elapsed,
+            skipped: false,
+            reason: "dependent members: #{dependency_names}"
+          )
+        end
       end
 
       def already_released_result(member)
