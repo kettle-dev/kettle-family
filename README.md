@@ -220,6 +220,11 @@ release:
     command: bundle exec kettle-changelog
 ```
 
+For `changelog.mode: root`, release commands pass `K_CHANGELOG_GEM_NAME` as the
+configured family name and `K_CHANGELOG_VERSION_FILE` when `version_file` is
+configured, so `kettle-changelog` can operate from a repository root without a
+root gemspec.
+
 For a flat repository that releases from multiple long-lived branches, list the
 release branches under `release.target_branches`. The branch list is processed
 in order. Each branch must be clean enough for `git checkout`, and each branch

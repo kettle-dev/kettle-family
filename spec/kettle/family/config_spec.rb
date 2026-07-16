@@ -262,6 +262,8 @@ RSpec.describe Kettle::Family::Config do
         mode: root
         path: CHANGELOG.md
         version_file: gems/tree_haver/lib/tree_haver/version.rb
+      family:
+        name: configured-family
       release:
         env:
           KETTLE_RB_DEV: false
@@ -283,7 +285,10 @@ RSpec.describe Kettle::Family::Config do
     expect(config.pre_release_image_url_skip_patterns).to eq(["https://assets.example.com/generated/*"])
     expect(config.shared_changelog?).to be(true)
     expect(config.changelog_full_path(double(root: File.join(@tmpdir, "gems", "alpha")))).to eq(File.join(@tmpdir, "CHANGELOG.md"))
-    expect(config.changelog_env).to eq("K_CHANGELOG_VERSION_FILE" => "gems/tree_haver/lib/tree_haver/version.rb")
+    expect(config.changelog_env).to eq(
+      "K_CHANGELOG_GEM_NAME" => "configured-family",
+      "K_CHANGELOG_VERSION_FILE" => "gems/tree_haver/lib/tree_haver/version.rb"
+    )
     expect(config.release_env).to eq("KETTLE_RB_DEV" => "false", "TSLP_DEV" => "")
     expect(config.release_family_changelog?).to be(true)
     expect(config.release_family_changelog_command).to eq("bundle exec kettle-changelog")

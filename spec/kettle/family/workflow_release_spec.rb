@@ -50,13 +50,16 @@ RSpec.describe Kettle::Family::Workflow do
       release_env: {"KETTLE_RB_DEV" => false}
     )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(@tmpdir, "mise.toml"), "[env]\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha", changelog: false)
 
     results = described_class.new(command: "release", config: config, members: [member]).results
 
     expect(results.map(&:phase)).to eq(%w[family_changelog check release_changelog release_build])
-    expect(results.first.command).to eq([RbConfig.ruby, "-e", "puts 'changelog'"])
+    expect(results.first.command).to include("K_CHANGELOG_GEM_NAME=#{config.family_name}")
+    expect(results.first.command).to include("K_CHANGELOG_VERSION_FILE=gems/tree_haver/lib/tree_haver/version.rb")
+    expect(results.first.command).to end_with(RbConfig.ruby, "-e", "puts 'changelog'")
     expect(results.first.workdir).to eq(@tmpdir)
     expect(results.first.skipped).to be(true)
     expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'build'"])

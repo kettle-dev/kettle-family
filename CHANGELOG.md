@@ -34,6 +34,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Root-mode family changelog release commands now pass the configured family
+  name to `kettle-changelog`, allowing shared root changelogs to run from
+  repositories that do not have a root gemspec.
 - `kettle-family bump-version` now recognizes exact same-version family
   dependencies written as `= #{spec.version}` instead of failing with a
   misleading ambiguous dependency error.

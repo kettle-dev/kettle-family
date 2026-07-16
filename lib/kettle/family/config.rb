@@ -167,9 +167,11 @@ module Kettle
       end
 
       def changelog_env
-        return {} unless changelog_version_file
+        env = {}
+        env["K_CHANGELOG_VERSION_FILE"] = changelog_version_file.to_s if changelog_version_file
+        env["K_CHANGELOG_GEM_NAME"] = family_name.to_s if shared_changelog?
 
-        {"K_CHANGELOG_VERSION_FILE" => changelog_version_file.to_s}
+        env
       end
 
       def template_command
