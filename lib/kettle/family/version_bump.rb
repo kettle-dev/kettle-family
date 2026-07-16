@@ -80,27 +80,56 @@ module Kettle
         parse_result = with_dev_errors { Kettle::Dev::VersionBump.parse_source(source, member.gemspec_path) }
 
         Kettle::Dev::VersionBump.each_node(parse_result.value).filter_map do |node|
-          dependency_edit_for(member.gemspec_path, source, node)
+          dependency_edit_for(member, source, node)
         end
       end
 
-      def dependency_edit_for(path, source, node)
+      def dependency_edit_for(member, source, node)
         return unless node.is_a?(Prism::CallNode) && DEPENDENCY_METHODS.include?(node.name)
 
         args = node.arguments&.arguments || []
         name_node, requirement_node = args
         return unless name_node.is_a?(Prism::StringNode) && member_names.include?(name_node.unescaped)
         return unless requirement_node
-        raise Error, "ambiguous family dependency #{name_node.unescaped.inspect} in #{path}" unless requirement_node.is_a?(Prism::StringNode)
+        dependency_target_version = member_target_versions.fetch(name_node.unescaped)
+        if same_version_dependency_requirement?(node, requirement_node)
+          return if dependency_target_version == target_version_for(member)
+
+          raise Error, "dynamic family dependency #{name_node.unescaped.inspect} in #{member.gemspec_path} uses #{call_receiver_name(node)}.version, but target version is #{dependency_target_version}"
+        end
+        raise Error, "unsupported dynamic family dependency #{name_node.unescaped.inspect} in #{member.gemspec_path}" unless requirement_node.is_a?(Prism::StringNode)
 
         current = requirement_node.unescaped
-        dependency_target_version = member_target_versions.fetch(name_node.unescaped)
         exact_prefix = "= "
         return unless current.start_with?(exact_prefix)
         return if current == "#{exact_prefix}#{dependency_target_version}"
 
         replacement = Kettle::Dev::VersionBump.quote_like(requirement_node.location.slice, "#{exact_prefix}#{dependency_target_version}")
-        Kettle::Dev::VersionBump.file_edit(path, source, requirement_node.location.start_offset, requirement_node.location.end_offset, replacement)
+        Kettle::Dev::VersionBump.file_edit(member.gemspec_path, source, requirement_node.location.start_offset, requirement_node.location.end_offset, replacement)
+      end
+
+      def same_version_dependency_requirement?(dependency_call_node, requirement_node)
+        return false unless requirement_node.is_a?(Prism::InterpolatedStringNode)
+
+        literal_prefix, embedded_version = requirement_node.parts
+        return false unless literal_prefix.is_a?(Prism::StringNode) && literal_prefix.unescaped == "= "
+        return false unless embedded_version.is_a?(Prism::EmbeddedStatementsNode)
+
+        statements = embedded_version.statements&.body || []
+        return false unless statements.length == 1
+
+        version_call = statements.first
+        version_call.is_a?(Prism::CallNode) &&
+          version_call.name == :version &&
+          call_receiver_name(version_call) == call_receiver_name(dependency_call_node)
+      end
+
+      def call_receiver_name(node)
+        receiver = node.receiver
+        return unless receiver
+        return receiver.name.to_s if receiver.respond_to?(:name)
+
+        receiver.location.slice
       end
 
       def target_version_for(member)

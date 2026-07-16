@@ -106,6 +106,26 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0"')
   end
 
+  it "accepts same-version family dependencies that use spec.version interpolation" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "1.0.0", dependencies: {"alpha" => :spec_version})
+
+    results = described_class.new(members: [alpha, beta], target_version: "minor", mode: :execute).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(alpha.version_file)).to include('VERSION = "1.1.0"')
+    expect(File.read(beta.version_file)).to include('VERSION = "1.1.0"')
+    expect(File.read(beta.gemspec_path)).to include('"alpha", "= #{spec.version}"')
+  end
+
+  it "rejects spec.version family dependency interpolation when member targets differ" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "2.0.0", dependencies: {"alpha" => :spec_version})
+
+    expect { described_class.new(members: [alpha, beta], target_version: "patch", mode: :execute).results }
+      .to raise_error(Kettle::Family::Error, /dynamic family dependency "alpha"/)
+  end
+
   it "rejects invalid target versions" do
     alpha = write_gem("alpha", version: "1.0.0")
 
@@ -123,7 +143,11 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
       end
     RUBY
     dependency_lines = dependencies.map do |dependency, requirement|
-      %(  spec.add_dependency "#{dependency}", "#{requirement}")
+      if requirement == :spec_version
+        %(  spec.add_dependency "#{dependency}", "= \#{spec.version}")
+      else
+        %(  spec.add_dependency "#{dependency}", "#{requirement}")
+      end
     end
     gemspec_path = File.join(root, "#{name}.gemspec")
     File.write(gemspec_path, <<~RUBY)

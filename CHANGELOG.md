@@ -34,6 +34,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family bump-version` now recognizes exact same-version family
+  dependencies written as `= #{spec.version}` instead of failing with a
+  misleading ambiguous dependency error.
+
 ### Security
 
 ## [0.2.7] - 2026-07-15
