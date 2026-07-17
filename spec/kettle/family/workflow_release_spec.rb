@@ -114,10 +114,11 @@ RSpec.describe Kettle::Family::Workflow do
       skip_steps: "10",
       local_ci: true,
       continue_ci_failures: true,
+      ci_workflows: "current,style.yml",
       skip_bundle_audit: true
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --local-ci --skip-bundle-audit"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit"])
   end
 
   it "passes bundle audit skip through release command environment" do

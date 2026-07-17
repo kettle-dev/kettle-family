@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family release` now accepts `--ci-workflows` and forwards the
+  comma-separated workflow subset to member `kettle-release` runs.
+
 ### Changed
 
 - Promoted the gems that provide built-in `kettle-family` workflow commands to
