@@ -46,7 +46,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **_options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
