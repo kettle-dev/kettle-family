@@ -46,7 +46,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **_options)
         @command = command
         @config = config
         @members = members
@@ -61,7 +61,7 @@ module Kettle
         @skip_steps = skip_steps
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
-        @ci_workflows = ci_workflows
+        @ci_workflows = validate_ci_workflows(ci_workflows)
         @skip_bundle_audit = skip_bundle_audit
         @auto_dependency_floors = auto_dependency_floors.nil? ? config.release_auto_dependency_floors? : auto_dependency_floors
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
@@ -649,6 +649,16 @@ module Kettle
         return command if args.empty?
 
         command.is_a?(Array) ? [*command, *args] : "#{command} #{args.join(" ")}"
+      end
+
+      def validate_ci_workflows(value)
+        return nil if value.nil? || value.to_s.empty?
+
+        workflows = value.to_s.split(",").map(&:strip)
+        invalid = workflows.find { |workflow| workflow.empty? || !workflow.match?(/\A[A-Za-z0-9_.\/-]+\z/) }
+        raise Error, "invalid --ci-workflows value #{value.inspect}" if invalid
+
+        workflows.join(",")
       end
 
       def release_env

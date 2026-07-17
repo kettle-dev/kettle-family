@@ -951,6 +951,20 @@ RSpec.describe Kettle::Family::CLI do
     expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit"])
   end
 
+  it "rejects unsafe release ci workflow subset values" do
+    write_ready_gem("alpha")
+    err = StringIO.new
+
+    status = described_class.call(
+      ["release", "--root", @tmpdir, "--publish", "--ci-workflows", "current; echo injected"],
+      out: StringIO.new,
+      err: err
+    )
+
+    expect(status).to eq(1)
+    expect(err.string).to include("invalid --ci-workflows value")
+  end
+
   it "passes interactive accept mode through release workflows" do
     write_ready_gem("alpha")
     workflow = instance_double(Kettle::Family::Workflow, results: [])

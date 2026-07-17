@@ -43,6 +43,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family bump-version` now recognizes exact same-version family
   dependencies written as `= #{spec.version}` instead of failing with a
   misleading ambiguous dependency error.
+- `kettle-family release --ci-workflows` now validates workflow names before
+  forwarding them to shell-backed `kettle-release` commands.
 
 ### Security
 
