@@ -31,6 +31,11 @@ Please file a bug if you notice a violation of semantic versioning.
 - Raised the runtime Ruby floor to 4.0.0 to match the `kettle-jem` templating
   dependency required by the shipped `template` command.
 
+- kettle-jem-template-20260716-001 - Shim gemspec manifests now include
+  `LICENSE.md` instead of nonexistent `LICENSE.txt`.
+- kettle-jem-template-20260716-002 - Generated gemspec manifests now ship fewer
+  repository-only files by default to reduce downstream distro packaging churn.
+
 ### Deprecated
 
 ### Removed

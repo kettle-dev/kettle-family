@@ -51,34 +51,21 @@ Gem::Specification.new do |spec|
       File.file?(path) && ![".", ".."].include?(File.basename(path))
     end
   end
+  package_metadata_files = %w[
+    CHANGELOG.md
+    LICENSE.md
+    README.md
+    sig/kettle/family.rbs
+  ].select { |path| File.exist?(path) }
 
   # Specify which files are part of the released package.
   spec.files = [
-    # Root license files
-    "LICENSE.md",
-    "AGPL-3.0-only.md",
+    # Root package metadata
+    *package_metadata_files,
     # Code / tasks / data (NOTE: exe/ is specified via spec.bindir and spec.executables below)
     *enumerate_package_files.call("lib"),
     # Executables and executable support scripts
-    *enumerate_package_files.call("exe"),
-    # Public certs for gem signing
-    *enumerate_package_files.call("certs"),
-    # Signatures
-    *enumerate_package_files.call("sig")
-  ]
-
-  # Automatically included with gem package, no need to list again in files.
-  spec.extra_rdoc_files = Dir[
-    # Files (alphabetical)
-    "CHANGELOG.md",
-    "CITATION.cff",
-    "CODE_OF_CONDUCT.md",
-    "CONTRIBUTING.md",
-    "FUNDING.md",
-    "LICENSE.md",
-    "README.md",
-    "RUBOCOP.md",
-    "SECURITY.md"
+    *enumerate_package_files.call("exe")
   ]
   spec.rdoc_options += [
     "--title",
@@ -109,10 +96,10 @@ Gem::Specification.new do |spec|
   #       However, development dependencies in gemspec will install on
   #       all versions of Ruby that will run in CI.
   #       This gem, and its gemspec runtime dependencies, will install on Ruby down to 4.0.0.
-  #       This gem, and its gemspec development dependencies, will install on Ruby down to 3.2.0.
+  #       This gem, and its gemspec development dependencies, will install on Ruby down to 4.0.0.
   #       Thus, dev dependencies in gemspec must have
   #
-  #       required_ruby_version ">= 3.2.0" (or lower)
+  #       required_ruby_version ">= 4.0.0" (or lower)
   #
   #       Development dependencies that require strictly newer Ruby versions should be in a "gemfile",
   #       and preferably a modular one (see gemfiles/modular/*.gemfile).
@@ -128,7 +115,7 @@ Gem::Specification.new do |spec|
 
   # Testing
   spec.add_development_dependency("appraisal2", "~> 3.1", ">= 3.1.4")               # ruby >= 1.8.7, for testing against multiple versions of dependencies
-  spec.add_development_dependency("turbo_tests2", "~> 3.1", ">= 3.1.9")            # ruby >= 2.4.0, default kettle-test runner
+  spec.add_development_dependency("turbo_tests2", "~> 3.1", ">= 3.1.14")           # ruby >= 2.4.0, default kettle-test runner
 
   # Releasing
   spec.add_development_dependency("ruby-progressbar", "~> 1.13")                    # ruby >= 0
