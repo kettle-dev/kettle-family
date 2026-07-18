@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-RSpec.describe "kettle-family runtime dependencies" do
-  let(:specification) { Gem::Specification.load(File.expand_path("../../../kettle-family.gemspec", __dir__)) }
+RSpec.describe Gem::Specification do
+  let(:specification) { described_class.load(File.expand_path("../../../../kettle-family.gemspec", __dir__)) }
 
   it "ships provider gems for built-in kettle-family workflow commands" do
     runtime_dependencies = specification.dependencies.select { |dependency| dependency.type == :runtime }
