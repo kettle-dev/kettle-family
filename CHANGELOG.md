@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.0.0] - 2026-07-17
+
+- TAG: [v1.0.0][1.0.0t]
+- COVERAGE: 95.22% -- 2370/2489 lines in 23 files
+- BRANCH COVERAGE: 76.87% -- 801/1042 branches in 23 files
+- 29.29% documented
+
+### Added
+
 - `kettle-family release` now accepts `--ci-workflows` and forwards the
   comma-separated workflow subset to member `kettle-release` runs.
 
@@ -30,16 +49,12 @@ Please file a bug if you notice a violation of semantic versioning.
   tooling and `kettle-test` for test runs.
 - Moved the `kettle-jem` templating provider to the templating Gemfile while
   the next `kettle-jem` release depends on unreleased `kettle-family` fixes.
-- Raised the runtime Ruby floor to 4.0.0 for the current release tooling stack.
+- Raised the runtime Ruby floor to 4.0.0.
 
 - kettle-jem-template-20260716-001 - Shim gemspec manifests now include
   `LICENSE.md` instead of nonexistent `LICENSE.txt`.
 - kettle-jem-template-20260716-002 - Generated gemspec manifests now ship fewer
   repository-only files by default to reduce downstream distro packaging churn.
-
-### Deprecated
-
-### Removed
 
 ### Fixed
 
@@ -51,8 +66,6 @@ Please file a bug if you notice a violation of semantic versioning.
   misleading ambiguous dependency error.
 - `kettle-family release --ci-workflows` now validates workflow names before
   forwarding them to shell-backed `kettle-release` commands.
-
-### Security
 
 ## [0.2.7] - 2026-07-15
 
@@ -723,7 +736,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/kettle-dev/kettle-family/compare/v0.2.7...v1.0.0
+[1.0.0t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.0
 [0.2.7]: https://github.com/kettle-dev/kettle-family/compare/v0.2.6...v0.2.7
 [0.2.7t]: https://github.com/kettle-dev/kettle-family/releases/tag/v0.2.7
 [0.2.6]: https://github.com/kettle-dev/kettle-family/compare/v0.2.5...v0.2.6

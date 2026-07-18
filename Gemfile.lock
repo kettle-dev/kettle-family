@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    kettle-family (0.2.7)
+    kettle-family (1.0.0)
       command_kit (~> 0.6)
       command_kit-completion (~> 0.1)
       kettle-dev (~> 2.3, >= 2.3.4)
@@ -458,7 +458,7 @@ CHECKSUMS
   irb (1.18.0) sha256=de9454a0703a54704b9811a5ef31a60c86949fbf4013fcf244fabc7c775248e3
   json (2.21.1) sha256=13a43df75d95641443f5702dff350f237164a9d811ff0f2c2800d4d980220583
   kettle-dev (2.3.6) sha256=955b01e8aca46438365332d1b4413f22cb58dabfeab5cba04d71237c53cc70ae
-  kettle-family (0.2.7)
+  kettle-family (1.0.0)
   kettle-rb (0.1.4) sha256=9cef7ce4f7021666b7222292f29051e51eaf042e8a5db11f3f4dd72f74243fc1
   kettle-soup-cover (3.0.0) sha256=4d3ed6c714cb88cf148f65934c6a96c976b2281abb3ae443ad0ddf6ac0da875b
   kettle-test (2.0.11) sha256=c710c90f7ab79d51f9452f0c09f5f90657e7a893f63583855c164d0b1b107ab2
