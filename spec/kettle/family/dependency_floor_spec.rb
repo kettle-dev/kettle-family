@@ -55,7 +55,7 @@ RSpec.describe Kettle::Family::DependencyFloor, :prism do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     dependency_lines = dependencies.map do |dependency, requirements|
-      serialized = Array(requirements).map { |requirement| requirement.is_a?(Array) ? requirement.inspect : requirement.inspect }
+      serialized = Array(requirements).map(&:inspect)
       %(  spec.add_dependency #{dependency.inspect}, #{serialized.join(", ")})
     end
     gemspec_path = File.join(root, "#{name}.gemspec")

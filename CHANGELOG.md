@@ -20,13 +20,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family release` now accepts `--ci-workflows` and forwards the
+  comma-separated workflow subset to member `kettle-release` runs.
+
 ### Changed
 
 - Promoted the gems that provide built-in `kettle-family` workflow commands to
   runtime dependencies: `kettle-dev` for release/changelog/SHA-pin/version
-  tooling, `kettle-jem` for templating, and `kettle-test` for test runs.
-- Raised the runtime Ruby floor to 4.0.0 to match the `kettle-jem` templating
-  dependency required by the shipped `template` command.
+  tooling and `kettle-test` for test runs.
+- Moved the `kettle-jem` templating provider to the templating Gemfile while
+  the next `kettle-jem` release depends on unreleased `kettle-family` fixes.
+- Raised the runtime Ruby floor to 4.0.0 for the current release tooling stack.
+
+- kettle-jem-template-20260716-001 - Shim gemspec manifests now include
+  `LICENSE.md` instead of nonexistent `LICENSE.txt`.
+- kettle-jem-template-20260716-002 - Generated gemspec manifests now ship fewer
+  repository-only files by default to reduce downstream distro packaging churn.
 
 ### Deprecated
 
@@ -40,6 +49,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family bump-version` now recognizes exact same-version family
   dependencies written as `= #{spec.version}` instead of failing with a
   misleading ambiguous dependency error.
+- `kettle-family release --ci-workflows` now validates workflow names before
+  forwarding them to shell-backed `kettle-release` commands.
 
 ### Security
 

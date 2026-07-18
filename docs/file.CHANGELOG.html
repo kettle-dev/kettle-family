@@ -74,13 +74,47 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="added">Added</h3>
 
+<ul>
+  <li>
+<code>kettle-family release</code> now accepts <code>--ci-workflows</code> and forwards the<br>
+comma-separated workflow subset to member <code>kettle-release</code> runs.</li>
+</ul>
+
 <h3 id="changed">Changed</h3>
+
+<ul>
+  <li>Promoted the gems that provide built-in <code>kettle-family</code> workflow commands to<br>
+runtime dependencies: <code>kettle-dev</code> for release/changelog/SHA-pin/version<br>
+tooling and <code>kettle-test</code> for test runs.</li>
+  <li>Moved the <code>kettle-jem</code> templating provider to the templating Gemfile while<br>
+the next <code>kettle-jem</code> release depends on unreleased <code>kettle-family</code> fixes.</li>
+  <li>
+    <p>Raised the runtime Ruby floor to 4.0.0 for the current release tooling stack.</p>
+  </li>
+  <li>kettle-jem-template-20260716-001 - Shim gemspec manifests now include<br>
+<code>LICENSE.md</code> instead of nonexistent <code>LICENSE.txt</code>.</li>
+  <li>kettle-jem-template-20260716-002 - Generated gemspec manifests now ship fewer<br>
+repository-only files by default to reduce downstream distro packaging churn.</li>
+</ul>
 
 <h3 id="deprecated">Deprecated</h3>
 
 <h3 id="removed">Removed</h3>
 
 <h3 id="fixed">Fixed</h3>
+
+<ul>
+  <li>Root-mode family changelog release commands now pass the configured family<br>
+name to <code>kettle-changelog</code>, allowing shared root changelogs to run from<br>
+repositories that do not have a root gemspec.</li>
+  <li>
+<code>kettle-family bump-version</code> now recognizes exact same-version family<br>
+dependencies written as <code>= #{spec.version}</code> instead of failing with a<br>
+misleading ambiguous dependency error.</li>
+  <li>
+<code>kettle-family release --ci-workflows</code> now validates workflow names before<br>
+forwarding them to shell-backed <code>kettle-release</code> commands.</li>
+</ul>
 
 <h3 id="security">Security</h3>
 
@@ -1050,7 +1084,7 @@ GitHub organization.</li>
 </div></div>
 
       <div id="footer">
-  Generated on Wed Jul 15 09:49:03 2026 by
+  Generated on Fri Jul 17 22:40:18 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.0.6).
 </div>

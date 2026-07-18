@@ -265,8 +265,6 @@
       <pre class="lines">
 
 
-418
-419
 420
 421
 422
@@ -280,10 +278,13 @@
 430
 431
 432
-433</pre>
+433
+434
+435
+436</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 418</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 420</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_run'>run</span><span class='lparen'>(</span><span class='op'>*</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_unexpected_arguments!'>unexpected_arguments!</span><span class='lparen'>(</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
@@ -294,6 +295,7 @@
     <span class='label'>release_skip_steps:</span> <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:skip_steps</span><span class='rbracket'>]</span><span class='comma'>,</span>
     <span class='label'>release_local_ci:</span> <span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:local_ci</span><span class='rparen'>)</span><span class='comma'>,</span>
     <span class='label'>release_continue_ci_failures:</span> <span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:continue_ci_failures</span><span class='rparen'>)</span><span class='comma'>,</span>
+    <span class='label'>release_ci_workflows:</span> <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:ci_workflows</span><span class='rbracket'>]</span><span class='comma'>,</span>
     <span class='label'>release_skip_bundle_audit:</span> <span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:skip_bundle_audit</span><span class='rparen'>)</span><span class='comma'>,</span>
     <span class='label'>release_auto_dependency_floors:</span> <span class='op'>!</span><span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:no_auto_floors</span><span class='rparen'>)</span><span class='comma'>,</span>
     <span class='label'>accept:</span> <span class='op'>!</span><span class='id identifier rubyid_options'>options</span><span class='period'>.</span><span class='id identifier rubyid_key?'>key?</span><span class='lparen'>(</span><span class='symbol'>:accept</span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:accept</span><span class='rbracket'>]</span><span class='comma'>,</span>
@@ -311,7 +313,7 @@
 </div>
 
       <div id="footer">
-  Generated on Wed Jul 15 09:49:04 2026 by
+  Generated on Fri Jul 17 22:40:18 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.0.6).
 </div>

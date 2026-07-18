@@ -115,7 +115,7 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(results).to all(be_ok)
     expect(File.read(alpha.version_file)).to include('VERSION = "1.1.0"')
     expect(File.read(beta.version_file)).to include('VERSION = "1.1.0"')
-    expect(File.read(beta.gemspec_path)).to include('"alpha", "= #{spec.version}"')
+    expect(File.read(beta.gemspec_path)).to include("\"alpha\", \"= \#{spec.version}\"")
   end
 
   it "rejects spec.version family dependency interpolation when member targets differ" do

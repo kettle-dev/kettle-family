@@ -46,7 +46,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, skip_bundle_audit: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -61,6 +61,7 @@ module Kettle
         @skip_steps = skip_steps
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
+        @ci_workflows = validate_ci_workflows(ci_workflows)
         @skip_bundle_audit = skip_bundle_audit
         @auto_dependency_floors = auto_dependency_floors.nil? ? config.release_auto_dependency_floors? : auto_dependency_floors
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
@@ -89,7 +90,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :skip_bundle_audit, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -290,6 +291,7 @@ module Kettle
           skip_steps: skip_steps,
           local_ci: local_ci,
           continue_ci_failures: continue_ci_failures,
+          ci_workflows: ci_workflows,
           skip_bundle_audit: skip_bundle_audit,
           auto_dependency_floors: auto_dependency_floors,
           gha_sha_pins_upgrade: gha_sha_pins_upgrade,
@@ -641,11 +643,22 @@ module Kettle
         args = []
         args << "start_step=#{start_step}" if start_step
         args << "skip_steps=#{skip_steps}" if skip_steps && !skip_steps.to_s.empty?
+        args << "--ci-workflows=#{ci_workflows}" if ci_workflows && !ci_workflows.to_s.empty?
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
         return command if args.empty?
 
         command.is_a?(Array) ? [*command, *args] : "#{command} #{args.join(" ")}"
+      end
+
+      def validate_ci_workflows(value)
+        return nil if value.nil? || value.to_s.empty?
+
+        workflows = value.to_s.split(",").map(&:strip)
+        invalid = workflows.find { |workflow| workflow.empty? || !workflow.match?(/\A[A-Za-z0-9_.\/-]+\z/) }
+        raise Error, "invalid --ci-workflows value #{value.inspect}" if invalid
+
+        workflows.join(",")
       end
 
       def release_env
@@ -659,6 +672,7 @@ module Kettle
         env["KETTLE_FAMILY_CONFIG"] = config.path if config.path
         env.merge!(TEMPLATE_QUIET_ENV) unless debug
         env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures
+        env["K_RELEASE_CI_WORKFLOWS"] = ci_workflows if ci_workflows && !ci_workflows.to_s.empty?
         env["KETTLE_DEV_SKIP_BUNDLE_AUDIT"] = "true" if skip_bundle_audit
         env
       end

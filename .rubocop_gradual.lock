@@ -1,6 +1,5 @@
 {
-  "spec/kettle/family/dependency_floor_spec.rb:1594891452": [
-    [58, 87, 19, "Style/IdenticalConditionalBranches: Move `requirement.inspect` out of the conditional.", 1587857922],
-    [58, 109, 19, "Style/IdenticalConditionalBranches: Move `requirement.inspect` out of the conditional.", 1587857922]
+  "kettle-family.gemspec:1846487200": [
+    [19, 32, 10, "Gemspec/RequiredRubyVersion: `required_ruby_version` and `TargetRubyVersion` (3.2, which may be specified in .rubocop.yml) should be equal.", 3888670706]
   ]
 }
