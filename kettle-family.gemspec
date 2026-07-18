@@ -87,7 +87,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
   spec.add_dependency("kettle-dev", "~> 2.3", ">= 2.3.4")                 # ruby >= 3.2.0
-  spec.add_dependency("kettle-jem", "~> 7.0", ">= 7.0.0")                 # ruby >= 4.0.0
   spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.10")              # ruby >= 2.4
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
 

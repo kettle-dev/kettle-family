@@ -9,7 +9,6 @@ RSpec.describe Gem::Specification do
 
     expect(runtime_dependency_names).to include(
       "kettle-dev",
-      "kettle-jem",
       "kettle-test"
     )
   end

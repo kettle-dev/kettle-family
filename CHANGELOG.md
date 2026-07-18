@@ -27,9 +27,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Promoted the gems that provide built-in `kettle-family` workflow commands to
   runtime dependencies: `kettle-dev` for release/changelog/SHA-pin/version
-  tooling, `kettle-jem` for templating, and `kettle-test` for test runs.
-- Raised the runtime Ruby floor to 4.0.0 to match the `kettle-jem` templating
-  dependency required by the shipped `template` command.
+  tooling and `kettle-test` for test runs.
+- Moved the `kettle-jem` templating provider to the templating Gemfile while
+  the next `kettle-jem` release depends on unreleased `kettle-family` fixes.
+- Raised the runtime Ruby floor to 4.0.0 for the current release tooling stack.
 
 - kettle-jem-template-20260716-001 - Shim gemspec manifests now include
   `LICENSE.md` instead of nonexistent `LICENSE.txt`.
