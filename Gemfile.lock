@@ -19,6 +19,22 @@ PATH
       ruby-progressbar (~> 1.13)
 
 PATH
+  remote: /var/home/pboling/src/my/kettle-dev/kettle-drift
+  specs:
+    kettle-drift (1.0.5)
+      version_gem (~> 1.1, >= 1.1.13)
+
+PATH
+  remote: /var/home/pboling/src/my/kettle-dev/kettle-soup-cover
+  specs:
+    kettle-soup-cover (3.0.0)
+      simplecov (>= 1.0)
+      simplecov-cobertura (>= 4.0)
+      simplecov-console (~> 0.9, >= 0.9.5)
+      simplecov-rcov (~> 0.3, >= 0.3.7)
+      simplecov_lcov_formatter (~> 0.9, >= 0.9.0)
+
+PATH
   remote: /var/home/pboling/src/my/kettle-dev/kettle-test
   specs:
     kettle-test (2.0.11)
@@ -188,12 +204,6 @@ GEM
       tree_haver (= 7.1.0)
       yaml-merge (= 7.1.0)
     kettle-rb (0.1.2)
-    kettle-soup-cover (3.0.0)
-      simplecov (>= 1.0)
-      simplecov-cobertura (>= 4.0)
-      simplecov-console (~> 0.9, >= 0.9.5)
-      simplecov-rcov (~> 0.3, >= 0.3.7)
-      simplecov_lcov_formatter (~> 0.9, >= 0.9.0)
     kramdown (2.5.2)
       rexml (>= 3.4.4)
     kramdown-merge (7.1.0)
@@ -516,8 +526,9 @@ DEPENDENCIES
   gitmoji-regex (~> 2.0, >= 2.0.4)
   irb (~> 1.17)
   kettle-dev!
+  kettle-drift!
   kettle-family!
-  kettle-soup-cover (~> 3.0, >= 3.0.0)
+  kettle-soup-cover!
   kettle-test!
   kramdown (~> 2.5, >= 2.5.1)
   kramdown-parser-gfm (~> 1.1)
@@ -600,10 +611,11 @@ CHECKSUMS
   json (2.21.1) sha256=13a43df75d95641443f5702dff350f237164a9d811ff0f2c2800d4d980220583
   json-merge (7.1.0)
   kettle-dev (2.3.5)
+  kettle-drift (1.0.5)
   kettle-family (0.2.7)
   kettle-jem (7.1.0)
   kettle-rb (0.1.2) sha256=e8aa6fd03b666f9e98a0e00d4183cb4b7ab140d33916ee692a87c1beba007eda
-  kettle-soup-cover (3.0.0) sha256=4d3ed6c714cb88cf148f65934c6a96c976b2281abb3ae443ad0ddf6ac0da875b
+  kettle-soup-cover (3.0.0)
   kettle-test (2.0.11)
   kramdown (2.5.2) sha256=1ba542204c66b6f9111ff00dcc26075b95b220b07f2905d8261740c82f7f02fa
   kramdown-merge (7.1.0)
