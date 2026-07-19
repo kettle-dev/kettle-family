@@ -68,6 +68,40 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --json"])
   end
 
+  it "disables the implicit family local path env during template prepare" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
+    RUBY
+
+    results = described_class.new(command: "template", config: config, members: [member]).results
+
+    expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
+    expect(results.fetch(0).command).to include("#{family_local_env_name}=false")
+  end
+
+  it "preserves an explicit family local path env during template prepare" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
+    RUBY
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      env_overrides: {family_local_env_name => "/explicit/family"}
+    ).results
+
+    expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
+    expect(results.fetch(0).command).to include("#{family_local_env_name}=/explicit/family")
+    expect(results.fetch(0).command).not_to include("#{family_local_env_name}=false")
+  end
+
   it "passes explicit environment overrides through member mise execution" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)

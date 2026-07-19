@@ -1004,9 +1004,16 @@ module Kettle
           member: member,
           phase: "prepare_template_dependencies",
           command: template_prepare_command(member),
-          env: workflow_env
+          env: template_prepare_env
         )
         memo << result
+      end
+
+      def template_prepare_env
+        env = workflow_env
+        family_env_name = config.family_local_path_env_name
+        env[family_env_name] = "false" if family_env_name && !env_overrides.key?(family_env_name)
+        env
       end
 
       def normalize_release_lockfiles(member:, runner:, memo:)
