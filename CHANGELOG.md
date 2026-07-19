@@ -36,6 +36,8 @@ Please file a bug if you notice a violation of semantic versioning.
   environment variable unless it was explicitly provided, avoiding stale local
   Gemfile activation failures before the prepare payload can refresh generated
   modular Gemfiles.
+- The templating prepare phase now runs outside each member's Bundler context so
+  it can repair stale generated Gemfiles before Bundler evaluates them.
 
 ### Security
 

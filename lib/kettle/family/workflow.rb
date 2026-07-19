@@ -898,7 +898,7 @@ module Kettle
       end
 
       def template_prepare_command(member)
-        command_text = templating_bundle_wired?(member) ? %w[bundle exec kettle-jem prepare] : "kettle-jem prepare"
+        command_text = "kettle-jem prepare"
         command_text = append_template_family_args(command_text)
         append_template_skip_commit(command_text)
       end

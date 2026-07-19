@@ -64,7 +64,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member]).results
 
     expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(0).command).to eq(["bundle", "exec", "kettle-jem", "prepare", "--quiet", "--json"])
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --json"])
     expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --json"])
   end
 
