@@ -399,7 +399,8 @@ RSpec.describe Kettle::Family::CLI do
     )
 
     expect(status).to eq(0)
-    command = JSON.parse(out.string).fetch("results").first.fetch("command")
+    result = JSON.parse(out.string).fetch("results").find { |entry| entry.fetch("phase") == "template" }
+    command = result.fetch("command")
     expect(command).to eq(
       [
         "mise",
@@ -465,7 +466,8 @@ RSpec.describe Kettle::Family::CLI do
     )
 
     expect(status).to eq(0)
-    command = JSON.parse(out.string).fetch("results").first.fetch("command")
+    result = JSON.parse(out.string).fetch("results").find { |entry| entry.fetch("phase") == "prepare_template_dependencies" }
+    command = result.fetch("command")
     expect(command).to include("DEBUG=true", "BUNDLE_DEBUG=true")
     expect(command).not_to include("DEBUG=false", "BUNDLE_DEBUG=false")
   end
