@@ -110,6 +110,11 @@ module Kettle
             break memo unless memo.last.ok?
           end
 
+          if command == "template"
+            prepare_template_dependencies(member: member, runner: runner, memo: memo)
+            break memo unless memo.last.ok?
+          end
+
           command_text = workflow_command(member)
           result = runner.call(member: member, phase: command, command: command_text, env: workflow_env)
           memo << result
@@ -157,6 +162,9 @@ module Kettle
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
             return memo unless memo.last.ok?
           end
+
+          prepare_template_dependencies(member: member, runner: runner, memo: memo)
+          return memo unless memo.last.ok?
 
           memo << runner.call(member: member, phase: command, command: workflow_command(member), env: workflow_env)
           return memo unless memo.last.ok?
@@ -886,6 +894,16 @@ module Kettle
       def template_command(member)
         command_text = config.template_command || default_template_command(member)
         command_text = append_template_family_args(command_text) if kettle_jem_template_command?(command_text)
+        append_template_skip_commit(command_text)
+      end
+
+      def template_prepare_command(member)
+        command_text = templating_bundle_wired?(member) ? %w[bundle exec kettle-jem prepare] : "kettle-jem prepare"
+        command_text = append_template_family_args(command_text)
+        append_template_skip_commit(command_text)
+      end
+
+      def append_template_skip_commit(command_text)
         return command_text if commit
         return command_text if command_text.is_a?(Array) && command_text.include?("--skip-commit")
         return [*command_text, "--skip-commit"] if command_text.is_a?(Array)
@@ -973,6 +991,19 @@ module Kettle
           member: member,
           phase: phase,
           command: config.normalize_lockfiles_command,
+          env: workflow_env
+        )
+        memo << result
+      end
+
+      def prepare_template_dependencies(member:, runner:, memo:)
+        command_text = config.template_command || default_template_command(member)
+        return unless kettle_jem_template_command?(command_text)
+
+        result = runner.call(
+          member: member,
+          phase: "prepare_template_dependencies",
+          command: template_prepare_command(member),
           env: workflow_env
         )
         memo << result
