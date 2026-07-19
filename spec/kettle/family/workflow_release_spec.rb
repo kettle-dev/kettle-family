@@ -287,7 +287,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
-    File.write(File.join(member.root, "mise.toml"), "[env]\nSMORG_RB_DEV = \"true\"\n")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nSTRUCTUREDMERGE_DEV = \"true\"\n")
 
     results = described_class.new(command: "release", config: config, members: [member]).results
 
@@ -303,7 +303,7 @@ RSpec.describe Kettle::Family::Workflow do
       "#{family_local_env_name}=false",
       "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
       "K_JEM_TEMPLATING=false",
-      "SMORG_RB_DEV=false",
+      "STRUCTUREDMERGE_DEV=false",
       "KETTLE_RB_DEV=false"
     )
     expect(results.first.command).not_to include("#{family_local_env_name}=#{@tmpdir}")
@@ -320,7 +320,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
-    File.write(File.join(member.root, "mise.toml"), "[env]\nSMORG_RB_DEV = \"true\"\nRUBOCOP_LTS_LOCAL = \"false\"\n")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nSTRUCTUREDMERGE_DEV = \"true\"\nRUBOCOP_LTS_LOCAL = \"false\"\n")
 
     results = described_class.new(
       command: "release",
@@ -328,7 +328,7 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       env_overrides: {
         "RUBOCOP_LTS_LOCAL" => "/workspace/rubocop-lts",
-        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV" => "/workspace/structuredmerge/ruby/gems",
         family_local_env_name => "/workspace/family"
       }
     ).results
@@ -336,10 +336,10 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to include(
       "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
       "#{family_local_env_name}=false",
-      "SMORG_RB_DEV=false"
+      "STRUCTUREDMERGE_DEV=false"
     )
     expect(results.first.command).not_to include("#{family_local_env_name}=/workspace/family")
-    expect(results.first.command).not_to include("SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems")
+    expect(results.first.command).not_to include("STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems")
     expect(results.first.command).to include("KETTLE_RB_DEV=false")
   end
 

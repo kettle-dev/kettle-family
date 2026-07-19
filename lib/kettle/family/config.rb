@@ -278,7 +278,7 @@ module Kettle
       def default_release_disable_local_path_env
         local_envs = %w[
           K_JEM_TEMPLATING
-          SMORG_RB_DEV
+          STRUCTUREDMERGE_DEV
           TSLP_DEV
           KETTLE_RB_DEV
           RUBOCOP_LTS_DEV

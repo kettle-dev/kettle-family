@@ -78,7 +78,7 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       env_overrides: {
         "K_JEM_TEMPLATING" => "true",
-        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV" => "/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL" => "/workspace/rubocop-lts"
       }
     ).results
@@ -109,12 +109,12 @@ RSpec.describe Kettle::Family::Workflow do
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
         "K_JEM_TEMPLATING=true",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
         "KETTLE_JEM_QUIET=true",
         "KETTLE_JEM_DEBUG=false",
         "KETTLE_DEV_DEBUG=false",
-        "SMORG_RB_DEBUG=false",
+        "STRUCTUREDMERGE_DEBUG=false",
         "BUNDLE_QUIET=true",
         "BUNDLE_DEBUG=false",
         "BUNDLER_DEBUG=false",
@@ -135,7 +135,7 @@ RSpec.describe Kettle::Family::Workflow do
       expect(result.command).to include(
         "K_JEM_TEMPLATING=true",
         "#{family_local_env_name}=#{@tmpdir}",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
         "BUNDLE_QUIET=true"
       )
@@ -158,7 +158,7 @@ RSpec.describe Kettle::Family::Workflow do
         "BUNDLE_DEBUG" => "true",
         "BUNDLER_DEBUG" => "true",
         "DEBUG_RESOLVER" => "true",
-        "SMORG_RB_DEBUG" => "true"
+        "STRUCTUREDMERGE_DEBUG" => "true"
       }
     ).results
     debug_results = described_class.new(
@@ -170,7 +170,7 @@ RSpec.describe Kettle::Family::Workflow do
         "BUNDLE_DEBUG" => "true",
         "BUNDLER_DEBUG" => "true",
         "DEBUG_RESOLVER" => "true",
-        "SMORG_RB_DEBUG" => "true"
+        "STRUCTUREDMERGE_DEBUG" => "true"
       },
       debug: true
     ).results
@@ -185,7 +185,7 @@ RSpec.describe Kettle::Family::Workflow do
       "DEBUG_RESOLVER",
       "BUNDLE_DEBUG=false",
       "BUNDLER_DEBUG=false",
-      "SMORG_RB_DEBUG=false"
+      "STRUCTUREDMERGE_DEBUG=false"
     )
     expect(quiet_env).not_to include(
       "DEBUG=true",
@@ -194,14 +194,14 @@ RSpec.describe Kettle::Family::Workflow do
       "BUNDLER_DEBUG=true",
       "DEBUG_RESOLVER=true",
       "DEBUG_RESOLVER=false",
-      "SMORG_RB_DEBUG=true"
+      "STRUCTUREDMERGE_DEBUG=true"
     )
     expect(debug_env).to include(
       "DEBUG=true",
       "BUNDLE_DEBUG=true",
       "BUNDLER_DEBUG=true",
       "DEBUG_RESOLVER=true",
-      "SMORG_RB_DEBUG=true"
+      "STRUCTUREDMERGE_DEBUG=true"
     )
   end
 

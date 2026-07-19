@@ -391,7 +391,7 @@ RSpec.describe Kettle::Family::CLI do
         "--env",
         "K_JEM_TEMPLATING=true",
         "--env",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "--json"
       ],
       out: out,
@@ -424,11 +424,11 @@ RSpec.describe Kettle::Family::CLI do
         "MOLINILLO_DEBUG",
         "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV=#{@tmpdir}",
         "K_JEM_TEMPLATING=true",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "KETTLE_JEM_QUIET=true",
         "KETTLE_JEM_DEBUG=false",
         "KETTLE_DEV_DEBUG=false",
-        "SMORG_RB_DEBUG=false",
+        "STRUCTUREDMERGE_DEBUG=false",
         "BUNDLE_QUIET=true",
         "BUNDLE_DEBUG=false",
         "BUNDLER_DEBUG=false",
@@ -485,13 +485,13 @@ RSpec.describe Kettle::Family::CLI do
     err = StringIO.new
 
     status = described_class.call(
-      ["template", "--root", @tmpdir, "--env", "K_JEM_TEMPLATING=true", "SMORG_RB_DEV=/workspace"],
+      ["template", "--root", @tmpdir, "--env", "K_JEM_TEMPLATING=true", "STRUCTUREDMERGE_DEV=/workspace"],
       out: StringIO.new,
       err: err
     )
 
     expect(status).to eq(1)
-    expect(err.string).to include("unexpected argument(s): SMORG_RB_DEV=/workspace")
+    expect(err.string).to include("unexpected argument(s): STRUCTUREDMERGE_DEV=/workspace")
   end
 
   it "checks version bumps without writing", :prism do
