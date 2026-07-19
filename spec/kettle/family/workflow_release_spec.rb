@@ -47,7 +47,7 @@ RSpec.describe Kettle::Family::Workflow do
         "path" => "CHANGELOG.md",
         "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
       },
-      release_env: {"KETTLE_RB_DEV" => false}
+      release_env: {"KETTLE_DEV_DEV" => false}
     )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[env]\n")
@@ -304,7 +304,7 @@ RSpec.describe Kettle::Family::Workflow do
       "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
       "K_JEM_TEMPLATING=false",
       "STRUCTUREDMERGE_DEV=false",
-      "KETTLE_RB_DEV=false"
+      "KETTLE_DEV_DEV=false"
     )
     expect(results.first.command).not_to include("#{family_local_env_name}=#{@tmpdir}")
     expect(results.first.command.last(4)).to eq(%w[bundle update nomono --bundler])
@@ -340,7 +340,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
     expect(results.first.command).not_to include("#{family_local_env_name}=/workspace/family")
     expect(results.first.command).not_to include("STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems")
-    expect(results.first.command).to include("KETTLE_RB_DEV=false")
+    expect(results.first.command).to include("KETTLE_DEV_DEV=false")
   end
 
   it "allows release readiness to use explicitly requested local source roots" do

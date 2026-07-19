@@ -211,7 +211,7 @@ changelog:
 
 release:
   env:
-    KETTLE_RB_DEV: false
+    KETTLE_DEV_DEV: false
   family_changelog:
     enabled: true
     command: bundle exec kettle-changelog

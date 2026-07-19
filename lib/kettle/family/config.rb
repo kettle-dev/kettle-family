@@ -280,7 +280,7 @@ module Kettle
           K_JEM_TEMPLATING
           STRUCTUREDMERGE_DEV
           TSLP_DEV
-          KETTLE_RB_DEV
+          KETTLE_DEV_DEV
           RUBOCOP_LTS_DEV
           PBOLING_DEV
           GALTZO_FLOSS_DEV

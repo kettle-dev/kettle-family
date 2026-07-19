@@ -266,7 +266,7 @@ RSpec.describe Kettle::Family::Config do
         name: configured-family
       release:
         env:
-          KETTLE_RB_DEV: false
+          KETTLE_DEV_DEV: false
           TSLP_DEV: ""
         family_changelog:
           enabled: true
@@ -289,7 +289,7 @@ RSpec.describe Kettle::Family::Config do
       "K_CHANGELOG_GEM_NAME" => "configured-family",
       "K_CHANGELOG_VERSION_FILE" => "gems/tree_haver/lib/tree_haver/version.rb"
     )
-    expect(config.release_env).to eq("KETTLE_RB_DEV" => "false", "TSLP_DEV" => "")
+    expect(config.release_env).to eq("KETTLE_DEV_DEV" => "false", "TSLP_DEV" => "")
     expect(config.release_family_changelog?).to be(true)
     expect(config.release_family_changelog_command).to eq("bundle exec kettle-changelog")
   end
