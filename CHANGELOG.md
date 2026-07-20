@@ -28,9 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Runtime dependency HEAD CI no longer runs JRuby and TruffleRuby jobs on
-  normal pushes when those engines cannot satisfy the Ruby 4 / Prism baseline;
-  engine-specific PRs and manual workflow runs still exercise those jobs.
+- Generated HEAD and runtime dependency HEAD CI workflows no longer include
+  JRuby or TruffleRuby jobs for this MRI-only gem.
 
 ### Security
 
