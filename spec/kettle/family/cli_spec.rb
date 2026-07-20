@@ -64,6 +64,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("--json")
     expect(out.string).to include("--report")
     expect(out.string).to include("branch-lanes")
+    expect(out.string).to include("bump")
     expect(out.string).not_to include("--only")
     expect(out.string).not_to include("--execute")
     expect(out.string).not_to include("--section")
@@ -535,10 +536,10 @@ RSpec.describe Kettle::Family::CLI do
     write_gem("alpha")
     out = StringIO.new
 
-    status = described_class.call(["bump-version", "1.1.0", "--root", @tmpdir, "--check"], out: out, err: StringIO.new)
+    status = described_class.call(["bump", "1.1.0", "--root", @tmpdir, "--check"], out: out, err: StringIO.new)
 
     expect(status).to eq(1)
-    expect(out.string).to include("failed alpha bump-version")
+    expect(out.string).to include("failed alpha bump")
     expect(out.string).to include("version changes required")
   end
 
@@ -547,21 +548,33 @@ RSpec.describe Kettle::Family::CLI do
     initialize_git_repo(@tmpdir)
     out = StringIO.new
 
-    status = described_class.call(["bump-version", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
 
     expect(status).to eq(0)
-    expect(out.string).to include("alpha bump-version")
+    expect(out.string).to include("alpha bump")
     expect(out.string).to include("alpha commit_version_bump")
     expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
+  end
+
+  it "keeps bump-version as a deprecated alias", :prism do
+    write_gem("alpha")
+    out = StringIO.new
+    err = StringIO.new
+
+    status = described_class.call(["bump-version", "1.1.0", "--root", @tmpdir, "--check"], out: out, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("bump-version is deprecated; use bump instead")
+    expect(out.string).to include("failed alpha bump-version")
   end
 
   it "describes the accepted bump-version targets when omitted" do
     err = StringIO.new
 
-    status = described_class.call(["bump-version"], out: StringIO.new, err: err)
+    status = described_class.call(["bump"], out: StringIO.new, err: err)
 
     expect(status).to eq(1)
-    expect(err.string).to include("bump-version requires VERSION, major, minor, patch, or pre")
+    expect(err.string).to include("bump requires VERSION, major, minor, patch, or pre")
   end
 
   it "plans version bumps across configured release target branches", :prism do

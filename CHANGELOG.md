@@ -33,6 +33,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Deprecated
 
+- `kettle-family bump-version` is now deprecated in favor of `kettle-family bump`.
+
 ### Removed
 
 ### Fixed
