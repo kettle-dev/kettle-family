@@ -1013,18 +1013,34 @@ module Kettle
 
       def emit_template_event_progress(member, event)
         case event["type"]
+        when "phase_start"
+          emit_template_event_line(member, ">", event["phase"].to_s)
+        when "phase_finish"
+          mark = event["status"].to_s == "failed" ? "F" : "."
+          emit_template_event_line(member, mark, event["phase"].to_s)
         when "recipe"
           path = event["path"].to_s
           mark = event["mark"].to_s.empty? ? (event["changed"] ? "*" : ".") : event["mark"].to_s
-          synchronize_template_progress do
-            progress_io.puts("[#{member.name}] #{mark} #{path}")
-            progress_io.flush if progress_io.respond_to?(:flush)
-          end
+          emit_template_event_line(member, mark, path)
+        when "post_apply_step", "command_step"
+          mark = event["mark"].to_s.empty? ? "." : event["mark"].to_s
+          label = [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
+          emit_template_event_line(member, mark, label)
+        when "diagnostic"
+          message = event["message"].to_s
+          label = message.empty? ? event["kind"].to_s : message
+          emit_template_event_line(member, "!", label)
         when "summary"
-          synchronize_template_progress do
-            progress_io.puts("[#{member.name}] done #{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed")
-            progress_io.flush if progress_io.respond_to?(:flush)
-          end
+          emit_template_event_line(member, "done", "#{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed")
+        end
+      end
+
+      def emit_template_event_line(member, mark, label)
+        return if label.to_s.empty?
+
+        synchronize_template_progress do
+          progress_io.puts("[#{member.name}] #{mark} #{label}")
+          progress_io.flush if progress_io.respond_to?(:flush)
         end
       end
 

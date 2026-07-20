@@ -22,7 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `kettle-family template` now uses `kettle-jem --events` as its default
   templating interface, including verbose and single-job runs, and streams
-  newline-delimited JSON template events as member-prefixed progress lines.
+  newline-delimited JSON template phase, recipe, post-apply, command-step,
+  diagnostic, and summary events as member-prefixed progress lines.
 
 ### Changed
 
