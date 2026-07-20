@@ -104,6 +104,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     File.write(File.join(repo, "README.md"), "main\n")
     run_git(repo, "add", ".")
     run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "branch", "-M", "main")
     run_git(repo, "tag", "-m", "v1.0.0", "v1.0.0")
     run_git(repo, "checkout", "--quiet", "-b", "release-branch")
     File.write(File.join(repo, "README.md"), "release branch\n")
