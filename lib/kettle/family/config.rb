@@ -190,6 +190,13 @@ module Kettle
         fetch_path("template", "jobs")
       end
 
+      def readme_corporate_sponsors
+        raw = fetch_path("readme", "corporate_sponsors") ||
+          fetch_path("sponsorships", "corporate") ||
+          fetch_path("corporate_sponsors")
+        normalize_corporate_sponsors(raw)
+      end
+
       def normalize_lockfiles?
         fetch_path("template", "normalize_lockfiles") == true
       end
@@ -304,6 +311,28 @@ module Kettle
         Dir.children(root)
           .map { |entry| File.join(root, entry) }
           .select { |path| File.directory?(path) }
+      end
+
+      def normalize_corporate_sponsors(raw)
+        Array(raw).filter_map do |entry|
+          unless entry.is_a?(Hash)
+            raise ArgumentError, "corporate sponsor entries must be mappings with name, url, and img_src"
+          end
+
+          sponsor = stringify_keys(entry)
+          name = sponsor["name"].to_s.strip
+          url = sponsor["url"].to_s.strip
+          img_src = sponsor["img_src"].to_s.strip
+          if name.empty? || url.empty? || img_src.empty?
+            raise ArgumentError, "corporate sponsor entries require name, url, and img_src"
+          end
+
+          {
+            "name" => name,
+            "url" => url,
+            "img_src" => img_src
+          }
+        end
       end
 
       def fetch_path(*keys)

@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family template` now passes family-level `readme.corporate_sponsors`
+  config into member `kettle-jem` runs for template-managed README sponsor logos.
+
 ### Changed
 
 ### Deprecated

@@ -54,6 +54,44 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).stdout).to eq("full/standalone\n")
   end
 
+  it "passes family corporate sponsors to kettle-jem templating environment" do
+    write_template_config(
+      command: [
+        RbConfig.ruby,
+        "-rjson",
+        "-e",
+        "puts JSON.parse(ENV.fetch('KETTLE_JEM_CORPORATE_SPONSORS_JSON')).first.fetch('name')",
+        "--",
+        "--skip-commit"
+      ]
+    )
+    config_path = File.join(@tmpdir, ".kettle-family.yml")
+    config_data = YAML.load_file(config_path)
+    config_data["readme"] = {
+      "corporate_sponsors" => [
+        {
+          "name" => "Family Sponsor",
+          "url" => "https://sponsor.example",
+          "img_src" => "https://sponsor.example/logo.svg"
+        }
+      ]
+    }
+    File.write(config_path, YAML.dump(config_data))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(config.readme_corporate_sponsors).to eq([
+      {
+        "name" => "Family Sponsor",
+        "url" => "https://sponsor.example",
+        "img_src" => "https://sponsor.example/logo.svg"
+      }
+    ])
+    expect(results.fetch(1).stdout).to eq("Family Sponsor\n")
+  end
+
   it "executes custom non-kettle-jem template commands without prepare dependency results" do
     write_template_config(
       command: [RbConfig.ruby, "-e", "puts 'custom templated'"],

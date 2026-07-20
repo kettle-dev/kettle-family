@@ -952,6 +952,10 @@ module Kettle
           if command == "template"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
+            corporate_sponsors = config.readme_corporate_sponsors
+            unless corporate_sponsors.empty?
+              env["KETTLE_JEM_CORPORATE_SPONSORS_JSON"] = JSON.generate(corporate_sponsors)
+            end
           end
           env.merge!(env_overrides)
           if command == "template" && verbose
