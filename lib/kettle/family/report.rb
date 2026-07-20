@@ -103,7 +103,7 @@ module Kettle
         lines << "results:"
         visible_results.each do |result|
           lines << "  #{result_state(result)} #{result.member_name} #{result.phase} #{result.reason || ""}".rstrip
-          append_indented_output(lines, result.stdout) unless suppress_success_output?(result)
+          append_result_stdout(lines, result)
           append_indented_output(lines, result.stderr) if !result.ok? && !result.stderr.to_s.empty?
           lines << "    resume: #{resume_hint_for(result)}" unless result.ok?
         end
@@ -158,8 +158,32 @@ module Kettle
         output.to_s.each_line(chomp: true) { |line| lines << "    #{line}" }
       end
 
+      def append_result_stdout(lines, result)
+        return if suppress_success_output?(result)
+
+        if template_event_stdout?(result)
+          append_template_event_failure_summary(lines, result.stdout) unless result.ok?
+        else
+          append_indented_output(lines, result.stdout)
+        end
+      end
+
       def suppress_success_output?(result)
         result.stdout.to_s.empty? || (command == "template" && result.ok?)
+      end
+
+      def template_event_stdout?(result)
+        command == "template" && result.phase == "template" && template_events(result.stdout).any?
+      end
+
+      def append_template_event_failure_summary(lines, output)
+        diagnostics = template_events(output).filter_map do |event|
+          next unless event["type"] == "diagnostic"
+
+          event["message"].to_s.empty? ? event["kind"].to_s : event["message"].to_s
+        end.uniq
+        diagnostics.each { |message| lines << "    diagnostic: #{message}" unless message.empty? }
+        lines << "    template event stream omitted from text report"
       end
 
       def append_template_summary(lines)
@@ -173,6 +197,9 @@ module Kettle
       end
 
       def template_changed_file_count(result)
+        event_count = template_changed_file_count_from_events(result.stdout)
+        return event_count if event_count
+
         payload = JSON.parse(result.stdout.to_s)
         Array(payload["changed_files"] || payload[:changed_files]).length if payload.is_a?(Hash)
       rescue JSON::ParserError
@@ -180,6 +207,22 @@ module Kettle
         return match[1].to_i if match
 
         0
+      end
+
+      def template_changed_file_count_from_events(output)
+        summaries = template_events(output).select { |event| event["type"] == "summary" && event.key?("changed_count") }
+        return nil if summaries.empty?
+
+        summaries.sum { |event| event["changed_count"].to_i }
+      end
+
+      def template_events(output)
+        output.to_s.each_line.filter_map do |line|
+          payload = JSON.parse(line)
+          payload if payload.is_a?(Hash) && payload["event_version"]
+        rescue JSON::ParserError
+          nil
+        end
       end
 
       def append_member_release_targets(lines)

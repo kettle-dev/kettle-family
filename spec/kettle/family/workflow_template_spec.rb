@@ -325,7 +325,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
   end
 
-  it "streams kettle-jem NDJSON template events as member progress lines" do
+  it "keeps kettle-jem NDJSON template events compact by default" do
     event_script = [
       "require 'json';",
       "puts JSON.generate(event_version: 1, type: 'phase_start', phase: 'recipes', status: 'started');",
@@ -351,6 +351,40 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     expect(results.find { |result| result.phase == "template" }.stdout).to include("\"type\":\"recipe\"")
+    expect(progress.string).to include("templating 2 members with 2 jobs:")
+    expect(progress.string).to include("..")
+    expect(progress.string).not_to include("[alpha] > recipes")
+    expect(progress.string).not_to include("[alpha] * Gemfile")
+    expect(progress.string).not_to include("[alpha] ! example warning")
+    expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
+  end
+
+  it "streams kettle-jem NDJSON template events as member progress lines when verbose" do
+    event_script = [
+      "require 'json';",
+      "puts JSON.generate(event_version: 1, type: 'phase_start', phase: 'recipes', status: 'started');",
+      "puts JSON.generate(event_version: 1, type: 'phase_finish', phase: 'recipes', status: 'ok');",
+      "puts JSON.generate(event_version: 1, type: 'recipe', path: 'Gemfile', changed: true, mark: '*');",
+      "puts JSON.generate(event_version: 1, type: 'post_apply_step', phase: 'post_apply', name: 'git_hooks_executable', status: 'updated', mark: '*');",
+      "puts JSON.generate(event_version: 1, type: 'command_step', phase: 'install', name: 'bundle_install', status: 'started', mark: '>');",
+      "puts JSON.generate(event_version: 1, type: 'diagnostic', message: 'example warning');",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_count: 1);"
+    ].join(" ")
+    write_template_config(command: [RbConfig.ruby, "-e", event_script])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [member_at("alpha"), member_at("beta")]
+    progress = StringIO.new
+
+    described_class.new(
+      command: "template",
+      config: config,
+      members: members,
+      execute: true,
+      jobs: 2,
+      progress_io: progress,
+      verbose: true
+    ).results
+
     expect(progress.string).to include("[alpha] > recipes")
     expect(progress.string).to include("[alpha] . recipes")
     expect(progress.string).to include("[alpha] * Gemfile")
@@ -361,7 +395,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
   end
 
-  it "streams kettle-jem NDJSON template events for single-job templating" do
+  it "keeps kettle-jem NDJSON template events compact for single-job templating" do
     event_script = [
       "require 'json';",
       "puts JSON.generate(event_version: 1, type: 'recipe', path: 'Gemfile', changed: true, mark: '*');",
@@ -383,8 +417,9 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.find { |result| result.phase == "template" }.stdout).to include("\"type\":\"recipe\"")
     expect(progress.string).to include("templating 1 member with 1 job:")
-    expect(progress.string).to include("[alpha] * Gemfile")
-    expect(progress.string).to include("[alpha] done 1 file changed")
+    expect(progress.string).to include(".")
+    expect(progress.string).not_to include("[alpha] * Gemfile")
+    expect(progress.string).not_to include("[alpha] done 1 file changed")
     expect(progress.string).to include("template summary: 1/1 members ok, 1 file changed")
   end
 

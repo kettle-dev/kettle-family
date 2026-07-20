@@ -994,6 +994,7 @@ module Kettle
 
       def template_event_line_handler(member)
         return nil unless progress_io
+        return nil unless verbose || debug
 
         lambda do |line|
           event = parse_template_event(line)

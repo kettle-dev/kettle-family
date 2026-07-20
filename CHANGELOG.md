@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family template` now keeps non-verbose `kettle-jem --events` progress
+  compact and omits raw NDJSON event streams from failed text reports.
 - Generated HEAD and runtime dependency HEAD CI workflows no longer include
   JRuby or TruffleRuby jobs for this MRI-only gem.
 

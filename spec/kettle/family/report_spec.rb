@@ -132,6 +132,46 @@ RSpec.describe Kettle::Family::Report do
     expect(text).not_to include("ok wave 1 release_wave")
   end
 
+  it "summarizes failed template NDJSON without dumping the raw event stream" do
+    selected_member = member("alpha")
+    stdout = [
+      JSON.generate(event_version: 1, type: "phase_start", phase: "install", status: "started"),
+      JSON.generate(event_version: 1, type: "diagnostic", message: "bundle install failed"),
+      JSON.generate(event_version: 1, type: "summary", changed_count: 3)
+    ].join("\n")
+    template_result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "template",
+      ["kettle-jem", "install", "--events"],
+      "/repo/alpha",
+      1,
+      false,
+      stdout,
+      "Bundler::GitError\n",
+      1.0,
+      false,
+      "command failed"
+    )
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [selected_member],
+      selected_members: [selected_member],
+      config_path: nil,
+      command: "template",
+      results: [template_result]
+    )
+
+    text = report.to_text
+
+    expect(text).to include("diagnostic: bundle install failed")
+    expect(text).to include("template event stream omitted from text report")
+    expect(text).to include("Bundler::GitError")
+    expect(text).to include("3 files changed")
+    expect(text).not_to include("\"event_version\"")
+    expect(text).not_to include("\"phase_start\"")
+  end
+
   it "uses a full release resume hint for failed publish releases" do
     result = Kettle::Family::CommandResult.new(
       "rubocop-ruby3_2",
