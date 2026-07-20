@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family release` now accepts `--skip-remotes` and forwards the
+  comma-separated remote skip list to member `kettle-release` runs.
+
 - `kettle-family template` now runs `kettle-jem prepare` before full templating
   for Kettle Jem-powered members so templating-only dependency bootstraps, such
   as parser packages, are available before the full template command loads.

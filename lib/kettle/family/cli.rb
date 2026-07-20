@@ -148,6 +148,7 @@ module Kettle
             release_continue_ci_failures: false,
             release_ci_workflows: nil,
             release_skip_bundle_audit: false,
+            release_skip_remotes: nil,
             accept: true,
             tag: false,
             push: false,
@@ -407,6 +408,7 @@ module Kettle
         option :continue_ci_failures, long: "--continue-ci-failures", desc: "Set K_RELEASE_CI_CONTINUE=true for release commands"
         option :ci_workflows, long: "--ci-workflows", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated CI workflow monitor subset through to kettle-release commands"
         option :skip_bundle_audit, long: "--skip-bundle-audit", desc: "Skip bundle:audit/update during release rake checks"
+        option :skip_remotes, long: "--skip-remotes", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated git remote skip list through to kettle-release commands"
         option :no_auto_floors, long: "--no-auto-floors", desc: "Do not raise family dependency floors between member releases" do
           options[:no_auto_floors] = true
         end
@@ -428,6 +430,7 @@ module Kettle
             release_continue_ci_failures: truthy_option?(:continue_ci_failures),
             release_ci_workflows: options[:ci_workflows],
             release_skip_bundle_audit: truthy_option?(:skip_bundle_audit),
+            release_skip_remotes: options[:skip_remotes],
             release_auto_dependency_floors: !truthy_option?(:no_auto_floors),
             accept: !options.key?(:accept) || options[:accept],
             tag: truthy_option?(:tag),
@@ -567,6 +570,7 @@ module Kettle
           continue_ci_failures: options[:release_continue_ci_failures],
           ci_workflows: options[:release_ci_workflows],
           skip_bundle_audit: options[:release_skip_bundle_audit],
+          skip_remotes: options[:release_skip_remotes],
           auto_dependency_floors: options[:release_auto_dependency_floors],
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],
           gha_sha_pins_check: options[:check],

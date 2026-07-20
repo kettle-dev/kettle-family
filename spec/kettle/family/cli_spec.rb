@@ -942,7 +942,7 @@ RSpec.describe Kettle::Family::CLI do
     out = StringIO.new
 
     status = described_class.call(
-      ["release", "--root", @tmpdir, "--publish", "--start-step", "10", "--skip-steps", "10", "--ci-workflows", "current,style.yml", "--local-ci", "--continue-ci-failures", "--skip-bundle-audit", "--json"],
+      ["release", "--root", @tmpdir, "--publish", "--start-step", "10", "--skip-steps", "10", "--ci-workflows", "current,style.yml", "--local-ci", "--continue-ci-failures", "--skip-bundle-audit", "--skip-remotes", "cb", "--json"],
       out: out,
       err: StringIO.new
     )
@@ -950,7 +950,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     report = JSON.parse(out.string)
     release = report.fetch("results").find { |result| result.fetch("phase") == "release_publish" }
-    expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit"])
+    expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb"])
   end
 
   it "rejects unsafe release ci workflow subset values" do
