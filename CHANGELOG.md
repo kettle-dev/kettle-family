@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `kettle-family release` now accepts `--skip-remotes` and forwards the
   comma-separated remote skip list to member `kettle-release` runs.
+- `kettle-family --only` now accepts release-state tokens `unreleased`,
+  `prepared`, and `pending`; multiple tokens are combined with logical AND.
 
 - `kettle-family template` now runs `kettle-jem prepare` before full templating
   for Kettle Jem-powered members so templating-only dependency bootstraps, such

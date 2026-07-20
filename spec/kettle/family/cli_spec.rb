@@ -153,6 +153,40 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).not_to include("skipped gamma release_build")
   end
 
+  it "plans releases for only members matching release-state status tokens" do
+    write_ready_gem("alpha")
+    write_ready_gem("beta")
+    write_ready_gem("gamma")
+    release_state_results = [
+      release_state_result("alpha", "unreleased_entries" => true, "prepared_release_pending" => false, "pending_release" => true),
+      release_state_result("beta", "unreleased_entries" => false, "prepared_release_pending" => true, "pending_release" => true),
+      release_state_result("gamma", "unreleased_entries" => false, "prepared_release_pending" => false, "pending_release" => false)
+    ]
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: release_state_results)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "pending,prepared"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("- alpha")
+    expect(out.string).to include("* beta")
+    expect(out.string).to include("- gamma")
+    expect(out.string).not_to include("skipped alpha release_build")
+    expect(out.string).to include("skipped beta release_build")
+    expect(out.string).not_to include("skipped gamma release_build")
+  end
+
+  it "rejects release-state status tokens mixed with member names" do
+    write_ready_gem("alpha")
+    err = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "pending,alpha"], out: StringIO.new, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("--only release-state tokens cannot be combined with member names: alpha")
+  end
+
   it "prints command-specific help for member selection options" do
     out = StringIO.new
 
@@ -160,6 +194,7 @@ RSpec.describe Kettle::Family::CLI do
 
     expect(status).to eq(0)
     expect(out.string).to include("--only")
+    expect(out.string).to include("unreleased, prepared, pending")
     expect(out.string).to include("--exclude")
     expect(out.string).to include("--execute")
     expect(out.string).to include("--publish")
@@ -1109,6 +1144,20 @@ RSpec.describe Kettle::Family::CLI do
       File.write(full_path, "#!/bin/sh\n")
       FileUtils.chmod("u+x", full_path)
     end
+  end
+
+  def release_state_result(member_name, state)
+    Kettle::Family::ReleaseStateResult.new(
+      member_name: member_name,
+      command: %w[kettle-changelog --release-state --json],
+      workdir: File.join(@tmpdir, member_name),
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.0,
+      state: state
+    )
   end
 
   def initialize_git_repo(path, branches: [])

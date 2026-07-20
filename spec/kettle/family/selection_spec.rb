@@ -17,6 +17,38 @@ RSpec.describe Kettle::Family::Selection do
     expect(selected.map(&:name)).to eq(%w[alpha gamma])
   end
 
+  it "selects members by release-state token" do
+    members = [member("alpha"), member("beta"), member("gamma")]
+    results = [
+      release_state("alpha", "unreleased_entries" => true, "prepared_release_pending" => false, "pending_release" => true),
+      release_state("beta", "unreleased_entries" => false, "prepared_release_pending" => true, "pending_release" => true),
+      release_state("gamma", "unreleased_entries" => false, "prepared_release_pending" => false, "pending_release" => false)
+    ]
+
+    selected = described_class.new(members: members, release_state_results: results).apply(only: "pending")
+
+    expect(selected.map(&:name)).to eq(%w[alpha beta])
+  end
+
+  it "ANDs multiple release-state tokens" do
+    members = [member("alpha"), member("beta"), member("gamma")]
+    results = [
+      release_state("alpha", "unreleased_entries" => true, "prepared_release_pending" => false, "pending_release" => true),
+      release_state("beta", "unreleased_entries" => false, "prepared_release_pending" => true, "pending_release" => true),
+      release_state("gamma", "unreleased_entries" => true, "prepared_release_pending" => true, "pending_release" => true)
+    ]
+
+    selected = described_class.new(members: members, release_state_results: results).apply(only: "pending,prepared")
+
+    expect(selected.map(&:name)).to eq(%w[beta gamma])
+  end
+
+  it "rejects mixing release-state tokens with member names" do
+    selection = described_class.new(members: [member("alpha")], release_state_results: [])
+
+    expect { selection.apply(only: "pending,alpha") }.to raise_error(Kettle::Family::Error, /cannot be combined with member names: alpha/)
+  end
+
   it "excludes comma-separated members from the family order" do
     selected = described_class.new(members: [member("alpha"), member("beta"), member("gamma")]).apply(exclude: "beta, gamma")
 
@@ -57,5 +89,19 @@ RSpec.describe Kettle::Family::Selection do
     selection = described_class.new(members: [])
 
     expect { selection.apply }.to raise_error(Kettle::Family::Error, /selection is empty/)
+  end
+
+  def release_state(member_name, state)
+    Kettle::Family::ReleaseStateResult.new(
+      member_name: member_name,
+      command: %w[kettle-changelog --release-state --json],
+      workdir: member_name,
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.0,
+      state: state
+    )
   end
 end

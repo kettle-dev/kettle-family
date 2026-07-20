@@ -37,7 +37,7 @@ module Kettle
 
       module SelectionOptions
         def self.included(base)
-          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members"
+          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members, or release-state tokens: unreleased, prepared, pending"
           base.option :exclude, value: {type: String, usage: "MEMBERS"}, desc: "Exclude comma-separated members"
           base.option :start_at, long: "--start-at", value: {type: String, usage: "MEMBER[@BRANCH]"}, desc: "Select from member through the end of order"
         end
@@ -517,7 +517,8 @@ module Kettle
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
-        selected = Selection.new(members: ordered).apply(only: options[:only], exclude: options[:exclude], start_at: start_at.member)
+        release_state_results = release_state_results_for_selection(config: config, members: ordered, only: options[:only])
+        selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: options[:only], exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
         results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
         Report.new(
@@ -543,6 +544,12 @@ module Kettle
         return member_local_branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if member_local_branch_target_command?(command, config, members)
 
         command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at)
+      end
+
+      def release_state_results_for_selection(config:, members:, only:)
+        return nil unless only.to_s.split(",").map(&:strip).any? { |token| Selection.status_token?(token) }
+
+        ReleaseStateCheck.new(config: config, members: members).results
       end
 
       def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))
