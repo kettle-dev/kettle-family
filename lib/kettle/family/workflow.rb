@@ -46,7 +46,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -69,6 +69,7 @@ module Kettle
         @gha_sha_pins_check = gha_sha_pins_check
         @env_overrides = env_overrides
         @debug = debug
+        @verbose = verbose
         @gem_signing_password = gem_signing_password
         @jobs = jobs
         @progress_io = progress_io
@@ -91,7 +92,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -947,7 +948,11 @@ module Kettle
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
           end
           env.merge!(env_overrides)
-          env.merge!(TEMPLATE_QUIET_ENV) if command == "template" && !debug
+          if command == "template" && verbose
+            env["KETTLE_JEM_VERBOSE"] = "true"
+          elsif command == "template" && !debug
+            env.merge!(TEMPLATE_QUIET_ENV)
+          end
         end
       end
 
@@ -957,8 +962,12 @@ module Kettle
 
       def append_template_family_args(command_text)
         args = []
-        args << "--quiet" unless command_includes_arg?(command_text, "--quiet")
-        args << "--json" unless command_includes_arg?(command_text, "--json")
+        if verbose
+          args << "--verbose" unless command_includes_arg?(command_text, "--verbose")
+        else
+          args << "--quiet" unless command_includes_arg?(command_text, "--quiet")
+          args << "--json" unless command_includes_arg?(command_text, "--json")
+        end
         append_command_args(command_text, args)
       end
 

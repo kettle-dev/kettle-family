@@ -68,6 +68,21 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --json"])
   end
 
+  it "passes verbose mode through to kettle-jem templating instead of forcing quiet JSON output" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
+    RUBY
+
+    results = described_class.new(command: "template", config: config, members: [member], verbose: true).results
+
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --verbose"])
+    expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --verbose"])
+    expect(results.fetch(1).command.join(" ")).not_to include("--quiet")
+    expect(results.fetch(1).command.join(" ")).not_to include("--json")
+  end
+
   it "disables the implicit family local path env during template prepare" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -241,6 +256,20 @@ RSpec.describe Kettle::Family::Workflow do
       "DEBUG_RESOLVER=true",
       "STRUCTUREDMERGE_DEBUG=true"
     )
+  end
+
+  it "sets KETTLE_JEM_VERBOSE and does not force quiet environment in verbose mode" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    results = described_class.new(command: "template", config: config, members: [member], verbose: true).results
+
+    command_env = results.find { |result| result.phase == "template" }.command.grep(/KETTLE_JEM|BUNDLE_QUIET/)
+    expect(command_env).to include("KETTLE_JEM_VERBOSE=true")
+    expect(command_env).not_to include("KETTLE_JEM_QUIET=true")
+    expect(command_env).not_to include("BUNDLE_QUIET=true")
   end
 
   it "runs executed templating members in parallel and emits compact progress" do

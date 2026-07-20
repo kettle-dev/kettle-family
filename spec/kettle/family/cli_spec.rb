@@ -508,6 +508,26 @@ RSpec.describe Kettle::Family::CLI do
     expect(command).not_to include("DEBUG=false", "BUNDLE_DEBUG=false")
   end
 
+  it "passes template verbose mode through to kettle-jem" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", "mise.toml"), "[env]\n")
+    out = StringIO.new
+
+    status = described_class.call(
+      ["template", "--root", @tmpdir, "--verbose", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").find { |entry| entry.fetch("phase") == "template" }
+    command = result.fetch("command")
+    expect(command).to include("KETTLE_JEM_VERBOSE=true")
+    expect(command.last(3)).to eq(["sh", "-lc", "kettle-jem install --verbose"])
+    expect(command).not_to include("KETTLE_JEM_QUIET=true")
+    expect(command).not_to include("BUNDLE_QUIET=true")
+  end
+
   it "rejects invalid workflow environment overrides" do
     write_gem("alpha")
     err = StringIO.new

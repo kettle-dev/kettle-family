@@ -65,6 +65,7 @@ module Kettle
       module WorkflowOptions
         def self.included(base)
           base.option :debug, desc: "Preserve debug environment for workflow commands"
+          base.option :verbose, desc: "Pass verbose mode through to supported workflow commands"
           base.option :jobs, value: {type: Integer, usage: "N"}, desc: "Parallel jobs for supported executed workflows"
           base.option :env, value: {type: String, usage: "KEY=VALUE"}, desc: "Override an environment variable for each member workflow command" do |value|
             parse_env_override(value, workflow_env)
@@ -134,6 +135,7 @@ module Kettle
             report: options[:report],
             execute: truthy_option?(:execute),
             debug: truthy_option?(:debug),
+            verbose: truthy_option?(:verbose),
             jobs: options[:jobs],
             workflow_env: workflow_env,
             changelog_section: nil,
@@ -606,6 +608,7 @@ module Kettle
           gha_sha_pins_check: options[:check],
           env_overrides: options[:workflow_env],
           debug: options[:debug],
+          verbose: options[:verbose],
           jobs: options[:jobs],
           progress_io: progress_io(command, options),
           bup_args: options[:bup_args],
