@@ -64,6 +64,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("--json")
     expect(out.string).to include("--report")
     expect(out.string).to include("branch-lanes")
+    expect(out.string).to include("bump")
     expect(out.string).not_to include("--only")
     expect(out.string).not_to include("--execute")
     expect(out.string).not_to include("--section")
@@ -153,6 +154,40 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).not_to include("skipped gamma release_build")
   end
 
+  it "plans releases for only members matching release-state status tokens" do
+    write_ready_gem("alpha")
+    write_ready_gem("beta")
+    write_ready_gem("gamma")
+    release_state_results = [
+      release_state_result("alpha", "unreleased_entries" => true, "prepared_release_pending" => false, "pending_release" => true),
+      release_state_result("beta", "unreleased_entries" => false, "prepared_release_pending" => true, "pending_release" => true),
+      release_state_result("gamma", "unreleased_entries" => false, "prepared_release_pending" => false, "pending_release" => false)
+    ]
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: release_state_results)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "pending,prepared"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("- alpha")
+    expect(out.string).to include("* beta")
+    expect(out.string).to include("- gamma")
+    expect(out.string).not_to include("skipped alpha release_build")
+    expect(out.string).to include("skipped beta release_build")
+    expect(out.string).not_to include("skipped gamma release_build")
+  end
+
+  it "rejects release-state status tokens mixed with member names" do
+    write_ready_gem("alpha")
+    err = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "pending,alpha"], out: StringIO.new, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("--only release-state tokens cannot be combined with member names: alpha")
+  end
+
   it "prints command-specific help for member selection options" do
     out = StringIO.new
 
@@ -160,6 +195,7 @@ RSpec.describe Kettle::Family::CLI do
 
     expect(status).to eq(0)
     expect(out.string).to include("--only")
+    expect(out.string).to include("unreleased, prepared, pending")
     expect(out.string).to include("--exclude")
     expect(out.string).to include("--execute")
     expect(out.string).to include("--publish")
@@ -391,7 +427,7 @@ RSpec.describe Kettle::Family::CLI do
         "--env",
         "K_JEM_TEMPLATING=true",
         "--env",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "--json"
       ],
       out: out,
@@ -399,7 +435,8 @@ RSpec.describe Kettle::Family::CLI do
     )
 
     expect(status).to eq(0)
-    command = JSON.parse(out.string).fetch("results").first.fetch("command")
+    result = JSON.parse(out.string).fetch("results").find { |entry| entry.fetch("phase") == "template" }
+    command = result.fetch("command")
     expect(command).to eq(
       [
         "mise",
@@ -424,11 +461,11 @@ RSpec.describe Kettle::Family::CLI do
         "MOLINILLO_DEBUG",
         "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV=#{@tmpdir}",
         "K_JEM_TEMPLATING=true",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "KETTLE_JEM_QUIET=true",
         "KETTLE_JEM_DEBUG=false",
         "KETTLE_DEV_DEBUG=false",
-        "SMORG_RB_DEBUG=false",
+        "STRUCTUREDMERGE_DEBUG=false",
         "BUNDLE_QUIET=true",
         "BUNDLE_DEBUG=false",
         "BUNDLER_DEBUG=false",
@@ -438,7 +475,7 @@ RSpec.describe Kettle::Family::CLI do
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
         "sh",
         "-lc",
-        "kettle-jem install --quiet --json"
+        "kettle-jem install --quiet --events"
       ]
     )
   end
@@ -465,9 +502,30 @@ RSpec.describe Kettle::Family::CLI do
     )
 
     expect(status).to eq(0)
-    command = JSON.parse(out.string).fetch("results").first.fetch("command")
+    result = JSON.parse(out.string).fetch("results").find { |entry| entry.fetch("phase") == "prepare_template_dependencies" }
+    command = result.fetch("command")
     expect(command).to include("DEBUG=true", "BUNDLE_DEBUG=true")
     expect(command).not_to include("DEBUG=false", "BUNDLE_DEBUG=false")
+  end
+
+  it "passes template verbose mode through to kettle-jem" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", "mise.toml"), "[env]\n")
+    out = StringIO.new
+
+    status = described_class.call(
+      ["template", "--root", @tmpdir, "--verbose", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").find { |entry| entry.fetch("phase") == "template" }
+    command = result.fetch("command")
+    expect(command).to include("KETTLE_JEM_VERBOSE=true")
+    expect(command.last(3)).to eq(["sh", "-lc", "kettle-jem install --verbose --events"])
+    expect(command).not_to include("KETTLE_JEM_QUIET=true")
+    expect(command).not_to include("BUNDLE_QUIET=true")
   end
 
   it "rejects invalid workflow environment overrides" do
@@ -485,23 +543,23 @@ RSpec.describe Kettle::Family::CLI do
     err = StringIO.new
 
     status = described_class.call(
-      ["template", "--root", @tmpdir, "--env", "K_JEM_TEMPLATING=true", "SMORG_RB_DEV=/workspace"],
+      ["template", "--root", @tmpdir, "--env", "K_JEM_TEMPLATING=true", "STRUCTUREDMERGE_DEV=/workspace"],
       out: StringIO.new,
       err: err
     )
 
     expect(status).to eq(1)
-    expect(err.string).to include("unexpected argument(s): SMORG_RB_DEV=/workspace")
+    expect(err.string).to include("unexpected argument(s): STRUCTUREDMERGE_DEV=/workspace")
   end
 
   it "checks version bumps without writing", :prism do
     write_gem("alpha")
     out = StringIO.new
 
-    status = described_class.call(["bump-version", "1.1.0", "--root", @tmpdir, "--check"], out: out, err: StringIO.new)
+    status = described_class.call(["bump", "1.1.0", "--root", @tmpdir, "--check"], out: out, err: StringIO.new)
 
     expect(status).to eq(1)
-    expect(out.string).to include("failed alpha bump-version")
+    expect(out.string).to include("failed alpha bump")
     expect(out.string).to include("version changes required")
   end
 
@@ -510,21 +568,33 @@ RSpec.describe Kettle::Family::CLI do
     initialize_git_repo(@tmpdir)
     out = StringIO.new
 
-    status = described_class.call(["bump-version", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--execute"], out: out, err: StringIO.new)
 
     expect(status).to eq(0)
-    expect(out.string).to include("alpha bump-version")
+    expect(out.string).to include("alpha bump")
     expect(out.string).to include("alpha commit_version_bump")
     expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
+  end
+
+  it "keeps bump-version as a deprecated alias", :prism do
+    write_gem("alpha")
+    out = StringIO.new
+    err = StringIO.new
+
+    status = described_class.call(["bump-version", "1.1.0", "--root", @tmpdir, "--check"], out: out, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("bump-version is deprecated; use bump instead")
+    expect(out.string).to include("failed alpha bump-version")
   end
 
   it "describes the accepted bump-version targets when omitted" do
     err = StringIO.new
 
-    status = described_class.call(["bump-version"], out: StringIO.new, err: err)
+    status = described_class.call(["bump"], out: StringIO.new, err: err)
 
     expect(status).to eq(1)
-    expect(err.string).to include("bump-version requires VERSION, major, minor, patch, or pre")
+    expect(err.string).to include("bump requires VERSION, major, minor, patch, or pre")
   end
 
   it "plans version bumps across configured release target branches", :prism do
@@ -940,7 +1010,7 @@ RSpec.describe Kettle::Family::CLI do
     out = StringIO.new
 
     status = described_class.call(
-      ["release", "--root", @tmpdir, "--publish", "--start-step", "10", "--skip-steps", "10", "--ci-workflows", "current,style.yml", "--local-ci", "--continue-ci-failures", "--skip-bundle-audit", "--json"],
+      ["release", "--root", @tmpdir, "--publish", "--start-step", "10", "--skip-steps", "10", "--ci-workflows", "current,style.yml", "--local-ci", "--continue-ci-failures", "--skip-bundle-audit", "--skip-remotes", "cb", "--json"],
       out: out,
       err: StringIO.new
     )
@@ -948,7 +1018,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     report = JSON.parse(out.string)
     release = report.fetch("results").find { |result| result.fetch("phase") == "release_publish" }
-    expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit"])
+    expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb"])
   end
 
   it "rejects unsafe release ci workflow subset values" do
@@ -1003,6 +1073,7 @@ RSpec.describe Kettle::Family::CLI do
         "version" => "1.2.4",
         "latest_released" => "1.2.3",
         "latest_changelog_version" => "1.2.4",
+        "ahead" => 5,
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
         "pending_release" => true
@@ -1017,8 +1088,10 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     expect(out.string).to include("release state:")
     expect(out.string).to include("latest released")
+    expect(out.string).to include("ahead")
     expect(out.string).to include("alpha")
     expect(out.string).to include("1.2.3")
+    expect(out.string).to include("5")
     expect(out.string).to include("yes")
   end
 
@@ -1107,6 +1180,20 @@ RSpec.describe Kettle::Family::CLI do
       File.write(full_path, "#!/bin/sh\n")
       FileUtils.chmod("u+x", full_path)
     end
+  end
+
+  def release_state_result(member_name, state)
+    Kettle::Family::ReleaseStateResult.new(
+      member_name: member_name,
+      command: %w[kettle-changelog --release-state --json],
+      workdir: File.join(@tmpdir, member_name),
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.0,
+      state: state
+    )
   end
 
   def initialize_git_repo(path, branches: [])

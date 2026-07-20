@@ -216,7 +216,7 @@ RSpec.describe Kettle::Family::Config do
 
     expect(config.release_normalize_lockfiles?).to be(true)
     expect(config.release_normalize_lockfiles_command).to eq(%w[bundle update nomono --bundler])
-    expect(config.release_disable_local_path_env).to include(config.family_local_path_env_name, "SMORG_RB_DEV", "K_JEM_TEMPLATING")
+    expect(config.release_disable_local_path_env).to include(config.family_local_path_env_name, "STRUCTUREDMERGE_DEV", "K_JEM_TEMPLATING")
   end
 
   it "allows release lockfile normalization overrides" do
@@ -266,7 +266,7 @@ RSpec.describe Kettle::Family::Config do
         name: configured-family
       release:
         env:
-          KETTLE_RB_DEV: false
+          KETTLE_DEV_DEV: false
           TSLP_DEV: ""
         family_changelog:
           enabled: true
@@ -289,7 +289,7 @@ RSpec.describe Kettle::Family::Config do
       "K_CHANGELOG_GEM_NAME" => "configured-family",
       "K_CHANGELOG_VERSION_FILE" => "gems/tree_haver/lib/tree_haver/version.rb"
     )
-    expect(config.release_env).to eq("KETTLE_RB_DEV" => "false", "TSLP_DEV" => "")
+    expect(config.release_env).to eq("KETTLE_DEV_DEV" => "false", "TSLP_DEV" => "")
     expect(config.release_family_changelog?).to be(true)
     expect(config.release_family_changelog_command).to eq("bundle exec kettle-changelog")
   end

@@ -54,6 +54,34 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).stdout).to eq("full/standalone\n")
   end
 
+  it "executes custom non-kettle-jem template commands without prepare dependency results" do
+    write_template_config(
+      command: [RbConfig.ruby, "-e", "puts 'custom templated'"],
+      normalize_lockfiles: false
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results.map(&:phase)).to eq(["template"])
+    expect(results.fetch(0).stdout).to eq("custom templated\n")
+  end
+
+  it "streams custom non-kettle-jem template commands without prepare dependency results" do
+    write_template_config(
+      command: [RbConfig.ruby, "-e", "puts 'custom templated'"],
+      normalize_lockfiles: false
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [member_at("alpha"), member_at("beta")]
+
+    results = described_class.new(command: "template", config: config, members: members, execute: true, jobs: 2).results
+
+    expect(results.map(&:phase)).to eq(%w[template template])
+    expect(results.map(&:stdout)).to eq(["custom templated\n", "custom templated\n"])
+  end
+
   it "adds quiet JSON flags and disables noisy debug environment for kettle-jem family templating" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -63,7 +91,58 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member]).results
 
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --json"])
+    expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
+    expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --events"])
+  end
+
+  it "passes verbose mode through to kettle-jem templating while keeping event output" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
+    RUBY
+
+    results = described_class.new(command: "template", config: config, members: [member], verbose: true).results
+
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --verbose --events"])
+    expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --verbose --events"])
+    expect(results.fetch(1).command.join(" ")).not_to include("--quiet")
+    expect(results.fetch(1).command.join(" ")).to include("--events")
+  end
+
+  it "disables the implicit family local path env during template prepare" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
+    RUBY
+
+    results = described_class.new(command: "template", config: config, members: [member]).results
+
+    expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
+    expect(results.fetch(0).command).to include("#{family_local_env_name}=false")
+  end
+
+  it "preserves an explicit family local path env during template prepare" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
+    RUBY
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      env_overrides: {family_local_env_name => "/explicit/family"}
+    ).results
+
+    expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
+    expect(results.fetch(0).command).to include("#{family_local_env_name}=/explicit/family")
+    expect(results.fetch(0).command).not_to include("#{family_local_env_name}=false")
   end
 
   it "passes explicit environment overrides through member mise execution" do
@@ -78,12 +157,14 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       env_overrides: {
         "K_JEM_TEMPLATING" => "true",
-        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV" => "/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL" => "/workspace/rubocop-lts"
       }
     ).results
 
-    expect(results.fetch(1).command).to eq(
+    expect(results.fetch(1).phase).to eq("prepare_template_dependencies")
+    expect(results.fetch(1).command.last(3)).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
+    expect(results.fetch(2).command).to eq(
       [
         "mise",
         "exec",
@@ -109,12 +190,12 @@ RSpec.describe Kettle::Family::Workflow do
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
         "K_JEM_TEMPLATING=true",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
         "KETTLE_JEM_QUIET=true",
         "KETTLE_JEM_DEBUG=false",
         "KETTLE_DEV_DEBUG=false",
-        "SMORG_RB_DEBUG=false",
+        "STRUCTUREDMERGE_DEBUG=false",
         "BUNDLE_QUIET=true",
         "BUNDLE_DEBUG=false",
         "BUNDLER_DEBUG=false",
@@ -127,15 +208,15 @@ RSpec.describe Kettle::Family::Workflow do
         "kettle-jem",
         "install",
         "--quiet",
-        "--json"
+        "--events"
       ]
     )
 
-    [results.fetch(0), results.fetch(2)].each do |result|
+    [results.fetch(0), results.fetch(3)].each do |result|
       expect(result.command).to include(
         "K_JEM_TEMPLATING=true",
         "#{family_local_env_name}=#{@tmpdir}",
-        "SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
         "BUNDLE_QUIET=true"
       )
@@ -158,7 +239,7 @@ RSpec.describe Kettle::Family::Workflow do
         "BUNDLE_DEBUG" => "true",
         "BUNDLER_DEBUG" => "true",
         "DEBUG_RESOLVER" => "true",
-        "SMORG_RB_DEBUG" => "true"
+        "STRUCTUREDMERGE_DEBUG" => "true"
       }
     ).results
     debug_results = described_class.new(
@@ -170,7 +251,7 @@ RSpec.describe Kettle::Family::Workflow do
         "BUNDLE_DEBUG" => "true",
         "BUNDLER_DEBUG" => "true",
         "DEBUG_RESOLVER" => "true",
-        "SMORG_RB_DEBUG" => "true"
+        "STRUCTUREDMERGE_DEBUG" => "true"
       },
       debug: true
     ).results
@@ -185,7 +266,7 @@ RSpec.describe Kettle::Family::Workflow do
       "DEBUG_RESOLVER",
       "BUNDLE_DEBUG=false",
       "BUNDLER_DEBUG=false",
-      "SMORG_RB_DEBUG=false"
+      "STRUCTUREDMERGE_DEBUG=false"
     )
     expect(quiet_env).not_to include(
       "DEBUG=true",
@@ -194,15 +275,29 @@ RSpec.describe Kettle::Family::Workflow do
       "BUNDLER_DEBUG=true",
       "DEBUG_RESOLVER=true",
       "DEBUG_RESOLVER=false",
-      "SMORG_RB_DEBUG=true"
+      "STRUCTUREDMERGE_DEBUG=true"
     )
     expect(debug_env).to include(
       "DEBUG=true",
       "BUNDLE_DEBUG=true",
       "BUNDLER_DEBUG=true",
       "DEBUG_RESOLVER=true",
-      "SMORG_RB_DEBUG=true"
+      "STRUCTUREDMERGE_DEBUG=true"
     )
+  end
+
+  it "sets KETTLE_JEM_VERBOSE and does not force quiet environment in verbose mode" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    results = described_class.new(command: "template", config: config, members: [member], verbose: true).results
+
+    command_env = results.find { |result| result.phase == "template" }.command.grep(/KETTLE_JEM|BUNDLE_QUIET/)
+    expect(command_env).to include("KETTLE_JEM_VERBOSE=true")
+    expect(command_env).not_to include("KETTLE_JEM_QUIET=true")
+    expect(command_env).not_to include("BUNDLE_QUIET=true")
   end
 
   it "runs executed templating members in parallel and emits compact progress" do
@@ -228,6 +323,69 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("templating 2 members with 2 jobs:")
     expect(progress.string).to include("..")
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
+  end
+
+  it "streams kettle-jem NDJSON template events as member progress lines" do
+    event_script = [
+      "require 'json';",
+      "puts JSON.generate(event_version: 1, type: 'phase_start', phase: 'recipes', status: 'started');",
+      "puts JSON.generate(event_version: 1, type: 'phase_finish', phase: 'recipes', status: 'ok');",
+      "puts JSON.generate(event_version: 1, type: 'recipe', path: 'Gemfile', changed: true, mark: '*');",
+      "puts JSON.generate(event_version: 1, type: 'post_apply_step', phase: 'post_apply', name: 'git_hooks_executable', status: 'updated', mark: '*');",
+      "puts JSON.generate(event_version: 1, type: 'command_step', phase: 'install', name: 'bundle_install', status: 'started', mark: '>');",
+      "puts JSON.generate(event_version: 1, type: 'diagnostic', message: 'example warning');",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_count: 1);"
+    ].join(" ")
+    write_template_config(command: [RbConfig.ruby, "-e", event_script])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [member_at("alpha"), member_at("beta")]
+    progress = StringIO.new
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: members,
+      execute: true,
+      jobs: 2,
+      progress_io: progress
+    ).results
+
+    expect(results.find { |result| result.phase == "template" }.stdout).to include("\"type\":\"recipe\"")
+    expect(progress.string).to include("[alpha] > recipes")
+    expect(progress.string).to include("[alpha] . recipes")
+    expect(progress.string).to include("[alpha] * Gemfile")
+    expect(progress.string).to include("[alpha] * post_apply:git_hooks_executable")
+    expect(progress.string).to include("[alpha] > install:bundle_install")
+    expect(progress.string).to include("[alpha] ! example warning")
+    expect(progress.string).to include("[alpha] done 1 file changed")
+    expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
+  end
+
+  it "streams kettle-jem NDJSON template events for single-job templating" do
+    event_script = [
+      "require 'json';",
+      "puts JSON.generate(event_version: 1, type: 'recipe', path: 'Gemfile', changed: true, mark: '*');",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_count: 1);"
+    ].join(" ")
+    write_template_config(command: [RbConfig.ruby, "-e", event_script])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    progress = StringIO.new
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      execute: true,
+      jobs: 1,
+      progress_io: progress
+    ).results
+
+    expect(results.find { |result| result.phase == "template" }.stdout).to include("\"type\":\"recipe\"")
+    expect(progress.string).to include("templating 1 member with 1 job:")
+    expect(progress.string).to include("[alpha] * Gemfile")
+    expect(progress.string).to include("[alpha] done 1 file changed")
+    expect(progress.string).to include("template summary: 1/1 members ok, 1 file changed")
   end
 
   it "plans templating across configured release target branches" do
@@ -322,16 +480,17 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member]).results
 
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem install --quiet --json"])
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
+    expect(results.fetch(1).command).to eq(["sh", "-lc", "kettle-jem install --quiet --events"])
   end
 
-  def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil)
+  def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil, normalize_lockfiles: true)
     config = {
       "template" => {
         "command" => command,
         "profile" => "full",
         "repository_topology" => "standalone",
-        "normalize_lockfiles" => true,
+        "normalize_lockfiles" => normalize_lockfiles,
         "normalize_lockfiles_command" => [RbConfig.ruby, "-e", "puts 'normalized'"]
       }
     }

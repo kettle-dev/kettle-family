@@ -27,7 +27,7 @@ module Kettle
         "KETTLE_JEM_QUIET" => "true",
         "KETTLE_JEM_DEBUG" => "false",
         "KETTLE_DEV_DEBUG" => "false",
-        "SMORG_RB_DEBUG" => "false",
+        "STRUCTUREDMERGE_DEBUG" => "false",
         "DEBUG" => nil,
         "BUNDLE_QUIET" => "true",
         "BUNDLE_DEBUG" => "false",
@@ -46,7 +46,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -63,11 +63,13 @@ module Kettle
         @continue_ci_failures = continue_ci_failures
         @ci_workflows = validate_ci_workflows(ci_workflows)
         @skip_bundle_audit = skip_bundle_audit
+        @skip_remotes = validate_skip_remotes(skip_remotes)
         @auto_dependency_floors = auto_dependency_floors.nil? ? config.release_auto_dependency_floors? : auto_dependency_floors
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
         @gha_sha_pins_check = gha_sha_pins_check
         @env_overrides = env_overrides
         @debug = debug
+        @verbose = verbose
         @gem_signing_password = gem_signing_password
         @jobs = jobs
         @progress_io = progress_io
@@ -90,7 +92,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -101,13 +103,18 @@ module Kettle
       end
 
       def member_workflow_results(workflow_members)
-        return template_member_workflow_results(workflow_members) if command == "template" && execute && template_jobs(workflow_members) > 1
+        return template_member_workflow_results(workflow_members) if command == "template" && execute
 
         runner = CommandRunner.new(execute: execute, accept: accept)
         workflow_members.each_with_object([]) do |member, memo|
           if command == "template" && config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
             break memo unless memo.last.ok?
+          end
+
+          if command == "template"
+            prepared = prepare_template_dependencies(member: member, runner: runner, memo: memo)
+            break memo if prepared == false
           end
 
           command_text = workflow_command(member)
@@ -158,7 +165,16 @@ module Kettle
             return memo unless memo.last.ok?
           end
 
-          memo << runner.call(member: member, phase: command, command: workflow_command(member), env: workflow_env)
+          prepared = prepare_template_dependencies(member: member, runner: runner, memo: memo)
+          return memo if prepared == false
+
+          memo << runner.call(
+            member: member,
+            phase: command,
+            command: workflow_command(member),
+            env: workflow_env,
+            stdout_line_handler: template_event_line_handler(member)
+          )
           return memo unless memo.last.ok?
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles")
@@ -646,6 +662,7 @@ module Kettle
         args << "--ci-workflows=#{ci_workflows}" if ci_workflows && !ci_workflows.to_s.empty?
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
+        args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
         return command if args.empty?
 
         command.is_a?(Array) ? [*command, *args] : "#{command} #{args.join(" ")}"
@@ -661,6 +678,16 @@ module Kettle
         workflows.join(",")
       end
 
+      def validate_skip_remotes(value)
+        return nil if value.nil? || value.to_s.empty?
+
+        remotes = value.to_s.split(",").map(&:strip)
+        invalid = remotes.find { |remote| remote.empty? || !remote.match?(/\A[A-Za-z0-9_.-]+\z/) }
+        raise Error, "invalid --skip-remotes value #{value.inspect}" if invalid
+
+        remotes.join(",")
+      end
+
       def release_env
         env = base_release_env
         env.merge!(env_overrides)
@@ -674,6 +701,7 @@ module Kettle
         env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures
         env["K_RELEASE_CI_WORKFLOWS"] = ci_workflows if ci_workflows && !ci_workflows.to_s.empty?
         env["KETTLE_DEV_SKIP_BUNDLE_AUDIT"] = "true" if skip_bundle_audit
+        env["K_RELEASE_SKIP_REMOTES"] = skip_remotes if skip_remotes && !skip_remotes.to_s.empty?
         env
       end
 
@@ -886,6 +914,16 @@ module Kettle
       def template_command(member)
         command_text = config.template_command || default_template_command(member)
         command_text = append_template_family_args(command_text) if kettle_jem_template_command?(command_text)
+        append_template_skip_commit(command_text)
+      end
+
+      def template_prepare_command(member)
+        command_text = "kettle-jem prepare"
+        command_text = append_template_family_args(command_text)
+        append_template_skip_commit(command_text)
+      end
+
+      def append_template_skip_commit(command_text)
         return command_text if commit
         return command_text if command_text.is_a?(Array) && command_text.include?("--skip-commit")
         return [*command_text, "--skip-commit"] if command_text.is_a?(Array)
@@ -916,7 +954,11 @@ module Kettle
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
           end
           env.merge!(env_overrides)
-          env.merge!(TEMPLATE_QUIET_ENV) if command == "template" && !debug
+          if command == "template" && verbose
+            env["KETTLE_JEM_VERBOSE"] = "true"
+          elsif command == "template" && !debug
+            env.merge!(TEMPLATE_QUIET_ENV)
+          end
         end
       end
 
@@ -926,8 +968,12 @@ module Kettle
 
       def append_template_family_args(command_text)
         args = []
-        args << "--quiet" unless command_includes_arg?(command_text, "--quiet")
-        args << "--json" unless command_includes_arg?(command_text, "--json")
+        if verbose
+          args << "--verbose" unless command_includes_arg?(command_text, "--verbose")
+        else
+          args << "--quiet" unless command_includes_arg?(command_text, "--quiet")
+        end
+        args << "--events" unless command_includes_arg?(command_text, "--events")
         append_command_args(command_text, args)
       end
 
@@ -946,6 +992,72 @@ module Kettle
         progress_io.flush if progress_io.respond_to?(:flush)
       end
 
+      def template_event_line_handler(member)
+        return nil unless progress_io
+
+        lambda do |line|
+          event = parse_template_event(line)
+          next unless event
+
+          emit_template_event_progress(member, event)
+        end
+      end
+
+      def parse_template_event(line)
+        payload = JSON.parse(line.to_s)
+        (payload.is_a?(Hash) && payload["event_version"]) ? payload : nil
+      rescue JSON::ParserError
+        nil
+      end
+
+      def emit_template_event_progress(member, event)
+        case event["type"]
+        when "phase_start"
+          emit_template_event_line(member, ">", event["phase"].to_s)
+        when "phase_finish"
+          emit_template_event_line(member, phase_finish_event_mark(event), event["phase"].to_s)
+        when "recipe"
+          path = event["path"].to_s
+          emit_template_event_line(member, template_event_mark(event, changed_mark: "*"), path)
+        when "post_apply_step", "command_step"
+          label = [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
+          emit_template_event_line(member, template_event_mark(event), label)
+        when "diagnostic"
+          message = event["message"].to_s
+          label = message.empty? ? event["kind"].to_s : message
+          emit_template_event_line(member, "!", label)
+        when "summary"
+          emit_template_event_line(member, "done", "#{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed")
+        end
+      end
+
+      def emit_template_event_line(member, mark, label)
+        return if label.to_s.empty?
+
+        synchronize_template_progress do
+          progress_io.puts("[#{member.name}] #{mark} #{label}")
+          progress_io.flush if progress_io.respond_to?(:flush)
+        end
+      end
+
+      def template_event_mark(event, changed_mark: ".")
+        mark = event["mark"].to_s
+        return mark unless mark.empty?
+
+        event["changed"] ? changed_mark : "."
+      end
+
+      def phase_finish_event_mark(event)
+        return "F" if event["status"].to_s == "failed"
+
+        "."
+      end
+
+      def synchronize_template_progress(&block)
+        @template_progress_mutex ||= Mutex.new
+        @template_progress_mutex.synchronize(&block)
+      end
+
       def emit_template_progress_summary(results)
         return unless progress_io
 
@@ -957,6 +1069,9 @@ module Kettle
       end
 
       def template_changed_file_count(result)
+        event_count = template_changed_file_count_from_events(result.stdout)
+        return event_count if event_count
+
         payload = JSON.parse(result.stdout.to_s)
         Array(payload["changed_files"] || payload[:changed_files]).length if payload.is_a?(Hash)
       rescue JSON::ParserError
@@ -964,6 +1079,16 @@ module Kettle
         return match[1].to_i if match
 
         0
+      end
+
+      def template_changed_file_count_from_events(output)
+        summaries = output.to_s.lines.filter_map do |line|
+          event = parse_template_event(line)
+          event if event && event["type"] == "summary"
+        end
+        return nil if summaries.empty?
+
+        summaries.last["changed_count"].to_i
       end
 
       def normalize_lockfiles(member:, runner:, memo:, phase:)
@@ -976,6 +1101,27 @@ module Kettle
           env: workflow_env
         )
         memo << result
+      end
+
+      def prepare_template_dependencies(member:, runner:, memo:)
+        command_text = config.template_command || default_template_command(member)
+        return true unless kettle_jem_template_command?(command_text)
+
+        result = runner.call(
+          member: member,
+          phase: "prepare_template_dependencies",
+          command: template_prepare_command(member),
+          env: template_prepare_env
+        )
+        memo << result
+        result.ok?
+      end
+
+      def template_prepare_env
+        env = workflow_env
+        family_env_name = config.family_local_path_env_name
+        env[family_env_name] = "false" if family_env_name && !env_overrides.key?(family_env_name)
+        env
       end
 
       def normalize_release_lockfiles(member:, runner:, memo:)

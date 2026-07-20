@@ -10,7 +10,7 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb bex install bump-version add-changelog release push pull up branch-lanes release-state].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull up branch-lanes release-state].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb bex release push pull up].freeze
 
       command_name "kettle-family"
@@ -37,7 +37,7 @@ module Kettle
 
       module SelectionOptions
         def self.included(base)
-          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members"
+          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members, or release-state tokens: unreleased, prepared, pending"
           base.option :exclude, value: {type: String, usage: "MEMBERS"}, desc: "Exclude comma-separated members"
           base.option :start_at, long: "--start-at", value: {type: String, usage: "MEMBER[@BRANCH]"}, desc: "Select from member through the end of order"
         end
@@ -65,6 +65,7 @@ module Kettle
       module WorkflowOptions
         def self.included(base)
           base.option :debug, desc: "Preserve debug environment for workflow commands"
+          base.option :verbose, desc: "Pass verbose mode through to supported workflow commands"
           base.option :jobs, value: {type: Integer, usage: "N"}, desc: "Parallel jobs for supported executed workflows"
           base.option :env, value: {type: String, usage: "KEY=VALUE"}, desc: "Override an environment variable for each member workflow command" do |value|
             parse_env_override(value, workflow_env)
@@ -134,6 +135,7 @@ module Kettle
             report: options[:report],
             execute: truthy_option?(:execute),
             debug: truthy_option?(:debug),
+            verbose: truthy_option?(:verbose),
             jobs: options[:jobs],
             workflow_env: workflow_env,
             changelog_section: nil,
@@ -148,6 +150,7 @@ module Kettle
             release_continue_ci_failures: false,
             release_ci_workflows: nil,
             release_skip_bundle_audit: false,
+            release_skip_remotes: nil,
             accept: true,
             tag: false,
             push: false,
@@ -353,11 +356,11 @@ module Kettle
         end
       end
 
-      class BumpVersion < BaseCommand
+      class Bump < BaseCommand
         include ExecutionOptions
         include CommitOptions
 
-        command_name "bump-version"
+        command_name "bump"
         usage "[options] VERSION|major|minor|patch|pre"
         description "Check, plan, or execute family version alignment."
         argument :target_version, required: false, usage: "VERSION|major|minor|patch|pre", desc: "Version or bump target"
@@ -366,9 +369,31 @@ module Kettle
         option :from, value: {type: String, usage: "VERSION"}, desc: "Require selected members to currently match VERSION"
 
         def run(target_version = nil)
-          raise Error, "bump-version requires VERSION, major, minor, patch, or pre" unless target_version
+          raise Error, "#{workflow_command_name} requires VERSION, major, minor, patch, or pre" unless target_version
 
-          run_family("bump-version", target_version: target_version, from_version: options[:from])
+          run_family(workflow_command_name, target_version: target_version, from_version: options[:from])
+        end
+
+        private
+
+        def workflow_command_name
+          "bump"
+        end
+      end
+
+      class BumpVersion < Bump
+        command_name "bump-version"
+        description "Deprecated alias for bump."
+
+        def run(target_version = nil)
+          stderr.puts("kettle-family: bump-version is deprecated; use bump instead.")
+          super
+        end
+
+        private
+
+        def workflow_command_name
+          "bump-version"
         end
       end
 
@@ -407,6 +432,7 @@ module Kettle
         option :continue_ci_failures, long: "--continue-ci-failures", desc: "Set K_RELEASE_CI_CONTINUE=true for release commands"
         option :ci_workflows, long: "--ci-workflows", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated CI workflow monitor subset through to kettle-release commands"
         option :skip_bundle_audit, long: "--skip-bundle-audit", desc: "Skip bundle:audit/update during release rake checks"
+        option :skip_remotes, long: "--skip-remotes", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated git remote skip list through to kettle-release commands"
         option :no_auto_floors, long: "--no-auto-floors", desc: "Do not raise family dependency floors between member releases" do
           options[:no_auto_floors] = true
         end
@@ -428,6 +454,7 @@ module Kettle
             release_continue_ci_failures: truthy_option?(:continue_ci_failures),
             release_ci_workflows: options[:ci_workflows],
             release_skip_bundle_audit: truthy_option?(:skip_bundle_audit),
+            release_skip_remotes: options[:skip_remotes],
             release_auto_dependency_floors: !truthy_option?(:no_auto_floors),
             accept: !options.key?(:accept) || options[:accept],
             tag: truthy_option?(:tag),
@@ -468,6 +495,7 @@ module Kettle
       command Bupb
       command Bex
       command Install
+      command Bump
       command BumpVersion
       command AddChangelog
       command Release
@@ -514,7 +542,8 @@ module Kettle
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
-        selected = Selection.new(members: ordered).apply(only: options[:only], exclude: options[:exclude], start_at: start_at.member)
+        release_state_results = release_state_results_for_selection(config: config, members: ordered, only: options[:only])
+        selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: options[:only], exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
         results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
         Report.new(
@@ -542,8 +571,14 @@ module Kettle
         command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at)
       end
 
+      def release_state_results_for_selection(config:, members:, only:)
+        return nil unless only.to_s.split(",").map(&:strip).any? { |token| Selection.status_token?(token) }
+
+        ReleaseStateCheck.new(config: config, members: members).results
+      end
+
       def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))
-        return bump_version_results(members: members, options: options) if command == "bump-version"
+        return bump_version_results(members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members) if command == "release-state"
@@ -567,11 +602,13 @@ module Kettle
           continue_ci_failures: options[:release_continue_ci_failures],
           ci_workflows: options[:release_ci_workflows],
           skip_bundle_audit: options[:release_skip_bundle_audit],
+          skip_remotes: options[:release_skip_remotes],
           auto_dependency_floors: options[:release_auto_dependency_floors],
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],
           gha_sha_pins_check: options[:check],
           env_overrides: options[:workflow_env],
           debug: options[:debug],
+          verbose: options[:verbose],
           jobs: options[:jobs],
           progress_io: progress_io(command, options),
           bup_args: options[:bup_args],
@@ -593,14 +630,14 @@ module Kettle
         return false if config.release_target_branches.empty?
         return false if command == "release-state"
         return false if command == "branch-lanes"
-        return false unless WORKFLOW_COMMANDS.include?(command) || %w[bump-version install add-changelog].include?(command)
+        return false unless WORKFLOW_COMMANDS.include?(command) || %w[bump bump-version install add-changelog].include?(command)
 
         !WORKFLOW_COMMANDS.include?(command)
       end
 
       def member_local_branch_target_command?(command, config, members)
         return false if !config.release_target_branches.empty?
-        return false unless %w[bump-version install add-changelog].include?(command)
+        return false unless %w[bump bump-version install add-changelog].include?(command)
 
         members.any? { |member| member_release_config(member: member, config: config) }
       end
@@ -686,14 +723,15 @@ module Kettle
         StartAt.new(member, branch)
       end
 
-      def bump_version_results(members:, options:)
+      def bump_version_results(members:, options:, phase:)
         require_relative "version_bump"
 
         results = VersionBump.new(
           members: members,
           target_version: options[:target_version],
           from_version: options[:from_version],
-          mode: bump_version_mode(options)
+          mode: bump_version_mode(options),
+          phase: phase
         ).results
         return results if options[:check] || !options[:commit]
         return results unless results.all?(&:ok?)

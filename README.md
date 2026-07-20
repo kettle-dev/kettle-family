@@ -211,7 +211,7 @@ changelog:
 
 release:
   env:
-    KETTLE_RB_DEV: false
+    KETTLE_DEV_DEV: false
   family_changelog:
     enabled: true
     command: bundle exec kettle-changelog
@@ -273,8 +273,28 @@ kettle-family release-state
 ```
 
 The release-state report lists each gem's current `version.rb`, latest published
-release, latest versioned `CHANGELOG.md` section, and whether pending changelog
-work exists in either `Unreleased` or an unpublished prepared release section.
+release, latest versioned `CHANGELOG.md` section, whether pending changelog work
+exists in either `Unreleased` or an unpublished prepared release section, and
+how many commits the current branch is ahead of the latest release tag.
+
+Use release-state tokens with `--only` to select gems by state instead of by
+name. Multiple tokens are combined with logical AND, so this selects only gems
+that are both unreleased and pending. Status tokens cannot be mixed with member
+names in the same `--only` value.
+
+```console
+kettle-family release-state --only pending
+kettle-family release-state --only unreleased,prepared
+kettle-family release --execute --only unreleased,pending
+```
+
+The supported release-state tokens are:
+
+| Token | Meaning |
+|-------|---------|
+| `unreleased` | The current `version.rb` is not the latest published gem version. |
+| `prepared` | The changelog already has a versioned section for the current `version.rb`. |
+| `pending` | The member has unreleased changelog work or an unpublished prepared release. |
 
 Plan or update GitHub Actions workflow SHA pins across the selected family
 members:
@@ -289,6 +309,15 @@ Run release prep/build phases without publishing:
 
 ```console
 kettle-family release --execute
+```
+
+When a remote mirror is temporarily unavailable, skip it for the underlying
+`kettle-release` fetch/parity gate instead of removing the remote from each
+member repository:
+
+```console
+kettle-family release --execute --publish --skip-remotes cb
+kettle-family release --execute --publish --skip-remotes cb,mirror2
 ```
 
 Publish through `kettle-release`. A full publish first runs the
@@ -319,6 +348,61 @@ If you intentionally need to continue after CI failures, opt in explicitly:
 
 ```console
 kettle-family release --publish --execute --continue-ci-failures
+```
+
+Bump aligned member versions with `bump`. The older `bump-version` command still
+works as a deprecated alias.
+
+```console
+kettle-family bump --execute --only pending patch
+kettle-family bump --execute --only unreleased minor
+```
+
+Run `kettle-jem` templating across the selected family members. Planning shows
+the commands that would run; `--execute` runs them. Executed templating defaults
+to a parallel job count based on CPU cores, capped for readability, and can be
+overridden with `--jobs`.
+
+```console
+kettle-family template
+kettle-family template --execute --jobs 4
+kettle-family template --execute --only kettle-family
+```
+
+Templating uses `kettle-jem --events` as the default child interface, so
+executed runs stream member-prefixed progress while still keeping the final
+family report. Progress marks include:
+
+| Mark | Meaning |
+|------|---------|
+| `>` | A phase or command step started. |
+| `.` | A phase, recipe, or step completed without changing files. |
+| `*` | A recipe or step changed files. |
+| `!` | A diagnostic was emitted. |
+| `F` | A phase or step failed. |
+| `done` | The member summary was emitted. |
+
+Example progress:
+
+```text
+templating 1 member with 1 job:
+[kettle-family] > recipes
+[kettle-family] * Gemfile
+[kettle-family] * post_apply:git_hooks_executable
+[kettle-family] done 2 files changed
+.
+template summary: 1/1 members ok, 2 files changed
+```
+
+Use `--verbose` when you need `kettle-jem` verbose diagnostics layered on top of
+the event stream. Environment overrides pass through to every member workflow
+command, which is useful when templating against local unreleased dependencies.
+
+```console
+kettle-family template --execute --verbose --jobs 1
+kettle-family template --execute \
+  --env K_JEM_TEMPLATING=true \
+  --env STRUCTUREDMERGE_DEV=/home/me/src/structuredmerge/ruby/gems
 ```
 
 ## 🔐 Security
@@ -386,7 +470,7 @@ For most applications, prefer the [Pessimistic Version Constraint][📌pvc] with
 For example:
 
 ```ruby
-spec.add_dependency("kettle-family", "~> 0.0")
+spec.add_dependency("kettle-family", "~> 1.0")
 ```
 
 <details markdown="1">
@@ -583,7 +667,7 @@ Thanks for RTFM. ☺️
 [📌gitmoji]: https://gitmoji.dev
 [📌gitmoji-img]: https://img.shields.io/badge/gitmoji_commits-%20%F0%9F%98%9C%20%F0%9F%98%8D-34495e.svg?style=flat-square
 [🧮kloc]: https://www.youtube.com/watch?v=dQw4w9WgXcQ
-[🧮kloc-img]: https://img.shields.io/badge/KLOC-2.489-FFDD67.svg?style=for-the-badge&logo=YouTube&logoColor=blue
+[🧮kloc-img]: https://img.shields.io/badge/KLOC-2.587-FFDD67.svg?style=for-the-badge&logo=YouTube&logoColor=blue
 [🔐security]: https://github.com/kettle-dev/kettle-family/blob/main/SECURITY.md
 [🔐security-img]: https://img.shields.io/badge/security-policy-259D6C.svg?style=flat
 [📄copyright-notice-explainer]: https://opensource.stackexchange.com/questions/5778/why-do-licenses-such-as-the-mit-license-specify-a-single-year

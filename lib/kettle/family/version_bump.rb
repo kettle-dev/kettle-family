@@ -7,12 +7,13 @@ module Kettle
     class VersionBump
       DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency].freeze
 
-      def initialize(members:, target_version:, from_version: nil, mode: :dry_run)
+      def initialize(members:, target_version:, from_version: nil, mode: :dry_run, phase: "bump-version")
         @members = members
         @target_version = target_version.to_s
         @explicit_target_version = validate_version(target_version) unless Kettle::Dev::VersionBump::BUMP_TYPES.include?(@target_version)
         @from_version = validate_version(from_version) if from_version
         @mode = mode
+        @phase = phase
         @member_names = members.map(&:name)
         @member_target_versions = members.each_with_object({}) do |member, memo|
           memo[member.name] = resolve_target_version(member)
@@ -25,7 +26,7 @@ module Kettle
 
       private
 
-      attr_reader :members, :target_version, :explicit_target_version, :from_version, :mode, :member_names, :member_target_versions
+      attr_reader :members, :target_version, :explicit_target_version, :from_version, :mode, :phase, :member_names, :member_target_versions
 
       def validate_version(version)
         with_dev_errors { Kettle::Dev::VersionBump.validate_version(version) }
@@ -39,8 +40,8 @@ module Kettle
         write_edits(edits) if mode == :execute
         CommandResult.new(
           member_name: member.name,
-          phase: "bump-version",
-          command: ["internal", "bump-version", member_target_version],
+          phase: phase,
+          command: ["internal", phase, member_target_version],
           workdir: member.root,
           status: check_failed?(edits) ? 1 : 0,
           success: !check_failed?(edits),

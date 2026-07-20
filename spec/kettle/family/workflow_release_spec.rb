@@ -47,7 +47,7 @@ RSpec.describe Kettle::Family::Workflow do
         "path" => "CHANGELOG.md",
         "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
       },
-      release_env: {"KETTLE_RB_DEV" => false}
+      release_env: {"KETTLE_DEV_DEV" => false}
     )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[env]\n")
@@ -115,10 +115,11 @@ RSpec.describe Kettle::Family::Workflow do
       local_ci: true,
       continue_ci_failures: true,
       ci_workflows: "current,style.yml",
-      skip_bundle_audit: true
+      skip_bundle_audit: true,
+      skip_remotes: "cb"
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb"])
   end
 
   it "rejects unsafe ci workflow subset values before building release commands" do
@@ -137,6 +138,22 @@ RSpec.describe Kettle::Family::Workflow do
     }.to raise_error(Kettle::Family::Error, /invalid --ci-workflows value/)
   end
 
+  it "rejects unsafe release remote skip values before building release commands" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+
+    expect {
+      described_class.new(
+        command: "release",
+        config: config,
+        members: [member],
+        publish: true,
+        skip_remotes: "cb; echo injected"
+      ).results
+    }.to raise_error(Kettle::Family::Error, /invalid --skip-remotes value/)
+  end
+
   it "passes bundle audit skip through release command environment" do
     write_release_config(publish_command: "bundle exec kettle-release")
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -152,6 +169,23 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     expect(results.last.command).to include("KETTLE_DEV_SKIP_BUNDLE_AUDIT=true")
+  end
+
+  it "passes remote skip list through release command environment" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true,
+      skip_remotes: "cb"
+    ).results
+
+    expect(results.last.command).to include("K_RELEASE_SKIP_REMOTES=cb")
   end
 
   it "disables noisy Bundler, debug, and implicit family-local environment for release commands" do
@@ -287,7 +321,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
-    File.write(File.join(member.root, "mise.toml"), "[env]\nSMORG_RB_DEV = \"true\"\n")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nSTRUCTUREDMERGE_DEV = \"true\"\n")
 
     results = described_class.new(command: "release", config: config, members: [member]).results
 
@@ -303,8 +337,8 @@ RSpec.describe Kettle::Family::Workflow do
       "#{family_local_env_name}=false",
       "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
       "K_JEM_TEMPLATING=false",
-      "SMORG_RB_DEV=false",
-      "KETTLE_RB_DEV=false"
+      "STRUCTUREDMERGE_DEV=false",
+      "KETTLE_DEV_DEV=false"
     )
     expect(results.first.command).not_to include("#{family_local_env_name}=#{@tmpdir}")
     expect(results.first.command.last(4)).to eq(%w[bundle update nomono --bundler])
@@ -320,7 +354,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
-    File.write(File.join(member.root, "mise.toml"), "[env]\nSMORG_RB_DEV = \"true\"\nRUBOCOP_LTS_LOCAL = \"false\"\n")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nSTRUCTUREDMERGE_DEV = \"true\"\nRUBOCOP_LTS_LOCAL = \"false\"\n")
 
     results = described_class.new(
       command: "release",
@@ -328,7 +362,7 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       env_overrides: {
         "RUBOCOP_LTS_LOCAL" => "/workspace/rubocop-lts",
-        "SMORG_RB_DEV" => "/workspace/structuredmerge/ruby/gems",
+        "STRUCTUREDMERGE_DEV" => "/workspace/structuredmerge/ruby/gems",
         family_local_env_name => "/workspace/family"
       }
     ).results
@@ -336,11 +370,11 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to include(
       "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
       "#{family_local_env_name}=false",
-      "SMORG_RB_DEV=false"
+      "STRUCTUREDMERGE_DEV=false"
     )
     expect(results.first.command).not_to include("#{family_local_env_name}=/workspace/family")
-    expect(results.first.command).not_to include("SMORG_RB_DEV=/workspace/structuredmerge/ruby/gems")
-    expect(results.first.command).to include("KETTLE_RB_DEV=false")
+    expect(results.first.command).not_to include("STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems")
+    expect(results.first.command).to include("KETTLE_DEV_DEV=false")
   end
 
   it "allows release readiness to use explicitly requested local source roots" do
