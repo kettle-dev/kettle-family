@@ -168,7 +168,13 @@ module Kettle
           prepare_template_dependencies(member: member, runner: runner, memo: memo)
           return memo unless memo.last.ok?
 
-          memo << runner.call(member: member, phase: command, command: workflow_command(member), env: workflow_env)
+          memo << runner.call(
+            member: member,
+            phase: command,
+            command: workflow_command(member),
+            env: workflow_env,
+            stdout_line_handler: template_event_line_handler(member)
+          )
           return memo unless memo.last.ok?
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles")
@@ -966,7 +972,7 @@ module Kettle
           args << "--verbose" unless command_includes_arg?(command_text, "--verbose")
         else
           args << "--quiet" unless command_includes_arg?(command_text, "--quiet")
-          args << "--json" unless command_includes_arg?(command_text, "--json")
+          args << "--events" unless command_includes_arg?(command_text, "--events")
         end
         append_command_args(command_text, args)
       end
@@ -986,6 +992,46 @@ module Kettle
         progress_io.flush if progress_io.respond_to?(:flush)
       end
 
+      def template_event_line_handler(member)
+        return nil unless progress_io
+
+        lambda do |line|
+          event = parse_template_event(line)
+          next unless event
+
+          emit_template_event_progress(member, event)
+        end
+      end
+
+      def parse_template_event(line)
+        payload = JSON.parse(line.to_s)
+        payload.is_a?(Hash) && payload["event_version"] ? payload : nil
+      rescue JSON::ParserError
+        nil
+      end
+
+      def emit_template_event_progress(member, event)
+        case event["type"]
+        when "recipe"
+          path = event["path"].to_s
+          mark = event["mark"].to_s.empty? ? (event["changed"] ? "*" : ".") : event["mark"].to_s
+          synchronize_template_progress do
+            progress_io.puts("[#{member.name}] #{mark} #{path}")
+            progress_io.flush if progress_io.respond_to?(:flush)
+          end
+        when "summary"
+          synchronize_template_progress do
+            progress_io.puts("[#{member.name}] done #{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed")
+            progress_io.flush if progress_io.respond_to?(:flush)
+          end
+        end
+      end
+
+      def synchronize_template_progress(&block)
+        @template_progress_mutex ||= Mutex.new
+        @template_progress_mutex.synchronize(&block)
+      end
+
       def emit_template_progress_summary(results)
         return unless progress_io
 
@@ -997,6 +1043,9 @@ module Kettle
       end
 
       def template_changed_file_count(result)
+        event_count = template_changed_file_count_from_events(result.stdout)
+        return event_count if event_count
+
         payload = JSON.parse(result.stdout.to_s)
         Array(payload["changed_files"] || payload[:changed_files]).length if payload.is_a?(Hash)
       rescue JSON::ParserError
@@ -1004,6 +1053,16 @@ module Kettle
         return match[1].to_i if match
 
         0
+      end
+
+      def template_changed_file_count_from_events(output)
+        summaries = output.to_s.lines.filter_map do |line|
+          event = parse_template_event(line)
+          event if event && event["type"] == "summary"
+        end
+        return nil if summaries.empty?
+
+        summaries.last["changed_count"].to_i
       end
 
       def normalize_lockfiles(member:, runner:, memo:, phase:)

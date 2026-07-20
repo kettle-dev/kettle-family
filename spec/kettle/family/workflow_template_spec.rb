@@ -64,8 +64,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member]).results
 
     expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --json"])
-    expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --json"])
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
+    expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --events"])
   end
 
   it "passes verbose mode through to kettle-jem templating instead of forcing quiet JSON output" do
@@ -80,7 +80,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --verbose"])
     expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --verbose"])
     expect(results.fetch(1).command.join(" ")).not_to include("--quiet")
-    expect(results.fetch(1).command.join(" ")).not_to include("--json")
+    expect(results.fetch(1).command.join(" ")).not_to include("--events")
   end
 
   it "disables the implicit family local path env during template prepare" do
@@ -135,7 +135,7 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     expect(results.fetch(1).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(1).command.last(3)).to eq(["sh", "-lc", "kettle-jem prepare --quiet --json"])
+    expect(results.fetch(1).command.last(3)).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
     expect(results.fetch(2).command).to eq(
       [
         "mise",
@@ -180,7 +180,7 @@ RSpec.describe Kettle::Family::Workflow do
         "kettle-jem",
         "install",
         "--quiet",
-        "--json"
+        "--events"
       ]
     )
 
@@ -297,6 +297,32 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
   end
 
+  it "streams kettle-jem NDJSON template events as member progress lines" do
+    event_script = [
+      "require 'json';",
+      "puts JSON.generate(event_version: 1, type: 'recipe', path: 'Gemfile', changed: true, mark: '*');",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_count: 1);"
+    ].join(" ")
+    write_template_config(command: [RbConfig.ruby, "-e", event_script])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [member_at("alpha"), member_at("beta")]
+    progress = StringIO.new
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: members,
+      execute: true,
+      jobs: 2,
+      progress_io: progress
+    ).results
+
+    expect(results.find { |result| result.phase == "template" }.stdout).to include("\"type\":\"recipe\"")
+    expect(progress.string).to include("[alpha] * Gemfile")
+    expect(progress.string).to include("[alpha] done 1 file changed")
+    expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
+  end
+
   it "plans templating across configured release target branches" do
     write_template_config(
       release_target_branches: %w[r1_8-even-v0 r1_9-even-v2]
@@ -389,8 +415,8 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member]).results
 
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --json"])
-    expect(results.fetch(1).command).to eq(["sh", "-lc", "kettle-jem install --quiet --json"])
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
+    expect(results.fetch(1).command).to eq(["sh", "-lc", "kettle-jem install --quiet --events"])
   end
 
   def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil)

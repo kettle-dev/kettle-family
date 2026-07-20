@@ -475,7 +475,7 @@ RSpec.describe Kettle::Family::CLI do
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
         "sh",
         "-lc",
-        "kettle-jem install --quiet --json"
+        "kettle-jem install --quiet --events"
       ]
     )
   end

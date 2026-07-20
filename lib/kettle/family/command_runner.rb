@@ -111,7 +111,7 @@ module Kettle
         @otp_coordinator = otp_coordinator
       end
 
-      def call(member:, phase:, command:, env: {}, interactive: false)
+      def call(member:, phase:, command:, env: {}, interactive: false, stdout_line_handler: nil)
         argv = command_argv(member: member, command: command, env: env)
         process_env = process_env(member: member, env: env)
         spawn_options = process_options
@@ -120,6 +120,8 @@ module Kettle
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         stdout, stderr, status = if interactive
           run_interactive(env: process_env, argv: argv, chdir: member.root, member_name: member.name, process_options: spawn_options)
+        elsif stdout_line_handler
+          run_streaming(env: process_env, argv: argv, chdir: member.root, process_options: spawn_options, stdout_line_handler: stdout_line_handler)
         else
           Open3.capture3(process_env, *argv, chdir: member.root, **spawn_options)
         end
@@ -144,6 +146,45 @@ module Kettle
       private
 
       attr_reader :execute, :accept, :gem_signing_password, :otp_coordinator
+
+      def run_streaming(env:, argv:, chdir:, process_options:, stdout_line_handler:)
+        captured_stdout = +""
+        captured_stderr = +""
+        stdout_line_buffer = +""
+        status = nil
+        Open3.popen3(env, *argv, chdir: chdir, **process_options) do |_input, output, error, wait_thread|
+          readers = [output, error]
+          until readers.empty?
+            ready = IO.select(readers)
+            ready.first.each do |reader|
+              if reader.equal?(output)
+                chunk = reader.readpartial(1024)
+                captured_stdout << chunk
+                stdout_line_buffer = stream_stdout_lines(stdout_line_buffer, chunk, stdout_line_handler)
+              else
+                captured_stderr << reader.readpartial(1024)
+              end
+            rescue EOFError
+              readers.delete(reader)
+            end
+          end
+          stdout_line_handler.call(stdout_line_buffer) unless stdout_line_buffer.empty?
+          status = wait_thread.value
+        end
+        [captured_stdout, captured_stderr, status]
+      end
+
+      def stream_stdout_lines(buffer, chunk, handler)
+        pending = buffer + chunk
+        lines = pending.lines
+        if pending.end_with?("\n")
+          remainder = +""
+        else
+          remainder = lines.pop.to_s
+        end
+        lines.each { |line| handler.call(line.chomp) }
+        remainder
+      end
 
       def run_interactive(env:, argv:, chdir:, member_name:, process_options:)
         return run_interactive_pty(env: env, argv: argv, chdir: chdir, member_name: member_name, process_options: process_options) if pty_available?
