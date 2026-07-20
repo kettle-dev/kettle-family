@@ -54,6 +54,34 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).stdout).to eq("full/standalone\n")
   end
 
+  it "executes custom non-kettle-jem template commands without prepare dependency results" do
+    write_template_config(
+      command: [RbConfig.ruby, "-e", "puts 'custom templated'"],
+      normalize_lockfiles: false
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results.map(&:phase)).to eq(["template"])
+    expect(results.fetch(0).stdout).to eq("custom templated\n")
+  end
+
+  it "streams custom non-kettle-jem template commands without prepare dependency results" do
+    write_template_config(
+      command: [RbConfig.ruby, "-e", "puts 'custom templated'"],
+      normalize_lockfiles: false
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [member_at("alpha"), member_at("beta")]
+
+    results = described_class.new(command: "template", config: config, members: members, execute: true, jobs: 2).results
+
+    expect(results.map(&:phase)).to eq(%w[template template])
+    expect(results.map(&:stdout)).to eq(["custom templated\n", "custom templated\n"])
+  end
+
   it "adds quiet JSON flags and disables noisy debug environment for kettle-jem family templating" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -456,13 +484,13 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command).to eq(["sh", "-lc", "kettle-jem install --quiet --events"])
   end
 
-  def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil)
+  def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil, normalize_lockfiles: true)
     config = {
       "template" => {
         "command" => command,
         "profile" => "full",
         "repository_topology" => "standalone",
-        "normalize_lockfiles" => true,
+        "normalize_lockfiles" => normalize_lockfiles,
         "normalize_lockfiles_command" => [RbConfig.ruby, "-e", "puts 'normalized'"]
       }
     }

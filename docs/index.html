@@ -477,8 +477,44 @@ kettle-family release
 </code></pre>
 
 <p>The release-state report lists each gem’s current <code>version.rb</code>, latest published<br>
-release, latest versioned <code>CHANGELOG.md</code> section, and whether pending changelog<br>
-work exists in either <code>Unreleased</code> or an unpublished prepared release section.</p>
+release, latest versioned <code>CHANGELOG.md</code> section, whether pending changelog work<br>
+exists in either <code>Unreleased</code> or an unpublished prepared release section, and<br>
+how many commits the current branch is ahead of the latest release tag.</p>
+
+<p>Use release-state tokens with <code>--only</code> to select gems by state instead of by<br>
+name. Multiple tokens are combined with logical AND, so this selects only gems<br>
+that are both unreleased and pending. Status tokens cannot be mixed with member<br>
+names in the same <code>--only</code> value.</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release-state --only pending
+kettle-family release-state --only unreleased,prepared
+kettle-family release --execute --only unreleased,pending
+</code></pre>
+
+<p>The supported release-state tokens are:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Token</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>unreleased</code></td>
+      <td>The current <code>version.rb</code> is not the latest published gem version.</td>
+    </tr>
+    <tr>
+      <td><code>prepared</code></td>
+      <td>The changelog already has a versioned section for the current <code>version.rb</code>.</td>
+    </tr>
+    <tr>
+      <td><code>pending</code></td>
+      <td>The member has unreleased changelog work or an unpublished prepared release.</td>
+    </tr>
+  </tbody>
+</table>
 
 <p>Plan or update GitHub Actions workflow SHA pins across the selected family<br>
 members:</p>
@@ -491,6 +527,14 @@ kettle-family gha-sha-pins --execute --upgrade minor
 <p>Run release prep/build phases without publishing:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release --execute
+</code></pre>
+
+<p>When a remote mirror is temporarily unavailable, skip it for the underlying<br>
+<code>kettle-release</code> fetch/parity gate instead of removing the remote from each<br>
+member repository:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --execute --publish --skip-remotes cb
+kettle-family release --execute --publish --skip-remotes cb,mirror2
 </code></pre>
 
 <p>Publish through <code>kettle-release</code>. A full publish first runs the<br>
@@ -517,6 +561,83 @@ passing <code>--local-ci</code> through to <code>kettle-release</code>:</p>
 <p>If you intentionally need to continue after CI failures, opt in explicitly:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --execute --continue-ci-failures
+</code></pre>
+
+<p>Bump aligned member versions with <code>bump</code>. The older <code>bump-version</code> command still<br>
+works as a deprecated alias.</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family bump --execute --only pending patch
+kettle-family bump --execute --only unreleased minor
+</code></pre>
+
+<p>Run <code>kettle-jem</code> templating across the selected family members. Planning shows<br>
+the commands that would run; <code>--execute</code> runs them. Executed templating defaults<br>
+to a parallel job count based on CPU cores, capped for readability, and can be<br>
+overridden with <code>--jobs</code>.</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family template
+kettle-family template --execute --jobs 4
+kettle-family template --execute --only kettle-family
+</code></pre>
+
+<p>Templating uses <code>kettle-jem --events</code> as the default child interface, so<br>
+executed runs stream member-prefixed progress while still keeping the final<br>
+family report. Progress marks include:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Mark</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>&gt;</code></td>
+      <td>A phase or command step started.</td>
+    </tr>
+    <tr>
+      <td><code>.</code></td>
+      <td>A phase, recipe, or step completed without changing files.</td>
+    </tr>
+    <tr>
+      <td><code>*</code></td>
+      <td>A recipe or step changed files.</td>
+    </tr>
+    <tr>
+      <td><code>!</code></td>
+      <td>A diagnostic was emitted.</td>
+    </tr>
+    <tr>
+      <td><code>F</code></td>
+      <td>A phase or step failed.</td>
+    </tr>
+    <tr>
+      <td><code>done</code></td>
+      <td>The member summary was emitted.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Example progress:</p>
+
+<pre class="code language-text"><code class="language-text">templating 1 member with 1 job:
+[kettle-family] &gt; recipes
+[kettle-family] * Gemfile
+[kettle-family] * post_apply:git_hooks_executable
+[kettle-family] done 2 files changed
+.
+template summary: 1/1 members ok, 2 files changed
+</code></pre>
+
+<p>Use <code>--verbose</code> when you need <code>kettle-jem</code> verbose diagnostics layered on top of<br>
+the event stream. Environment overrides pass through to every member workflow<br>
+command, which is useful when templating against local unreleased dependencies.</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family template --execute --verbose --jobs 1
+kettle-family template --execute \
+  --env K_JEM_TEMPLATING=true \
+  --env STRUCTUREDMERGE_DEV=/home/me/src/structuredmerge/ruby/gems
 </code></pre>
 
 <h2 id="-security">🔐 Security</h2>

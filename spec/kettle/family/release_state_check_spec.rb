@@ -85,6 +85,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     run_git(repo, "init", "--quiet")
     run_git(repo, "config", "user.email", "kettle-family@example.test")
     run_git(repo, "config", "user.name", "Kettle Family")
+    run_git(repo, "branch", "-M", "main")
     File.write(File.join(repo, "README.md"), "test\n")
     run_git(repo, "add", ".")
     run_git(repo, "commit", "--quiet", "-m", "Initial")
@@ -93,6 +94,29 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     check = described_class.new(members: [member])
 
     expect(check.send(:branch_latest_released, member, "2.4.0")).to eq("2.3.1")
+  end
+
+  it "counts commits ahead of the release tag on the checked-out HEAD" do
+    repo = File.join(@tmpdir, "repo")
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(repo, "README.md"), "main\n")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "tag", "-m", "v1.0.0", "v1.0.0")
+    run_git(repo, "checkout", "--quiet", "-b", "release-branch")
+    File.write(File.join(repo, "README.md"), "release branch\n")
+    run_git(repo, "commit", "--quiet", "-am", "Release branch change")
+    File.write(File.join(repo, "README.md"), "release branch again\n")
+    run_git(repo, "commit", "--quiet", "-am", "Second release branch change")
+    run_git(repo, "checkout", "--quiet", "main")
+    File.write(File.join(repo, "README.md"), "main branch\n")
+    run_git(repo, "commit", "--quiet", "-am", "Main branch change")
+    run_git(repo, "checkout", "--quiet", "release-branch")
+    check = described_class.new(members: [])
+
+    expect(check.send(:commits_ahead_of_release, repo, "1.0.0")).to eq(2)
   end
 
   it "leaves branch release state unchanged when the line version is unavailable" do

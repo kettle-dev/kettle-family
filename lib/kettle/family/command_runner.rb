@@ -177,11 +177,7 @@ module Kettle
       def stream_stdout_lines(buffer, chunk, handler)
         pending = buffer + chunk
         lines = pending.lines
-        if pending.end_with?("\n")
-          remainder = +""
-        else
-          remainder = lines.pop.to_s
-        end
+        remainder = pending.end_with?("\n") ? +"" : lines.pop.to_s
         lines.each { |line| handler.call(line.chomp) }
         remainder
       end

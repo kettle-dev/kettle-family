@@ -113,8 +113,8 @@ module Kettle
           end
 
           if command == "template"
-            prepare_template_dependencies(member: member, runner: runner, memo: memo)
-            break memo unless memo.last.ok?
+            prepared = prepare_template_dependencies(member: member, runner: runner, memo: memo)
+            break memo if prepared == false
           end
 
           command_text = workflow_command(member)
@@ -165,8 +165,8 @@ module Kettle
             return memo unless memo.last.ok?
           end
 
-          prepare_template_dependencies(member: member, runner: runner, memo: memo)
-          return memo unless memo.last.ok?
+          prepared = prepare_template_dependencies(member: member, runner: runner, memo: memo)
+          return memo if prepared == false
 
           memo << runner.call(
             member: member,
@@ -970,11 +970,10 @@ module Kettle
         args = []
         if verbose
           args << "--verbose" unless command_includes_arg?(command_text, "--verbose")
-          args << "--events" unless command_includes_arg?(command_text, "--events")
         else
           args << "--quiet" unless command_includes_arg?(command_text, "--quiet")
-          args << "--events" unless command_includes_arg?(command_text, "--events")
         end
+        args << "--events" unless command_includes_arg?(command_text, "--events")
         append_command_args(command_text, args)
       end
 
@@ -1006,7 +1005,7 @@ module Kettle
 
       def parse_template_event(line)
         payload = JSON.parse(line.to_s)
-        payload.is_a?(Hash) && payload["event_version"] ? payload : nil
+        (payload.is_a?(Hash) && payload["event_version"]) ? payload : nil
       rescue JSON::ParserError
         nil
       end
@@ -1016,16 +1015,13 @@ module Kettle
         when "phase_start"
           emit_template_event_line(member, ">", event["phase"].to_s)
         when "phase_finish"
-          mark = event["status"].to_s == "failed" ? "F" : "."
-          emit_template_event_line(member, mark, event["phase"].to_s)
+          emit_template_event_line(member, phase_finish_event_mark(event), event["phase"].to_s)
         when "recipe"
           path = event["path"].to_s
-          mark = event["mark"].to_s.empty? ? (event["changed"] ? "*" : ".") : event["mark"].to_s
-          emit_template_event_line(member, mark, path)
+          emit_template_event_line(member, template_event_mark(event, changed_mark: "*"), path)
         when "post_apply_step", "command_step"
-          mark = event["mark"].to_s.empty? ? "." : event["mark"].to_s
           label = [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
-          emit_template_event_line(member, mark, label)
+          emit_template_event_line(member, template_event_mark(event), label)
         when "diagnostic"
           message = event["message"].to_s
           label = message.empty? ? event["kind"].to_s : message
@@ -1042,6 +1038,19 @@ module Kettle
           progress_io.puts("[#{member.name}] #{mark} #{label}")
           progress_io.flush if progress_io.respond_to?(:flush)
         end
+      end
+
+      def template_event_mark(event, changed_mark: ".")
+        mark = event["mark"].to_s
+        return mark unless mark.empty?
+
+        event["changed"] ? changed_mark : "."
+      end
+
+      def phase_finish_event_mark(event)
+        return "F" if event["status"].to_s == "failed"
+
+        "."
       end
 
       def synchronize_template_progress(&block)
@@ -1096,7 +1105,7 @@ module Kettle
 
       def prepare_template_dependencies(member:, runner:, memo:)
         command_text = config.template_command || default_template_command(member)
-        return unless kettle_jem_template_command?(command_text)
+        return true unless kettle_jem_template_command?(command_text)
 
         result = runner.call(
           member: member,
@@ -1105,6 +1114,7 @@ module Kettle
           env: template_prepare_env
         )
         memo << result
+        result.ok?
       end
 
       def template_prepare_env

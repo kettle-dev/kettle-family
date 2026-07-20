@@ -33,6 +33,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family` template preparation now handles custom non-`kettle-jem`
+  template commands without treating no-op dependency preparation as failure.
+- `kettle-family release-state` now counts `ahead` from the release tag to the
+  checked-out member `HEAD`.
+- Generated docs now retain the YARD `_index.html` content wrapper after
+  regeneration with the shared YARD postprocessing stack.
+
 ### Security
 
 ## [1.0.1] - 2026-07-19

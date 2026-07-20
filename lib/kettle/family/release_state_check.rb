@@ -165,10 +165,9 @@ module Kettle
 
       def commits_ahead_of_release(root, version)
         tag = release_tag_for_version(root, version)
-        branch = default_branch_ref(root)
-        return nil unless tag && branch
+        return nil unless tag && git_ref_exists?(root, "HEAD")
 
-        stdout, _stderr, status = Open3.capture3("git", "rev-list", "--count", "#{tag}..#{branch}", chdir: root)
+        stdout, _stderr, status = Open3.capture3("git", "rev-list", "--count", "#{tag}..HEAD", chdir: root)
         status.success? ? stdout.to_i : nil
       end
 
@@ -176,13 +175,6 @@ module Kettle
         return nil if version.to_s.empty?
 
         ["v#{version}", version.to_s].find { |tag| git_ref_exists?(root, "refs/tags/#{tag}^{commit}") }
-      end
-
-      def default_branch_ref(root)
-        stdout, _stderr, status = Open3.capture3("git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD", chdir: root)
-        return stdout.strip if status.success? && !stdout.strip.empty?
-
-        %w[main master HEAD].find { |ref| git_ref_exists?(root, ref) }
       end
 
       def git_ref_exists?(root, ref)
