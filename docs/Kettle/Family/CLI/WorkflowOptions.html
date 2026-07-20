@@ -160,13 +160,15 @@
 69
 70
 71
-72</pre>
+72
+73</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 66</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_included'>included</span><span class='lparen'>(</span><span class='id identifier rubyid_base'>base</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:debug</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Preserve debug environment for workflow commands</span><span class='tstring_end'>&quot;</span></span>
+  <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:verbose</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Pass verbose mode through to supported workflow commands</span><span class='tstring_end'>&quot;</span></span>
   <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:jobs</span><span class='comma'>,</span> <span class='label'>value:</span> <span class='lbrace'>{</span><span class='label'>type:</span> <span class='const'>Integer</span><span class='comma'>,</span> <span class='label'>usage:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>N</span><span class='tstring_end'>&quot;</span></span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Parallel jobs for supported executed workflows</span><span class='tstring_end'>&quot;</span></span>
   <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:env</span><span class='comma'>,</span> <span class='label'>value:</span> <span class='lbrace'>{</span><span class='label'>type:</span> <span class='const'>String</span><span class='comma'>,</span> <span class='label'>usage:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>KEY=VALUE</span><span class='tstring_end'>&quot;</span></span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Override an environment variable for each member workflow command</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_value'>value</span><span class='op'>|</span>
     <span class='id identifier rubyid_parse_env_override'>parse_env_override</span><span class='lparen'>(</span><span class='id identifier rubyid_value'>value</span><span class='comma'>,</span> <span class='id identifier rubyid_workflow_env'>workflow_env</span><span class='rparen'>)</span>

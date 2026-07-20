@@ -71,7 +71,7 @@
   <dl>
     <dt>Inherits:</dt>
     <dd>
-      <span class="inheritName"><span class='object_link'><a href="BaseCommand.html" title="Kettle::Family::CLI::BaseCommand (class)">BaseCommand</a></span></span>
+      <span class="inheritName"><span class='object_link'><a href="Bump.html" title="Kettle::Family::CLI::Bump (class)">Bump</a></span></span>
       
         <ul class="fullTree">
           <li>Object</li>
@@ -79,6 +79,8 @@
             <li class="next">CommandKit::Command</li>
           
             <li class="next"><span class='object_link'><a href="BaseCommand.html" title="Kettle::Family::CLI::BaseCommand (class)">BaseCommand</a></span></li>
+          
+            <li class="next"><span class='object_link'><a href="Bump.html" title="Kettle::Family::CLI::Bump (class)">Bump</a></span></li>
           
             <li class="next">Kettle::Family::CLI::BumpVersion</li>
           
@@ -92,11 +94,6 @@
   
   
   
-  
-  <dl>
-      <dt>Includes:</dt>
-      <dd><span class='object_link'><a href="CommitOptions.html" title="Kettle::Family::CLI::CommitOptions (module)">CommitOptions</a></span>, <span class='object_link'><a href="ExecutionOptions.html" title="Kettle::Family::CLI::ExecutionOptions (module)">ExecutionOptions</a></span></dd>
-  </dl>
   
   
 
@@ -154,6 +151,13 @@
   
 
 
+  
+  
+  
+  
+  
+  
+  
   
   
   
@@ -247,48 +251,23 @@
   
 
   
-</h3><div class="docstring">
-  <div class="discussion">
-    
-
-
-  </div>
-</div>
-<div class="tags">
-  
-<p class="tag_title">Raises:</p>
-<ul class="raise">
-  
-    <li>
-      
-      
-        <span class='type'>(<tt><span class='object_link'><a href="../Error.html" title="Kettle::Family::Error (class)">Error</a></span></tt>)</span>
-      
-      
-      
-    </li>
-  
-</ul>
-
-</div><table class="source_code">
+</h3><table class="source_code">
   <tr>
     <td>
       <pre class="lines">
 
 
-368
-369
-370
-371
-372</pre>
+388
+389
+390
+391</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 368</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 388</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_run'>run</span><span class='lparen'>(</span><span class='id identifier rubyid_target_version'>target_version</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="../Error.html" title="Kettle::Family::Error (class)">Error</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump-version requires VERSION, major, minor, patch, or pre</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>unless</span> <span class='id identifier rubyid_target_version'>target_version</span>
-
-  <span class='id identifier rubyid_run_family'>run_family</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump-version</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>target_version:</span> <span class='id identifier rubyid_target_version'>target_version</span><span class='comma'>,</span> <span class='label'>from_version:</span> <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:from</span><span class='rbracket'>]</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_stderr'>stderr</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family: bump-version is deprecated; use bump instead.</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='kw'>super</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
