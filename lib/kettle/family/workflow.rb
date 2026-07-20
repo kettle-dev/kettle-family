@@ -103,7 +103,7 @@ module Kettle
       end
 
       def member_workflow_results(workflow_members)
-        return template_member_workflow_results(workflow_members) if command == "template" && execute && template_jobs(workflow_members) > 1
+        return template_member_workflow_results(workflow_members) if command == "template" && execute
 
         runner = CommandRunner.new(execute: execute, accept: accept)
         workflow_members.each_with_object([]) do |member, memo|
@@ -970,6 +970,7 @@ module Kettle
         args = []
         if verbose
           args << "--verbose" unless command_includes_arg?(command_text, "--verbose")
+          args << "--events" unless command_includes_arg?(command_text, "--events")
         else
           args << "--quiet" unless command_includes_arg?(command_text, "--quiet")
           args << "--events" unless command_includes_arg?(command_text, "--events")

@@ -20,9 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family template` now requests `kettle-jem --events` in quiet mode and
-  streams newline-delimited JSON template events as member-prefixed progress
-  lines during parallel templating.
+- `kettle-family template` now uses `kettle-jem --events` as its default
+  templating interface, including verbose and single-job runs, and streams
+  newline-delimited JSON template events as member-prefixed progress lines.
 
 ### Changed
 

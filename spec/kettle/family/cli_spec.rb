@@ -523,7 +523,7 @@ RSpec.describe Kettle::Family::CLI do
     result = JSON.parse(out.string).fetch("results").find { |entry| entry.fetch("phase") == "template" }
     command = result.fetch("command")
     expect(command).to include("KETTLE_JEM_VERBOSE=true")
-    expect(command.last(3)).to eq(["sh", "-lc", "kettle-jem install --verbose"])
+    expect(command.last(3)).to eq(["sh", "-lc", "kettle-jem install --verbose --events"])
     expect(command).not_to include("KETTLE_JEM_QUIET=true")
     expect(command).not_to include("BUNDLE_QUIET=true")
   end
