@@ -1053,6 +1053,7 @@ RSpec.describe Kettle::Family::CLI do
         "version" => "1.2.4",
         "latest_released" => "1.2.3",
         "latest_changelog_version" => "1.2.4",
+        "ahead" => 5,
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
         "pending_release" => true
@@ -1067,8 +1068,10 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     expect(out.string).to include("release state:")
     expect(out.string).to include("latest released")
+    expect(out.string).to include("ahead")
     expect(out.string).to include("alpha")
     expect(out.string).to include("1.2.3")
+    expect(out.string).to include("5")
     expect(out.string).to include("yes")
   end
 

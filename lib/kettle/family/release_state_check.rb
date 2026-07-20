@@ -125,7 +125,10 @@ module Kettle
         latest_released = branch_latest_released(member, state["latest_changelog_version"])
         return state unless latest_released
 
-        state.merge("latest_released" => latest_released)
+        state.merge(
+          "latest_released" => latest_released,
+          "ahead" => commits_ahead_of_release(member.root, latest_released)
+        )
       rescue ArgumentError
         state
       end
@@ -160,6 +163,33 @@ module Kettle
         Gem::Version.new(value)
       end
 
+      def commits_ahead_of_release(root, version)
+        tag = release_tag_for_version(root, version)
+        branch = default_branch_ref(root)
+        return nil unless tag && branch
+
+        stdout, _stderr, status = Open3.capture3("git", "rev-list", "--count", "#{tag}..#{branch}", chdir: root)
+        status.success? ? stdout.to_i : nil
+      end
+
+      def release_tag_for_version(root, version)
+        return nil if version.to_s.empty?
+
+        ["v#{version}", version.to_s].find { |tag| git_ref_exists?(root, "refs/tags/#{tag}^{commit}") }
+      end
+
+      def default_branch_ref(root)
+        stdout, _stderr, status = Open3.capture3("git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD", chdir: root)
+        return stdout.strip if status.success? && !stdout.strip.empty?
+
+        %w[main master HEAD].find { |ref| git_ref_exists?(root, ref) }
+      end
+
+      def git_ref_exists?(root, ref)
+        _stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--verify", "--quiet", ref, chdir: root)
+        status.success?
+      end
+
       def family_changelog_state(root)
         changelog = File.expand_path(config.changelog_path, root)
         raise Error, "missing root changelog #{config.changelog_path}" unless File.file?(changelog)
@@ -169,11 +199,13 @@ module Kettle
         latest_changelog_version = latest_changelog_version(content)
         unreleased_entries = unreleased_entries?(content)
         prepared_release_pending = !version.to_s.empty? && latest_changelog_version == version
+        ahead = commits_ahead_of_release(root, latest_changelog_version)
         {
           "gem_name" => config.family_name,
           "version" => version,
           "latest_released" => nil,
           "latest_changelog_version" => latest_changelog_version,
+          "ahead" => ahead,
           "unreleased_entries" => unreleased_entries,
           "prepared_release_pending" => prepared_release_pending,
           "pending_release" => unreleased_entries || prepared_release_pending

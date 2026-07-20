@@ -316,6 +316,7 @@ module Kettle
           state.fetch("version", "unknown").to_s,
           state.fetch("latest_released", nil).to_s.empty? ? "unknown" : state.fetch("latest_released").to_s,
           state.fetch("latest_changelog_version", nil).to_s.empty? ? "none" : state.fetch("latest_changelog_version").to_s,
+          state.fetch("ahead", nil).nil? ? "unknown" : state.fetch("ahead").to_s,
           yes_no(state.fetch("unreleased_entries", nil)),
           yes_no(state.fetch("prepared_release_pending", nil)),
           yes_no(state.fetch("pending_release", nil))
@@ -326,7 +327,7 @@ module Kettle
       end
 
       def release_state_header
-        header = [["gem", "version.rb", "latest released", "latest changelog", "unreleased", "prepared", "pending"]]
+        header = [["gem", "version.rb", "latest released", "latest changelog", "ahead", "unreleased", "prepared", "pending"]]
         return header unless release_state_has_branches?
 
         [["branch", *header.first]]

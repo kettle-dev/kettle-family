@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family release-state` now includes an `ahead` column counting commits
+  from the latest release tag to the local default branch when available.
 - `kettle-family release` now accepts `--skip-remotes` and forwards the
   comma-separated remote skip list to member `kettle-release` runs.
 - `kettle-family --only` now accepts release-state tokens `unreleased`,

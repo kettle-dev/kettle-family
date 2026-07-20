@@ -19,6 +19,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       "version" => "1.2.4",
       "latest_released" => "1.2.3",
       "latest_changelog_version" => "1.2.4",
+      "ahead" => 3,
       "unreleased_entries" => false,
       "prepared_release_pending" => true,
       "pending_release" => true
@@ -31,7 +32,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.command.first).to eq(RbConfig.ruby)
     expect(result.command).to include("-S", "kettle-changelog", "--release-state", "--json")
     expect(result.workdir).to eq(member.root)
-    expect(result.state).to include("latest_released" => "1.2.3", "pending_release" => true)
+    expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true)
   end
 
   it "reports command failures without treating pending release work as an error" do
@@ -65,6 +66,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     allow(check).to receive_messages(git_root: @tmpdir, discover_branch_members: branch_members)
     allow(check).to receive(:with_branch_worktree).and_yield(@tmpdir)
     allow(check).to receive(:branch_latest_released).and_return("1.0.0", "1.0.1")
+    allow(check).to receive(:commits_ahead_of_release).and_return(2, 3)
     allow(Open3).to receive(:capture3).and_return(
       [JSON.generate("gem_name" => "alpha", "version" => "1.0.1", "latest_released" => "9.0.0", "latest_changelog_version" => "1.0.0", "pending_release" => false), "", status(0, true)],
       [JSON.generate("gem_name" => "alpha", "version" => "1.0.2", "latest_released" => "9.0.0", "latest_changelog_version" => "1.0.1", "pending_release" => true), "", status(0, true)]
@@ -75,6 +77,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(results.map(&:branch)).to eq(%w[r1 r2])
     expect(results.map { |result| result.state.fetch("version") }).to eq(%w[1.0.1 1.0.2])
     expect(results.map { |result| result.state.fetch("latest_released") }).to eq(%w[1.0.0 1.0.1])
+    expect(results.map { |result| result.state.fetch("ahead") }).to eq([2, 3])
   end
 
   it "selects the latest release tag from the branch changelog major line" do
@@ -246,6 +249,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       "gem_name" => "structuredmerge-ruby",
       "version" => "7.0.0",
       "latest_changelog_version" => "7.0.0",
+      "ahead" => nil,
       "unreleased_entries" => true,
       "prepared_release_pending" => true,
       "pending_release" => true
