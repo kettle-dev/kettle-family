@@ -74,14 +74,6 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="added">Added</h3>
 
-<ul>
-  <li>
-<code>kettle-family template</code> now uses <code>kettle-jem --events</code> as its default<br>
-templating interface, including verbose and single-job runs, and streams<br>
-newline-delimited JSON template phase, recipe, post-apply, command-step,<br>
-diagnostic, and summary events as member-prefixed progress lines.</li>
-</ul>
-
 <h3 id="changed">Changed</h3>
 
 <h3 id="deprecated">Deprecated</h3>
@@ -90,27 +82,16 @@ diagnostic, and summary events as member-prefixed progress lines.</li>
 
 <h3 id="fixed">Fixed</h3>
 
-<ul>
-  <li>
-<code>kettle-family</code> template preparation now handles custom non-<code>kettle-jem</code><br>
-template commands without treating no-op dependency preparation as failure.</li>
-  <li>
-<code>kettle-family release-state</code> now counts <code>ahead</code> from the release tag to the<br>
-checked-out member <code>HEAD</code>.</li>
-  <li>Generated docs now retain the YARD <code>_index.html</code> content wrapper after<br>
-regeneration with the shared YARD postprocessing stack.</li>
-</ul>
-
 <h3 id="security">Security</h3>
 
-<h2 id="101---2026-07-19">
-<a href="https://github.com/kettle-dev/kettle-family/compare/v1.0.0...v1.0.1">1.0.1</a> - 2026-07-19</h2>
+<h2 id="101---2026-07-20">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v1.0.0...v1.0.1">1.0.1</a> - 2026-07-20</h2>
 
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.1">v1.0.1</a>
 </li>
-  <li>COVERAGE: 95.32% – 2466/2587 lines in 23 files</li>
-  <li>BRANCH COVERAGE: 77.16% – 838/1086 branches in 23 files</li>
+  <li>COVERAGE: 95.44% – 2534/2655 lines in 23 files</li>
+  <li>BRANCH COVERAGE: 77.89% – 877/1126 branches in 23 files</li>
   <li>29.10% documented</li>
 </ul>
 
@@ -131,9 +112,15 @@ comma-separated remote skip list to member <code>kettle-release</code> runs.</li
 member <code>kettle-jem</code> runs instead of forcing quiet JSON output.</p>
   </li>
   <li>
-<code>kettle-family template</code> now runs <code>kettle-jem prepare</code> before full templating<br>
+    <p><code>kettle-family template</code> now runs <code>kettle-jem prepare</code> before full templating<br>
 for Kettle Jem-powered members so templating-only dependency bootstraps, such<br>
-as parser packages, are available before the full template command loads.</li>
+as parser packages, are available before the full template command loads.</p>
+  </li>
+  <li>
+<code>kettle-family template</code> now uses <code>kettle-jem --events</code> as its default<br>
+templating interface, including verbose and single-job runs, and streams<br>
+newline-delimited JSON template phase, recipe, post-apply, command-step,<br>
+diagnostic, and summary events as member-prefixed progress lines.</li>
 </ul>
 
 <h3 id="deprecated-1">Deprecated</h3>
@@ -150,8 +137,18 @@ as parser packages, are available before the full template command loads.</li>
 environment variable unless it was explicitly provided, avoiding stale local<br>
 Gemfile activation failures before the prepare payload can refresh generated<br>
 modular Gemfiles.</li>
-  <li>The templating prepare phase now runs outside each member’s Bundler context so<br>
-it can repair stale generated Gemfiles before Bundler evaluates them.</li>
+  <li>
+    <p>The templating prepare phase now runs outside each member’s Bundler context so<br>
+it can repair stale generated Gemfiles before Bundler evaluates them.</p>
+  </li>
+  <li>
+<code>kettle-family</code> template preparation now handles custom non-<code>kettle-jem</code><br>
+template commands without treating no-op dependency preparation as failure.</li>
+  <li>
+<code>kettle-family release-state</code> now counts <code>ahead</code> from the release tag to the<br>
+checked-out member <code>HEAD</code>.</li>
+  <li>Generated docs now retain the YARD <code>_index.html</code> content wrapper after<br>
+regeneration with the shared YARD postprocessing stack.</li>
 </ul>
 
 <h2 id="100---2026-07-17">

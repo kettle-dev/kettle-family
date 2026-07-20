@@ -20,11 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family template` now uses `kettle-jem --events` as its default
-  templating interface, including verbose and single-job runs, and streams
-  newline-delimited JSON template phase, recipe, post-apply, command-step,
-  diagnostic, and summary events as member-prefixed progress lines.
-
 ### Changed
 
 ### Deprecated
@@ -33,20 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- `kettle-family` template preparation now handles custom non-`kettle-jem`
-  template commands without treating no-op dependency preparation as failure.
-- `kettle-family release-state` now counts `ahead` from the release tag to the
-  checked-out member `HEAD`.
-- Generated docs now retain the YARD `_index.html` content wrapper after
-  regeneration with the shared YARD postprocessing stack.
-
 ### Security
 
-## [1.0.1] - 2026-07-19
+## [1.0.1] - 2026-07-20
 
 - TAG: [v1.0.1][1.0.1t]
-- COVERAGE: 95.32% -- 2466/2587 lines in 23 files
-- BRANCH COVERAGE: 77.16% -- 838/1086 branches in 23 files
+- COVERAGE: 95.44% -- 2534/2655 lines in 23 files
+- BRANCH COVERAGE: 77.89% -- 877/1126 branches in 23 files
 - 29.10% documented
 
 ### Added
@@ -64,6 +52,11 @@ Please file a bug if you notice a violation of semantic versioning.
   for Kettle Jem-powered members so templating-only dependency bootstraps, such
   as parser packages, are available before the full template command loads.
 
+- `kettle-family template` now uses `kettle-jem --events` as its default
+  templating interface, including verbose and single-job runs, and streams
+  newline-delimited JSON template phase, recipe, post-apply, command-step,
+  diagnostic, and summary events as member-prefixed progress lines.
+
 ### Deprecated
 
 - `kettle-family bump-version` is now deprecated in favor of `kettle-family bump`.
@@ -76,6 +69,13 @@ Please file a bug if you notice a violation of semantic versioning.
   modular Gemfiles.
 - The templating prepare phase now runs outside each member's Bundler context so
   it can repair stale generated Gemfiles before Bundler evaluates them.
+
+- `kettle-family` template preparation now handles custom non-`kettle-jem`
+  template commands without treating no-op dependency preparation as failure.
+- `kettle-family release-state` now counts `ahead` from the release tag to the
+  checked-out member `HEAD`.
+- Generated docs now retain the YARD `_index.html` content wrapper after
+  regeneration with the shared YARD postprocessing stack.
 
 ## [1.0.0] - 2026-07-17
 
