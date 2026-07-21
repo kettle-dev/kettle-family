@@ -792,16 +792,9 @@ module Kettle
         if current_release_head
           stdout = "#{member.name} #{member.version} is already published and current HEAD matches #{tag}; skipping release"
           reason = "already released"
-          skipped = true
-        elsif release_pending?(member)
-          stdout = "#{member.name} #{member.version} is already published, but current HEAD is not #{tag}. " \
-            "Bump the version with `kettle-family bump-version patch --execute --only #{member.name}` before releasing."
-          reason = "published version does not match current HEAD"
-          skipped = false
         else
-          stdout = "#{member.name} #{member.version} is already published and release-state reports no pending release; skipping release"
-          reason = "already released; no pending release"
-          skipped = true
+          stdout = "#{member.name} #{member.version} is already published and current HEAD is newer than #{tag}; skipping release"
+          reason = "already released; current HEAD is newer than release tag"
         end
 
         CommandResult.new(
@@ -809,21 +802,14 @@ module Kettle
           phase: "release_skip",
           command: ["internal", "released-version-check", member.version],
           workdir: member.root,
-          status: skipped ? 0 : 1,
-          success: skipped,
+          status: 0,
+          success: true,
           stdout: stdout,
           stderr: "",
           elapsed_seconds: 0.0,
-          skipped: skipped,
+          skipped: true,
           reason: reason
         )
-      end
-
-      def release_pending?(member)
-        results = ReleaseStateCheck.new(members: [member], config: config).results
-        return true unless results.all?(&:ok?)
-
-        results.any? { |result| result.state.fetch("pending_release", true) }
       end
 
       def release_tag_name(version)

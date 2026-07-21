@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family release --publish` now skips already-published members even
+  when post-release commits leave HEAD ahead of the release tag, allowing later
+  pending members to continue.
+
 ### Security
 
 ## [1.0.3] - 2026-07-21
