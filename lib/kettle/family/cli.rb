@@ -10,8 +10,8 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull up branch-lanes release-state].freeze
-      WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb bex release push pull up].freeze
+      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
+      WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb bex release push pull sync up].freeze
 
       command_name "kettle-family"
       usage "[options] COMMAND [ARGS...]"
@@ -254,6 +254,16 @@ module Kettle
         end
       end
 
+      class State < ReleaseState
+        command_name "state"
+        description "Alias for release-state."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("release-state")
+        end
+      end
+
       class WorkflowCommand < BaseCommand
         include ExecutionOptions
         include WorkflowOptions
@@ -475,6 +485,12 @@ module Kettle
         description "Plan or execute git pull --rebase per member."
       end
 
+      class Sync < WorkflowCommand
+        command_name "sync"
+        usage "[options]"
+        description "Plan or execute default-branch fetch/rebase and branch rebase per member."
+      end
+
       class Up < WorkflowCommand
         command_name "up"
         usage "[options]"
@@ -501,9 +517,11 @@ module Kettle
       command Release
       command Push
       command Pull
+      command Sync
       command Up
       command BranchLanes
       command ReleaseState
+      command State
 
       prepend ReturningMain
 

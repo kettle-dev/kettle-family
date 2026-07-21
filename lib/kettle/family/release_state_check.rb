@@ -59,6 +59,7 @@ module Kettle
         success = status.success?
         state = success ? JSON.parse(stdout) : {}
         state = branch_filtered_state(member, state, branch) if success && branch
+        state = enrich_git_state(member.root, state) if success
         result(member: member, command: command, stdout: stdout, stderr: stderr, status: status.exitstatus, elapsed: elapsed, success: success, state: state, branch: branch)
       rescue JSON::ParserError => error
         result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
@@ -182,6 +183,73 @@ module Kettle
         status.success?
       end
 
+      def enrich_git_state(root, state)
+        return state unless git_work_tree?(root)
+
+        enriched = state.dup
+        current_branch = git_output(root, "branch", "--show-current")
+        enriched["current_branch"] = current_branch unless current_branch.to_s.empty?
+
+        version = state["latest_released"].to_s.empty? ? state["latest_changelog_version"] : state["latest_released"]
+        return enriched if version.to_s.empty?
+
+        local_default = default_branch(root)
+        if local_default
+          enriched["default_branch"] = local_default
+          if (counts = release_counts_for_ref(root, version, local_default))
+            enriched["behind"] = counts.fetch(:behind)
+            enriched["ahead"] = counts.fetch(:ahead)
+          end
+        end
+
+        remote_default = remote_default_branch(root, local_default)
+        if remote_default
+          enriched["remote_default_branch"] = remote_default
+          if (counts = release_counts_for_ref(root, version, remote_default))
+            enriched["remote_behind"] = counts.fetch(:behind)
+            enriched["remote_ahead"] = counts.fetch(:ahead)
+          end
+        end
+
+        enriched
+      end
+
+      def git_work_tree?(root)
+        _stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--is-inside-work-tree", chdir: root)
+        status.success?
+      end
+
+      def default_branch(root)
+        remote_default = remote_default_branch(root)
+        branch = remote_default&.delete_prefix("origin/")
+        return branch if branch && git_ref_exists?(root, "refs/heads/#{branch}")
+
+        %w[main master].find { |name| git_ref_exists?(root, "refs/heads/#{name}") }
+      end
+
+      def remote_default_branch(root, local_default = nil)
+        symbolic = git_output(root, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
+        return symbolic if symbolic&.start_with?("origin/")
+
+        "origin/#{local_default}" if local_default && git_ref_exists?(root, "refs/remotes/origin/#{local_default}")
+      end
+
+      def release_counts_for_ref(root, version, ref)
+        tag = release_tag_for_version(root, version)
+        return nil unless tag && git_ref_exists?(root, ref)
+
+        stdout = git_output(root, "rev-list", "--left-right", "--count", "#{tag}...#{ref}")
+        parts = stdout.to_s.split
+        return nil unless parts.length == 2 && parts.all? { |part| part.match?(/\A\d+\z/) }
+
+        {behind: parts.fetch(0).to_i, ahead: parts.fetch(1).to_i}
+      end
+
+      def git_output(root, *args)
+        stdout, _stderr, status = Open3.capture3("git", *args, chdir: root)
+        status.success? ? stdout.strip : nil
+      end
+
       def family_changelog_state(root)
         changelog = File.expand_path(config.changelog_path, root)
         raise Error, "missing root changelog #{config.changelog_path}" unless File.file?(changelog)
@@ -192,7 +260,7 @@ module Kettle
         unreleased_entries = unreleased_entries?(content)
         prepared_release_pending = !version.to_s.empty? && latest_changelog_version == version
         ahead = commits_ahead_of_release(root, latest_changelog_version)
-        {
+        enrich_git_state(root, {
           "gem_name" => config.family_name,
           "version" => version,
           "latest_released" => nil,
@@ -201,7 +269,7 @@ module Kettle
           "unreleased_entries" => unreleased_entries,
           "prepared_release_pending" => prepared_release_pending,
           "pending_release" => unreleased_entries || prepared_release_pending
-        }
+        })
       end
 
       def root_changelog_version(root)

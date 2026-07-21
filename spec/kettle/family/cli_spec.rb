@@ -941,6 +941,22 @@ RSpec.describe Kettle::Family::CLI do
     ])
   end
 
+  it "plans standalone default-branch sync commands per member" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["sync", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    result = JSON.parse(out.string).fetch("results").first
+    expect(result.fetch("member")).to eq("alpha")
+    expect(result.fetch("phase")).to eq("sync")
+    expect(result.fetch("command")).to start_with("sh", "-lc")
+    expect(result.fetch("command").last).to include('git fetch origin "$default_branch"')
+    expect(result.fetch("command").last).to include('git rebase "origin/$default_branch"')
+    expect(result.fetch("command").last).to include('git rebase "$default_branch"')
+  end
+
   it "plans standalone git sync commands across member-local release target branches" do
     write_gem("alpha")
     File.write(File.join(@tmpdir, "alpha", ".kettle-family.yml"), <<~YAML)
@@ -1094,10 +1110,14 @@ RSpec.describe Kettle::Family::CLI do
       elapsed_seconds: 0.1,
       state: {
         "gem_name" => "alpha",
+        "current_branch" => "feature",
         "version" => "1.2.4",
         "latest_released" => "1.2.3",
         "latest_changelog_version" => "1.2.4",
         "ahead" => 5,
+        "behind" => 1,
+        "remote_ahead" => 7,
+        "remote_behind" => 1,
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
         "pending_release" => true
@@ -1112,11 +1132,25 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     expect(out.string).to include("release state:")
     expect(out.string).to include("latest released")
-    expect(out.string).to include("ahead")
+    expect(out.string).to include("checkout")
+    expect(out.string).to include("ahead / behind")
     expect(out.string).to include("alpha")
+    expect(out.string).to include("feature")
     expect(out.string).to include("1.2.3")
-    expect(out.string).to include("5")
+    expect(out.string).to include("5 (7) / 1")
     expect(out.string).to include("yes")
+  end
+
+  it "keeps state as a release-state alias" do
+    write_gem("alpha")
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: [])
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["state", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("command: release-state")
   end
 
   it "does not require dependency ordering for release-state reports" do

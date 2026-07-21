@@ -22,9 +22,15 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `kettle-family template` now passes family-level `readme.corporate_sponsors`
   config into member `kettle-jem` runs for template-managed README sponsor logos.
+- `kettle-family state` is now an alias for `kettle-family release-state`.
+- `kettle-family sync` now fetches the remote default branch, rebases the local
+  default branch onto it, then rebases the original checked-out branch onto the
+  updated local default branch.
 
 ### Changed
 
+- `kettle-family release-state` now reports the checked-out branch and displays
+  release distance as local/remote ahead and behind counts.
 - kettle-jem-template-20260720-001 - Generated READMEs can now render
   template-managed corporate sponsor logos from project or family config.
 - kettle-jem-template-20260720-002 - Generated development Gemfiles now use the

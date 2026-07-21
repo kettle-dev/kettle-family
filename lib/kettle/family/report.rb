@@ -20,6 +20,7 @@ module Kettle
         push
         release
         release-state
+        sync
         template
         test
         up
@@ -356,10 +357,11 @@ module Kettle
         state = result.state || {}
         row = [
           state.fetch("gem_name", result.member_name).to_s,
+          state.fetch("current_branch", nil).to_s.empty? ? "unknown" : state.fetch("current_branch").to_s,
           state.fetch("version", "unknown").to_s,
           state.fetch("latest_released", nil).to_s.empty? ? "unknown" : state.fetch("latest_released").to_s,
           state.fetch("latest_changelog_version", nil).to_s.empty? ? "none" : state.fetch("latest_changelog_version").to_s,
-          state.fetch("ahead", nil).nil? ? "unknown" : state.fetch("ahead").to_s,
+          release_state_ahead_behind(state),
           yes_no(state.fetch("unreleased_entries", nil)),
           yes_no(state.fetch("prepared_release_pending", nil)),
           yes_no(state.fetch("pending_release", nil))
@@ -370,10 +372,25 @@ module Kettle
       end
 
       def release_state_header
-        header = [["gem", "version.rb", "latest released", "latest changelog", "ahead", "unreleased", "prepared", "pending"]]
+        header = [["gem", "checkout", "version.rb", "latest released", "latest changelog", "ahead / behind", "unreleased", "prepared", "pending"]]
         return header unless release_state_has_branches?
 
         [["branch", *header.first]]
+      end
+
+      def release_state_ahead_behind(state)
+        local_ahead = state.fetch("ahead", nil)
+        local_behind = state.fetch("behind", nil)
+        return "unknown" if local_ahead.nil? && local_behind.nil?
+
+        "#{release_state_count(local_ahead, state.fetch("remote_ahead", nil))} / #{release_state_count(local_behind, state.fetch("remote_behind", nil))}"
+      end
+
+      def release_state_count(local_value, remote_value)
+        local_text = local_value.nil? ? "unknown" : local_value.to_s
+        return local_text if remote_value.nil? || remote_value == local_value
+
+        "#{local_text} (#{remote_value})"
       end
 
       def release_state_has_branches?

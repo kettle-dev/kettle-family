@@ -16,6 +16,36 @@ module Kettle
         "lint" => "bundle exec rake rubocop_gradual",
         "docs" => "bundle exec rake yard",
         "gha-sha-pins" => "bundle exec kettle-gha-sha-pins",
+        "sync" => [
+          "sh",
+          "-lc",
+          <<~SH
+            set -e
+            current_branch=$(git branch --show-current)
+            if [ -z "$current_branch" ]; then
+              echo "kettle-family sync requires a named branch checkout" >&2
+              exit 1
+            fi
+            default_ref=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)
+            default_branch=${default_ref#origin/}
+            if [ -z "$default_branch" ] || [ "$default_branch" = "$default_ref" ]; then
+              default_branch=$(git remote show origin | awk '/HEAD branch:/ { print $NF; exit }')
+            fi
+            if [ -z "$default_branch" ]; then
+              echo "could not determine origin default branch" >&2
+              exit 1
+            fi
+            git fetch origin "$default_branch"
+            if [ "$current_branch" != "$default_branch" ]; then
+              git switch "$default_branch"
+            fi
+            git rebase "origin/$default_branch"
+            if [ "$current_branch" != "$default_branch" ]; then
+              git switch "$current_branch"
+              git rebase "$default_branch"
+            fi
+          SH
+        ],
         "bupb" => %w[bundle update --bundler]
       }.freeze
       GIT_SYNC_COMMANDS = {

@@ -120,6 +120,67 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(check.send(:commits_ahead_of_release, repo, "1.0.0")).to eq(2)
   end
 
+  it "enriches release state with current branch and local default ahead/behind counts" do
+    repo = File.join(@tmpdir, "repo")
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(repo, "README.md"), "initial\n")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "branch", "-M", "main")
+    run_git(repo, "tag", "-m", "v1.0.0", "v1.0.0")
+    File.write(File.join(repo, "README.md"), "main\n")
+    run_git(repo, "commit", "--quiet", "-am", "Main change")
+    run_git(repo, "switch", "--quiet", "-c", "feature")
+    check = described_class.new(members: [])
+
+    state = check.send(:enrich_git_state, repo, {
+      "latest_released" => "1.0.0",
+      "ahead" => 99
+    })
+
+    expect(state).to include(
+      "current_branch" => "feature",
+      "default_branch" => "main",
+      "ahead" => 1,
+      "behind" => 0
+    )
+  end
+
+  it "enriches release state with divergent remote default ahead/behind counts" do
+    repo = File.join(@tmpdir, "repo")
+    remote = File.join(@tmpdir, "origin.git")
+    run_git(remote, "init", "--quiet", "--bare")
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(repo, "README.md"), "initial\n")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "branch", "-M", "main")
+    run_git(repo, "tag", "-m", "v1.0.0", "v1.0.0")
+    run_git(repo, "remote", "add", "origin", remote)
+    run_git(repo, "push", "--quiet", "-u", "origin", "main")
+    run_git(repo, "remote", "set-head", "origin", "main")
+    File.write(File.join(repo, "README.md"), "local main\n")
+    run_git(repo, "commit", "--quiet", "-am", "Local main change")
+    check = described_class.new(members: [])
+
+    state = check.send(:enrich_git_state, repo, {
+      "latest_released" => "1.0.0"
+    })
+
+    expect(state).to include(
+      "default_branch" => "main",
+      "remote_default_branch" => "origin/main",
+      "ahead" => 1,
+      "behind" => 0,
+      "remote_ahead" => 0,
+      "remote_behind" => 0
+    )
+  end
+
   it "leaves branch release state unchanged when the line version is unavailable" do
     member = member("alpha")
     check = described_class.new(members: [member])
