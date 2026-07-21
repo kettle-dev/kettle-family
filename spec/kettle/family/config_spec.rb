@@ -24,6 +24,8 @@ RSpec.describe Kettle::Family::Config do
     expect(config.member_exclude_patterns).to eq([
       "vendor/**",
       "**/vendor/**",
+      "benchmarks/**",
+      "**/benchmarks/**",
       "tmp/**",
       "**/tmp/**",
       "spec/**",
@@ -87,6 +89,8 @@ RSpec.describe Kettle::Family::Config do
     expect(config.member_exclude_patterns).to eq([
       "vendor/**",
       "**/vendor/**",
+      "benchmarks/**",
+      "**/benchmarks/**",
       "tmp/**",
       "**/tmp/**",
       "spec/**",

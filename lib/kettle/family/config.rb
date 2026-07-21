@@ -9,6 +9,8 @@ module Kettle
       DEFAULT_MEMBER_EXCLUDES = [
         "vendor/**",
         "**/vendor/**",
+        "benchmarks/**",
+        "**/benchmarks/**",
         "tmp/**",
         "**/tmp/**",
         "spec/**",

@@ -182,6 +182,17 @@ RSpec.describe Kettle::Family::Discovery do
     expect(members.map(&:name)).to eq(%w[alpha beta])
   end
 
+  it "excludes default benchmark fixture gemspecs before loading members" do
+    write_gem("alpha")
+    write_gem("beta")
+    write_gemspec(File.join(@tmpdir, "beta", "benchmarks", "fixtures", "skeleton"), "skeleton")
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config).members
+
+    expect(members.map(&:name)).to eq(%w[alpha beta])
+  end
+
   it "excludes default top-level vendored gemspecs before loading members" do
     write_gem("alpha")
     write_gemspec(File.join(@tmpdir, "vendor", "fixture"), "vendored")

@@ -31,6 +31,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Default member discovery now excludes benchmark fixture gemspecs so benchmark
+  projects are not treated as install/template/release family members.
 - `kettle-family template` now keeps non-verbose `kettle-jem --events` progress
   compact and omits raw NDJSON event streams from failed text reports.
 - Generated HEAD and runtime dependency HEAD CI workflows no longer include
