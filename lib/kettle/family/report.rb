@@ -357,7 +357,7 @@ module Kettle
         state = result.state || {}
         row = [
           state.fetch("gem_name", result.member_name).to_s,
-          state.fetch("current_branch", nil).to_s.empty? ? "unknown" : state.fetch("current_branch").to_s,
+          release_state_checkout(state),
           state.fetch("version", "unknown").to_s,
           state.fetch("latest_released", nil).to_s.empty? ? "unknown" : state.fetch("latest_released").to_s,
           state.fetch("latest_changelog_version", nil).to_s.empty? ? "none" : state.fetch("latest_changelog_version").to_s,
@@ -372,10 +372,15 @@ module Kettle
       end
 
       def release_state_header
-        header = [["gem", "checkout", "version.rb", "latest released", "latest changelog", "ahead / behind", "unreleased", "prepared", "pending"]]
+        header = [["gem", "checkout", "V.rb", "V.rel", "V.ch.md", "🔼 / 🔽", "unrel", "prep", "pend"]]
         return header unless release_state_has_branches?
 
         [["branch", *header.first]]
+      end
+
+      def release_state_checkout(state)
+        branch = state.fetch("current_branch", nil).to_s
+        branch.empty? ? "unknown" : branch[0, 10]
       end
 
       def release_state_ahead_behind(state)

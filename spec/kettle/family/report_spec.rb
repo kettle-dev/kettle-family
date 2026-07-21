@@ -46,6 +46,7 @@ RSpec.describe Kettle::Family::Report do
       elapsed_seconds: 0.1,
       state: {
         "gem_name" => "rubocop-lts",
+        "current_branch" => "feature/release-state-compaction",
         "version" => "24.2.0",
         "latest_released" => "24.2.0",
         "latest_changelog_version" => "24.2.0",
@@ -69,7 +70,16 @@ RSpec.describe Kettle::Family::Report do
     text = report.to_text
 
     expect(text).to include("branch")
+    expect(text).to include("V.rb")
+    expect(text).to include("V.rel")
+    expect(text).to include("V.ch.md")
+    expect(text).to include("🔼 / 🔽")
+    expect(text).to include("unrel")
+    expect(text).to include("prep")
+    expect(text).to include("pend")
     expect(text).to include("r3_2-even-v24")
+    expect(text).to include("feature/re")
+    expect(text).not_to include("feature/release-state-compaction")
     expect(text).to include("rubocop-lts")
   end
 

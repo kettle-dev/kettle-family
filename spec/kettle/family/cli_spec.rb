@@ -1110,7 +1110,7 @@ RSpec.describe Kettle::Family::CLI do
       elapsed_seconds: 0.1,
       state: {
         "gem_name" => "alpha",
-        "current_branch" => "feature",
+        "current_branch" => "feature/release-state-compaction",
         "version" => "1.2.4",
         "latest_released" => "1.2.3",
         "latest_changelog_version" => "1.2.4",
@@ -1131,11 +1131,12 @@ RSpec.describe Kettle::Family::CLI do
 
     expect(status).to eq(0)
     expect(out.string).to include("release state:")
-    expect(out.string).to include("latest released")
+    expect(out.string).to include("V.rel")
     expect(out.string).to include("checkout")
-    expect(out.string).to include("ahead / behind")
+    expect(out.string).to include("🔼 / 🔽")
     expect(out.string).to include("alpha")
-    expect(out.string).to include("feature")
+    expect(out.string).to include("feature/re")
+    expect(out.string).not_to include("feature/release-state-compaction")
     expect(out.string).to include("1.2.3")
     expect(out.string).to include("5 (7) / 1")
     expect(out.string).to include("yes")

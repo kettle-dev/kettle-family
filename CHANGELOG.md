@@ -22,6 +22,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- `kettle-family release-state` text tables now use compact column headings and
+  truncate checkout branch names to 10 characters.
+
 ### Deprecated
 
 ### Removed
