@@ -32,6 +32,39 @@ RSpec.describe Kettle::Family::Discovery do
     expect(member.dependencies).to be_empty
   end
 
+  it "includes development dependencies in release dependency metadata" do
+    write_gem("alpha")
+    write_gem("beta", development_dependencies: ["alpha"])
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = described_class.new(config: config).members.find { |candidate| candidate.name == "beta" }
+
+    expect(member.dependencies).to be_empty
+    expect(member.release_dependencies).to eq(["alpha"])
+  end
+
+  it "includes Gemfile and evaluated modular Gemfile dependencies in release dependency metadata" do
+    write_gem("alpha")
+    beta = write_gem("beta")
+    FileUtils.mkdir_p(File.join(beta, "gemfiles", "modular"))
+    File.write(File.join(beta, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gemspec
+      eval_gemfile "gemfiles/modular/coverage.gemfile"
+    RUBY
+    File.write(File.join(beta, "gemfiles", "modular", "coverage.gemfile"), <<~RUBY)
+      platform :mri do
+        gem "alpha", "~> 1.0", ">= 1.0.0", require: false
+      end
+    RUBY
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = described_class.new(config: config).members.find { |candidate| candidate.name == "beta" }
+
+    expect(member.dependencies).to be_empty
+    expect(member.release_dependencies).to eq(["alpha"])
+  end
+
   it "applies selection after ordering" do
     write_gem("alpha")
     write_gem("beta", dependencies: ["alpha"])
@@ -286,6 +319,7 @@ RSpec.describe Kettle::Family::Discovery do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     write_gemspec(root, name, dependencies: dependencies, development_dependencies: development_dependencies)
+    root
   end
 
   def write_gemspec(root, name, dependencies: [], development_dependencies: [])

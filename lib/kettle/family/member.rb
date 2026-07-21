@@ -9,6 +9,7 @@ module Kettle
       :version_file,
       :version,
       :dependencies,
+      :release_dependencies,
       :required_ruby_version,
       :licenses,
       :authors
@@ -21,6 +22,7 @@ module Kettle
           "version_file" => version_file,
           "version" => version,
           "dependencies" => dependencies,
+          "release_dependencies" => release_dependencies || dependencies,
           "required_ruby_version" => required_ruby_version,
           "licenses" => Array(licenses),
           "authors" => Array(authors)

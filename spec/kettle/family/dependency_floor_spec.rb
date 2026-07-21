@@ -23,6 +23,16 @@ RSpec.describe Kettle::Family::DependencyFloor, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.2.3"')
   end
 
+  it "raises development dependency floors for released family members" do
+    alpha = write_gem("alpha", version: "1.2.3")
+    beta = write_gem("beta", version: "2.0.0", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]}, dependency_method: "add_development_dependency")
+
+    results = described_class.new(released_members: [alpha], dependent_members: [beta], mode: :execute).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(beta.gemspec_path)).to include('add_development_dependency "alpha", "~> 1.0", ">= 1.2.3"')
+  end
+
   it "handles array requirement declarations" do
     alpha = write_gem("alpha", version: "1.2.3")
     beta = write_gem("beta", version: "2.0.0", dependencies: {"alpha" => [[">= 1.0.0", "< 2.0"]]})
@@ -51,12 +61,12 @@ RSpec.describe Kettle::Family::DependencyFloor, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0"')
   end
 
-  def write_gem(name, version:, dependencies: {})
+  def write_gem(name, version:, dependencies: {}, dependency_method: "add_dependency")
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     dependency_lines = dependencies.map do |dependency, requirements|
       serialized = Array(requirements).map(&:inspect)
-      %(  spec.add_dependency #{dependency.inspect}, #{serialized.join(", ")})
+      %(  spec.#{dependency_method} #{dependency.inspect}, #{serialized.join(", ")})
     end
     gemspec_path = File.join(root, "#{name}.gemspec")
     File.write(gemspec_path, <<~RUBY)

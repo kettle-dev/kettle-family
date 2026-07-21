@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family release` now builds release waves from gemspec development
+  dependencies and literal Gemfile dependencies, including dependencies in
+  modular Gemfiles loaded with `eval_gemfile`, so development-tooling releases
+  unblock dependent member releases before the next wave starts.
+
 ### Security
 
 ## [1.0.2] - 2026-07-21

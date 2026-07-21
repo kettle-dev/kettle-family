@@ -787,6 +787,28 @@ RSpec.describe Kettle::Family::Workflow do
     expect(waves.map { |wave| wave.map(&:name) }).to eq([%w[alpha gamma], %w[beta]])
   end
 
+  it "builds release waves from release-only member dependencies" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    soup = ready_member("kettle-soup-cover")
+    nomono = ready_member("nomono", release_dependencies: ["kettle-soup-cover"])
+    workflow = described_class.new(command: "release", config: config, members: [soup, nomono], execute: true, jobs: 2)
+
+    waves = workflow.send(:release_waves, [soup, nomono])
+
+    expect(waves.map { |wave| wave.map(&:name) }).to eq([["kettle-soup-cover"], ["nomono"]])
+  end
+
+  it "breaks release-only dependency cycles by selected member order" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha", release_dependencies: ["beta"])
+    beta = ready_member("beta", release_dependencies: ["alpha"])
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, jobs: 2)
+
+    waves = workflow.send(:release_waves, [alpha, beta])
+
+    expect(waves.map { |wave| wave.map(&:name) }).to eq([["alpha"], ["beta"]])
+  end
+
   it "stops before release commands when readiness fails" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -819,7 +841,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
-  def ready_member(name, changelog: true, dependencies: [])
+  def ready_member(name, changelog: true, dependencies: [], release_dependencies: nil)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))
     %w[Gemfile Rakefile README.md LICENSE.md].each do |path|
@@ -831,7 +853,7 @@ RSpec.describe Kettle::Family::Workflow do
       File.write(full_path, "#!/bin/sh\n")
       FileUtils.chmod("u+x", full_path)
     end
-    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: dependencies)
+    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: dependencies, release_dependencies: release_dependencies || dependencies)
   end
 
   def ready_member_with_gemspec(name, version: "1.0.0", dependencies: {})

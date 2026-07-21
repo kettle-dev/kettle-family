@@ -525,10 +525,15 @@ module Kettle
         completed = []
         waves = []
         until pending.empty?
-          wave_names = pending.select do |name|
+          hard_ready = pending.select do |name|
+            selected_hard_dependencies_for(by_name.fetch(name), by_name).all? { |dependency| completed.include?(dependency) }
+          end
+          raise Error, "cyclic release dependency order: #{pending.join(", ")}" if hard_ready.empty?
+
+          wave_names = hard_ready.select do |name|
             selected_dependencies_for(by_name.fetch(name), by_name).all? { |dependency| completed.include?(dependency) }
           end
-          raise Error, "cyclic release dependency order: #{pending.join(", ")}" if wave_names.empty?
+          wave_names = [hard_ready.first] if wave_names.empty?
 
           waves << wave_names.map { |name| by_name.fetch(name) }
           completed.concat(wave_names)
@@ -537,8 +542,12 @@ module Kettle
         waves
       end
 
-      def selected_dependencies_for(member, by_name)
+      def selected_hard_dependencies_for(member, by_name)
         Array(member.dependencies).map(&:to_s).select { |dependency| by_name.key?(dependency) }
+      end
+
+      def selected_dependencies_for(member, by_name)
+        release_dependency_names(member).select { |dependency| by_name.key?(dependency) }
       end
 
       def append_dependency_floor_results(released_members:, dependent_members:, runner:, memo:)
@@ -565,8 +574,12 @@ module Kettle
       def dependent_members_depending_on(released_members:, dependent_members:)
         released_names = released_members.map(&:name)
         dependent_members.select do |member|
-          Array(member.dependencies).map(&:to_s).any? { |dependency| released_names.include?(dependency) }
+          release_dependency_names(member).any? { |dependency| released_names.include?(dependency) }
         end
+      end
+
+      def release_dependency_names(member)
+        Array(member.release_dependencies || member.dependencies).map(&:to_s)
       end
 
       def append_registry_wait_result(released_members:, dependent_members:, memo:)

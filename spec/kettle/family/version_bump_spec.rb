@@ -50,6 +50,16 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.1.0"')
   end
 
+  it "updates exact family development dependency pins" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "1.0.0", dependencies: {"alpha" => "= 1.0.0"}, dependency_method: "add_development_dependency")
+
+    results = described_class.new(members: [alpha, beta], target_version: "1.1.0", mode: :execute).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(beta.gemspec_path)).to include('add_development_dependency "alpha", "= 1.1.0"')
+  end
+
   it "patch-bumps each member from its own current version" do
     alpha = write_gem("alpha", version: "1.0.0")
     beta = write_gem("beta", version: "2.3.4", dependencies: {"alpha" => "= 1.0.0"})
@@ -133,7 +143,7 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
       .to raise_error(Kettle::Family::Error, /invalid version/)
   end
 
-  def write_gem(name, version:, dependencies: {})
+  def write_gem(name, version:, dependencies: {}, dependency_method: "add_dependency")
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "lib", name.tr("-", "_")))
     version_file = File.join(root, "lib", name.tr("-", "_"), "version.rb")
@@ -144,9 +154,9 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     RUBY
     dependency_lines = dependencies.map do |dependency, requirement|
       if requirement == :spec_version
-        %(  spec.add_dependency "#{dependency}", "= \#{spec.version}")
+        %(  spec.#{dependency_method} "#{dependency}", "= \#{spec.version}")
       else
-        %(  spec.add_dependency "#{dependency}", "#{requirement}")
+        %(  spec.#{dependency_method} "#{dependency}", "#{requirement}")
       end
     end
     gemspec_path = File.join(root, "#{name}.gemspec")

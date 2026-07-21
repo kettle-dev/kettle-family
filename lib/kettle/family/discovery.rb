@@ -57,17 +57,39 @@ module Kettle
 
       def member_from_gemspec(path)
         spec = load_gemspec(path)
+        root = File.dirname(path)
+        dependencies = spec.runtime_dependencies.map(&:name).sort
         Member.new(
           name: spec.name,
-          root: File.dirname(path),
+          root: root,
           gemspec_path: path,
-          version_file: version_file(File.dirname(path), spec.name),
+          version_file: version_file(root, spec.name),
           version: spec.version.to_s,
-          dependencies: spec.runtime_dependencies.map(&:name).sort,
+          dependencies: dependencies,
+          release_dependencies: release_dependencies(root: root, spec: spec, dependencies: dependencies),
           required_ruby_version: required_ruby_version(spec),
           licenses: licenses(spec),
           authors: authors(spec)
         )
+      end
+
+      def release_dependencies(root:, spec:, dependencies:)
+        (
+          dependencies +
+          spec.development_dependencies.map(&:name) +
+          gemfile_dependencies(root)
+        ).uniq.sort
+      end
+
+      def gemfile_dependencies(root)
+        gemfile = File.join(root, "Gemfile")
+        return [] unless File.file?(gemfile)
+
+        gemfile_dependency_collector(root: root).dependencies_for(gemfile).sort
+      end
+
+      def gemfile_dependency_collector(root:)
+        GemfileDependencyCollector.new(root: root)
       end
 
       def required_ruby_version(spec)
@@ -152,6 +174,79 @@ module Kettle
         return unless expanded_path.start_with?(prefix)
 
         expanded_path.delete_prefix(prefix)
+      end
+
+      class GemfileDependencyCollector
+        GEM_METHODS = %i[gem].freeze
+        EVAL_GEMFILE_METHODS = %i[eval_gemfile].freeze
+
+        def initialize(root:)
+          @root = root
+          @dependencies = Set.new
+          @visited = Set.new
+        end
+
+        def dependencies_for(path)
+          collect(File.expand_path(path))
+          dependencies.to_a
+        end
+
+        private
+
+        attr_reader :root, :dependencies, :visited
+
+        def collect(path)
+          return unless File.file?(path)
+          return if visited.include?(path)
+
+          visited << path
+          source = File.read(path)
+          parse_result = parse_source(source, path)
+          each_node(parse_result.value) do |node|
+            collect_call(path, node) if node.is_a?(Prism::CallNode)
+          end
+        end
+
+        def collect_call(path, node)
+          args = node.arguments&.arguments || []
+          first_arg = args.first
+          dependencies << first_arg.unescaped if GEM_METHODS.include?(node.name) && first_arg.is_a?(Prism::StringNode)
+          collect(eval_gemfile_path(path, first_arg)) if EVAL_GEMFILE_METHODS.include?(node.name) && first_arg.is_a?(Prism::StringNode)
+        end
+
+        def eval_gemfile_path(path, node)
+          gemfile_path = node.unescaped
+          return File.expand_path(gemfile_path, root) if gemfile_path.start_with?("/")
+
+          File.expand_path(gemfile_path, File.dirname(path))
+        end
+
+        def parse_source(source, path)
+          require_prism
+          parse_result = Prism.parse(source)
+          raise Error, "could not parse Gemfile dependency file #{path}" unless parse_result.success?
+
+          parse_result
+        end
+
+        def require_prism
+          return if defined?(Prism)
+
+          require "prism"
+        rescue LoadError => error
+          raise Error, "Gemfile dependency discovery requires Prism; install the prism gem or run on Ruby 3.3+ (#{error.message})"
+        end
+
+        def each_node(root)
+          return enum_for(__method__, root) unless block_given?
+
+          queue = [root]
+          until queue.empty?
+            node = queue.shift
+            yield node
+            queue.concat(node.child_nodes.compact) if node.respond_to?(:child_nodes)
+          end
+        end
       end
     end
   end

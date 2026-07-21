@@ -5,7 +5,7 @@ require "kettle/dev"
 module Kettle
   module Family
     class VersionBump
-      DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency].freeze
+      DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency add_development_dependency].freeze
 
       def initialize(members:, target_version:, from_version: nil, mode: :dry_run, phase: "bump-version")
         @members = members

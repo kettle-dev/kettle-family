@@ -5,7 +5,7 @@ require "kettle/dev"
 module Kettle
   module Family
     class DependencyFloor
-      DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency].freeze
+      DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency add_development_dependency].freeze
 
       def initialize(released_members:, dependent_members:, mode: :dry_run)
         @released_members = released_members
