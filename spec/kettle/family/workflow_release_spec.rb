@@ -424,7 +424,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.stdout).to include("already published")
   end
 
-  it "skips already published versions when local HEAD is newer than the release tag" do
+  it "fails published-version skips when release state reports unreleased changes" do
     write_release_config(publish_command: [RbConfig.ruby, "-e", "abort 'should not run'"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
@@ -434,15 +434,38 @@ RSpec.describe Kettle::Family::Workflow do
     allow(workflow).to receive(:git_work_tree?).with(member.root).and_return(true)
     allow(workflow).to receive(:git_rev_parse).with(member.root, "refs/tags/v1.0.0^{}").and_return("tag-sha")
     allow(workflow).to receive(:git_rev_parse).with(member.root, "HEAD").and_return("head-sha")
+    allow(workflow).to receive(:unreleased_changes_pending?).with(member).and_return(true)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(["release_skip"])
+    expect(results.first).not_to be_ok
+    expect(results.first.skipped).to be(false)
+    expect(results.first.reason).to eq("published version has unreleased changes")
+    expect(results.first.stdout).to include("release-state reports unreleased changes")
+    expect(results.first.stdout).to include("bump patch --execute --only alpha")
+  end
+
+  it "skips already published versions when local HEAD is newer than the release tag with no unreleased changes" do
+    write_release_config(publish_command: [RbConfig.ruby, "-e", "abort 'should not run'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).with("alpha", "1.0.0").and_return(true)
+    allow(workflow).to receive(:git_work_tree?).with(member.root).and_return(true)
+    allow(workflow).to receive(:git_rev_parse).with(member.root, "refs/tags/v1.0.0^{}").and_return("tag-sha")
+    allow(workflow).to receive(:git_rev_parse).with(member.root, "HEAD").and_return("head-sha")
+    allow(workflow).to receive(:unreleased_changes_pending?).with(member).and_return(false)
 
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(["release_skip"])
     expect(results.first).to be_ok
     expect(results.first.skipped).to be(true)
-    expect(results.first.reason).to eq("already released; current HEAD is newer than release tag")
+    expect(results.first.reason).to eq("already released; no unreleased changes")
     expect(results.first.stdout).to include("current HEAD is newer than v1.0.0")
-    expect(results.first.stdout).not_to include("bump-version")
+    expect(results.first.stdout).to include("no unreleased changes")
   end
 
   it "continues release after skipping an already published version whose HEAD moved past the tag" do
@@ -457,6 +480,7 @@ RSpec.describe Kettle::Family::Workflow do
     allow(workflow).to receive(:git_work_tree?).with(alpha.root).and_return(true)
     allow(workflow).to receive(:git_rev_parse).with(alpha.root, "refs/tags/v1.0.0^{}").and_return("tag-sha")
     allow(workflow).to receive(:git_rev_parse).with(alpha.root, "HEAD").and_return("head-sha")
+    allow(workflow).to receive(:unreleased_changes_pending?).with(alpha).and_return(false)
 
     results = workflow.results
 
