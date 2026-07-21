@@ -4,7 +4,7 @@
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>
-  Class: Kettle::Family::CLI::Bex
+  Class: Kettle::Family::CLI::State
   
     &mdash; Documentation by YARD 0.9.45
   
@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="../../../css/common.css" type="text/css">
 
 <script type="text/javascript">
-  pathId = "Kettle::Family::CLI::Bex";
+  pathId = "Kettle::Family::CLI::State";
   relpath = '../../../';
 </script>
 
@@ -38,10 +38,10 @@
       <div id="header">
         <div id="menu">
   
-    <a href="../../../_index.html">Index (B)</a> &raquo;
+    <a href="../../../_index.html">Index (S)</a> &raquo;
     <span class='title'><span class='object_link'><a href="../../../Kettle.html" title="Kettle (module)">Kettle</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../../Family.html" title="Kettle::Family (module)">Family</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../CLI.html" title="Kettle::Family::CLI (class)">CLI</a></span></span>
      &raquo; 
-    <span class="title">Bex</span>
+    <span class="title">State</span>
   
 </div>
 
@@ -61,7 +61,7 @@
         <div class="clear"></div>
       </div>
 
-      <div id="content"><h1>Class: Kettle::Family::CLI::Bex
+      <div id="content"><h1>Class: Kettle::Family::CLI::State
   
   
   
@@ -71,7 +71,7 @@
   <dl>
     <dt>Inherits:</dt>
     <dd>
-      <span class="inheritName"><span class='object_link'><a href="WorkflowCommand.html" title="Kettle::Family::CLI::WorkflowCommand (class)">WorkflowCommand</a></span></span>
+      <span class="inheritName"><span class='object_link'><a href="ReleaseState.html" title="Kettle::Family::CLI::ReleaseState (class)">ReleaseState</a></span></span>
       
         <ul class="fullTree">
           <li>Object</li>
@@ -80,9 +80,9 @@
           
             <li class="next"><span class='object_link'><a href="BaseCommand.html" title="Kettle::Family::CLI::BaseCommand (class)">BaseCommand</a></span></li>
           
-            <li class="next"><span class='object_link'><a href="WorkflowCommand.html" title="Kettle::Family::CLI::WorkflowCommand (class)">WorkflowCommand</a></span></li>
+            <li class="next"><span class='object_link'><a href="ReleaseState.html" title="Kettle::Family::CLI::ReleaseState (class)">ReleaseState</a></span></li>
           
-            <li class="next">Kettle::Family::CLI::Bex</li>
+            <li class="next">Kettle::Family::CLI::State</li>
           
         </ul>
         <a href="#" class="inheritanceTree">show all</a>
@@ -126,7 +126,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#run-instance_method" title="#run (instance method)">#<strong>run</strong>(*bex_args)  &#x21d2; Object </a>
+      <a href="#run-instance_method" title="#run (instance method)">#<strong>run</strong>(*args)  &#x21d2; Object </a>
     
 
     
@@ -158,42 +158,6 @@
   
   
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  <h3 class="inherited">Methods included from <span class='object_link'><a href="CommitOptions.html" title="Kettle::Family::CLI::CommitOptions (module)">CommitOptions</a></span></h3>
-  <p class="inherited"><span class='object_link'><a href="CommitOptions.html#included-class_method" title="Kettle::Family::CLI::CommitOptions.included (method)">included</a></span></p>
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  <h3 class="inherited">Methods included from <span class='object_link'><a href="WorkflowOptions.html" title="Kettle::Family::CLI::WorkflowOptions (module)">WorkflowOptions</a></span></h3>
-  <p class="inherited"><span class='object_link'><a href="WorkflowOptions.html#included-class_method" title="Kettle::Family::CLI::WorkflowOptions.included (method)">included</a></span></p>
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  <h3 class="inherited">Methods included from <span class='object_link'><a href="ExecutionOptions.html" title="Kettle::Family::CLI::ExecutionOptions (module)">ExecutionOptions</a></span></h3>
-  <p class="inherited"><span class='object_link'><a href="ExecutionOptions.html#included-class_method" title="Kettle::Family::CLI::ExecutionOptions.included (method)">included</a></span></p>
-
   
   
   
@@ -257,54 +221,29 @@
       <div class="method_details first">
   <h3 class="signature first" id="run-instance_method">
   
-    #<strong>run</strong>(*bex_args)  &#x21d2; <tt>Object</tt> 
+    #<strong>run</strong>(*args)  &#x21d2; <tt>Object</tt> 
   
 
   
 
   
-</h3><div class="docstring">
-  <div class="discussion">
-    
-
-
-  </div>
-</div>
-<div class="tags">
-  
-<p class="tag_title">Raises:</p>
-<ul class="raise">
-  
-    <li>
-      
-      
-        <span class='type'>(<tt><span class='object_link'><a href="../Error.html" title="Kettle::Family::Error (class)">Error</a></span></tt>)</span>
-      
-      
-      
-    </li>
-  
-</ul>
-
-</div><table class="source_code">
+</h3><table class="source_code">
   <tr>
     <td>
       <pre class="lines">
 
 
-347
-348
-349
-350
-351</pre>
+261
+262
+263
+264</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 347</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 261</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_run'>run</span><span class='lparen'>(</span><span class='op'>*</span><span class='id identifier rubyid_bex_args'>bex_args</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="../Error.html" title="Kettle::Family::Error (class)">Error</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bex requires COMMAND [ARGS]</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>if</span> <span class='id identifier rubyid_bex_args'>bex_args</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
-
-  <span class='id identifier rubyid_run_family'>run_family</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bex</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>bex_args:</span> <span class='id identifier rubyid_bex_args'>bex_args</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_run'>run</span><span class='lparen'>(</span><span class='op'>*</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_unexpected_arguments!'>unexpected_arguments!</span><span class='lparen'>(</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_run_family'>run_family</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release-state</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -316,7 +255,7 @@
 </div>
 
       <div id="footer">
-  Generated on Fri Jul 17 22:40:18 2026 by
+  Generated on Tue Jul 21 13:55:10 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.0.6).
 </div>

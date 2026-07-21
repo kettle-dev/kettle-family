@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.0.2] - 2026-07-21
+
+- TAG: [v1.0.2][1.0.2t]
+- COVERAGE: 95.51% -- 2637/2761 lines in 23 files
+- BRANCH COVERAGE: 77.98% -- 928/1190 branches in 23 files
+- 28.63% documented
+
+### Added
+
 - `kettle-family template` now passes family-level `readme.corporate_sponsors`
   config into member `kettle-jem` runs for template-managed README sponsor logos.
 - `kettle-family state` is now an alias for `kettle-family release-state`.
@@ -42,10 +61,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - kettle-jem-template-20260720-005 - Generated README Support & Community rows
   now include a RubyForum help badge.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Default member discovery now excludes benchmark fixture gemspecs so benchmark
@@ -54,8 +69,6 @@ Please file a bug if you notice a violation of semantic versioning.
   compact and omits raw NDJSON event streams from failed text reports.
 - Generated HEAD and runtime dependency HEAD CI workflows no longer include
   JRuby or TruffleRuby jobs for this MRI-only gem.
-
-### Security
 
 ## [1.0.1] - 2026-07-20
 
@@ -810,7 +823,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/kettle-dev/kettle-family/compare/v1.0.1...v1.0.2
+[1.0.2t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.2
 [1.0.1]: https://github.com/kettle-dev/kettle-family/compare/v1.0.0...v1.0.1
 [1.0.1t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.1
 [1.0.0]: https://github.com/kettle-dev/kettle-family/compare/v0.2.7...v1.0.0
