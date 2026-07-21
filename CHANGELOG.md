@@ -22,12 +22,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- `kettle-family release-state` text tables now use compact column headings and
-  truncate checkout branch names to 10 characters.
-
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.0.3] - 2026-07-21
+
+- TAG: [v1.0.3][1.0.3t]
+- COVERAGE: 95.54% -- 2699/2825 lines in 23 files
+- BRANCH COVERAGE: 77.90% -- 948/1217 branches in 23 files
+- 28.74% documented
+
+### Changed
+
+- `kettle-family release-state` text tables now use compact column headings and
+  truncate checkout branch names to 10 characters.
 
 ### Fixed
 
@@ -35,8 +48,6 @@ Please file a bug if you notice a violation of semantic versioning.
   dependencies and literal Gemfile dependencies, including dependencies in
   modular Gemfiles loaded with `eval_gemfile`, so development-tooling releases
   unblock dependent member releases before the next wave starts.
-
-### Security
 
 ## [1.0.2] - 2026-07-21
 
@@ -831,7 +842,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/kettle-dev/kettle-family/compare/v1.0.2...v1.0.3
+[1.0.3t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.3
 [1.0.2]: https://github.com/kettle-dev/kettle-family/compare/v1.0.1...v1.0.2
 [1.0.2t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.2
 [1.0.1]: https://github.com/kettle-dev/kettle-family/compare/v1.0.0...v1.0.1
