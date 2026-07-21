@@ -28,18 +28,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- `kettle-family bump` now rewrites exact family dependency pins according to
-  release-wave order, so earlier members are not changed to require unreleased
-  later member versions.
-
 ### Security
 
 ## [1.0.3] - 2026-07-21
 
 - TAG: [v1.0.3][1.0.3t]
-- COVERAGE: 95.54% -- 2699/2825 lines in 23 files
-- BRANCH COVERAGE: 77.90% -- 948/1217 branches in 23 files
-- 28.74% documented
+- COVERAGE: 95.61% -- 2724/2849 lines in 24 files
+- BRANCH COVERAGE: 77.97% -- 952/1221 branches in 24 files
+- 28.68% documented
 
 ### Changed
 
@@ -52,6 +48,10 @@ Please file a bug if you notice a violation of semantic versioning.
   dependencies and literal Gemfile dependencies, including dependencies in
   modular Gemfiles loaded with `eval_gemfile`, so development-tooling releases
   unblock dependent member releases before the next wave starts.
+
+- `kettle-family bump` now rewrites exact family dependency pins according to
+  release-wave order, so earlier members are not changed to require unreleased
+  later member versions.
 
 ## [1.0.2] - 2026-07-21
 

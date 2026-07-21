@@ -82,13 +82,6 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="fixed">Fixed</h3>
 
-<ul>
-  <li>
-<code>kettle-family bump</code> now rewrites exact family dependency pins according to<br>
-release-wave order, so earlier members are not changed to require unreleased<br>
-later member versions.</li>
-</ul>
-
 <h3 id="security">Security</h3>
 
 <h2 id="103---2026-07-21">
@@ -97,9 +90,9 @@ later member versions.</li>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.3">v1.0.3</a>
 </li>
-  <li>COVERAGE: 95.54% – 2699/2825 lines in 23 files</li>
-  <li>BRANCH COVERAGE: 77.90% – 948/1217 branches in 23 files</li>
-  <li>28.74% documented</li>
+  <li>COVERAGE: 95.61% – 2724/2849 lines in 24 files</li>
+  <li>BRANCH COVERAGE: 77.97% – 952/1221 branches in 24 files</li>
+  <li>28.68% documented</li>
 </ul>
 
 <h3 id="changed-1">Changed</h3>
@@ -114,10 +107,16 @@ truncate checkout branch names to 10 characters.</li>
 
 <ul>
   <li>
-<code>kettle-family release</code> now builds release waves from gemspec development<br>
+    <p><code>kettle-family release</code> now builds release waves from gemspec development<br>
 dependencies and literal Gemfile dependencies, including dependencies in<br>
 modular Gemfiles loaded with <code>eval_gemfile</code>, so development-tooling releases<br>
-unblock dependent member releases before the next wave starts.</li>
+unblock dependent member releases before the next wave starts.</p>
+  </li>
+  <li>
+    <p><code>kettle-family bump</code> now rewrites exact family dependency pins according to<br>
+release-wave order, so earlier members are not changed to require unreleased<br>
+later member versions.</p>
+  </li>
 </ul>
 
 <h2 id="102---2026-07-21">
