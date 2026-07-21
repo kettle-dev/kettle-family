@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.0.4] - 2026-07-21
+
+- TAG: [v1.0.4][1.0.4t]
+- COVERAGE: 95.68% -- 2726/2849 lines in 24 files
+- BRANCH COVERAGE: 77.97% -- 952/1221 branches in 24 files
+- 28.68% documented
+
+### Fixed
+
 - `kettle-family release --publish` now skips already-published members with no
   unreleased changes even when post-release commits leave HEAD ahead of the
   release tag, allowing later pending members to continue.
-
-### Security
 
 ## [1.0.3] - 2026-07-21
 
@@ -850,7 +859,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/kettle-dev/kettle-family/compare/v1.0.3...v1.0.4
+[1.0.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.4
 [1.0.3]: https://github.com/kettle-dev/kettle-family/compare/v1.0.2...v1.0.3
 [1.0.3t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.3
 [1.0.2]: https://github.com/kettle-dev/kettle-family/compare/v1.0.1...v1.0.2
