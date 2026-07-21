@@ -743,14 +743,25 @@ module Kettle
 
       def bump_version_results(members:, options:, phase:)
         require_relative "version_bump"
+        require_relative "release_waves"
 
-        results = VersionBump.new(
-          members: members,
-          target_version: options[:target_version],
-          from_version: options[:from_version],
-          mode: bump_version_mode(options),
-          phase: phase
-        ).results
+        results = []
+        completed_target_versions = {}
+        ReleaseWaves.new(members: members).waves.each do |wave|
+          bump = VersionBump.new(
+            members: wave,
+            target_version: options[:target_version],
+            from_version: options[:from_version],
+            mode: bump_version_mode(options),
+            phase: phase,
+            dependency_target_versions: completed_target_versions
+          )
+          wave_results = bump.results
+          results.concat(wave_results)
+          break unless wave_results.all?(&:ok?)
+
+          completed_target_versions.merge!(bump.target_versions)
+        end
         return results if options[:check] || !options[:commit]
         return results unless results.all?(&:ok?)
 

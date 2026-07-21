@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family bump` now rewrites exact family dependency pins according to
+  release-wave order, so earlier members are not changed to require unreleased
+  later member versions.
+
 ### Security
 
 ## [1.0.3] - 2026-07-21

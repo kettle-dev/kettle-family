@@ -60,6 +60,23 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(File.read(beta.gemspec_path)).to include('add_development_dependency "alpha", "= 1.1.0"')
   end
 
+  it "can restrict family dependency pin targets to already released members" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "1.0.0", dependencies: {"alpha" => "= 1.0.0"})
+
+    results = described_class.new(
+      members: [beta],
+      target_version: "patch",
+      mode: :execute,
+      dependency_target_versions: {"alpha" => "1.0.1"}
+    ).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(alpha.version_file)).to include('VERSION = "1.0.0"')
+    expect(File.read(beta.version_file)).to include('VERSION = "1.0.1"')
+    expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.0.1"')
+  end
+
   it "patch-bumps each member from its own current version" do
     alpha = write_gem("alpha", version: "1.0.0")
     beta = write_gem("beta", version: "2.3.4", dependencies: {"alpha" => "= 1.0.0"})

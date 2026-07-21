@@ -7,7 +7,7 @@ module Kettle
     class VersionBump
       DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency add_development_dependency].freeze
 
-      def initialize(members:, target_version:, from_version: nil, mode: :dry_run, phase: "bump-version")
+      def initialize(members:, target_version:, from_version: nil, mode: :dry_run, phase: "bump-version", dependency_target_versions: nil)
         @members = members
         @target_version = target_version.to_s
         @explicit_target_version = validate_version(target_version) unless Kettle::Dev::VersionBump::BUMP_TYPES.include?(@target_version)
@@ -18,15 +18,21 @@ module Kettle
         @member_target_versions = members.each_with_object({}) do |member, memo|
           memo[member.name] = resolve_target_version(member)
         end
+        @dependency_target_versions = dependency_target_versions || member_target_versions
+        @dependency_member_names = @dependency_target_versions.keys
       end
 
       def results
         members.map { |member| result_for(member) }
       end
 
+      def target_versions
+        member_target_versions.dup
+      end
+
       private
 
-      attr_reader :members, :target_version, :explicit_target_version, :from_version, :mode, :phase, :member_names, :member_target_versions
+      attr_reader :members, :target_version, :explicit_target_version, :from_version, :mode, :phase, :member_target_versions, :dependency_target_versions, :dependency_member_names
 
       def validate_version(version)
         with_dev_errors { Kettle::Dev::VersionBump.validate_version(version) }
@@ -90,9 +96,11 @@ module Kettle
 
         args = node.arguments&.arguments || []
         name_node, requirement_node = args
-        return unless name_node.is_a?(Prism::StringNode) && member_names.include?(name_node.unescaped)
+        return unless name_node.is_a?(Prism::StringNode) && dependency_member_names.include?(name_node.unescaped)
         return unless requirement_node
-        dependency_target_version = member_target_versions.fetch(name_node.unescaped)
+        dependency_target_version = dependency_target_versions[name_node.unescaped]
+        return unless dependency_target_version
+
         if same_version_dependency_requirement?(node, requirement_node)
           return if dependency_target_version == target_version_for(member)
 

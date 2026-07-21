@@ -600,6 +600,22 @@ RSpec.describe Kettle::Family::CLI do
     expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
   end
 
+  it "bumps exact family dependency pins in release-wave order", :prism do
+    write_gem("alpha")
+    write_gem("beta")
+    write_exact_development_dependency("alpha", "beta", "= 1.0.0")
+    write_exact_development_dependency("beta", "alpha", "= 1.0.0")
+    out = StringIO.new
+
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--execute", "--no-commit"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
+    expect(File.read(File.join(@tmpdir, "beta", "lib", "beta", "version.rb"))).to include('VERSION = "1.0.1"')
+    expect(File.read(File.join(@tmpdir, "alpha", "alpha.gemspec"))).to include('add_development_dependency "beta", "= 1.0.0"')
+    expect(File.read(File.join(@tmpdir, "beta", "beta.gemspec"))).to include('add_development_dependency "alpha", "= 1.0.1"')
+  end
+
   it "keeps bump-version as a deprecated alias", :prism do
     write_gem("alpha")
     out = StringIO.new
@@ -1208,6 +1224,17 @@ RSpec.describe Kettle::Family::CLI do
         spec.version = "1.0.0"
         #{dependencies.map { |dependency| %(spec.add_dependency "#{dependency}") }.join("\n")}
         #{metadata_lines.join("\n")}
+      end
+    RUBY
+  end
+
+  def write_exact_development_dependency(name, dependency, requirement)
+    root = File.join(@tmpdir, name)
+    File.write(File.join(root, "#{name}.gemspec"), <<~RUBY)
+      Gem::Specification.new do |spec|
+        spec.name = "#{name}"
+        spec.version = "1.0.0"
+        spec.add_development_dependency "#{dependency}", "#{requirement}"
       end
     RUBY
   end
