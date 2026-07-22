@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family state` now reports per-gem release-state rows for monorepos
+  that use a shared root changelog, while still preferring member-local
+  changelogs when present and retaining branch-stack release-state output.
+
 ### Security
 
 ## [1.0.4] - 2026-07-21

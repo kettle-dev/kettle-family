@@ -298,48 +298,103 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(check).to have_received(:remove_branch_worktree).with(root: @tmpdir, worktree_root: yielded)
   end
 
-  it "checks a shared root changelog once for the family" do
-    FileUtils.mkdir_p(File.join(@tmpdir, "gems", "tree_haver", "lib", "tree_haver"))
-    File.write(File.join(@tmpdir, "CHANGELOG.md"), <<~MARKDOWN)
-      ## [Unreleased]
-
-      ### Fixed
-
-      - Pending fix.
-
-      ## [7.0.0] - 2026-05-05
-    MARKDOWN
-    File.write(File.join(@tmpdir, "gems", "tree_haver", "lib", "tree_haver", "version.rb"), <<~RUBY)
-      module TreeHaver
-        VERSION = "7.0.0"
-      end
-    RUBY
-    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
-      family:
-        name: structuredmerge-ruby
-      changelog:
-        mode: root
-        path: CHANGELOG.md
-        version_file: gems/tree_haver/lib/tree_haver/version.rb
-    YAML
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = member("alpha")
-
-    result = described_class.new(config: config, members: [member]).results.fetch(0)
-
-    expect(result).to be_ok
-    expect(result.member_name).to eq("structuredmerge-ruby")
-    expect(result.workdir).to eq(@tmpdir)
-    expect(result.command).to eq(["internal", "release-state", "root-changelog"])
-    expect(result.state).to include(
-      "gem_name" => "structuredmerge-ruby",
-      "version" => "7.0.0",
-      "latest_changelog_version" => "7.0.0",
-      "ahead" => nil,
-      "unreleased_entries" => true,
-      "prepared_release_pending" => true,
-      "pending_release" => true
+  it "checks a shared root changelog once per monorepo member" do
+    alpha = member("alpha", version_file: File.join(@tmpdir, "gems", "alpha", "lib", "alpha", "version.rb"))
+    beta = member("beta", version_file: File.join(@tmpdir, "gems", "beta", "lib", "beta", "version.rb"))
+    config = release_state_config(shared_changelog: true, changelog_env: {
+      "K_CHANGELOG_GEM_NAME" => "family",
+      "K_CHANGELOG_VERSION_FILE" => File.join(@tmpdir, "VERSION.rb")
+    })
+    allow(Open3).to receive(:capture3).and_return(
+      [JSON.generate("gem_name" => "alpha", "version" => "1.0.0", "latest_released" => "1.0.0", "pending_release" => false), "", status(0, true)],
+      [JSON.generate("gem_name" => "beta", "version" => "2.0.0", "latest_released" => "1.9.0", "pending_release" => true), "", status(0, true)]
     )
+
+    results = described_class.new(config: config, members: [alpha, beta]).results
+
+    expect(results.map(&:member_name)).to eq(%w[alpha beta])
+    expect(results.map { |result| result.state.fetch("gem_name") }).to eq(%w[alpha beta])
+    expect(Open3).to have_received(:capture3).with(
+      hash_including(
+        "K_CHANGELOG_GEM_NAME" => "alpha",
+        "K_CHANGELOG_VERSION_FILE" => alpha.version_file
+      ),
+      RbConfig.ruby,
+      "-S",
+      "kettle-changelog",
+      "--release-state",
+      "--json",
+      chdir: @tmpdir
+    )
+    expect(Open3).to have_received(:capture3).with(
+      hash_including(
+        "K_CHANGELOG_GEM_NAME" => "beta",
+        "K_CHANGELOG_VERSION_FILE" => beta.version_file
+      ),
+      RbConfig.ruby,
+      "-S",
+      "kettle-changelog",
+      "--release-state",
+      "--json",
+      chdir: @tmpdir
+    )
+  end
+
+  it "prefers member-local changelogs inside a shared root changelog monorepo" do
+    alpha = member("alpha", version_file: File.join(@tmpdir, "gems", "alpha", "lib", "alpha", "version.rb"))
+    kettle_jem = member("kettle-jem", version_file: File.join(@tmpdir, "gems", "kettle-jem", "lib", "kettle", "jem", "version.rb"))
+    File.write(File.join(kettle_jem.root, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = release_state_config(shared_changelog: true, changelog_env: {
+      "K_CHANGELOG_GEM_NAME" => "family",
+      "K_CHANGELOG_VERSION_FILE" => File.join(@tmpdir, "VERSION.rb")
+    })
+    allow(Open3).to receive(:capture3).and_return(
+      [JSON.generate("gem_name" => "alpha", "version" => "1.0.0", "latest_released" => "1.0.0", "pending_release" => false), "", status(0, true)],
+      [JSON.generate("gem_name" => "kettle-jem", "version" => "7.1.0", "latest_released" => "7.0.0", "pending_release" => true), "", status(0, true)]
+    )
+
+    results = described_class.new(config: config, members: [alpha, kettle_jem]).results
+
+    expect(results.map(&:member_name)).to eq(%w[alpha kettle-jem])
+    expect(Open3).to have_received(:capture3).with(
+      hash_including("K_CHANGELOG_GEM_NAME" => "alpha"),
+      RbConfig.ruby,
+      "-S",
+      "kettle-changelog",
+      "--release-state",
+      "--json",
+      chdir: @tmpdir
+    )
+    expect(Open3).to have_received(:capture3).with(
+      hash_including(
+        "K_CHANGELOG_GEM_NAME" => "kettle-jem",
+        "K_CHANGELOG_VERSION_FILE" => kettle_jem.version_file
+      ),
+      RbConfig.ruby,
+      "-S",
+      "kettle-changelog",
+      "--release-state",
+      "--json",
+      chdir: kettle_jem.root
+    )
+  end
+
+  it "checks shared root changelog members across configured release target branches" do
+    member = member("alpha", version_file: File.join(@tmpdir, "worktree", "alpha", "lib", "alpha", "version.rb"))
+    config = release_state_config(shared_changelog: true, release_target_branches: %w[r1])
+    check = described_class.new(config: config, members: [member])
+    allow(check).to receive_messages(git_root: @tmpdir, discover_branch_members: [member])
+    allow(check).to receive(:with_branch_worktree).and_yield(File.join(@tmpdir, "worktree"))
+    allow(check).to receive_messages(branch_latest_released: "1.0.0", commits_ahead_of_release: 4)
+    allow(Open3).to receive(:capture3).and_return(
+      [JSON.generate("gem_name" => "alpha", "version" => "1.1.0", "latest_released" => "9.0.0", "latest_changelog_version" => "1.1.0", "pending_release" => true), "", status(0, true)]
+    )
+
+    result = check.results.fetch(0)
+
+    expect(result.member_name).to eq("alpha")
+    expect(result.branch).to eq("r1")
+    expect(result.state).to include("latest_released" => "1.0.0", "ahead" => 4)
   end
 
   it "raises when git cannot add a branch worktree" do
@@ -388,25 +443,25 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     }.to raise_error(Kettle::Family::Error, /is outside git root/)
   end
 
-  def member(name)
+  def member(name, version_file: nil)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
-    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: [])
+    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: version_file, version: "1.0.0", dependencies: [])
   end
 
   def status(exitstatus, success)
     instance_double(Process::Status, exitstatus: exitstatus, success?: success)
   end
 
-  def release_state_config(root: @tmpdir, path: nil, release_target_branches: [])
+  def release_state_config(root: @tmpdir, path: nil, release_target_branches: [], shared_changelog: false, changelog_env: {})
     instance_double(
       Kettle::Family::Config,
       root: root,
       path: path,
       release_target_branches: release_target_branches,
-      shared_changelog?: false,
+      shared_changelog?: shared_changelog,
       changelog_workdir: nil,
-      changelog_env: {}
+      changelog_env: changelog_env
     )
   end
 

@@ -17,7 +17,7 @@ module Kettle
 
       def results
         return branch_results unless release_target_branches.empty?
-        return [check_family_changelog] if shared_changelog?
+        return members.map { |member| check_shared_changelog_member_or_local(member) } if shared_changelog?
 
         members.each_with_object([]) do |member, memo|
           member_branch_results = member_local_branch_results(member)
@@ -38,12 +38,12 @@ module Kettle
         selected_names = members.map(&:name)
         release_target_branches.each_with_object([]) do |branch, memo|
           with_branch_worktree(root: root, branch: branch) do |worktree_root|
+            branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
             if shared_changelog?
-              memo << check_family_changelog(branch: branch, worktree_root: worktree_root)
+              memo.concat(branch_members.map { |member| check_shared_changelog_member_or_local(member, branch: branch) })
               next
             end
 
-            branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
             memo.concat(branch_members.map { |member| check_member(member, branch: branch) })
           end
         rescue Error => error
@@ -54,7 +54,7 @@ module Kettle
       def check_member(member, branch: nil)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         command = release_state_command
-        stdout, stderr, status = Open3.capture3(release_state_env, *command, chdir: release_state_workdir(member))
+        stdout, stderr, status = Open3.capture3(release_state_env(member), *command, chdir: release_state_workdir(member))
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         success = status.success?
         state = success ? JSON.parse(stdout) : {}
@@ -69,26 +69,38 @@ module Kettle
         [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
       end
 
-      def check_family_changelog(branch: nil, worktree_root: nil)
-        member = family_member(root: worktree_root ? branch_config_root(worktree_root) : config.root)
+      def check_shared_changelog_member_or_local(member, branch: nil)
+        return check_member(member, branch: branch) if member_local_changelog?(member)
+
+        check_shared_changelog_member(member, branch: branch)
+      end
+
+      def check_shared_changelog_member(member, branch: nil)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        state = family_changelog_state(member.root)
+        command = release_state_command
+        stdout, stderr, status = Open3.capture3(shared_changelog_env(member), *command, chdir: config.root)
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+        success = status.success?
+        state = success ? JSON.parse(stdout) : {}
+        state = branch_filtered_state(member, state, branch) if success && branch
+        state = enrich_git_state(member.root, state) if success
         result(
           member: member,
-          command: ["internal", "release-state", "root-changelog"],
-          stdout: "",
-          stderr: "",
-          status: 0,
+          command: command,
+          stdout: stdout,
+          stderr: stderr,
+          status: status.exitstatus,
           elapsed: elapsed,
-          success: true,
+          success: success,
           state: state,
           branch: branch
         )
+      rescue JSON::ParserError => error
+        result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
       rescue Error => error
         result(
           member: member,
-          command: ["internal", "release-state", "root-changelog"],
+          command: command || release_state_command,
           stdout: "",
           stderr: error.message,
           status: 1,
@@ -100,26 +112,33 @@ module Kettle
         )
       end
 
-      def family_member(root:)
-        Member.new(
-          name: config.family_name,
-          root: root,
-          gemspec_path: nil,
-          version_file: nil,
-          version: nil,
-          dependencies: []
-        )
-      end
-
       def release_state_workdir(member)
         return member.root unless config
-        return member.root if config.shared_changelog?
+        return config.root if config.shared_changelog? && !member_local_changelog?(member)
 
         config.changelog_workdir(member) || member.root
       end
 
-      def release_state_env
+      def release_state_env(member = nil)
+        return member_changelog_env(member) if member && shared_changelog? && member_local_changelog?(member)
+
         config ? config.changelog_env : {}
+      end
+
+      def shared_changelog_env(member)
+        env = release_state_env(member).merge("K_CHANGELOG_GEM_NAME" => member.name.to_s)
+        env["K_CHANGELOG_VERSION_FILE"] = member.version_file.to_s if member.version_file
+        env
+      end
+
+      def member_changelog_env(member)
+        env = {"K_CHANGELOG_GEM_NAME" => member.name.to_s}
+        env["K_CHANGELOG_VERSION_FILE"] = member.version_file.to_s if member.version_file
+        env
+      end
+
+      def member_local_changelog?(member)
+        File.file?(File.join(member.root, "CHANGELOG.md"))
       end
 
       def branch_filtered_state(member, state, _branch)
