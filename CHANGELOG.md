@@ -28,10 +28,19 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.0.6] - 2026-07-23
+
+- TAG: [v1.0.6][1.0.6t]
+- COVERAGE: 94.43% -- 2781/2945 lines in 24 files
+- BRANCH COVERAGE: 76.66% -- 982/1281 branches in 24 files
+- 29.23% documented
+
+### Fixed
+
 - Monorepo templating now passes a shared `kettle-jem` git commit lock so
   parallel member templating no longer races while updating `HEAD`.
-
-### Security
 
 ## [1.0.5] - 2026-07-23
 
@@ -881,7 +890,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/kettle-dev/kettle-family/compare/v1.0.5...v1.0.6
+[1.0.6t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.6
 [1.0.5]: https://github.com/kettle-dev/kettle-family/compare/v1.0.4...v1.0.5
 [1.0.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.5
 [1.0.4]: https://github.com/kettle-dev/kettle-family/compare/v1.0.3...v1.0.4
