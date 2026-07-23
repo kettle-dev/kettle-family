@@ -178,6 +178,30 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).not_to include("skipped gamma release_build")
   end
 
+  it "plans releases for only members requiring a version bump" do
+    write_ready_gem("alpha")
+    write_ready_gem("beta")
+    write_ready_gem("gamma")
+    release_state_results = [
+      release_state_result("alpha", "unreleased_entries" => true, "bump_release_pending" => true),
+      release_state_result("beta", "unreleased_entries" => true, "bump_release_pending" => false),
+      release_state_result("gamma", "unreleased_entries" => false, "bump_release_pending" => false)
+    ]
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: release_state_results)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "bump"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("* alpha")
+    expect(out.string).to include("- beta")
+    expect(out.string).to include("- gamma")
+    expect(out.string).to include("skipped alpha release_build")
+    expect(out.string).not_to include("skipped beta release_build")
+    expect(out.string).not_to include("skipped gamma release_build")
+  end
+
   it "plans templating for only members matching release-state status tokens" do
     write_ready_gem("alpha")
     write_ready_gem("beta")
@@ -219,7 +243,7 @@ RSpec.describe Kettle::Family::CLI do
 
     expect(status).to eq(0)
     expect(out.string).to include("--only")
-    expect(out.string).to include("unreleased, prepared, pending")
+    expect(out.string).to include("unreleased, prepared, pending, bump")
     expect(out.string).to include("--exclude")
     expect(out.string).to include("--execute")
     expect(out.string).to include("--publish")
@@ -1137,7 +1161,8 @@ RSpec.describe Kettle::Family::CLI do
         "remote_behind" => 1,
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
-        "pending_release" => true
+        "pending_release" => true,
+        "bump_release_pending" => false
       }
     )
     checker = instance_double(Kettle::Family::ReleaseStateCheck, results: [result])
@@ -1148,7 +1173,13 @@ RSpec.describe Kettle::Family::CLI do
 
     expect(status).to eq(0)
     expect(out.string).to include("release state:")
+    expect(out.string).to include("boolean columns:")
+    expect(out.string).to include("unrel: unreleased changelog entries are present")
+    expect(out.string).to include("prep: V.ch.md matches V.rb and is ready to publish")
+    expect(out.string).to include("pend: unrel or prep")
+    expect(out.string).to include("bump: unrel is yes and V.rb differs from V.rel")
     expect(out.string).to include("V.rel")
+    expect(out.string).to include("bump")
     expect(out.string).to include("checkout")
     expect(out.string).to include("🔼 / 🔽")
     expect(out.string).to include("alpha")

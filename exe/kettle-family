@@ -10,6 +10,6 @@ end
 
 require "kettle/family"
 
-puts "== #{script_basename} v#{Kettle::Family::Version::VERSION} =="
+puts "== #{script_basename} v#{Kettle::Family::Version::VERSION} ==" unless ARGV.include?("--json")
 
 exit(Kettle::Family::CLI.call(ARGV))

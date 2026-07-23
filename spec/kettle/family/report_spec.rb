@@ -52,7 +52,8 @@ RSpec.describe Kettle::Family::Report do
         "latest_changelog_version" => "24.2.0",
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
-        "pending_release" => true
+        "pending_release" => true,
+        "bump_release_pending" => false
       },
       branch: "r3_2-even-v24"
     )
@@ -69,6 +70,11 @@ RSpec.describe Kettle::Family::Report do
 
     text = report.to_text
 
+    expect(text).to include("boolean columns:")
+    expect(text).to include("unrel: unreleased changelog entries are present")
+    expect(text).to include("prep: V.ch.md matches V.rb and is ready to publish")
+    expect(text).to include("pend: unrel or prep")
+    expect(text).to include("bump: unrel is yes and V.rb differs from V.rel")
     expect(text).to include("branch")
     expect(text).to include("V.rb")
     expect(text).to include("V.rel")
@@ -77,6 +83,7 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("unrel")
     expect(text).to include("prep")
     expect(text).to include("pend")
+    expect(text).to include("bump")
     expect(text).to include("r3_2-even-v24")
     expect(text).to include("feature/re")
     expect(text).not_to include("feature/release-state-compaction")

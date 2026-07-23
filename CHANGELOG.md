@@ -22,6 +22,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- `kettle-family state` now includes a `bump` boolean column, documents the
+  boolean release-state columns above the table, and accepts `--only bump` to
+  select members with unreleased changes whose `V.rb` differs from `V.rel`.
 - The `kettle-family` executable now supports `-v` / `--version` and prints a
   standard startup header on normal runs.
 - Template and release workflows now use `tty-progressbar`-backed multi-line

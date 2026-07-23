@@ -6,7 +6,8 @@ module Kettle
       STATUS_TOKEN_KEYS = {
         "unreleased" => "unreleased_entries",
         "prepared" => "prepared_release_pending",
-        "pending" => "pending_release"
+        "pending" => "pending_release",
+        "bump" => "bump_release_pending"
       }.freeze
 
       def self.status_tokens

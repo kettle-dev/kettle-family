@@ -30,6 +30,19 @@ RSpec.describe Kettle::Family::Selection do
     expect(selected.map(&:name)).to eq(%w[alpha beta])
   end
 
+  it "selects members by bump release-state token" do
+    members = [member("alpha"), member("beta"), member("gamma")]
+    results = [
+      release_state("alpha", "unreleased_entries" => true, "bump_release_pending" => true),
+      release_state("beta", "unreleased_entries" => true, "bump_release_pending" => false),
+      release_state("gamma", "unreleased_entries" => false, "bump_release_pending" => false)
+    ]
+
+    selected = described_class.new(members: members, release_state_results: results).apply(only: "bump")
+
+    expect(selected.map(&:name)).to eq(["alpha"])
+  end
+
   it "ANDs multiple release-state tokens" do
     members = [member("alpha"), member("beta"), member("gamma")]
     results = [

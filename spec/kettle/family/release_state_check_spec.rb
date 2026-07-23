@@ -32,7 +32,41 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.command.first).to eq(RbConfig.ruby)
     expect(result.command).to include("-S", "kettle-changelog", "--release-state", "--json")
     expect(result.workdir).to eq(member.root)
-    expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true)
+    expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true, "bump_release_pending" => false)
+  end
+
+  it "marks bump release pending when unreleased entries exist after the latest released version" do
+    member = member("alpha")
+    state = {
+      "gem_name" => "alpha",
+      "version" => "1.2.4",
+      "latest_released" => "1.2.3",
+      "unreleased_entries" => true,
+      "prepared_release_pending" => false,
+      "pending_release" => true
+    }
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(state), "", status(0, true)])
+
+    result = described_class.new(members: [member]).results.fetch(0)
+
+    expect(result.state).to include("bump_release_pending" => true)
+  end
+
+  it "does not mark bump release pending when unreleased entries match the latest released version" do
+    member = member("alpha")
+    state = {
+      "gem_name" => "alpha",
+      "version" => "1.2.3",
+      "latest_released" => "1.2.3",
+      "unreleased_entries" => true,
+      "prepared_release_pending" => false,
+      "pending_release" => true
+    }
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(state), "", status(0, true)])
+
+    result = described_class.new(members: [member]).results.fetch(0)
+
+    expect(result.state).to include("bump_release_pending" => false)
   end
 
   it "reports command failures without treating pending release work as an error" do

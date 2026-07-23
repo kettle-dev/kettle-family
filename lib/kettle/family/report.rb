@@ -367,6 +367,11 @@ module Kettle
 
       def append_release_state_results(lines)
         lines << "release state:"
+        lines << "  boolean columns:"
+        lines << "    unrel: unreleased changelog entries are present"
+        lines << "    prep: V.ch.md matches V.rb and is ready to publish"
+        lines << "    pend: unrel or prep"
+        lines << "    bump: unrel is yes and V.rb differs from V.rel"
         rows = release_state_header
         results.each do |result|
           rows << release_state_row(result)
@@ -393,7 +398,8 @@ module Kettle
           release_state_ahead_behind(state),
           yes_no(state.fetch("unreleased_entries", nil)),
           yes_no(state.fetch("prepared_release_pending", nil)),
-          yes_no(state.fetch("pending_release", nil))
+          yes_no(state.fetch("pending_release", nil)),
+          yes_no(state.fetch("bump_release_pending", nil))
         ]
         return row unless release_state_has_branches?
 
@@ -401,7 +407,7 @@ module Kettle
       end
 
       def release_state_header
-        header = [["gem", "checkout", "V.rb", "V.rel", "V.ch.md", "🔼 / 🔽", "unrel", "prep", "pend"]]
+        header = [["gem", "checkout", "V.rb", "V.rel", "V.ch.md", "🔼 / 🔽", "unrel", "prep", "pend", "bump"]]
         return header unless release_state_has_branches?
 
         [["branch", *header.first]]

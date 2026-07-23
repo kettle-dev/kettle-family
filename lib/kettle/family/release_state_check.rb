@@ -59,6 +59,7 @@ module Kettle
         success = status.success?
         state = success ? JSON.parse(stdout) : {}
         state = branch_filtered_state(member, state, branch) if success && branch
+        state = state_with_computed_booleans(state) if success
         state = enrich_git_state(member.root, state) if success
         result(member: member, command: command, stdout: stdout, stderr: stderr, status: status.exitstatus, elapsed: elapsed, success: success, state: state, branch: branch)
       rescue JSON::ParserError => error
@@ -279,7 +280,7 @@ module Kettle
         unreleased_entries = unreleased_entries?(content)
         prepared_release_pending = !version.to_s.empty? && latest_changelog_version == version
         ahead = commits_ahead_of_release(root, latest_changelog_version)
-        enrich_git_state(root, {
+        state_with_computed_booleans(enrich_git_state(root, {
           "gem_name" => config.family_name,
           "version" => version,
           "latest_released" => nil,
@@ -288,7 +289,17 @@ module Kettle
           "unreleased_entries" => unreleased_entries,
           "prepared_release_pending" => prepared_release_pending,
           "pending_release" => unreleased_entries || prepared_release_pending
-        })
+        }))
+      end
+
+      def state_with_computed_booleans(state)
+        enriched = state.dup
+        enriched["bump_release_pending"] = bump_release_pending?(enriched)
+        enriched
+      end
+
+      def bump_release_pending?(state)
+        state["unreleased_entries"] == true && state["version"].to_s != state["latest_released"].to_s
       end
 
       def root_changelog_version(root)

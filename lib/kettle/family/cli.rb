@@ -37,7 +37,7 @@ module Kettle
 
       module SelectionOptions
         def self.included(base)
-          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members, or release-state tokens: unreleased, prepared, pending"
+          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members, or release-state tokens: unreleased, prepared, pending, bump"
           base.option :exclude, value: {type: String, usage: "MEMBERS"}, desc: "Exclude comma-separated members"
           base.option :start_at, long: "--start-at", value: {type: String, usage: "MEMBER[@BRANCH]"}, desc: "Select from member through the end of order"
         end
