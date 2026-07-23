@@ -89,6 +89,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency("kettle-dev", "~> 2.3", ">= 2.3.10")                 # ruby >= 3.2.0
   spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.14")              # ruby >= 2.4
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
+  spec.add_dependency("tty-progressbar", "~> 0.18")                           # ruby >= 2.0.0
 
   # NOTE: It is preferable to list development dependencies in the gemspec due to increased
   #       visibility and discoverability.

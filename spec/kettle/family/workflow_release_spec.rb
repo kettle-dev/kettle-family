@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "stringio"
 require "tmpdir"
 require "yaml"
 
@@ -28,9 +29,11 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
 
-    results = described_class.new(command: "release", config: config, members: [member], publish: true, tag: true, push: true).results
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true, tag: true, push: true)
+    results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish release_tag release_push])
+    expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
   it "plans a configured family changelog phase and shared root changelog checks" do
@@ -587,14 +590,19 @@ RSpec.describe Kettle::Family::Workflow do
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
     members = [ready_member("alpha"), ready_member("beta")]
+    progress = StringIO.new
 
-    workflow = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 2)
+    workflow = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 2, progress_io: progress)
     allow(workflow).to receive(:truffleruby?).and_return(false)
 
     results = workflow.results
 
     expect(results).to all(be_ok)
     expect(results.count { |result| result.phase == "release_build" }).to eq(2)
+    expect(progress.string).to include("releasing 2 members with 2 jobs:")
+    expect(progress.string).to include("[alpha] . release_build")
+    expect(progress.string).to include("[beta] . release_build")
+    expect(progress.string).to include("release summary: 2/2 members ok")
   end
 
   it "emits release wave markers for parallel release groups" do

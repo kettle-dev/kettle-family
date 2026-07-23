@@ -7,6 +7,8 @@ require "etc"
 require "open3"
 require "uri"
 
+require_relative "workflow_progress"
+
 module Kettle
   module Family
     class Workflow
@@ -165,17 +167,16 @@ module Kettle
         ordered_results = Array.new(workflow_members.length)
         mutex = Mutex.new
         stop = false
-        emit_template_progress_start(workflow_members)
+        template_progress = start_template_progress(workflow_members)
         Array.new(template_jobs(workflow_members)) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- family templating intentionally runs independent members concurrently.
             loop do
               break if mutex.synchronize { stop }
               index, member = queue.pop(true)
-              member_results = template_results_for_member(member)
+              member_results = template_results_for_member(member, progress: template_progress)
               mutex.synchronize do
                 ordered_results[index] = member_results
                 stop = true unless member_results.all?(&:ok?)
-                emit_template_progress_mark(member_results)
               end
             rescue ThreadError
               break
@@ -183,19 +184,22 @@ module Kettle
           end
         end.each(&:join)
         flattened = ordered_results.compact.flatten
-        emit_template_progress_summary(flattened)
+        emit_template_progress_summary(flattened, progress: template_progress)
         flattened
       end
 
-      def template_results_for_member(member)
+      def template_results_for_member(member, progress: nil)
+        progress&.start_member(member, total: template_phase_total, status: template_initial_status)
         runner = CommandRunner.new(execute: execute, accept: accept)
         [].tap do |memo|
           if config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
+            emit_member_result_progress(member, memo.last, progress: progress)
             return memo unless memo.last.ok?
           end
 
           prepared = prepare_template_dependencies(member: member, runner: runner, memo: memo)
+          emit_member_result_progress(member, memo.last, progress: progress) if memo.last&.phase == "prepare_template_dependencies"
           return memo if prepared == false
 
           memo << runner.call(
@@ -203,11 +207,22 @@ module Kettle
             phase: command,
             command: workflow_command(member),
             env: workflow_env,
-            stdout_line_handler: template_event_line_handler(member)
+            stdout_line_handler: template_event_line_handler(member, progress: progress)
           )
+          emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles")
+          emit_member_result_progress(member, memo.last, progress: progress)
+        ensure
+          template_result = memo.find { |result| result.phase == "template" } || memo.last
+          if template_result
+            progress&.finish_member(
+              member,
+              success: memo.all?(&:ok?),
+              status: template_member_finish_status(template_result)
+            )
+          end
         end
       end
 
@@ -366,13 +381,20 @@ module Kettle
         return results unless results.all?(&:ok?)
         return parallel_release_member_results(release_members, results) if parallel_release_members?(release_members)
 
-        release_members.each_with_object(results) do |member, memo|
-          memo.concat(release_results_for_member(member, runner: runner))
-          break memo unless memo.last.ok?
+        release_progress = start_release_progress(release_members)
+        @release_progress = release_progress
+        begin
+          release_members.each_with_object(results) do |member, memo|
+            memo.concat(release_results_for_member(member, runner: runner))
+            break memo unless memo.last.ok?
 
-          remaining_members = release_members.drop(release_members.index(member) + 1)
-          append_dependency_floor_results(released_members: [member], dependent_members: remaining_members, runner: runner, memo: memo)
-          break memo unless memo.last&.ok?
+            remaining_members = release_members.drop(release_members.index(member) + 1)
+            append_dependency_floor_results(released_members: [member], dependent_members: remaining_members, runner: runner, memo: memo)
+            break memo unless memo.last&.ok?
+          end
+        ensure
+          emit_release_progress_summary(results, progress: release_progress)
+          @release_progress = nil
         end
       end
 
@@ -380,16 +402,23 @@ module Kettle
         results = initial_results.dup
         waves = release_waves(release_members)
         completed_members = []
-        waves.each_with_index do |wave, index|
-          results << release_wave_result(wave, index: index, total: waves.length)
-          wave_results = run_release_wave(wave)
-          results.concat(wave_results.flatten)
-          break unless wave_results.all? { |member_results| member_results.all?(&:ok?) }
+        release_progress = start_release_progress(release_members)
+        @release_progress = release_progress
+        begin
+          waves.each_with_index do |wave, index|
+            results << release_wave_result(wave, index: index, total: waves.length)
+            wave_results = run_release_wave(wave)
+            results.concat(wave_results.flatten)
+            break unless wave_results.all? { |member_results| member_results.all?(&:ok?) }
 
-          completed_members.concat(wave)
-          remaining_members = release_members - completed_members
-          append_dependency_floor_results(released_members: wave, dependent_members: remaining_members, runner: release_command_runner, memo: results)
-          break unless results.last&.ok?
+            completed_members.concat(wave)
+            remaining_members = release_members - completed_members
+            append_dependency_floor_results(released_members: wave, dependent_members: remaining_members, runner: release_command_runner, memo: results)
+            break unless results.last&.ok?
+          end
+        ensure
+          emit_release_progress_summary(results, progress: release_progress)
+          @release_progress = nil
         end
         results
       end
@@ -439,21 +468,27 @@ module Kettle
       end
 
       def release_results_for_member(member, runner:)
+        progress = @release_progress
+        progress&.start_member(member, total: release_phase_total, status: "check")
         [].tap do |memo|
           if skip_already_released?(member)
             memo << already_released_result(member)
+            emit_member_result_progress(member, memo.last, progress: progress)
             return memo
           end
 
           if config.release_normalize_lockfiles?
             normalize_release_lockfiles(member: member, runner: runner, memo: memo)
+            emit_member_result_progress(member, memo.last, progress: progress)
             return memo unless memo.last&.ok?
 
             commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "release")
+            emit_member_result_progress(member, memo.last, progress: progress)
             return memo unless memo.last&.ok?
           end
 
           append_release_internal_checks(member: member, memo: memo)
+          memo.last(2).each { |result| emit_member_result_progress(member, result, progress: progress) }
           return memo unless memo.last(2).all?(&:ok?)
 
           memo << runner.call(
@@ -463,9 +498,21 @@ module Kettle
             env: release_env,
             interactive: release_command_interactive?
           )
+          emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
 
+          before_git_phase_count = memo.length
           append_release_git_phases(member: member, runner: runner, memo: memo)
+          memo.drop(before_git_phase_count).each { |result| emit_member_result_progress(member, result, progress: progress) }
+        ensure
+          finished_result = memo.find { |result| result.phase == release_phase } || memo.last
+          if finished_result
+            progress&.finish_member(
+              member,
+              success: memo.all?(&:ok?),
+              status: release_member_finish_status(finished_result)
+            )
+          end
         end
       end
 
@@ -1096,30 +1143,103 @@ module Kettle
         append_command_args(command_text, args)
       end
 
-      def emit_template_progress_start(workflow_members)
-        return unless progress_io
-
-        progress_io.puts("templating #{workflow_members.length} member#{"s" unless workflow_members.length == 1} with #{template_jobs(workflow_members)} job#{"s" unless template_jobs(workflow_members) == 1}:")
-        progress_io.flush if progress_io.respond_to?(:flush)
+      def start_template_progress(workflow_members)
+        progress = WorkflowProgress.new(
+          io: progress_io,
+          label: "templating",
+          total: workflow_members.length,
+          jobs: template_jobs(workflow_members)
+        )
+        progress.start
+        progress
       end
 
-      def emit_template_progress_mark(member_results)
-        return unless progress_io
-
-        template_result = member_results.find { |result| result.phase == "template" } || member_results.last
-        progress_io.print(template_result.ok? ? "." : "F")
-        progress_io.flush if progress_io.respond_to?(:flush)
+      def start_release_progress(release_members)
+        progress = WorkflowProgress.new(
+          io: progress_io,
+          label: release_progress_label,
+          total: release_members.length,
+          jobs: release_jobs(release_members)
+        )
+        progress.start
+        progress
       end
 
-      def template_event_line_handler(member)
+      def template_phase_total
+        config.normalize_lockfiles? ? 4 : 2
+      end
+
+      def release_phase_total
+        total = 3
+        total += 2 if config.release_normalize_lockfiles?
+        total += 1 if tag
+        total += 1 if push
+        total
+      end
+
+      def release_progress_label
+        if release_phase == "release_publish"
+          "publishing"
+        else
+          "releasing"
+        end
+      end
+
+      def template_initial_status
+        config.normalize_lockfiles? ? "prepare_lockfiles" : "prepare_template_dependencies"
+      end
+
+      def emit_member_result_progress(member, result, progress:)
+        return unless result
+
+        progress&.advance(member, status: result.phase, success: result.ok?, mark: command_result_progress_mark(result))
+      end
+
+      def command_result_progress_mark(result)
+        return "S" if result.skipped
+
+        result.ok? ? "." : "F"
+      end
+
+      def template_member_finish_status(result)
+        changed_files = template_changed_file_count(result)
+        "#{changed_files} file#{"s" unless changed_files == 1} changed"
+      end
+
+      def release_member_finish_status(result)
+        result.skipped ? "skipped #{result.phase}" : result.phase
+      end
+
+      def emit_template_progress_summary(results, progress:)
+        return unless progress
+
+        template_results = results.select { |result| result.phase == "template" }
+        changed_files = template_results.sum { |result| template_changed_file_count(result) }
+        progress.stop
+        progress.summary("template summary: #{template_results.count(&:ok?)}/#{template_results.length} members ok, #{changed_files} file#{"s" unless changed_files == 1} changed")
+      end
+
+      def emit_release_progress_summary(results, progress:)
+        return unless progress
+
+        release_results = results.select { |result| result.phase == release_phase || result.phase == "release_skip" }
+        progress.stop
+        progress.summary("release summary: #{release_results.count(&:ok?)}/#{release_results.length} members ok")
+      end
+
+      def template_event_line_handler(member, progress: nil)
         return nil unless progress_io
-        return nil unless verbose || debug
+        return nil unless verbose || debug || progress&.tty?
 
         lambda do |line|
           event = parse_template_event(line)
           next unless event
 
-          emit_template_event_progress(member, event)
+          if verbose || debug
+            emit_template_event_progress(member, event)
+          else
+            emit_template_event_status(member, event, progress: progress)
+          end
         end
       end
 
@@ -1151,6 +1271,39 @@ module Kettle
         end
       end
 
+      def emit_template_event_status(member, event, progress:)
+        status = case event["type"]
+        when "phase_start", "phase_finish"
+          event["phase"].to_s
+        when "recipe"
+          event["path"].to_s
+        when "post_apply_step", "command_step"
+          [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
+        when "diagnostic"
+          message = event["message"].to_s
+          message.empty? ? event["kind"].to_s : message
+        when "summary"
+          "#{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed"
+        end
+        mark = template_event_status_mark(event)
+        progress&.update(member, status: status, mark: mark) if status && !status.empty?
+      end
+
+      def template_event_status_mark(event)
+        case event["type"]
+        when "phase_start"
+          ">"
+        when "phase_finish"
+          phase_finish_event_mark(event)
+        when "recipe"
+          template_event_mark(event, changed_mark: "*")
+        when "post_apply_step", "command_step"
+          template_event_mark(event)
+        when "diagnostic"
+          "!"
+        end
+      end
+
       def emit_template_event_line(member, mark, label)
         return if label.to_s.empty?
 
@@ -1176,16 +1329,6 @@ module Kettle
       def synchronize_template_progress(&block)
         @template_progress_mutex ||= Mutex.new
         @template_progress_mutex.synchronize(&block)
-      end
-
-      def emit_template_progress_summary(results)
-        return unless progress_io
-
-        template_results = results.select { |result| result.phase == "template" }
-        changed_files = template_results.sum { |result| template_changed_file_count(result) }
-        progress_io.puts
-        progress_io.puts("template summary: #{template_results.count(&:ok?)}/#{template_results.length} members ok, #{changed_files} file#{"s" unless changed_files == 1} changed")
-        progress_io.flush if progress_io.respond_to?(:flush)
       end
 
       def template_changed_file_count(result)

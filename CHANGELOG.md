@@ -22,6 +22,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Template and release workflows now use `tty-progressbar`-backed multi-line
+  member progress in normal TTY output, with kettle-jem NDJSON marks rendered
+  as a fixed-width sliding event tape instead of dots or raw event dumps.
+
 ### Deprecated
 
 ### Removed
