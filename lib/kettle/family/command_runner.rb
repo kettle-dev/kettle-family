@@ -139,7 +139,8 @@ module Kettle
           stderr: stderr,
           elapsed_seconds: elapsed.round(3),
           skipped: false,
-          reason: status.success? ? nil : "command failed"
+          reason: status.success? ? nil : "command failed",
+          output_streamed: interactive
         )
       end
 

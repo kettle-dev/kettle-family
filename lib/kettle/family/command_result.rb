@@ -14,7 +14,8 @@ module Kettle
       :elapsed_seconds,
       :skipped,
       :reason,
-      :branch
+      :branch,
+      :output_streamed
     ) do
       def to_h
         {
@@ -29,12 +30,17 @@ module Kettle
           "stderr" => summarize(stderr),
           "elapsed_seconds" => elapsed_seconds,
           "skipped" => skipped,
-          "reason" => reason
+          "reason" => reason,
+          "output_streamed" => output_streamed?
         }
       end
 
       def ok?
         success || skipped
+      end
+
+      def output_streamed?
+        !!output_streamed
       end
 
       private

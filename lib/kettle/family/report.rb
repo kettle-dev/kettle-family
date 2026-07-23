@@ -162,7 +162,9 @@ module Kettle
       def append_result_stdout(lines, result)
         return if suppress_success_output?(result)
 
-        if template_event_stdout?(result)
+        if output_streamed?(result)
+          append_streamed_output_summary(lines, result) unless result.ok?
+        elsif template_event_stdout?(result)
           append_template_event_failure_summary(lines, result.stdout) unless result.ok?
         else
           append_indented_output(lines, result.stdout)
@@ -175,6 +177,33 @@ module Kettle
 
       def template_event_stdout?(result)
         command == "template" && result.phase == "template" && template_events(result.stdout).any?
+      end
+
+      def output_streamed?(result)
+        result.respond_to?(:output_streamed?) && result.output_streamed?
+      end
+
+      def append_streamed_output_summary(lines, result)
+        summary = streamed_output_summary(result)
+        lines << "    summary: #{summary}" if summary
+        recommended_fix = streamed_recommended_fix(result)
+        lines << "    recommended fix: #{recommended_fix}" if recommended_fix
+        lines << "    output: omitted because it was already streamed"
+      end
+
+      def streamed_output_summary(result)
+        streamed_output_lines(result).reverse.find do |line|
+          line.match?(/(?:failed|failure|error|exited|aborted)/i) && !line.match?(/\A(?:Files|CI|Actions)/)
+        end
+      end
+
+      def streamed_recommended_fix(result)
+        line = streamed_output_lines(result).reverse.find { |candidate| candidate.match?(/\ARecommended fix:\s+/) }
+        line&.sub(/\ARecommended fix:\s+/, "")
+      end
+
+      def streamed_output_lines(result)
+        [result.stdout, result.stderr].join("\n").lines.map(&:strip).reject(&:empty?)
       end
 
       def append_template_event_failure_summary(lines, output)

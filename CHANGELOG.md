@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Failed interactive release results now summarize streamed command output
+  instead of replaying the full child-process transcript in the final report.
 - `kettle-family state` now reports per-gem release-state rows for monorepos
   that use a shared root changelog, while still preferring member-local
   changelogs when present and retaining branch-stack release-state output.

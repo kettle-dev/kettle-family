@@ -182,6 +182,50 @@ RSpec.describe Kettle::Family::Report do
     expect(text).not_to include("\"phase_start\"")
   end
 
+  it "summarizes streamed failure output without replaying the transcript" do
+    selected_member = member("alpha")
+    stdout = <<~TEXT
+      == kettle-release v2.3.8 ==
+      Running pre-release checks via kettle-pre-release...
+      GitHub Actions SHA pin validation failed
+      Recommended fix: kettle-gha-sha-pins --write --upgrade major
+      kettle-release: exited (status=1, msg=GitHub Actions SHA pin validation failed)
+    TEXT
+    result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "release_publish",
+      ["bundle", "exec", "kettle-release"],
+      "/repo/alpha",
+      1,
+      false,
+      stdout,
+      "",
+      1.0,
+      false,
+      "command failed",
+      nil,
+      true
+    )
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [selected_member],
+      selected_members: [selected_member],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [result]
+    )
+
+    text = report.to_text
+
+    expect(text).to include("summary: kettle-release: exited (status=1, msg=GitHub Actions SHA pin validation failed)")
+    expect(text).to include("recommended fix: kettle-gha-sha-pins --write --upgrade major")
+    expect(text).to include("output: omitted because it was already streamed")
+    expect(text).not_to include("Running pre-release checks via kettle-pre-release")
+    expect(report.to_h.fetch("results").first.fetch("output_streamed")).to be(true)
+  end
+
   it "uses a full release resume hint for failed publish releases" do
     result = Kettle::Family::CommandResult.new(
       "rubocop-ruby3_2",
