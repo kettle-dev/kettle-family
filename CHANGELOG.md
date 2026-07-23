@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release workflows now automatically normalize `Gemfile.lock` before readiness
+  when a selected member lockfile contains local path remotes.
 - `bump` summaries now list successfully bumped members instead of reporting
   `succeeded: none`.
 

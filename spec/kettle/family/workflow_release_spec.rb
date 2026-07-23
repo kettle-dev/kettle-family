@@ -347,6 +347,32 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command.last(4)).to eq(%w[bundle update nomono --bundler])
   end
 
+  it "auto-normalizes local path lockfiles before release readiness" do
+    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{@tmpdir}/beta\n")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      execute: true,
+      commit: false,
+      env_overrides: fake_bundle_env
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[
+      release_normalize_lockfiles
+      check
+      release_changelog
+      release_build
+    ])
+    expect(results.first.command).to eq(["sh", "-lc", "bundle lock"])
+    expect(File.read(File.join(member.root, "Gemfile.lock"))).not_to include("PATH")
+    expect(results).to all(be_ok)
+  end
+
   it "forces configured local path envs off during lockfile normalization" do
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],

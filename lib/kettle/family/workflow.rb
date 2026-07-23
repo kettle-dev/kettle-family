@@ -479,12 +479,12 @@ module Kettle
             return memo
           end
 
-          if config.release_normalize_lockfiles?
+          if normalize_release_lockfiles?(member)
             normalize_release_lockfiles(member: member, runner: runner, memo: memo)
             emit_member_result_progress(member, memo.last, progress: progress)
             return memo unless memo.last&.ok?
 
-            commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "release")
+            commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "release", force: true)
             emit_member_result_progress(member, memo.last, progress: progress)
             return memo unless memo.last&.ok?
           end
@@ -1409,6 +1409,19 @@ module Kettle
         memo << result
       end
 
+      def normalize_release_lockfiles?(member)
+        config.release_normalize_lockfiles? || release_lockfile_has_local_path_remote?(member)
+      end
+
+      def release_lockfile_has_local_path_remote?(member)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return false unless File.file?(lockfile)
+
+        File.readlines(lockfile).any? do |line|
+          line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+        end
+      end
+
       def release_lockfile_env
         base_release_env
           .merge(env_overrides)
@@ -1424,9 +1437,9 @@ module Kettle
         end
       end
 
-      def commit_normalized_lockfiles(branch_members:, runner:, memo:, reason: command)
+      def commit_normalized_lockfiles(branch_members:, runner:, memo:, reason: command, force: false)
         return unless commit
-        return unless commit_normalized_lockfiles?(reason)
+        return unless force || commit_normalized_lockfiles?(reason)
 
         branch_members.each do |member|
           result = runner.call(

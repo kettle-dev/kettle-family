@@ -83,6 +83,8 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="fixed">Fixed</h3>
 
 <ul>
+  <li>Release workflows now automatically normalize <code>Gemfile.lock</code> before readiness<br>
+when a selected member lockfile contains local path remotes.</li>
   <li>
 <code>bump</code> summaries now list successfully bumped members instead of reporting<br>
 <code>succeeded: none</code>.</li>
