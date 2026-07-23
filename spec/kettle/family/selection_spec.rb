@@ -30,6 +30,19 @@ RSpec.describe Kettle::Family::Selection do
     expect(selected.map(&:name)).to eq(%w[alpha beta])
   end
 
+  it "selects members by shortened release-state table tokens" do
+    members = [member("alpha"), member("beta"), member("gamma")]
+    results = [
+      release_state("alpha", "unreleased_entries" => true, "prepared_release_pending" => false, "pending_release" => true),
+      release_state("beta", "unreleased_entries" => false, "prepared_release_pending" => true, "pending_release" => true),
+      release_state("gamma", "unreleased_entries" => true, "prepared_release_pending" => true, "pending_release" => true)
+    ]
+
+    selected = described_class.new(members: members, release_state_results: results).apply(only: "pend,prep")
+
+    expect(selected.map(&:name)).to eq(%w[beta gamma])
+  end
+
   it "selects members by bump release-state token" do
     members = [member("alpha"), member("beta"), member("gamma")]
     results = [

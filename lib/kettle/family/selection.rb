@@ -5,8 +5,11 @@ module Kettle
     class Selection
       STATUS_TOKEN_KEYS = {
         "unreleased" => "unreleased_entries",
+        "unrel" => "unreleased_entries",
         "prepared" => "prepared_release_pending",
+        "prep" => "prepared_release_pending",
         "pending" => "pending_release",
+        "pend" => "pending_release",
         "bump" => "bump_release_pending"
       }.freeze
 

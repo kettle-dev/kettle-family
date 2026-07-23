@@ -202,6 +202,30 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).not_to include("skipped gamma release_build")
   end
 
+  it "plans templating for shortened release-state status tokens" do
+    write_ready_gem("alpha")
+    write_ready_gem("beta")
+    write_ready_gem("gamma")
+    release_state_results = [
+      release_state_result("alpha", "unreleased_entries" => true, "prepared_release_pending" => false, "pending_release" => true),
+      release_state_result("beta", "unreleased_entries" => false, "prepared_release_pending" => true, "pending_release" => true),
+      release_state_result("gamma", "unreleased_entries" => true, "prepared_release_pending" => true, "pending_release" => true)
+    ]
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: release_state_results)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["template", "--root", @tmpdir, "--only", "pend,prep"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("- alpha")
+    expect(out.string).to include("* beta")
+    expect(out.string).to include("* gamma")
+    expect(out.string).not_to include("skipped alpha prepare_template_dependencies")
+    expect(out.string).to include("skipped beta prepare_template_dependencies")
+    expect(out.string).to include("skipped gamma prepare_template_dependencies")
+  end
+
   it "plans templating for only members matching release-state status tokens" do
     write_ready_gem("alpha")
     write_ready_gem("beta")
@@ -243,7 +267,7 @@ RSpec.describe Kettle::Family::CLI do
 
     expect(status).to eq(0)
     expect(out.string).to include("--only")
-    expect(out.string).to include("unreleased, prepared, pending, bump")
+    expect(out.string).to include("unreleased/unrel, prepared/prep, pending/pend, bump")
     expect(out.string).to include("--exclude")
     expect(out.string).to include("--execute")
     expect(out.string).to include("--publish")
