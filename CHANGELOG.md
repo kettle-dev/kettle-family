@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `bup` / `bupb` now run bundle updates with local sibling path environments
+  disabled and refuse to auto-commit lockfiles containing local path remotes.
+
 ### Security
 
 ## [1.1.0] - 2026-07-23

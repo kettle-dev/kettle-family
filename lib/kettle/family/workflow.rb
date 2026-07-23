@@ -150,13 +150,15 @@ module Kettle
           end
 
           command_text = workflow_command(member)
-          result = runner.call(member: member, phase: command, command: command_text, env: workflow_env)
+          result = runner.call(member: member, phase: command, command: command_text, env: command_env)
           memo << result
           break memo unless result.ok?
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
           commit_gha_sha_pins(member: member, runner: runner, memo: memo) if command == "gha-sha-pins"
-          commit_bundle_update(member: member, runner: runner, memo: memo) if %w[bup bupb].include?(command)
+          if %w[bup bupb].include?(command) && validate_bundle_update_lockfile(member: member, memo: memo)
+            commit_bundle_update(member: member, runner: runner, memo: memo)
+          end
           commit_bex_changes(member: member, runner: runner, memo: memo) if command == "bex"
         end
       end
@@ -1113,6 +1115,16 @@ module Kettle
         end
       end
 
+      def command_env
+        return bundle_update_env if %w[bup bupb].include?(command)
+
+        workflow_env
+      end
+
+      def bundle_update_env
+        workflow_env.merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
+      end
+
       def monorepo_template?
         command == "template" && config.family_mode == "monorepo"
       end
@@ -1472,6 +1484,38 @@ module Kettle
           ]
         )
         memo << result
+      end
+
+      def validate_bundle_update_lockfile(member:, memo:)
+        return true unless execute && commit
+
+        diagnostics = bundle_update_lockfile_diagnostics(member)
+        result = CommandResult.new(
+          member.name,
+          "bundle_update_readiness",
+          ["internal", "bundle-update-readiness"],
+          member.root,
+          diagnostics.empty? ? 0 : 1,
+          diagnostics.empty?,
+          diagnostics.join("\n"),
+          "",
+          0.0,
+          false,
+          diagnostics.empty? ? nil : "bundle update produced release-invalid lockfile"
+        )
+        memo << result
+        result.ok?
+      end
+
+      def bundle_update_lockfile_diagnostics(member)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return [] unless File.file?(lockfile)
+
+        File.readlines(lockfile).filter_map.with_index(1) do |line, index|
+          next unless line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+
+          "release lockfile has local path remote at Gemfile.lock:#{index}"
+        end
       end
 
       def commit_bex_changes(member:, runner:, memo:)

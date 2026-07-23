@@ -82,6 +82,12 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="fixed">Fixed</h3>
 
+<ul>
+  <li>
+<code>bup</code> / <code>bupb</code> now run bundle updates with local sibling path environments<br>
+disabled and refuse to auto-commit lockfiles containing local path remotes.</li>
+</ul>
+
 <h3 id="security">Security</h3>
 
 <h2 id="110---2026-07-23">
@@ -101,7 +107,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>
 <code>kettle-family state</code> now includes a <code>bump</code> boolean column, documents the<br>
 boolean release-state columns above the table, and accepts <code>--only bump</code> to<br>
-select members with unreleased changes whose <code>V.rb</code> differs from <code>V.rel</code>.</li>
+select members with unreleased changes whose <code>V.rb</code> still matches <code>V.rel</code>.</li>
   <li>
 <code>--only</code> release-state filters now accept the short table column names<br>
 <code>unrel</code>, <code>prep</code>, and <code>pend</code> in addition to <code>unreleased</code>, <code>prepared</code>, and<br>

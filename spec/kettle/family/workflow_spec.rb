@@ -65,6 +65,46 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).phase).to eq("commit_bundle_update")
   end
 
+  it "plans bundle updates with local path environments disabled" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        local_path_env: KETTLE_DEV_DEV
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    results = described_class.new(command: "bup", config: config, members: [member]).results
+
+    expect(results.first.command).to include("KETTLE_DEV_DEV=false")
+  end
+
+  it "does not commit bundle updates that produce local path lockfile remotes" do
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
+      #!/usr/bin/env ruby
+      File.write("Gemfile.lock", "PATH\\n  remote: #{@tmpdir}/beta\\n")
+      exit(0)
+    RUBY
+    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(
+      command: "bup",
+      config: config,
+      members: [member],
+      execute: true,
+      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[bup bundle_update_readiness])
+    expect(results.last).not_to be_ok
+    expect(results.last.reason).to eq("bundle update produced release-invalid lockfile")
+    expect(results.last.stdout).to include("release lockfile has local path remote")
+  end
+
   it "plans named bundle updates when bup args are provided" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
