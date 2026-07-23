@@ -2,7 +2,10 @@
 # frozen_string_literal: true
 
 script_basename = File.basename(__FILE__)
-require_relative "../lib/kettle/family/version"
+repo_lib = File.expand_path("../lib", __dir__)
+$LOAD_PATH.unshift(repo_lib) if File.directory?(repo_lib) && !$LOAD_PATH.include?(repo_lib)
+
+require "kettle/family/version"
 if ARGV.any? { |arg| arg == "-v" || arg == "--version" }
   puts Kettle::Family::Version::VERSION
   exit(0)
