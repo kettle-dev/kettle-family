@@ -54,6 +54,30 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).stdout).to eq("full/standalone\n")
   end
 
+  it "passes a shared git commit lock to monorepo kettle-jem templating" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    results = described_class.new(command: "template", config: config, members: [member]).results
+
+    expect(results.fetch(1).command).to include(
+      "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}"
+    )
+  end
+
+  it "does not serialize git commits for sibling repository templating" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], family_mode: "sibling_repos")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    results = described_class.new(command: "template", config: config, members: [member]).results
+
+    expect(results.fetch(1).command.join(" ")).not_to include("KETTLE_JEM_GIT_COMMIT_LOCK")
+  end
+
   it "passes family corporate sponsors to kettle-jem templating environment" do
     write_template_config(
       command: [
@@ -227,6 +251,7 @@ RSpec.describe Kettle::Family::Workflow do
         "#{family_local_env_name}=#{@tmpdir}",
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
+        "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "K_JEM_TEMPLATING=true",
         "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
@@ -557,7 +582,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command).to eq(["sh", "-lc", "kettle-jem install --quiet --events"])
   end
 
-  def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil, normalize_lockfiles: true)
+  def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil, normalize_lockfiles: true, family_mode: nil)
     config = {
       "template" => {
         "command" => command,
@@ -567,6 +592,7 @@ RSpec.describe Kettle::Family::Workflow do
         "normalize_lockfiles_command" => [RbConfig.ruby, "-e", "puts 'normalized'"]
       }
     }
+    config["family"] = {"mode" => family_mode} if family_mode
     config["release"] = {"target_branches" => release_target_branches} if release_target_branches
     File.write(
       File.join(root, ".kettle-family.yml"),

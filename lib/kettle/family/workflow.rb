@@ -1051,6 +1051,7 @@ module Kettle
           if command == "template"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
+            env["KETTLE_JEM_GIT_COMMIT_LOCK"] = template_git_commit_lock_path if monorepo_template?
             corporate_sponsors = config.readme_corporate_sponsors
             unless corporate_sponsors.empty?
               env["KETTLE_JEM_CORPORATE_SPONSORS_JSON"] = JSON.generate(corporate_sponsors)
@@ -1063,6 +1064,21 @@ module Kettle
             env.merge!(TEMPLATE_QUIET_ENV)
           end
         end
+      end
+
+      def monorepo_template?
+        command == "template" && config.family_mode == "monorepo"
+      end
+
+      def template_git_commit_lock_path
+        File.join(git_common_dir(config.root), "kettle-family-template-commit.lock")
+      end
+
+      def git_common_dir(root)
+        stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--git-common-dir", chdir: root)
+        return File.expand_path(stdout.strip, root) if status.success? && !stdout.strip.empty?
+
+        File.join(root, ".git")
       end
 
       def kettle_jem_template_command?(command_text)

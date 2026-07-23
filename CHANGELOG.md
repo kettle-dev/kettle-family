@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Monorepo templating now passes a shared `kettle-jem` git commit lock so
+  parallel member templating no longer races while updating `HEAD`.
+
 ### Security
 
 ## [1.0.5] - 2026-07-23
