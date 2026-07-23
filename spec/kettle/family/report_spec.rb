@@ -34,6 +34,15 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_text.lines.first).to eq("kettle-family: #{Kettle::Family::VERSION}\n")
   end
 
+  it "tracks every command that reports selected member results" do
+    expected = (
+      Kettle::Family::CLI::WORKFLOW_COMMANDS +
+      %w[add-changelog bump bump-version install release-state]
+    ).sort
+
+    expect(described_class::MEMBER_RESULT_COMMANDS.sort).to eq(expected)
+  end
+
   it "renders release-state results with a branch column when branches are present" do
     result = Kettle::Family::ReleaseStateResult.new(
       member_name: "rubocop-lts",
@@ -278,6 +287,26 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_text).to include("outcome: success")
     expect(report.to_text).to include("succeeded: alpha")
     expect(report.to_h.fetch("summary").fetch("outcome")).to eq("success")
+  end
+
+  it "summarizes successful bump members with their commit phases" do
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [member("alpha"), member("beta")],
+      selected_members: [member("alpha"), member("beta")],
+      config_path: nil,
+      command: "bump",
+      results: [
+        result("alpha", phase: "bump"),
+        result("beta", phase: "bump"),
+        result("alpha", phase: "commit_version_bump"),
+        result("beta", phase: "commit_version_bump")
+      ]
+    )
+
+    expect(report.to_text).to include("succeeded: alpha, beta")
+    expect(report.to_h.fetch("summary").fetch("succeeded")).to eq(%w[alpha beta])
   end
 
   it "renders failed and pending members in the final summary" do

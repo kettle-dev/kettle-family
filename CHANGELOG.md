@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `bump` summaries now list successfully bumped members instead of reporting
+  `succeeded: none`.
+
 ### Security
 
 ## [1.1.1] - 2026-07-23

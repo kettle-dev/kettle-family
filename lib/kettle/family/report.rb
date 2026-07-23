@@ -8,6 +8,7 @@ module Kettle
       MEMBER_RESULT_COMMANDS = %w[
         add-changelog
         bex
+        bump
         bump-version
         bup
         bupb
