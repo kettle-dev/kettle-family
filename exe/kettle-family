@@ -1,6 +1,15 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+script_basename = File.basename(__FILE__)
+require_relative "../lib/kettle/family/version"
+if ARGV.any? { |arg| arg == "-v" || arg == "--version" }
+  puts Kettle::Family::Version::VERSION
+  exit(0)
+end
+
 require "kettle/family"
+
+puts "== #{script_basename} v#{Kettle::Family::Version::VERSION} =="
 
 exit(Kettle::Family::CLI.call(ARGV))
