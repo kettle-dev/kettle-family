@@ -116,8 +116,12 @@
         </dt>
         <dd><pre class="code"><span class='lbrace'>{</span>
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>unreleased</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>unreleased_entries</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+  <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>unrel</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>unreleased_entries</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>prepared</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>prepared_release_pending</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
-  <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>pending</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>pending_release</span><span class='tstring_end'>&quot;</span></span>
+  <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>prep</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>prepared_release_pending</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+  <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>pending</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>pending_release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+  <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>pend</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>pending_release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+  <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump_release_pending</span><span class='tstring_end'>&quot;</span></span>
 <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
     </dl>
@@ -273,13 +277,13 @@
       <pre class="lines">
 
 
-20
-21
-22
-23</pre>
+24
+25
+26
+27</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 20</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 24</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>release_state_results:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
@@ -335,12 +339,12 @@
       <pre class="lines">
 
 
-16
-17
-18</pre>
+20
+21
+22</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 16</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 20</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_status_token?'>status_token?</span><span class='lparen'>(</span><span class='id identifier rubyid_value'>value</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="#STATUS_TOKEN_KEYS-constant" title="Kettle::Family::Selection::STATUS_TOKEN_KEYS (constant)">STATUS_TOKEN_KEYS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_key?'>key?</span><span class='lparen'>(</span><span class='id identifier rubyid_value'>value</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='rparen'>)</span>
@@ -365,12 +369,12 @@
       <pre class="lines">
 
 
-12
-13
-14</pre>
+16
+17
+18</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 12</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 16</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_status_tokens'>status_tokens</span>
   <span class='const'><span class='object_link'><a href="#STATUS_TOKEN_KEYS-constant" title="Kettle::Family::Selection::STATUS_TOKEN_KEYS (constant)">STATUS_TOKEN_KEYS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_keys'>keys</span>
@@ -424,18 +428,18 @@
       <pre class="lines">
 
 
-25
-26
-27
-28
 29
 30
 31
 32
-33</pre>
+33
+34
+35
+36
+37</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 25</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 29</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_apply'>apply</span><span class='lparen'>(</span><span class='label'>only:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>exclude:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>start_at:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_selected'>selected</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>

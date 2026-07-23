@@ -70,7 +70,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v1.0.6...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v1.1.0...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
 
@@ -83,6 +83,35 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="fixed">Fixed</h3>
 
 <h3 id="security">Security</h3>
+
+<h2 id="110---2026-07-23">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v1.0.6...v1.1.0">1.1.0</a> - 2026-07-23</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.0">v1.1.0</a>
+</li>
+  <li>COVERAGE: 94.37% – 2934/3109 lines in 25 files</li>
+  <li>BRANCH COVERAGE: 76.29% – 1049/1375 branches in 25 files</li>
+  <li>28.68% documented</li>
+</ul>
+
+<h3 id="changed-1">Changed</h3>
+
+<ul>
+  <li>
+<code>kettle-family state</code> now includes a <code>bump</code> boolean column, documents the<br>
+boolean release-state columns above the table, and accepts <code>--only bump</code> to<br>
+select members with unreleased changes whose <code>V.rb</code> differs from <code>V.rel</code>.</li>
+  <li>
+<code>--only</code> release-state filters now accept the short table column names<br>
+<code>unrel</code>, <code>prep</code>, and <code>pend</code> in addition to <code>unreleased</code>, <code>prepared</code>, and<br>
+<code>pending</code>.</li>
+  <li>The <code>kettle-family</code> executable now supports <code>-v</code> / <code>--version</code> and prints a<br>
+standard startup header on normal runs.</li>
+  <li>Template and release workflows now use <code>tty-progressbar</code>-backed multi-line<br>
+member progress in normal TTY output, with kettle-jem NDJSON marks rendered<br>
+as a fixed-width sliding event tape instead of dots or raw event dumps.</li>
+</ul>
 
 <h2 id="106---2026-07-23">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v1.0.5...v1.0.6">1.0.6</a> - 2026-07-23</h2>
@@ -159,7 +188,7 @@ release tag, allowing later pending members to continue.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="changed-1">Changed</h3>
+<h3 id="changed-2">Changed</h3>
 
 <ul>
   <li>
@@ -208,7 +237,7 @@ default branch onto it, then rebases the original checked-out branch onto the<br
 updated local default branch.</li>
 </ul>
 
-<h3 id="changed-2">Changed</h3>
+<h3 id="changed-3">Changed</h3>
 
 <ul>
   <li>
@@ -324,7 +353,7 @@ regeneration with the shared YARD postprocessing stack.</li>
 comma-separated workflow subset to member <code>kettle-release</code> runs.</li>
 </ul>
 
-<h3 id="changed-3">Changed</h3>
+<h3 id="changed-4">Changed</h3>
 
 <ul>
   <li>Promoted the gems that provide built-in <code>kettle-family</code> workflow commands to<br>
@@ -423,7 +452,7 @@ project-specific volatile image URLs.</li>
 <code>kettle-release</code> commands.</li>
 </ul>
 
-<h3 id="changed-4">Changed</h3>
+<h3 id="changed-5">Changed</h3>
 
 <ul>
   <li>
@@ -512,7 +541,7 @@ worktree would block <code>git checkout</code> for configured release target bra
   <li>29.96% documented</li>
 </ul>
 
-<h3 id="changed-5">Changed</h3>
+<h3 id="changed-6">Changed</h3>
 
 <ul>
   <li>
@@ -811,7 +840,7 @@ member release commands unless <code>--debug</code> is enabled.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="changed-6">Changed</h3>
+<h3 id="changed-7">Changed</h3>
 
 <ul>
   <li>Local path environment suppression now uses <code>TSLP_DEV</code> for<br>
@@ -854,7 +883,7 @@ RubyGems MFA prompts.</li>
 dependency-safe waves, using <code>--jobs</code> for parallelism.</li>
 </ul>
 
-<h3 id="changed-7">Changed</h3>
+<h3 id="changed-8">Changed</h3>
 
 <ul>
   <li>Family templating now invokes <code>kettle-jem</code> in quiet JSON mode and suppresses<br>
@@ -1091,7 +1120,7 @@ branch.</p>
   </li>
 </ul>
 
-<h3 id="changed-8">Changed</h3>
+<h3 id="changed-9">Changed</h3>
 
 <ul>
   <li>Retemplated project metadata and CI/development automation with <code>kettle-jem</code> v7.0.0.</li>
@@ -1125,7 +1154,7 @@ generated templating bundle wiring, and member command execution now respects<br
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="changed-9">Changed</h3>
+<h3 id="changed-10">Changed</h3>
 
 <ul>
   <li>
@@ -1161,7 +1190,7 @@ including config-defined <code>install.local_dependencies</code> resolved relati
 <code>.kettle-family.yml</code> file.</li>
 </ul>
 
-<h3 id="changed-10">Changed</h3>
+<h3 id="changed-11">Changed</h3>
 
 <ul>
   <li>Development dependency <code>kettle-dev</code> now requires 2.2.10 or newer.</li>
@@ -1204,7 +1233,7 @@ Prism available.</li>
   <li>44.00% documented</li>
 </ul>
 
-<h3 id="changed-11">Changed</h3>
+<h3 id="changed-12">Changed</h3>
 
 <ul>
   <li>Runtime dependency <code>kettle-dev</code> now requires 2.2.8 or newer.</li>
@@ -1267,7 +1296,7 @@ requirement, licenses, and authors.</li>
 family members using <code>kettle-changelog --release-state --json</code>.</li>
 </ul>
 
-<h3 id="changed-12">Changed</h3>
+<h3 id="changed-13">Changed</h3>
 
 <ul>
   <li>Retemplated generated project files with <code>kettle-dev</code> &gt;= 2.2.7.</li>

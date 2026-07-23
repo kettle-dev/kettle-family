@@ -22,6 +22,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.1.0] - 2026-07-23
+
+- TAG: [v1.1.0][1.1.0t]
+- COVERAGE: 94.37% -- 2934/3109 lines in 25 files
+- BRANCH COVERAGE: 76.29% -- 1049/1375 branches in 25 files
+- 28.68% documented
+
+### Changed
+
 - `kettle-family state` now includes a `bump` boolean column, documents the
   boolean release-state columns above the table, and accepts `--only bump` to
   select members with unreleased changes whose `V.rb` differs from `V.rel`.
@@ -33,14 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Template and release workflows now use `tty-progressbar`-backed multi-line
   member progress in normal TTY output, with kettle-jem NDJSON marks rendered
   as a fixed-width sliding event tape instead of dots or raw event dumps.
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [1.0.6] - 2026-07-23
 
@@ -902,7 +911,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/kettle-dev/kettle-family/compare/v1.0.6...v1.1.0
+[1.1.0t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.0
 [1.0.6]: https://github.com/kettle-dev/kettle-family/compare/v1.0.5...v1.0.6
 [1.0.6t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.0.6
 [1.0.5]: https://github.com/kettle-dev/kettle-family/compare/v1.0.4...v1.0.5
