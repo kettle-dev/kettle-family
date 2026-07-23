@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family releases now retry `bundle update` for dependent members after
+  wave-aware dependency floor bumps, and reject empty lockfile checksum entries
+  for the just-published gems, so a registry version endpoint becoming visible
+  before Bundler's dependency index no longer breaks the next publish.
 - Failed interactive release results now summarize streamed command output
   instead of replaying the full child-process transcript in the final report.
 - `kettle-family state` now reports per-gem release-state rows for monorepos

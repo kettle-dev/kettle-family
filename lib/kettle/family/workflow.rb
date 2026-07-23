@@ -542,6 +542,9 @@ module Kettle
         return if memo.any? && !memo.last.ok?
 
         append_registry_wait_result(released_members: released_members, dependent_members: affected_dependent_members, memo: memo)
+        return if memo.any? && !memo.last.ok?
+
+        append_dependency_floor_lockfile_results(released_members: released_members, dependent_members: affected_dependent_members, runner: runner, memo: memo)
       end
 
       def dependent_members_depending_on(released_members:, dependent_members:)
@@ -560,6 +563,85 @@ module Kettle
         return if dependent_members.empty?
 
         memo << wait_for_registry_result(released_members: released_members, dependent_members: dependent_members)
+      end
+
+      def append_dependency_floor_lockfile_results(released_members:, dependent_members:, runner:, memo:)
+        return unless execute && publish
+        return if dependent_members.empty?
+
+        dependent_members.each do |member|
+          memo << wait_for_dependency_floor_lockfiles_result(member: member, released_members: released_members, runner: runner)
+          break unless memo.last.ok?
+        end
+      end
+
+      def wait_for_dependency_floor_lockfiles_result(member:, released_members:, runner:)
+        result = nil
+        REGISTRY_WAIT_ATTEMPTS.times do |index|
+          result = runner.call(
+            member: member,
+            phase: "dependency_floor_lockfiles",
+            command: ["bundle", "update", *released_members.map(&:name)],
+            env: release_lockfile_env
+          )
+          validate_dependency_floor_lockfile_result(result: result, member: member, released_members: released_members) if result.ok?
+          annotate_dependency_floor_lockfile_result(result, index + 1)
+          break if result.ok?
+
+          sleep(REGISTRY_WAIT_INTERVAL_SECONDS) if index + 1 < REGISTRY_WAIT_ATTEMPTS
+        end
+        result
+      end
+
+      def validate_dependency_floor_lockfile_result(result:, member:, released_members:)
+        diagnostics = dependency_floor_lockfile_diagnostics(member: member, released_members: released_members)
+        return if diagnostics.empty?
+
+        result.status = 1
+        result.success = false
+        result.stderr = [result.stderr, *diagnostics].reject(&:empty?).join("\n")
+      end
+
+      def dependency_floor_lockfile_diagnostics(member:, released_members:)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return ["Gemfile.lock was not created by dependency floor lockfile refresh"] unless File.file?(lockfile)
+
+        lockfile_source = File.read(lockfile)
+        released_members.filter_map do |released_member|
+          checksum_line = checksum_line_for(lockfile_source: lockfile_source, member: released_member)
+          if checksum_line.nil?
+            "Gemfile.lock CHECKSUMS is missing #{released_member.name} #{released_member.version}"
+          elsif !checksum_line.include?("sha256=")
+            "Gemfile.lock CHECKSUMS has no sha256 for #{released_member.name} #{released_member.version}"
+          end
+        end
+      end
+
+      def checksum_line_for(lockfile_source:, member:)
+        in_checksums = false
+        lockfile_source.each_line do |line|
+          stripped = line.chomp
+          if stripped == "CHECKSUMS"
+            in_checksums = true
+            next
+          end
+          next unless in_checksums
+          break if !stripped.empty? && stripped == stripped.upcase && !stripped.start_with?(" ")
+
+          return stripped if stripped.start_with?("  #{member.name} (#{member.version})")
+        end
+        nil
+      end
+
+      def annotate_dependency_floor_lockfile_result(result, attempts)
+        return unless result
+
+        if result.ok?
+          message = "refreshed dependency floor lockfiles after #{attempts} attempt(s)"
+          result.stdout = [result.stdout, message].reject(&:empty?).join("\n")
+        else
+          result.reason = "dependency floor lockfile refresh failed after #{attempts} attempt(s)"
+        end
       end
 
       def commit_dependency_floor_changes(dependent_members:, runner:, memo:)

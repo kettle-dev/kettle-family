@@ -700,7 +700,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "waits for just-published family dependencies before releasing dependents" do
-    write_release_config
+    write_release_config(release_env: fake_bundle_env)
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
     beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
@@ -720,12 +720,127 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[
       check release_changelog release_publish dependency_floor release_wait_for_registry
+      dependency_floor_lockfiles
       check release_changelog release_publish
     ])
     wait = results.find { |result| result.phase == "release_wait_for_registry" }
     expect(wait).to be_ok
     expect(wait.stdout).to include("alpha 1.2.3")
     expect(wait.stdout).to include("after 3 check(s)")
+    expect(workflow).to have_received(:sleep).with(15).twice
+  end
+
+  it "retries dependent bundle refreshes after just-published dependency floors" do
+    write_release_config(
+      release_env: fake_bundle_env(<<~BASH)
+        attempts_file="$BUNDLE_ATTEMPTS_FILE"
+        attempts=0
+        if [ -f "$attempts_file" ]; then
+          attempts="$(cat "$attempts_file")"
+        fi
+        attempts="$((attempts + 1))"
+        printf '%s' "$attempts" > "$attempts_file"
+        printf 'bundle attempt %s: %s\\n' "$attempts" "$*"
+        if [ "$attempts" -lt 3 ]; then
+          exit 1
+        fi
+        cat > Gemfile.lock <<'LOCK'
+        GEM
+          specs:
+            alpha (1.2.3)
+
+        CHECKSUMS
+          alpha (1.2.3) sha256=abc123
+        LOCK
+      BASH
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+    alpha_checks = 0
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?) do |gem_name, _version|
+      next false if gem_name == "beta"
+
+      alpha_checks += 1
+      alpha_checks > 1
+    end
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[
+      check release_changelog release_publish dependency_floor release_wait_for_registry
+      dependency_floor_lockfiles check release_changelog release_publish
+    ])
+    lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
+    expect(lockfile_refresh).to be_ok
+    expect(lockfile_refresh.command).to eq(%w[bundle update alpha])
+    expect(lockfile_refresh.member_name).to eq("beta")
+    expect(lockfile_refresh.stdout).to include("bundle attempt 3: update alpha")
+    expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 3 attempt(s)")
+    expect(workflow).to have_received(:sleep).with(15).twice
+  end
+
+  it "retries dependent bundle refreshes when Bundler writes empty checksums for just-published floors" do
+    write_release_config(
+      release_env: fake_bundle_env(<<~BASH)
+        attempts_file="$BUNDLE_ATTEMPTS_FILE"
+        attempts=0
+        if [ -f "$attempts_file" ]; then
+          attempts="$(cat "$attempts_file")"
+        fi
+        attempts="$((attempts + 1))"
+        printf '%s' "$attempts" > "$attempts_file"
+        printf 'bundle attempt %s: %s\\n' "$attempts" "$*"
+        if [ "$attempts" -lt 3 ]; then
+          cat > Gemfile.lock <<'LOCK'
+        GEM
+          specs:
+            alpha (1.2.3)
+
+        CHECKSUMS
+          alpha (1.2.3)
+        LOCK
+          exit 0
+        fi
+        cat > Gemfile.lock <<'LOCK'
+        GEM
+          specs:
+            alpha (1.2.3)
+
+        CHECKSUMS
+          alpha (1.2.3) sha256=abc123
+        LOCK
+      BASH
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+    alpha_checks = 0
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?) do |gem_name, _version|
+      next false if gem_name == "beta"
+
+      alpha_checks += 1
+      alpha_checks > 1
+    end
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[
+      check release_changelog release_publish dependency_floor release_wait_for_registry
+      dependency_floor_lockfiles check release_changelog release_publish
+    ])
+    lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
+    expect(lockfile_refresh).to be_ok
+    expect(lockfile_refresh.stdout).to include("bundle attempt 3: update alpha")
+    expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 3 attempt(s)")
     expect(workflow).to have_received(:sleep).with(15).twice
   end
 
@@ -865,6 +980,29 @@ RSpec.describe Kettle::Family::Workflow do
       File.join(@tmpdir, ".kettle-family.yml"),
       YAML.dump(config)
     )
+  end
+
+  def fake_bundle_env(body = "")
+    bin_dir = File.join(@tmpdir, "fake-bin")
+    FileUtils.mkdir_p(bin_dir)
+    bundle_path = File.join(bin_dir, "bundle")
+    File.write(bundle_path, <<~BASH)
+      #!/usr/bin/env bash
+      #{body}
+      cat > Gemfile.lock <<'LOCK'
+      GEM
+        specs:
+          alpha (1.2.3)
+
+      CHECKSUMS
+        alpha (1.2.3) sha256=abc123
+      LOCK
+    BASH
+    FileUtils.chmod("u+x", bundle_path)
+    {
+      "PATH" => "#{bin_dir}:#{ENV.fetch("PATH")}",
+      "BUNDLE_ATTEMPTS_FILE" => File.join(@tmpdir, "bundle-attempts")
+    }
   end
 
   def ready_member(name, changelog: true, dependencies: [], release_dependencies: nil)
