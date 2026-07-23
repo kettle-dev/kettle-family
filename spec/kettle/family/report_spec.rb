@@ -74,7 +74,7 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("unrel: unreleased changelog entries are present")
     expect(text).to include("prep: V.ch.md matches V.rb and is ready to publish")
     expect(text).to include("pend: unrel or prep")
-    expect(text).to include("bump: unrel is yes and V.rb differs from V.rel")
+    expect(text).to include("bump: unrel is yes and V.rb matches V.rel")
     expect(text).to include("branch")
     expect(text).to include("V.rb")
     expect(text).to include("V.rel")

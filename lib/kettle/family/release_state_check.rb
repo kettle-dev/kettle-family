@@ -299,7 +299,7 @@ module Kettle
       end
 
       def bump_release_pending?(state)
-        state["unreleased_entries"] == true && state["version"].to_s != state["latest_released"].to_s
+        state["unreleased_entries"] == true && state["version"].to_s == state["latest_released"].to_s
       end
 
       def root_changelog_version(root)

@@ -35,11 +35,11 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true, "bump_release_pending" => false)
   end
 
-  it "marks bump release pending when unreleased entries exist after the latest released version" do
+  it "marks bump release pending when unreleased entries exist without a version bump" do
     member = member("alpha")
     state = {
       "gem_name" => "alpha",
-      "version" => "1.2.4",
+      "version" => "1.2.3",
       "latest_released" => "1.2.3",
       "unreleased_entries" => true,
       "prepared_release_pending" => false,
@@ -52,11 +52,11 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("bump_release_pending" => true)
   end
 
-  it "does not mark bump release pending when unreleased entries match the latest released version" do
+  it "does not mark bump release pending when unreleased entries already have a version bump" do
     member = member("alpha")
     state = {
       "gem_name" => "alpha",
-      "version" => "1.2.3",
+      "version" => "1.2.4",
       "latest_released" => "1.2.3",
       "unreleased_entries" => true,
       "prepared_release_pending" => false,

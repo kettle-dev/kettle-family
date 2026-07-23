@@ -1201,7 +1201,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("unrel: unreleased changelog entries are present")
     expect(out.string).to include("prep: V.ch.md matches V.rb and is ready to publish")
     expect(out.string).to include("pend: unrel or prep")
-    expect(out.string).to include("bump: unrel is yes and V.rb differs from V.rel")
+    expect(out.string).to include("bump: unrel is yes and V.rb matches V.rel")
     expect(out.string).to include("V.rel")
     expect(out.string).to include("bump")
     expect(out.string).to include("checkout")

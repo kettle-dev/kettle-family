@@ -371,7 +371,7 @@ module Kettle
         lines << "    unrel: unreleased changelog entries are present"
         lines << "    prep: V.ch.md matches V.rb and is ready to publish"
         lines << "    pend: unrel or prep"
-        lines << "    bump: unrel is yes and V.rb differs from V.rel"
+        lines << "    bump: unrel is yes and V.rb matches V.rel"
         rows = release_state_header
         results.each do |result|
           rows << release_state_row(result)

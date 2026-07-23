@@ -41,7 +41,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `kettle-family state` now includes a `bump` boolean column, documents the
   boolean release-state columns above the table, and accepts `--only bump` to
-  select members with unreleased changes whose `V.rb` differs from `V.rel`.
+  select members with unreleased changes whose `V.rb` still matches `V.rel`.
 - `--only` release-state filters now accept the short table column names
   `unrel`, `prep`, and `pend` in addition to `unreleased`, `prepared`, and
   `pending`.
