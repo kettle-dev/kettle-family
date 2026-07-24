@@ -28,12 +28,21 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.1.3] - 2026-07-23
+
+- TAG: [v1.1.3][1.1.3t]
+- COVERAGE: 94.44% -- 2987/3163 lines in 25 files
+- BRANCH COVERAGE: 76.40% -- 1078/1411 branches in 25 files
+- 28.68% documented
+
+### Fixed
+
 - No-config single-member templating no longer injects a synthetic family-local
   path environment pointing at the member root.
 - Template and release progress now keep each member locked to its own TTY row
   while parallel workers report events out of order.
-
-### Security
 
 ## [1.1.2] - 2026-07-23
 
@@ -942,7 +951,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/kettle-dev/kettle-family/compare/v1.1.2...v1.1.3
+[1.1.3t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.3
 [1.1.2]: https://github.com/kettle-dev/kettle-family/compare/v1.1.1...v1.1.2
 [1.1.2t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.2
 [1.1.1]: https://github.com/kettle-dev/kettle-family/compare/v1.1.0...v1.1.1
