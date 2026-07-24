@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Template and release progress now keep each member locked to its own TTY row
+  while parallel workers report events out of order.
+
 ### Security
 
 ## [1.1.2] - 2026-07-23

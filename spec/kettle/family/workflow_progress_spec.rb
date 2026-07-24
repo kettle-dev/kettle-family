@@ -39,6 +39,25 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     expect(output.string).not_to include("#{"*" * 31} Gemfile")
   end
 
+  it "preallocates TTY progress rows in member order" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    alpha = instance_double(Kettle::Family::Member, name: "alpha")
+    beta = instance_double(Kettle::Family::Member, name: "beta")
+    progress = described_class.new(io: output, label: "templating", total: 2, jobs: 2, members: [alpha, beta])
+
+    progress.start
+    progress.start_member(beta, total: 1, status: "template")
+    progress.start_member(alpha, total: 1, status: "template")
+    progress.stop
+
+    alpha_row = output.string.index("\e[1Galpha")
+    beta_row = output.string.index("\e[1Gbeta")
+    expect(alpha_row).to be < beta_row
+    expect(output.string).to include("\e[1A\e[1Gbeta")
+    expect(output.string).to include("\e[2A\e[1Galpha")
+  end
+
   it "renders readable non-TTY progress lines without requiring flush" do
     output = progress_output_class.new
     member = instance_double(Kettle::Family::Member, name: "alpha")

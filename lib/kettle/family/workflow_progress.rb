@@ -8,24 +8,34 @@ module Kettle
       FORMAT = "%<member>-24s :events :status"
       EVENT_WIDTH = 30
 
-      def initialize(io:, label:, total:, jobs:, enabled: true)
+      def initialize(io:, label:, total:, jobs:, members: [], enabled: true)
         @io = io
         @label = label
         @total = total.to_i
         @jobs = jobs.to_i
         @enabled = enabled && !!io
         @bars = {}
+        @line_order = members.map(&:name)
+        @started = false
+        @stopped = false
         @member_totals = {}
         @member_events = Hash.new("")
+        @member_statuses = Hash.new("")
         @mutex = Mutex.new
         @tty = @enabled && io.respond_to?(:tty?) && io.tty?
-        @multibar = @tty ? TTY::ProgressBar::Multi.new(output: io) : nil
+        @multibar = @tty ? TTY::ProgressBar::Multi.new(output: io, frequency: 0) : nil
       end
 
       def start
         return unless @enabled
 
-        write_line("#{@label} #{@total} member#{plural(@total)} with #{@jobs} job#{plural(@jobs)}:")
+        synchronize do
+          next if @started
+
+          write_line("#{@label} #{@total} member#{plural(@total)} with #{@jobs} job#{plural(@jobs)}:")
+          @started = true
+          @line_order.each { |member_name| render_name(member_name, status: "") } if @tty
+        end
       end
 
       def start_member(member, total:, status:)
@@ -84,7 +94,12 @@ module Kettle
       def stop
         return unless @enabled
 
-        synchronize { @multibar&.stop }
+        synchronize do
+          next if @stopped
+
+          @multibar&.stop
+          @stopped = true
+        end
       end
 
       def tty?
@@ -103,7 +118,7 @@ module Kettle
       private
 
       def render(member, status:)
-        bar_for(member).advance(0, events: event_tape(member), status: status)
+        render_name(member.name, status: status)
       end
 
       def append_event(member, mark)
@@ -116,8 +131,18 @@ module Kettle
         @member_events[member.name].rjust(EVENT_WIDTH)
       end
 
-      def bar_for(member)
-        @bars[member.name] ||= @multibar.register(Kernel.format(FORMAT, member: member.name), total: nil)
+      def render_name(member_name, status:)
+        @member_statuses[member_name] = status
+        @line_order << member_name unless @line_order.include?(member_name)
+        bar_for(member_name).advance(
+          0,
+          events: @member_events[member_name].rjust(EVENT_WIDTH),
+          status: @member_statuses[member_name]
+        )
+      end
+
+      def bar_for(member_name)
+        @bars[member_name] ||= @multibar.register(Kernel.format(FORMAT, member: member_name), total: nil)
       end
 
       def plural(count)

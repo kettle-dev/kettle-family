@@ -1160,7 +1160,8 @@ module Kettle
           io: progress_io,
           label: "templating",
           total: workflow_members.length,
-          jobs: template_jobs(workflow_members)
+          jobs: template_jobs(workflow_members),
+          members: workflow_members
         )
         progress.start
         progress
@@ -1171,7 +1172,8 @@ module Kettle
           io: progress_io,
           label: release_progress_label,
           total: release_members.length,
-          jobs: release_jobs(release_members)
+          jobs: release_jobs(release_members),
+          members: release_members
         )
         progress.start
         progress
