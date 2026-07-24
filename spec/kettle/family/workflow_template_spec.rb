@@ -54,6 +54,36 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).stdout).to eq("full/standalone\n")
   end
 
+  it "does not inject an implicit family local path env for no-config single-member templating" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = Kettle::Family::Member.new(
+      name: File.basename(@tmpdir),
+      root: @tmpdir,
+      gemspec_path: File.join(@tmpdir, "#{File.basename(@tmpdir)}.gemspec"),
+      version: "1.0.0",
+      dependencies: []
+    )
+    File.write(File.join(@tmpdir, "mise.toml"), "[env]\nK_JEM_TEMPLATING = \"false\"\n")
+    File.write(File.join(@tmpdir, "Gemfile"), <<~RUBY)
+      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
+    RUBY
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      env_overrides: {
+        "K_JEM_TEMPLATING" => "true",
+        "STRUCTUREDMERGE_DEV" => "/workspace/structuredmerge/ruby/gems"
+      }
+    ).results
+
+    template_command = results.find { |result| result.phase == "template" }.command
+    expect(template_command).not_to include("#{family_local_env_name}=#{@tmpdir}")
+    expect(template_command).to include("K_JEM_TEMPLATING=true")
+    expect(template_command).to include("STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems")
+  end
+
   it "passes a shared git commit lock to monorepo kettle-jem templating" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)

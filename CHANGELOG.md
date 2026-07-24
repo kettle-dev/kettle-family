@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- No-config single-member templating no longer injects a synthetic family-local
+  path environment pointing at the member root.
 - Template and release progress now keep each member locked to its own TTY row
   while parallel workers report events out of order.
 

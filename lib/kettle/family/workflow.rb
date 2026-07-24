@@ -1096,7 +1096,7 @@ module Kettle
 
       def workflow_env
         {}.tap do |env|
-          env.merge!(config.family_local_path_env)
+          env.merge!(workflow_family_local_path_env)
           if command == "template"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
@@ -1113,6 +1113,24 @@ module Kettle
             env.merge!(TEMPLATE_QUIET_ENV)
           end
         end
+      end
+
+      def workflow_family_local_path_env
+        return {} if implicit_single_member_template_root?
+
+        config.family_local_path_env
+      end
+
+      def implicit_single_member_template_root?
+        return false unless command == "template"
+        return false if config.path
+        return false unless config.family_mode == "monorepo"
+        return false unless members.one?
+        return false unless File.expand_path(config.members_root) == File.expand_path(config.root)
+        return false unless File.expand_path(members.first.root) == File.expand_path(config.root)
+
+        family_env_name = config.family_local_path_env_name
+        family_env_name && !env_overrides.key?(family_env_name)
       end
 
       def command_env
