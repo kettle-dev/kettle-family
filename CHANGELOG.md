@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Dependency floor propagation after a sibling release now retries
+  `bundle update <released-gem>` before committing floor changes, so dependents
+  wait for Bundler to install the just-published gem and write valid lockfile
+  checksums.
+
 ### Security
 
 ## [1.1.3] - 2026-07-23

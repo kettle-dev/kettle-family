@@ -733,35 +733,28 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.0.0"')
   end
 
-  it "waits for just-published family dependencies before releasing dependents" do
+  it "refreshes just-published family dependencies before releasing dependents" do
     write_release_config(release_env: fake_bundle_env)
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
     beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
-    alpha_checks = 0
 
     allow(workflow).to receive(:prompt_for_gem_signing_password)
-    allow(workflow).to receive(:released_version?) do |gem_name, _version|
-      next false if gem_name == "beta"
-
-      alpha_checks += 1
-      alpha_checks >= 4
-    end
+    allow(workflow).to receive(:released_version?).and_return(false)
     allow(workflow).to receive(:sleep)
 
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor release_wait_for_registry
-      dependency_floor_lockfiles
+      check release_changelog release_publish dependency_floor dependency_floor_lockfiles
       check release_changelog release_publish
     ])
-    wait = results.find { |result| result.phase == "release_wait_for_registry" }
-    expect(wait).to be_ok
-    expect(wait.stdout).to include("alpha 1.2.3")
-    expect(wait.stdout).to include("after 3 check(s)")
-    expect(workflow).to have_received(:sleep).with(15).twice
+    expect(results.find { |result| result.phase == "release_wait_for_registry" }).to be_nil
+    lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
+    expect(lockfile_refresh).to be_ok
+    expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 1 attempt(s)")
+    expect(workflow).not_to have_received(:sleep)
   end
 
   it "retries dependent bundle refreshes after just-published dependency floors" do
@@ -792,22 +785,16 @@ RSpec.describe Kettle::Family::Workflow do
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
     beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
-    alpha_checks = 0
 
     allow(workflow).to receive(:prompt_for_gem_signing_password)
-    allow(workflow).to receive(:released_version?) do |gem_name, _version|
-      next false if gem_name == "beta"
-
-      alpha_checks += 1
-      alpha_checks > 1
-    end
+    allow(workflow).to receive(:released_version?).and_return(false)
     allow(workflow).to receive(:sleep)
 
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor release_wait_for_registry
-      dependency_floor_lockfiles check release_changelog release_publish
+      check release_changelog release_publish dependency_floor dependency_floor_lockfiles
+      check release_changelog release_publish
     ])
     lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
     expect(lockfile_refresh).to be_ok
@@ -816,6 +803,64 @@ RSpec.describe Kettle::Family::Workflow do
     expect(lockfile_refresh.stdout).to include("bundle attempt 3: update alpha")
     expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 3 attempt(s)")
     expect(workflow).to have_received(:sleep).with(15).twice
+  end
+
+  it "waits and refreshes dependent lockfiles before committing dependency floors" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, jobs: 1)
+    phases = []
+    runner = lambda do |member:, phase:, command:, **_options|
+      phases << phase
+      if phase == "dependency_floor_lockfiles"
+        File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+          GEM
+            specs:
+              alpha (1.2.3)
+
+          CHECKSUMS
+            alpha (1.2.3) sha256=abc123
+        LOCK
+      end
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        0,
+        true,
+        phase,
+        "",
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    memo = []
+    workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
+
+    expect(memo.map(&:phase)).to eq(%w[
+      dependency_floor dependency_floor_lockfiles commit_dependency_floor
+    ])
+    expect(phases).to eq(%w[dependency_floor_lockfiles commit_dependency_floor])
+    expect(memo.last.command.join(" ")).to include("Gemfile.lock")
+  end
+
+  it "skips dependency floor bundle refreshes when no floor changed" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.2.3"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, jobs: 1)
+    runner = ->(**_options) { raise "dependency floor runner should not be called" }
+
+    memo = []
+    workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
+
+    expect(memo).to be_empty
   end
 
   it "retries dependent bundle refreshes when Bundler writes empty checksums for just-published floors" do
@@ -854,22 +899,16 @@ RSpec.describe Kettle::Family::Workflow do
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
     beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
-    alpha_checks = 0
 
     allow(workflow).to receive(:prompt_for_gem_signing_password)
-    allow(workflow).to receive(:released_version?) do |gem_name, _version|
-      next false if gem_name == "beta"
-
-      alpha_checks += 1
-      alpha_checks > 1
-    end
+    allow(workflow).to receive(:released_version?).and_return(false)
     allow(workflow).to receive(:sleep)
 
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor release_wait_for_registry
-      dependency_floor_lockfiles check release_changelog release_publish
+      check release_changelog release_publish dependency_floor dependency_floor_lockfiles
+      check release_changelog release_publish
     ])
     lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
     expect(lockfile_refresh).to be_ok
@@ -878,8 +917,9 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).to have_received(:sleep).with(15).twice
   end
 
-  it "times out waiting for just-published family dependencies before lockfile normalization" do
+  it "exhausts dependent bundle refresh retries before continuing release" do
     write_release_config(
+      release_env: fake_bundle_env("exit 1"),
       template: {
         "normalize_lockfiles" => true,
         "normalize_lockfiles_command" => [RbConfig.ruby, "-e", "puts 'normalized'"]
@@ -898,12 +938,12 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[
       release_normalize_lockfiles check release_changelog release_publish
-      dependency_floor release_wait_for_registry
+      dependency_floor dependency_floor_lockfiles
     ])
-    wait = results.last
-    expect(wait.phase).to eq("release_wait_for_registry")
-    expect(wait).not_to be_ok
-    expect(wait.stdout).to include("timed out waiting for alpha 1.2.3 after 15 check(s)")
+    refresh = results.last
+    expect(refresh.phase).to eq("dependency_floor_lockfiles")
+    expect(refresh).not_to be_ok
+    expect(refresh.reason).to eq("dependency floor lockfile refresh failed after 15 attempt(s)")
     expect(workflow).to have_received(:sleep).with(15).exactly(14).times
   end
 
