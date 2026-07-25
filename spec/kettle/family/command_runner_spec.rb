@@ -224,6 +224,39 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.stderr).to eq("")
   end
 
+  it "filters consumed stdout events from interactive terminal output" do
+    member = member_at("alpha")
+    runner = described_class.new(execute: true)
+    allow(runner).to receive(:pty_available?).and_return(false)
+    result = nil
+    events = []
+
+    expect do
+      result = runner.call(
+        member: member,
+        phase: "release_publish",
+        command: [
+          RbConfig.ruby,
+          "-rjson",
+          "-e",
+          "puts 'Release complete'; puts JSON.generate(event_version: 1, type: 'summary', status: 'ok'); puts 'Done'"
+        ],
+        interactive: true,
+        stdout_line_handler: lambda do |line|
+          payload = JSON.parse(line)
+          events << payload
+          payload["event_version"]
+        rescue JSON::ParserError
+          false
+        end
+      )
+    end.to output("Release complete\nDone\n").to_stdout
+
+    expect(result).to be_ok
+    expect(result.stdout).to include("\"event_version\":1")
+    expect(events).to contain_exactly(include("type" => "summary", "status" => "ok"))
+  end
+
   it "reports PTY availability from the runtime" do
     runner = described_class.new
 

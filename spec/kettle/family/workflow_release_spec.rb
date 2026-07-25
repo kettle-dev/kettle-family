@@ -847,9 +847,9 @@ RSpec.describe Kettle::Family::Workflow do
     ])
     lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
     expect(lockfile_refresh).to be_ok
-    expect(lockfile_refresh.command).to eq(%w[bundle update alpha])
+    expect(lockfile_refresh.command).to eq(%w[bundle lock --update alpha --add-checksums])
     expect(lockfile_refresh.member_name).to eq("beta")
-    expect(lockfile_refresh.stdout).to include("bundle attempt 3: update alpha")
+    expect(lockfile_refresh.stdout).to include("bundle attempt 3: lock --update alpha --add-checksums")
     expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 3 attempt(s)")
     expect(workflow).to have_received(:sleep).with(15).twice
   end
@@ -912,6 +912,41 @@ RSpec.describe Kettle::Family::Workflow do
     expect(memo).to be_empty
   end
 
+  it "uses a checksum-aware dependent lockfile refresh command" do
+    write_release_config(
+      release_env: fake_bundle_env(<<~BASH)
+        if [ "$*" != "lock --update alpha --add-checksums" ]; then
+          printf 'unexpected bundle command: %s\\n' "$*" >&2
+          exit 1
+        fi
+        cat > Gemfile.lock <<'LOCK'
+        GEM
+          specs:
+            alpha (1.2.3)
+
+        CHECKSUMS
+          alpha (1.2.3) sha256=abc123
+        LOCK
+      BASH
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).and_return(false)
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
+    expect(lockfile_refresh).to be_ok
+    expect(lockfile_refresh.command).to eq(%w[bundle lock --update alpha --add-checksums])
+    expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 1 attempt(s)")
+    expect(workflow).not_to have_received(:sleep)
+  end
+
   it "retries dependent bundle refreshes when Bundler writes empty checksums for just-published floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)
@@ -961,7 +996,7 @@ RSpec.describe Kettle::Family::Workflow do
     ])
     lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
     expect(lockfile_refresh).to be_ok
-    expect(lockfile_refresh.stdout).to include("bundle attempt 3: update alpha")
+    expect(lockfile_refresh.stdout).to include("bundle attempt 3: lock --update alpha --add-checksums")
     expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 3 attempt(s)")
     expect(workflow).to have_received(:sleep).with(15).twice
   end

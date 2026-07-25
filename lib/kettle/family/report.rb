@@ -315,6 +315,8 @@ module Kettle
       def summary_succeeded
         selected_member_results.filter_map do |member_name, member_results|
           next if member_results.empty?
+          member_results = summary_terminal_member_results(member_results)
+          next if member_results.empty?
           next if member_results.any? { |result| !result.ok? }
           next if member_results.all?(&:skipped)
 
@@ -324,6 +326,8 @@ module Kettle
 
       def summary_skipped
         selected_member_results.filter_map do |member_name, member_results|
+          next if member_results.empty?
+          member_results = summary_terminal_member_results(member_results)
           next if member_results.empty?
           next unless member_results.all?(&:skipped)
 
@@ -345,7 +349,7 @@ module Kettle
         return [] unless member_result_command?
         return [] if visible_results.empty?
 
-        ran = selected_member_results.keys
+        ran = summary_ran_member_names
         reason = pending_reason
         (selected_names - ran).map do |member_name|
           {
@@ -362,6 +366,28 @@ module Kettle
         else
           "no command result recorded"
         end
+      end
+
+      def summary_ran_member_names
+        return selected_member_results.keys unless command == "release"
+
+        failed = visible_results.reject(&:ok?).map(&:member_name)
+        terminal = selected_member_results.filter_map do |member_name, member_results|
+          member_name if member_results.any? { |result| release_terminal_result?(result) }
+        end
+        (failed + terminal).uniq
+      end
+
+      def summary_terminal_member_results(member_results)
+        return member_results unless command == "release"
+
+        member_results.select { |result| release_terminal_result?(result) }
+      end
+
+      def release_terminal_result?(result)
+        result.phase == "release_skip" ||
+          result.phase == "release_publish" ||
+          result.phase == "release_build"
       end
 
       def summary_list(values)

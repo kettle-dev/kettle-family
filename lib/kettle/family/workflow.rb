@@ -623,7 +623,7 @@ module Kettle
           result = runner.call(
             member: member,
             phase: "dependency_floor_lockfiles",
-            command: ["bundle", "update", *released_members.map(&:name)],
+            command: dependency_floor_lockfile_command(released_members),
             env: release_lockfile_env
           )
           validate_dependency_floor_lockfile_result(result: result, member: member, released_members: released_members) if result.ok?
@@ -657,6 +657,10 @@ module Kettle
             "Gemfile.lock CHECKSUMS has no sha256 for #{released_member.name} #{released_member.version}"
           end
         end
+      end
+
+      def dependency_floor_lockfile_command(released_members)
+        ["bundle", "lock", "--update", *released_members.map(&:name), "--add-checksums"]
       end
 
       def checksum_line_for(lockfile_source:, member:)
@@ -1220,13 +1224,14 @@ module Kettle
 
         lambda do |line|
           event = parse_template_event(line)
-          next unless event
+          next false unless event
 
           if verbose || debug
             emit_template_event_progress(member, event)
           else
             emit_template_event_status(member, event, progress: progress)
           end
+          true
         end
       end
 
@@ -1236,13 +1241,14 @@ module Kettle
 
         lambda do |line|
           event = parse_template_event(line)
-          next unless event
+          next false unless event
 
           if verbose || debug
             emit_release_event_progress(member, event)
           else
             emit_release_event_status(member, event, progress: progress)
           end
+          true
         end
       end
 

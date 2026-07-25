@@ -119,7 +119,14 @@ module Kettle
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         stdout, stderr, status = if interactive
-          run_interactive(env: process_env, argv: argv, chdir: member.root, member_name: member.name, process_options: spawn_options)
+          run_interactive(
+            env: process_env,
+            argv: argv,
+            chdir: member.root,
+            member_name: member.name,
+            process_options: spawn_options,
+            stdout_line_handler: stdout_line_handler
+          )
         elsif stdout_line_handler
           run_streaming(env: process_env, argv: argv, chdir: member.root, process_options: spawn_options, stdout_line_handler: stdout_line_handler)
         else
@@ -183,14 +190,31 @@ module Kettle
         remainder
       end
 
-      def run_interactive(env:, argv:, chdir:, member_name:, process_options:)
-        return run_interactive_pty(env: env, argv: argv, chdir: chdir, member_name: member_name, process_options: process_options) if pty_available?
+      def run_interactive(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:)
+        if pty_available?
+          return run_interactive_pty(
+            env: env,
+            argv: argv,
+            chdir: chdir,
+            member_name: member_name,
+            process_options: process_options,
+            stdout_line_handler: stdout_line_handler
+          )
+        end
 
-        run_interactive_open3(env: env, argv: argv, chdir: chdir, member_name: member_name, process_options: process_options)
+        run_interactive_open3(
+          env: env,
+          argv: argv,
+          chdir: chdir,
+          member_name: member_name,
+          process_options: process_options,
+          stdout_line_handler: stdout_line_handler
+        )
       end
 
-      def run_interactive_pty(env:, argv:, chdir:, member_name:, process_options:)
+      def run_interactive_pty(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:)
         stdout = +""
+        stdout_line_buffer = +""
         status = nil
         PTY.spawn(env, *argv, chdir: chdir, **process_options) do |output, input, pid|
           begin
@@ -202,7 +226,7 @@ module Kettle
                 if reader.equal?(output)
                   chunk = output.readpartial(1024)
                   stdout << chunk
-                  $stdout.print(chunk)
+                  stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler)
                   handle_interactive_prompt(input, chunk, member_name: member_name)
                 else
                   input.write($stdin.readpartial(1024))
@@ -212,14 +236,16 @@ module Kettle
           rescue Errno::EIO
             # PTY raises EIO when the child process exits after closing the slave.
           end
+          flush_interactive_stdout(stdout_line_buffer, stdout_line_handler)
           _, status = Process.wait2(pid)
         end
         [stdout, "", status]
       end
 
-      def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:)
+      def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:)
         captured_stdout = +""
         captured_stderr = +""
+        stdout_line_buffer = +""
         status = nil
         Open3.popen3(env, *argv, chdir: chdir, **process_options) do |input, output, error, wait_thread|
           readers = [output, error]
@@ -230,27 +256,86 @@ module Kettle
               if reader.equal?($stdin)
                 input.write($stdin.readpartial(1024))
               else
-                read_interactive_stream(reader, output, input, captured_stdout, captured_stderr, readers, member_name: member_name)
+                stdout_line_buffer = read_interactive_stream(
+                  reader,
+                  output,
+                  input,
+                  captured_stdout,
+                  captured_stderr,
+                  readers,
+                  member_name: member_name,
+                  stdout_line_buffer: stdout_line_buffer,
+                  stdout_line_handler: stdout_line_handler
+                )
               end
             end
           end
+          flush_interactive_stdout(stdout_line_buffer, stdout_line_handler)
           status = wait_thread.value
         end
         [captured_stdout, captured_stderr, status]
       end
 
-      def read_interactive_stream(reader, output, input, captured_stdout, captured_stderr, readers, member_name:)
+      def read_interactive_stream(
+        reader,
+        output,
+        input,
+        captured_stdout,
+        captured_stderr,
+        readers,
+        member_name:,
+        stdout_line_buffer:,
+        stdout_line_handler:
+      )
         chunk = reader.readpartial(1024)
         if reader.equal?(output)
           captured_stdout << chunk
-          $stdout.print(chunk)
+          stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler)
         else
           captured_stderr << chunk
           $stderr.print(chunk)
         end
         handle_interactive_prompt(input, chunk, member_name: member_name)
+        stdout_line_buffer
       rescue EOFError
         readers.delete(reader)
+        stdout_line_buffer
+      end
+
+      def print_interactive_stdout(buffer, chunk, stdout_line_handler)
+        return print_interactive_chunk(chunk) unless stdout_line_handler
+
+        pending = buffer + chunk
+        lines = pending.lines
+        remainder = pending.end_with?("\n") ? +"" : lines.pop.to_s
+        lines.each { |line| print_interactive_line(line, stdout_line_handler) }
+        return +"" if remainder.empty?
+        unless possible_event_line?(remainder)
+          $stdout.print(remainder)
+          return +""
+        end
+
+        remainder
+      end
+
+      def flush_interactive_stdout(buffer, stdout_line_handler)
+        return if buffer.empty?
+
+        print_interactive_line(buffer, stdout_line_handler)
+      end
+
+      def print_interactive_chunk(chunk)
+        $stdout.print(chunk)
+        +""
+      end
+
+      def print_interactive_line(line, stdout_line_handler)
+        consumed = possible_event_line?(line) && stdout_line_handler.call(line.chomp)
+        $stdout.print(line) unless consumed
+      end
+
+      def possible_event_line?(line)
+        line.to_s.lstrip.start_with?("{")
       end
 
       def pty_available?

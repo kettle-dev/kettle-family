@@ -377,4 +377,36 @@ RSpec.describe Kettle::Family::Report do
       {"member" => "gamma", "phase" => "release", "reason" => "not run after earlier failure"}
     ])
   end
+
+  it "does not count dependency floor-only members as released in release summaries" do
+    report = described_class.new(
+      family_name: "galtzo-floss",
+      order_mode: "dependency",
+      members: [member("alpha"), member("beta"), member("gamma")],
+      selected_members: [member("alpha"), member("beta"), member("gamma")],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [
+        result("alpha", phase: "release_publish"),
+        result("beta", phase: "dependency_floor"),
+        result("gamma", phase: "dependency_floor"),
+        result("beta", phase: "dependency_floor_lockfiles", success: false, reason: "dependency floor lockfile refresh failed")
+      ]
+    )
+
+    summary = report.to_h.fetch("summary")
+    text = report.to_text
+
+    expect(report).not_to be_success
+    expect(summary.fetch("succeeded")).to eq(["alpha"])
+    expect(summary.fetch("failed")).to eq([
+      {"member" => "beta", "phase" => "dependency_floor_lockfiles", "reason" => "dependency floor lockfile refresh failed"}
+    ])
+    expect(summary.fetch("pending")).to eq([
+      {"member" => "gamma", "phase" => "release", "reason" => "not run after earlier failure"}
+    ])
+    expect(text).to include("succeeded: alpha")
+    expect(text).to include("pending: gamma release (not run after earlier failure)")
+  end
 end

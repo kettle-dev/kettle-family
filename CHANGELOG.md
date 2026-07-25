@@ -28,6 +28,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release summaries now count only members that reached a release terminal
+  phase as succeeded, so dependency-floor side effects do not appear as
+  published gems after an earlier failure.
+- Dependency-floor lockfile refresh now uses checksum-aware Bundler locking
+  (`bundle lock --update ... --add-checksums`) before validating just-published
+  sibling floors, so missing or empty checksum entries still retry and fail
+  instead of being accepted.
+- Interactive release commands now suppress consumed `kettle-release --events`
+  NDJSON lines from terminal output while keeping them captured for progress and
+  failure summaries.
+
 ### Security
 
 ## [1.1.5] - 2026-07-25
