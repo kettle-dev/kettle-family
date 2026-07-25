@@ -22,9 +22,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- kettle-jem-template-20260725-001 - Generated JRuby and TruffleRuby workflow
+  files now run when pull request head branches start with `feature/release`,
+  so release CI monitoring does not report intentionally skipped engine
+  workflows as failures.
+
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.1.6] - 2026-07-25
+
+- TAG: [v1.1.6][1.1.6t]
+- COVERAGE: 95.19% -- 3084/3240 lines in 25 files
+- BRANCH COVERAGE: 76.80% -- 1132/1474 branches in 25 files
+- 28.68% documented
 
 ### Fixed
 
@@ -38,8 +54,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Interactive release commands now suppress consumed `kettle-release --events`
   NDJSON lines from terminal output while keeping them captured for progress and
   failure summaries.
-
-### Security
 
 ## [1.1.5] - 2026-07-25
 
@@ -997,7 +1011,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.5...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.6...HEAD
+[1.1.6]: https://github.com/kettle-dev/kettle-family/compare/v1.1.5...v1.1.6
+[1.1.6t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.6
 [1.1.5]: https://github.com/kettle-dev/kettle-family/compare/v1.1.4...v1.1.5
 [1.1.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.5
 [1.1.4]: https://github.com/kettle-dev/kettle-family/compare/v1.1.3...v1.1.4
