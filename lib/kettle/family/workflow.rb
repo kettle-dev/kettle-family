@@ -1495,7 +1495,7 @@ module Kettle
               "sh",
               "-lc",
               "files=$(git ls-files --modified --others --exclude-standard -- Gemfile.lock '*.lock' '**/*.lock'); " \
-                "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔒 Normalize lockfiles after templating'; fi"
+                "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔒️ Normalize lockfiles after templating'; fi"
             ]
           )
           memo << result
@@ -1523,7 +1523,7 @@ module Kettle
           command: [
             "sh",
             "-lc",
-            "if ! git diff --quiet -- .github/workflows; then git add -- .github/workflows && git commit -m '🔒 Pin GitHub Actions SHAs'; fi"
+            "if ! git diff --quiet -- .github/workflows; then git add -- .github/workflows && git commit -m '🔒️ Pin GitHub Actions SHAs'; fi"
           ]
         )
         memo << result
@@ -1539,7 +1539,7 @@ module Kettle
             "sh",
             "-lc",
             "files=$(git ls-files --modified --others --exclude-standard -- Gemfile.lock '*.lock' '**/*.lock'); " \
-              "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔒 Update bundle'; fi"
+              "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔒️ Update bundle'; fi"
           ]
         )
         memo << result

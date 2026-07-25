@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - TTY workflow progress now clamps member status text and summarizes structured
   diagnostics, preventing long event payloads from wrapping rows and corrupting
   multi-member progress displays.
+- Automated lockfile, bundle-update, and workflow-pin commits now use the
+  gitmoji grapheme accepted by generated commit hooks.
 
 ### Security
 

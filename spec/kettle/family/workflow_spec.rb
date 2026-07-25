@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "gitmoji/regex"
 require "tmpdir"
 
 RSpec.describe Kettle::Family::Workflow do
@@ -32,6 +33,20 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.first.skipped).to be(true)
     expect(results.first.command).to eq(["sh", "-lc", "bundle exec rake rubocop_gradual"])
+  end
+
+  it "uses gitmoji-valid generated commit subjects" do
+    # Commit subjects are embedded in shell command literals, so scan only the
+    # generated command source rather than trying to parse shell with Ruby AST.
+    subjects = %w[workflow cli].flat_map do |source|
+      File.read(File.expand_path("../../../lib/kettle/family/#{source}.rb", __dir__))
+        .scan(/git commit -m '([^']+)'/)
+        .flatten
+    end
+
+    expect(subjects).not_to be_empty
+    expect(subjects).to all(match(Gitmoji::Regex::REGEX))
+    expect(subjects.map { |subject| subject =~ Gitmoji::Regex::REGEX }).to all(eq(0))
   end
 
   it "runs internal check results" do
