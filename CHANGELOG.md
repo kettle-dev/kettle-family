@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release and template orchestration now consume NDJSON event lines even when
+  progress rendering is disabled, preventing raw `--events` payloads from
+  leaking into interactive terminal output.
+
 ### Security
 
 ## [1.1.6] - 2026-07-25

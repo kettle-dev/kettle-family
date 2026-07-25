@@ -652,6 +652,18 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("[alpha] F failed")
   end
 
+  it "consumes release NDJSON events when progress rendering is disabled" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    handler = workflow.send(:release_event_line_handler, member)
+
+    expect(handler.call(JSON.generate(event_version: 1, type: "summary", status: "ok"))).to be(true)
+    expect(handler.call("plain release output")).to be(false)
+  end
+
   it "maps release NDJSON events to TTY progress updates" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

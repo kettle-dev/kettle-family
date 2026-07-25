@@ -1219,34 +1219,32 @@ module Kettle
       end
 
       def template_event_line_handler(member, progress: nil)
-        return nil unless progress_io
-        return nil unless verbose || debug || progress&.tty?
-
         lambda do |line|
           event = parse_template_event(line)
           next false unless event
 
-          if verbose || debug
-            emit_template_event_progress(member, event)
-          else
-            emit_template_event_status(member, event, progress: progress)
+          if progress_io
+            if verbose || debug
+              emit_template_event_progress(member, event)
+            elsif progress&.tty?
+              emit_template_event_status(member, event, progress: progress)
+            end
           end
           true
         end
       end
 
       def release_event_line_handler(member, progress: nil)
-        return nil unless progress_io
-        return nil unless verbose || debug || progress&.tty?
-
         lambda do |line|
           event = parse_template_event(line)
           next false unless event
 
-          if verbose || debug
-            emit_release_event_progress(member, event)
-          else
-            emit_release_event_status(member, event, progress: progress)
+          if progress_io
+            if verbose || debug
+              emit_release_event_progress(member, event)
+            elsif progress&.tty?
+              emit_release_event_status(member, event, progress: progress)
+            end
           end
           true
         end
