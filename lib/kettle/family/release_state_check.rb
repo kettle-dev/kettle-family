@@ -6,14 +6,18 @@ require "open3"
 require "rbconfig"
 require "rubygems"
 require "securerandom"
+require "yaml"
 
 module Kettle
   module Family
     class ReleaseStateCheck
+      KETTLE_JEM_CONFIG_PATHS = [".structuredmerge/kettle-jem.yml", ".kettle-jem.yml"].freeze
+
       def initialize(members:, config: nil)
         @members = members
         @config = config
         @github_latest_release_by_repo = {}
+        @transfer_changelog_lag_by_key = {}
       end
 
       def results
@@ -63,6 +67,7 @@ module Kettle
         state = state_with_computed_booleans(state) if success
         state = enrich_git_state(member.root, state) if success
         state = enrich_github_release(member.root, state) if success
+        state = enrich_transfer_changelog_lag(member.root, state) if success
         result(member: member, command: command, stdout: stdout, stderr: stderr, status: status.exitstatus, elapsed: elapsed, success: success, state: state, branch: branch)
       rescue JSON::ParserError => error
         result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
@@ -88,6 +93,7 @@ module Kettle
         state = branch_filtered_state(member, state, branch) if success && branch
         state = enrich_git_state(member.root, state) if success
         state = enrich_github_release(member.root, state) if success
+        state = enrich_transfer_changelog_lag(member.root, state) if success
         result(
           member: member,
           command: command,
@@ -283,7 +289,7 @@ module Kettle
         unreleased_entries = unreleased_entries?(content)
         prepared_release_pending = !version.to_s.empty? && latest_changelog_version == version
         ahead = commits_ahead_of_release(root, latest_changelog_version)
-        enrich_github_release(root, state_with_computed_booleans(enrich_git_state(root, {
+        state = enrich_github_release(root, state_with_computed_booleans(enrich_git_state(root, {
           "gem_name" => config.family_name,
           "version" => version,
           "latest_released" => nil,
@@ -293,6 +299,7 @@ module Kettle
           "prepared_release_pending" => prepared_release_pending,
           "pending_release" => unreleased_entries || prepared_release_pending
         })))
+        enrich_transfer_changelog_lag(root, state)
       end
 
       def state_with_computed_booleans(state)
@@ -310,6 +317,74 @@ module Kettle
         return state unless tag
 
         state.merge("github_latest_release" => tag)
+      end
+
+      def enrich_transfer_changelog_lag(root, state)
+        kettle_jem_state = kettle_jem_config_state(root)
+        return state unless kettle_jem_state
+
+        replay = kettle_jem_state["changelog_replay"]
+        replay = replay.is_a?(Hash) ? replay : {}
+        last_entry_key = replay["last_entry_key"] || replay[:last_entry_key]
+        lag = transfer_changelog_lag(last_entry_key)
+        return state unless lag
+
+        state.merge("transfer_changelog_lag" => lag.fetch("missing_count", 0).to_i)
+      end
+
+      def kettle_jem_config_state(root)
+        path = KETTLE_JEM_CONFIG_PATHS.map { |relative| File.join(root.to_s, relative) }.find { |candidate| File.file?(candidate) }
+        return nil unless path
+
+        data = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
+        state = data.is_a?(Hash) ? data["kettle-jem"] : nil
+        state.is_a?(Hash) ? state : {}
+      rescue Psych::Exception, SystemCallError
+        nil
+      end
+
+      def transfer_changelog_lag(last_entry_key)
+        cache_key = last_entry_key.to_s
+        @transfer_changelog_lag_by_key.fetch(cache_key) do
+          @transfer_changelog_lag_by_key[cache_key] = in_process_transfer_changelog_lag(last_entry_key) || external_transfer_changelog_lag(cache_key)
+        end
+      rescue StandardError
+        nil
+      end
+
+      def in_process_transfer_changelog_lag(last_entry_key)
+        return nil unless load_kettle_jem_transfer_api
+
+        normalize_transfer_changelog_lag(::Kettle::Jem.transfer_changelog_lag(last_entry_key))
+      rescue StandardError
+        nil
+      end
+
+      def load_kettle_jem_transfer_api
+        return true if defined?(::Kettle::Jem) && ::Kettle::Jem.respond_to?(:transfer_changelog_lag)
+
+        require "kettle/jem"
+        defined?(::Kettle::Jem) && ::Kettle::Jem.respond_to?(:transfer_changelog_lag)
+      rescue LoadError
+        false
+      end
+
+      def external_transfer_changelog_lag(cache_key)
+        code = <<~RUBY
+          last_entry_key = ARGV.fetch(0, "")
+          last_entry_key = nil if last_entry_key.empty?
+          puts JSON.generate(Kettle::Jem.transfer_changelog_lag(last_entry_key))
+        RUBY
+        stdout, _stderr, status = Open3.capture3(RbConfig.ruby, "-rjson", "-rkettle/jem", "-e", code, cache_key)
+        status.success? ? normalize_transfer_changelog_lag(JSON.parse(stdout)) : nil
+      rescue JSON::ParserError, SystemCallError
+        nil
+      end
+
+      def normalize_transfer_changelog_lag(lag)
+        return nil unless lag.is_a?(Hash)
+
+        lag.each_with_object({}) { |(key, value), memo| memo[key.to_s] = value }
       end
 
       def github_latest_release(root)

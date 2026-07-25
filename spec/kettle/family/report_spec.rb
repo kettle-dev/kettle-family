@@ -59,6 +59,7 @@ RSpec.describe Kettle::Family::Report do
         "version" => "24.2.0",
         "latest_released" => "24.2.0",
         "github_latest_release" => "v24.2.0",
+        "transfer_changelog_lag" => 2,
         "latest_changelog_version" => "24.2.0",
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
@@ -85,11 +86,13 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("prep: V.ch.md matches V.rb and is ready to publish")
     expect(text).to include("pend: unrel or prep")
     expect(text).to include("bump: unrel is yes and V.rb matches V.rel")
+    expect(text).to include("T📰: kettle-jem transfer changelog entries not yet replayed")
     expect(text).to include("branch")
     expect(text).to include("V.rb")
     expect(text).to include("V.ch.md")
     expect(text).to include("V.rel")
     expect(text).to include("GH.rel")
+    expect(text).to include("T📰")
     expect(text).to include("🔼 / 🔽")
     expect(text).to include("unrel")
     expect(text).to include("prep")
@@ -103,6 +106,43 @@ RSpec.describe Kettle::Family::Report do
     expect(header.index("V.rb")).to be < header.index("V.ch.md")
     expect(header.index("V.ch.md")).to be < header.index("V.rel")
     expect(header.index("V.rel")).to be < header.index("GH.rel")
+    expect(header.index("GH.rel")).to be < header.index("T📰")
+  end
+
+  it "marks GitHub release values that do not match the RubyGems release" do
+    result = Kettle::Family::ReleaseStateResult.new(
+      member_name: "alpha",
+      command: ["internal", "release-state"],
+      workdir: "/repo/alpha",
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.1,
+      state: {
+        "gem_name" => "alpha",
+        "current_branch" => "main",
+        "version" => "1.2.4",
+        "latest_released" => "1.2.3",
+        "github_latest_release" => "v1.2.2",
+        "latest_changelog_version" => "1.2.4",
+        "unreleased_entries" => true,
+        "prepared_release_pending" => false,
+        "pending_release" => true,
+        "bump_release_pending" => false
+      }
+    )
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [],
+      selected_members: [],
+      config_path: nil,
+      command: "release-state",
+      results: [result]
+    )
+
+    expect(report.to_text).to include("🔴 v1.2.2")
   end
 
   it "renders member-local release target branches" do

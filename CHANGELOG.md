@@ -20,7 +20,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family state` now marks mismatched GitHub release tags and reports
+  kettle-jem transfer changelog replay lag in a `T📰` column.
+
 ### Changed
+
+- Bare `kettle-family bump` now defaults to `--only bump`, and bare
+  `kettle-family release` now defaults to `--only pending`.
 
 ### Deprecated
 

@@ -242,6 +242,28 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(check.send(:normalize_github_release_tag, "v1.1.7\n")).to eq("v1.1.7")
   end
 
+  it "enriches release state with kettle-jem transfer changelog lag" do
+    root = File.join(@tmpdir, "alpha")
+    FileUtils.mkdir_p(File.join(root, ".structuredmerge"))
+    File.write(File.join(root, ".structuredmerge", "kettle-jem.yml"), <<~YAML)
+      kettle-jem:
+        changelog_replay:
+          last_entry_key: "kettle-jem-template-20260725-001"
+        checksums: {}
+    YAML
+    kettle_jem = Module.new do
+      def self.transfer_changelog_lag(last_entry_key)
+        {"last_entry_key" => last_entry_key, "missing_count" => 3}
+      end
+    end
+    stub_const("Kettle::Jem", kettle_jem)
+    check = described_class.new(members: [])
+
+    state = check.send(:enrich_transfer_changelog_lag, root, {})
+
+    expect(state).to include("transfer_changelog_lag" => 3)
+  end
+
   it "leaves branch release state unchanged when the line version is unavailable" do
     member = member("alpha")
     check = described_class.new(members: [member])

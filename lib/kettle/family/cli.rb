@@ -560,8 +560,9 @@ module Kettle
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
-        release_state_results = release_state_results_for_selection(config: config, members: ordered, only: options[:only])
-        selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: options[:only], exclude: options[:exclude], start_at: start_at.member)
+        effective_only = default_only_filter(command: command, only: options[:only])
+        release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only)
+        selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
         results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
         Report.new(
@@ -593,6 +594,14 @@ module Kettle
         return nil unless only.to_s.split(",").map(&:strip).any? { |token| Selection.status_token?(token) }
 
         ReleaseStateCheck.new(config: config, members: members).results
+      end
+
+      def default_only_filter(command:, only:)
+        return only unless only.to_s.empty?
+        return "bump" if %w[bump bump-version].include?(command)
+        return "pending" if command == "release"
+
+        only
       end
 
       def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))

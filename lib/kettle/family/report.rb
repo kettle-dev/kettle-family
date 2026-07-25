@@ -421,6 +421,7 @@ module Kettle
         lines << "    prep: V.ch.md matches V.rb and is ready to publish"
         lines << "    pend: unrel or prep"
         lines << "    bump: unrel is yes and V.rb matches V.rel"
+        lines << "    T📰: kettle-jem transfer changelog entries not yet replayed"
         rows = release_state_header
         results.each do |result|
           rows << release_state_row(result)
@@ -444,7 +445,8 @@ module Kettle
           state.fetch("version", "unknown").to_s,
           state.fetch("latest_changelog_version", nil).to_s.empty? ? "none" : state.fetch("latest_changelog_version").to_s,
           state.fetch("latest_released", nil).to_s.empty? ? "unknown" : state.fetch("latest_released").to_s,
-          state.fetch("github_latest_release", nil).to_s.empty? ? "unknown" : state.fetch("github_latest_release").to_s,
+          release_state_github_release(state),
+          state.fetch("transfer_changelog_lag", 0).to_i.to_s,
           release_state_ahead_behind(state),
           yes_no(state.fetch("unreleased_entries", nil)),
           yes_no(state.fetch("prepared_release_pending", nil)),
@@ -457,10 +459,24 @@ module Kettle
       end
 
       def release_state_header
-        header = [["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", "🔼 / 🔽", "unrel", "prep", "pend", "bump"]]
+        header = [["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", "T📰", "🔼 / 🔽", "unrel", "prep", "pend", "bump"]]
         return header unless release_state_has_branches?
 
         [["branch", *header.first]]
+      end
+
+      def release_state_github_release(state)
+        github_release = state.fetch("github_latest_release", nil).to_s
+        return "unknown" if github_release.empty?
+
+        latest_released = state.fetch("latest_released", nil).to_s
+        return github_release if latest_released.empty? || latest_released == "unknown"
+
+        release_state_release_versions_match?(latest_released, github_release) ? github_release : "🔴 #{github_release}"
+      end
+
+      def release_state_release_versions_match?(latest_released, github_release)
+        latest_released.to_s.delete_prefix("v") == github_release.to_s.delete_prefix("v")
       end
 
       def release_state_checkout(state)
