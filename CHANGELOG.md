@@ -20,12 +20,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Release orchestration now passes `--events` through to `kettle-release` and
-  maps release NDJSON events into the family progress display.
-
 ### Changed
-
-- kettle-jem-template-initial - Initial templating by kettle-jem.
 
 ### Deprecated
 
@@ -33,10 +28,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.1.5] - 2026-07-25
+
+- TAG: [v1.1.5][1.1.5t]
+- COVERAGE: 94.64% -- 3021/3192 lines in 25 files
+- BRANCH COVERAGE: 76.45% -- 1110/1452 branches in 25 files
+- 28.68% documented
+
+### Added
+
+- Release orchestration now passes `--events` through to `kettle-release` and
+  maps release NDJSON events into the family progress display.
+
+### Changed
+
+- kettle-jem-template-initial - Initial templating by kettle-jem.
+
+### Fixed
+
 - Failed release command reports now summarize release NDJSON diagnostics and
   final status instead of dumping the raw event stream into the human report.
-
-### Security
 
 ## [1.1.4] - 2026-07-24
 
@@ -973,7 +986,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.5...HEAD
+[1.1.5]: https://github.com/kettle-dev/kettle-family/compare/v1.1.4...v1.1.5
+[1.1.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.5
 [1.1.4]: https://github.com/kettle-dev/kettle-family/compare/v1.1.3...v1.1.4
 [1.1.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.4
 [1.1.3]: https://github.com/kettle-dev/kettle-family/compare/v1.1.2...v1.1.3
