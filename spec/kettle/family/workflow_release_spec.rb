@@ -122,7 +122,7 @@ RSpec.describe Kettle::Family::Workflow do
       skip_remotes: "cb"
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --events"])
   end
 
   it "rejects unsafe ci workflow subset values before building release commands" do
@@ -629,6 +629,55 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("[alpha] . release_build")
     expect(progress.string).to include("[beta] . release_build")
     expect(progress.string).to include("release summary: 2/2 members ok")
+  end
+
+  it "maps release NDJSON events to progress lines" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    progress = StringIO.new
+    workflow = described_class.new(command: "release", config: config, members: [member], verbose: true, progress_io: progress)
+
+    handler = workflow.send(:release_event_line_handler, member)
+    [
+      {event_version: 1, type: "run_start", command: "release"},
+      {event_version: 1, type: "command_step", phase: "release", name: "bundle_exec", status: "started", mark: ">"},
+      {event_version: 1, type: "diagnostic", kind: "remote_fetch", message: "cb unavailable"},
+      {event_version: 1, type: "summary", status: "failed"}
+    ].each { |event| handler.call(JSON.generate(event)) }
+
+    expect(progress.string).to include("[alpha] > release")
+    expect(progress.string).to include("[alpha] > release:bundle_exec")
+    expect(progress.string).to include("[alpha] ! cb unavailable")
+    expect(progress.string).to include("[alpha] F failed")
+  end
+
+  it "maps release NDJSON events to TTY progress updates" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    updates = []
+    progress = Class.new do
+      define_method(:initialize) { |target| @target = target }
+      define_method(:tty?) { true }
+      define_method(:update) do |_member, status:, mark:|
+        @target << [status, mark]
+      end
+    end.new(updates)
+    workflow = described_class.new(command: "release", config: config, members: [member], progress_io: StringIO.new)
+
+    handler = workflow.send(:release_event_line_handler, member, progress: progress)
+    [
+      {event_version: 1, type: "run_start", command: "release"},
+      {event_version: 1, type: "command_step", phase: "release", name: "bundle_exec", status: "ok", mark: "."},
+      {event_version: 1, type: "diagnostic", kind: "remote_fetch", message: ""},
+      {event_version: 1, type: "summary", status: "ok"}
+    ].each { |event| handler.call(JSON.generate(event)) }
+
+    expect(updates).to include(["release", ">"])
+    expect(updates).to include(["release:bundle_exec", "."])
+    expect(updates).to include(["remote_fetch", "!"])
+    expect(updates).to include(["ok", "."])
   end
 
   it "emits release wave markers for parallel release groups" do

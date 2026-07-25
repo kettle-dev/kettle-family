@@ -498,7 +498,8 @@ module Kettle
             phase: release_phase,
             command: release_command,
             env: release_env,
-            interactive: release_command_interactive?
+            interactive: release_command_interactive?,
+            stdout_line_handler: release_event_line_handler(member, progress: progress)
           )
           emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
@@ -803,6 +804,7 @@ module Kettle
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
         args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
+        args << "--events" unless command_includes_arg?(command, "--events")
         return command if args.empty?
 
         command.is_a?(Array) ? [*command, *args] : "#{command} #{args.join(" ")}"
@@ -1228,6 +1230,22 @@ module Kettle
         end
       end
 
+      def release_event_line_handler(member, progress: nil)
+        return nil unless progress_io
+        return nil unless verbose || debug || progress&.tty?
+
+        lambda do |line|
+          event = parse_template_event(line)
+          next unless event
+
+          if verbose || debug
+            emit_release_event_progress(member, event)
+          else
+            emit_release_event_status(member, event, progress: progress)
+          end
+        end
+      end
+
       def parse_template_event(line)
         payload = JSON.parse(line.to_s)
         (payload.is_a?(Hash) && payload["event_version"]) ? payload : nil
@@ -1272,6 +1290,51 @@ module Kettle
         end
         mark = template_event_status_mark(event)
         progress&.update(member, status: status, mark: mark) if status && !status.empty?
+      end
+
+      def emit_release_event_progress(member, event)
+        case event["type"]
+        when "run_start"
+          emit_template_event_line(member, ">", "release")
+        when "command_step"
+          label = [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
+          emit_template_event_line(member, template_event_mark(event), label)
+        when "diagnostic"
+          message = event["message"].to_s
+          label = message.empty? ? event["kind"].to_s : message
+          emit_template_event_line(member, "!", label)
+        when "summary"
+          emit_template_event_line(member, phase_finish_event_mark(event), event["status"].to_s)
+        end
+      end
+
+      def emit_release_event_status(member, event, progress:)
+        status = case event["type"]
+        when "run_start"
+          "release"
+        when "command_step"
+          [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
+        when "diagnostic"
+          message = event["message"].to_s
+          message.empty? ? event["kind"].to_s : message
+        when "summary"
+          event["status"].to_s
+        end
+        mark = release_event_status_mark(event)
+        progress&.update(member, status: status, mark: mark) if status && !status.empty?
+      end
+
+      def release_event_status_mark(event)
+        case event["type"]
+        when "run_start"
+          ">"
+        when "command_step"
+          template_event_mark(event)
+        when "diagnostic"
+          "!"
+        when "summary"
+          phase_finish_event_mark(event)
+        end
       end
 
       def template_event_status_mark(event)

@@ -167,6 +167,8 @@ module Kettle
           append_streamed_output_summary(lines, result) unless result.ok?
         elsif template_event_stdout?(result)
           append_template_event_failure_summary(lines, result.stdout) unless result.ok?
+        elsif release_event_stdout?(result)
+          append_release_event_failure_summary(lines, result.stdout) unless result.ok?
         else
           append_indented_output(lines, result.stdout)
         end
@@ -178,6 +180,10 @@ module Kettle
 
       def template_event_stdout?(result)
         command == "template" && result.phase == "template" && template_events(result.stdout).any?
+      end
+
+      def release_event_stdout?(result)
+        command == "release" && result.phase.to_s.start_with?("release_") && template_events(result.stdout).any?
       end
 
       def output_streamed?(result)
@@ -215,6 +221,22 @@ module Kettle
         end.uniq
         diagnostics.each { |message| lines << "    diagnostic: #{message}" unless message.empty? }
         lines << "    template event stream omitted from text report"
+      end
+
+      def append_release_event_failure_summary(lines, output)
+        events = template_events(output)
+        diagnostics = events.filter_map do |event|
+          next unless event["type"] == "diagnostic"
+
+          event["message"].to_s.empty? ? event["kind"].to_s : event["message"].to_s
+        end.uniq
+        summary = events.reverse.find { |event| event["type"] == "summary" }
+        diagnostics.each { |message| lines << "    diagnostic: #{message}" unless message.empty? }
+        if summary
+          detail = [summary["status"], summary["error_message"]].map(&:to_s).reject(&:empty?).join(": ")
+          lines << "    summary: #{detail}" unless detail.empty?
+        end
+        lines << "    release event stream omitted from text report"
       end
 
       def append_template_summary(lines)

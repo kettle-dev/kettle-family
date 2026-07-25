@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Release orchestration now passes `--events` through to `kettle-release` and
+  maps release NDJSON events into the family progress display.
+
 ### Changed
 
 ### Deprecated
@@ -27,6 +30,9 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Removed
 
 ### Fixed
+
+- Failed release command reports now summarize release NDJSON diagnostics and
+  final status instead of dumping the raw event stream into the human report.
 
 ### Security
 

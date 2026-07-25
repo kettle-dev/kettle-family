@@ -74,6 +74,11 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="added">Added</h3>
 
+<ul>
+  <li>Release orchestration now passes <code>--events</code> through to <code>kettle-release</code> and<br>
+maps release NDJSON events into the family progress display.</li>
+</ul>
+
 <h3 id="changed">Changed</h3>
 
 <h3 id="deprecated">Deprecated</h3>
@@ -81,6 +86,11 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="removed">Removed</h3>
 
 <h3 id="fixed">Fixed</h3>
+
+<ul>
+  <li>Failed release command reports now summarize release NDJSON diagnostics and<br>
+final status instead of dumping the raw event stream into the human report.</li>
+</ul>
 
 <h3 id="security">Security</h3>
 

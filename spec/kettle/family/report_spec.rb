@@ -198,6 +198,46 @@ RSpec.describe Kettle::Family::Report do
     expect(text).not_to include("\"phase_start\"")
   end
 
+  it "summarizes failed release NDJSON without dumping the raw event stream" do
+    selected_member = member("alpha")
+    stdout = [
+      JSON.generate(event_version: 1, type: "run_start", command: "release"),
+      JSON.generate(event_version: 1, type: "diagnostic", kind: "remote_fetch", message: "cb unavailable"),
+      JSON.generate(event_version: 1, type: "summary", status: "failed", error_message: "Command failed")
+    ].join("\n")
+    result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "release_publish",
+      ["bundle", "exec", "kettle-release", "--events"],
+      "/repo/alpha",
+      1,
+      false,
+      stdout,
+      "",
+      1.0,
+      false,
+      "command failed"
+    )
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [selected_member],
+      selected_members: [selected_member],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [result]
+    )
+
+    text = report.to_text
+
+    expect(text).to include("diagnostic: cb unavailable")
+    expect(text).to include("summary: failed: Command failed")
+    expect(text).to include("release event stream omitted from text report")
+    expect(text).not_to include("\"event_version\"")
+    expect(text).not_to include("\"run_start\"")
+  end
+
   it "summarizes streamed failure output without replaying the transcript" do
     selected_member = member("alpha")
     stdout = <<~TEXT
