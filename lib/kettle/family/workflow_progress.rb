@@ -171,7 +171,7 @@ module Kettle
         return DEFAULT_TERMINAL_WIDTH unless @tty
 
         TTY::Screen.width.to_i
-      rescue StandardError
+      rescue
         DEFAULT_TERMINAL_WIDTH
       end
 
