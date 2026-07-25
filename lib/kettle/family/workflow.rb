@@ -1270,9 +1270,7 @@ module Kettle
           label = [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
           emit_template_event_line(member, template_event_mark(event), label)
         when "diagnostic"
-          message = event["message"].to_s
-          label = message.empty? ? event["kind"].to_s : message
-          emit_template_event_line(member, "!", label)
+          emit_template_event_line(member, "!", diagnostic_event_label(event))
         when "summary"
           emit_template_event_line(member, "done", "#{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed")
         end
@@ -1287,8 +1285,7 @@ module Kettle
         when "post_apply_step", "command_step"
           [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
         when "diagnostic"
-          message = event["message"].to_s
-          message.empty? ? event["kind"].to_s : message
+          diagnostic_event_label(event)
         when "summary"
           "#{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed"
         end
@@ -1304,9 +1301,7 @@ module Kettle
           label = [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
           emit_template_event_line(member, template_event_mark(event), label)
         when "diagnostic"
-          message = event["message"].to_s
-          label = message.empty? ? event["kind"].to_s : message
-          emit_template_event_line(member, "!", label)
+          emit_template_event_line(member, "!", diagnostic_event_label(event))
         when "summary"
           emit_template_event_line(member, phase_finish_event_mark(event), event["status"].to_s)
         end
@@ -1319,8 +1314,7 @@ module Kettle
         when "command_step"
           [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
         when "diagnostic"
-          message = event["message"].to_s
-          message.empty? ? event["kind"].to_s : message
+          diagnostic_event_label(event)
         when "summary"
           event["status"].to_s
         end
@@ -1354,6 +1348,18 @@ module Kettle
         when "diagnostic"
           "!"
         end
+      end
+
+      def diagnostic_event_label(event)
+        message = event["message"]
+        return message.to_s unless message.to_s.empty? || message.is_a?(Hash)
+
+        kind = event["kind"].to_s
+        return kind unless kind.empty?
+        return "diagnostic" unless message.is_a?(Hash)
+
+        nested_kind = message["kind"].to_s
+        nested_kind.empty? ? "diagnostic" : nested_kind
       end
 
       def emit_template_event_line(member, mark, label)

@@ -58,6 +58,22 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     expect(output.string).to include("\e[2A\e[1Galpha")
   end
 
+  it "clamps TTY statuses so member rows cannot wrap" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    allow(TTY::Screen).to receive(:width).and_return(72)
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    long_status = "plugin_lifecycle " + ("configured_plugins " * 8)
+    progress = described_class.new(io: output, label: "templating", total: 1, jobs: 1, members: [member])
+
+    progress.start
+    progress.update(member, status: long_status, mark: "!")
+    progress.stop
+
+    expect(output.string).to include("plugin_lifecy...")
+    expect(output.string).not_to include(long_status)
+  end
+
   it "renders readable non-TTY progress lines without requiring flush" do
     output = progress_output_class.new
     member = instance_double(Kettle::Family::Member, name: "alpha")

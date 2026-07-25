@@ -1,12 +1,17 @@
 # frozen_string_literal: true
 
 require "tty-progressbar"
+require "tty-screen"
 
 module Kettle
   module Family
     class WorkflowProgress
-      FORMAT = "%<member>-24s :events :status"
+      MEMBER_WIDTH = 24
+      FORMAT = "%<member>-#{MEMBER_WIDTH}.#{MEMBER_WIDTH}s :events :status"
       EVENT_WIDTH = 30
+      MIN_STATUS_WIDTH = 12
+      DEFAULT_TERMINAL_WIDTH = 80
+      ELLIPSIS = "..."
 
       def initialize(io:, label:, total:, jobs:, members: [], enabled: true)
         @io = io
@@ -132,7 +137,7 @@ module Kettle
       end
 
       def render_name(member_name, status:)
-        @member_statuses[member_name] = status
+        @member_statuses[member_name] = truncate_status(status)
         @line_order << member_name unless @line_order.include?(member_name)
         bar_for(member_name).advance(
           0,
@@ -147,6 +152,27 @@ module Kettle
 
       def plural(count)
         "s" unless count == 1
+      end
+
+      def truncate_status(status)
+        normalized = status.to_s.gsub(/\s+/, " ").strip
+        width = status_width
+        return normalized if normalized.length <= width
+        return normalized[0, width] if width <= ELLIPSIS.length
+
+        "#{normalized[0, width - ELLIPSIS.length]}#{ELLIPSIS}"
+      end
+
+      def status_width
+        [terminal_width - MEMBER_WIDTH - 1 - EVENT_WIDTH - 1, MIN_STATUS_WIDTH].max
+      end
+
+      def terminal_width
+        return DEFAULT_TERMINAL_WIDTH unless @tty
+
+        TTY::Screen.width.to_i
+      rescue StandardError
+        DEFAULT_TERMINAL_WIDTH
       end
 
       def write_line(line)

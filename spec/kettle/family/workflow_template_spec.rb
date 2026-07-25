@@ -492,6 +492,34 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
   end
 
+  it "summarizes structured template diagnostics for TTY progress rows" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    updates = []
+    progress = Class.new do
+      define_method(:initialize) { |target| @target = target }
+      define_method(:tty?) { true }
+      define_method(:update) do |_member, status:, mark:|
+        @target << [status, mark]
+      end
+    end.new(updates)
+    workflow = described_class.new(command: "template", config: config, members: [member], progress_io: StringIO.new)
+
+    handler = workflow.send(:template_event_line_handler, member, progress: progress)
+    handler.call(JSON.generate(
+      event_version: 1,
+      type: "diagnostic",
+      message: {
+        kind: "plugin_lifecycle",
+        configured_plugins: ["kettle-drift"],
+        registered_hooks: [{plugin_name: "kettle-drift", phase: "remaining_files"}]
+      }
+    ))
+
+    expect(updates).to include(["plugin_lifecycle", "!"])
+  end
+
   it "keeps kettle-jem NDJSON template events summarized for single-job templating" do
     event_script = [
       "require 'json';",

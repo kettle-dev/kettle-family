@@ -31,6 +31,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Release and template orchestration now consume NDJSON event lines even when
   progress rendering is disabled, preventing raw `--events` payloads from
   leaking into interactive terminal output.
+- TTY workflow progress now clamps member status text and summarizes structured
+  diagnostics, preventing long event payloads from wrapping rows and corrupting
+  multi-member progress displays.
 
 ### Security
 
