@@ -13,6 +13,7 @@ module Kettle
       def initialize(members:, config: nil)
         @members = members
         @config = config
+        @github_latest_release_by_repo = {}
       end
 
       def results
@@ -61,6 +62,7 @@ module Kettle
         state = branch_filtered_state(member, state, branch) if success && branch
         state = state_with_computed_booleans(state) if success
         state = enrich_git_state(member.root, state) if success
+        state = enrich_github_release(member.root, state) if success
         result(member: member, command: command, stdout: stdout, stderr: stderr, status: status.exitstatus, elapsed: elapsed, success: success, state: state, branch: branch)
       rescue JSON::ParserError => error
         result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
@@ -85,6 +87,7 @@ module Kettle
         state = success ? JSON.parse(stdout) : {}
         state = branch_filtered_state(member, state, branch) if success && branch
         state = enrich_git_state(member.root, state) if success
+        state = enrich_github_release(member.root, state) if success
         result(
           member: member,
           command: command,
@@ -280,7 +283,7 @@ module Kettle
         unreleased_entries = unreleased_entries?(content)
         prepared_release_pending = !version.to_s.empty? && latest_changelog_version == version
         ahead = commits_ahead_of_release(root, latest_changelog_version)
-        state_with_computed_booleans(enrich_git_state(root, {
+        enrich_github_release(root, state_with_computed_booleans(enrich_git_state(root, {
           "gem_name" => config.family_name,
           "version" => version,
           "latest_released" => nil,
@@ -289,7 +292,7 @@ module Kettle
           "unreleased_entries" => unreleased_entries,
           "prepared_release_pending" => prepared_release_pending,
           "pending_release" => unreleased_entries || prepared_release_pending
-        }))
+        })))
       end
 
       def state_with_computed_booleans(state)
@@ -300,6 +303,62 @@ module Kettle
 
       def bump_release_pending?(state)
         state["unreleased_entries"] == true && state["version"].to_s == state["latest_released"].to_s
+      end
+
+      def enrich_github_release(root, state)
+        tag = github_latest_release(root)
+        return state unless tag
+
+        state.merge("github_latest_release" => tag)
+      end
+
+      def github_latest_release(root)
+        repo = github_repo_slug(root)
+        return nil unless repo
+
+        @github_latest_release_by_repo.fetch(repo) do
+          stdout, _stderr, status = Open3.capture3("gh", "release", "view", "--repo", repo, "--json", "tagName", "--jq", ".tagName")
+          tag = status.success? ? normalize_github_release_tag(stdout) : nil
+          @github_latest_release_by_repo[repo] = tag
+        end
+      rescue SystemCallError
+        nil
+      end
+
+      def normalize_github_release_tag(value)
+        tag = value.to_s.strip
+        return nil if tag.empty?
+
+        tag.start_with?("v") ? tag : "v#{tag}"
+      end
+
+      def github_repo_slug(root)
+        stdout, _stderr, status = Open3.capture3("git", "remote", "-v", chdir: root)
+        return nil unless status.success?
+
+        stdout.each_line.filter_map do |line|
+          remote_url = line.split.fetch(1, nil)
+          github_slug_from_remote_url(remote_url)
+        end.first
+      end
+
+      def github_slug_from_remote_url(remote_url)
+        return nil unless remote_url&.include?("github.com")
+
+        # Git remote URLs support scp-like SSH syntax as well as URI syntax, so
+        # string slicing is more reliable than URI parsing for the full set.
+        slug = if remote_url.start_with?("git@github.com:")
+          remote_url.delete_prefix("git@github.com:")
+        elsif remote_url.include?("github.com/")
+          remote_url.split("github.com/", 2).last
+        end
+        return nil unless slug
+
+        slug = slug.delete_suffix(".git").split(/[?#]/, 2).first.to_s
+        parts = slug.split("/")
+        return nil if parts.length < 2 || parts.fetch(0).empty? || parts.fetch(1).empty?
+
+        "#{parts.fetch(0)}/#{parts.fetch(1)}"
       end
 
       def root_changelog_version(root)

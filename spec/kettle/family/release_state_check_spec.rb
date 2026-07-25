@@ -215,6 +215,33 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     )
   end
 
+  it "enriches release state with the latest GitHub release tag" do
+    check = described_class.new(members: [])
+    allow(Open3).to receive(:capture3) do |*args, **kwargs|
+      case args
+      when ["git", "remote", "-v"]
+        expect(kwargs).to eq(chdir: @tmpdir)
+        ["origin\tgit@github.com:kettle-dev/kettle-family.git (fetch)\n", "", status(0, true)]
+      when ["gh", "release", "view", "--repo", "kettle-dev/kettle-family", "--json", "tagName", "--jq", ".tagName"]
+        expect(kwargs).to be_empty
+        ["v1.1.7\n", "", status(0, true)]
+      else
+        raise "unexpected command: #{args.inspect} #{kwargs.inspect}"
+      end
+    end
+
+    state = check.send(:enrich_github_release, @tmpdir, {})
+
+    expect(state).to include("github_latest_release" => "v1.1.7")
+  end
+
+  it "normalizes GitHub release tags with a v prefix" do
+    check = described_class.new(members: [])
+
+    expect(check.send(:normalize_github_release_tag, "1.1.7\n")).to eq("v1.1.7")
+    expect(check.send(:normalize_github_release_tag, "v1.1.7\n")).to eq("v1.1.7")
+  end
+
   it "leaves branch release state unchanged when the line version is unavailable" do
     member = member("alpha")
     check = described_class.new(members: [member])

@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family state` now reports the latest GitHub release tag in a `GH.rel`
+  column next to the local, changelog, and RubyGems version columns.
+
 ### Changed
 
 ### Deprecated

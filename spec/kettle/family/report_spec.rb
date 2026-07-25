@@ -58,6 +58,7 @@ RSpec.describe Kettle::Family::Report do
         "current_branch" => "feature/release-state-compaction",
         "version" => "24.2.0",
         "latest_released" => "24.2.0",
+        "github_latest_release" => "v24.2.0",
         "latest_changelog_version" => "24.2.0",
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
@@ -86,8 +87,9 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("bump: unrel is yes and V.rb matches V.rel")
     expect(text).to include("branch")
     expect(text).to include("V.rb")
-    expect(text).to include("V.rel")
     expect(text).to include("V.ch.md")
+    expect(text).to include("V.rel")
+    expect(text).to include("GH.rel")
     expect(text).to include("🔼 / 🔽")
     expect(text).to include("unrel")
     expect(text).to include("prep")
@@ -97,6 +99,10 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("feature/re")
     expect(text).not_to include("feature/release-state-compaction")
     expect(text).to include("rubocop-lts")
+    header = text.lines.find { |line| line.include?("GH.rel") }
+    expect(header.index("V.rb")).to be < header.index("V.ch.md")
+    expect(header.index("V.ch.md")).to be < header.index("V.rel")
+    expect(header.index("V.rel")).to be < header.index("GH.rel")
   end
 
   it "renders member-local release target branches" do
