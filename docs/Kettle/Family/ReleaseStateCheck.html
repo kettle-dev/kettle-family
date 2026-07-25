@@ -200,7 +200,8 @@
 13
 14
 15
-16</pre>
+16
+17</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 13</span>
@@ -208,6 +209,7 @@
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
+  <span class='ivar'>@github_latest_release_by_repo</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -236,7 +238,6 @@
       <pre class="lines">
 
 
-18
 19
 20
 21
@@ -248,10 +249,11 @@
 27
 28
 29
-30</pre>
+30
+31</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 18</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 19</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>

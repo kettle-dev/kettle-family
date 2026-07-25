@@ -20,9 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `kettle-family state` now reports the latest GitHub release tag in a `GH.rel`
-  column next to the local, changelog, and RubyGems version columns.
-
 ### Changed
 
 ### Deprecated
@@ -32,6 +29,18 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.1.8] - 2026-07-25
+
+- TAG: [v1.1.8][1.1.8t]
+- COVERAGE: 95.48% -- 3147/3296 lines in 25 files
+- BRANCH COVERAGE: 77.42% -- 1169/1510 branches in 25 files
+- 28.26% documented
+
+### Added
+
+- `kettle-family state` now reports the latest GitHub release tag in a `GH.rel`
+  column next to the local, changelog, and RubyGems version columns.
 
 ## [1.1.7] - 2026-07-25
 
@@ -1034,7 +1043,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.7...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.8...HEAD
+[1.1.8]: https://github.com/kettle-dev/kettle-family/compare/v1.1.7...v1.1.8
+[1.1.8t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.8
 [1.1.7]: https://github.com/kettle-dev/kettle-family/compare/v1.1.6...v1.1.7
 [1.1.7t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.7
 [1.1.6]: https://github.com/kettle-dev/kettle-family/compare/v1.1.5...v1.1.6
