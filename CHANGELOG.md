@@ -22,11 +22,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- kettle-jem-template-20260725-001 - Generated JRuby and TruffleRuby workflow
-  files now run when pull request head branches start with `feature/release`,
-  so release CI monitoring does not report intentionally skipped engine
-  workflows as failures.
-
 ### Deprecated
 
 ### Removed
@@ -54,6 +49,13 @@ Please file a bug if you notice a violation of semantic versioning.
 - Interactive release commands now suppress consumed `kettle-release --events`
   NDJSON lines from terminal output while keeping them captured for progress and
   failure summaries.
+
+### Changed
+
+- kettle-jem-template-20260725-001 - Generated JRuby and TruffleRuby workflow
+  files now run when pull request head branches start with `feature/release`,
+  so release CI monitoring does not report intentionally skipped engine
+  workflows as failures.
 
 ## [1.1.5] - 2026-07-25
 
