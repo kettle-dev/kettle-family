@@ -25,6 +25,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- kettle-jem-template-initial - Initial templating by kettle-jem.
+
 ### Deprecated
 
 ### Removed
