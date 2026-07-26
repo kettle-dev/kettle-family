@@ -131,6 +131,7 @@
 </span><span class='words_sep'>  </span><span class='tstring_content'>push</span><span class='words_sep'>
 </span><span class='words_sep'>  </span><span class='tstring_content'>release</span><span class='words_sep'>
 </span><span class='words_sep'>  </span><span class='tstring_content'>release-state</span><span class='words_sep'>
+</span><span class='words_sep'>  </span><span class='tstring_content'>reset</span><span class='words_sep'>
 </span><span class='words_sep'>  </span><span class='tstring_content'>sync</span><span class='words_sep'>
 </span><span class='words_sep'>  </span><span class='tstring_content'>template</span><span class='words_sep'>
 </span><span class='words_sep'>  </span><span class='tstring_content'>test</span><span class='words_sep'>
@@ -672,7 +673,6 @@
       <pre class="lines">
 
 
-33
 34
 35
 36
@@ -686,10 +686,11 @@
 44
 45
 46
-47</pre>
+47
+48</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 33</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 34</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>family_name:</span><span class='comma'>,</span> <span class='label'>order_mode:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>selected_members:</span><span class='comma'>,</span> <span class='label'>config_path:</span><span class='comma'>,</span> <span class='label'>family_mode:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>branch_lanes:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>release_target_branches:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>member_release_target_branches:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>release_mode:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>command:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>results:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>warnings:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span>
   <span class='ivar'>@family_name</span> <span class='op'>=</span> <span class='id identifier rubyid_family_name'>family_name</span>
@@ -743,12 +744,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_branch_lanes'>branch_lanes</span>
   <span class='ivar'>@branch_lanes</span>
@@ -785,12 +786,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_command'>command</span>
   <span class='ivar'>@command</span>
@@ -827,12 +828,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_config_path'>config_path</span>
   <span class='ivar'>@config_path</span>
@@ -869,12 +870,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_family_mode'>family_mode</span>
   <span class='ivar'>@family_mode</span>
@@ -911,12 +912,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_family_name'>family_name</span>
   <span class='ivar'>@family_name</span>
@@ -953,12 +954,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_member_release_target_branches'>member_release_target_branches</span>
   <span class='ivar'>@member_release_target_branches</span>
@@ -995,12 +996,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@members</span>
@@ -1037,12 +1038,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_order_mode'>order_mode</span>
   <span class='ivar'>@order_mode</span>
@@ -1079,12 +1080,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_mode'>release_mode</span>
   <span class='ivar'>@release_mode</span>
@@ -1121,12 +1122,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span>
   <span class='ivar'>@release_target_branches</span>
@@ -1163,12 +1164,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='ivar'>@results</span>
@@ -1205,12 +1206,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_selected_members'>selected_members</span>
   <span class='ivar'>@selected_members</span>
@@ -1247,12 +1248,12 @@
       <pre class="lines">
 
 
-31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 32</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_warnings'>warnings</span>
   <span class='ivar'>@warnings</span>
@@ -1307,12 +1308,12 @@
       <pre class="lines">
 
 
-95
 96
-97</pre>
+97
+98</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 95</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 96</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_success?'>success?</span>
   <span class='id identifier rubyid_results'>results</span><span class='period'>.</span><span class='id identifier rubyid_all?'>all?</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:ok?</span><span class='rparen'>)</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_summary_pending'>summary_pending</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
@@ -1337,7 +1338,6 @@
       <pre class="lines">
 
 
-49
 50
 51
 52
@@ -1355,10 +1355,11 @@
 64
 65
 66
-67</pre>
+67
+68</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 49</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 50</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_to_h'>to_h</span>
   <span class='lbrace'>{</span>
@@ -1399,12 +1400,12 @@
       <pre class="lines">
 
 
-69
 70
-71</pre>
+71
+72</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 69</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 70</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_to_json'>to_json</span><span class='lparen'>(</span><span class='op'>*</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
   <span class='const'>JSON</span><span class='period'>.</span><span class='id identifier rubyid_pretty_generate'>pretty_generate</span><span class='lparen'>(</span><span class='id identifier rubyid_to_h'>to_h</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
@@ -1429,7 +1430,6 @@
       <pre class="lines">
 
 
-73
 74
 75
 76
@@ -1449,10 +1449,11 @@
 90
 91
 92
-93</pre>
+93
+94</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 73</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/report.rb', line 74</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_to_text'>to_text</span>
   <span class='id identifier rubyid_lines'>lines</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family: </span><span class='embexpr_beg'>#{</span><span class='const'><span class='object_link'><a href="../../Kettle.html" title="Kettle (module)">Kettle</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Family.html" title="Kettle::Family (module)">Family</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../Family.html#VERSION-constant" title="Kettle::Family::VERSION (constant)">VERSION</a></span></span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>family: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_family_name'>family_name</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>

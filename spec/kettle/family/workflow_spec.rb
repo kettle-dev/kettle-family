@@ -59,6 +59,132 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["internal", "readiness"])
   end
 
+  it "plans Gemfile.lock resets with checksum-gap updates" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_lockfile(member.root, <<~LOCK)
+      GEM
+        remote: https://gem.coop/
+        specs:
+          alpha (1.0.0)
+          beta (2.0.0)
+
+      CHECKSUMS
+        alpha (1.0.0)
+        beta (2.0.0) sha256=abc123
+    LOCK
+
+    results = described_class.new(command: "reset", reset_target: "Gemfile.lock", config: config, members: [member], commit: false).results
+
+    expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
+    expect(results.first.command).to eq(%w[bundle lock --update alpha --add-checksums])
+    expect(results.first.skipped).to be(true)
+  end
+
+  it "executes Gemfile.lock resets with local path environments disabled" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        local_path_env: KETTLE_DEV_DEV
+    YAML
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
+      #!/usr/bin/env ruby
+      File.write("bundle-reset.txt", [ARGV.join(" "), ENV["KETTLE_DEV_DEV"]].join("\\n"))
+      File.write("Gemfile.lock", <<~LOCK)
+        GEM
+          remote: https://gem.coop/
+          specs:
+            alpha (1.0.0)
+
+        CHECKSUMS
+          alpha (1.0.0) sha256=abc123
+      LOCK
+      exit(0)
+    RUBY
+    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_lockfile(member.root, <<~LOCK)
+      PATH
+        remote: #{@tmpdir}/beta
+        specs:
+          beta (2.0.0)
+
+      GEM
+        remote: https://gem.coop/
+        specs:
+          alpha (1.0.0)
+
+      CHECKSUMS
+        alpha (1.0.0)
+    LOCK
+
+    results = described_class.new(
+      command: "reset",
+      reset_target: "Gemfile.lock",
+      config: config,
+      members: [member],
+      execute: true,
+      commit: false,
+      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+    ).results
+
+    expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
+    expect(results.first).to be_ok
+    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update alpha --add-checksums\nfalse")
+  end
+
+  it "fails Gemfile.lock resets that leave release-invalid lockfiles" do
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
+      #!/usr/bin/env ruby
+      File.write("Gemfile.lock", <<~LOCK)
+        PATH
+          remote: #{@tmpdir}/beta
+          specs:
+            beta (2.0.0)
+
+        GEM
+          remote: https://gem.coop/
+          specs:
+            alpha (1.0.0)
+
+        CHECKSUMS
+          alpha (1.0.0)
+      LOCK
+      exit(0)
+    RUBY
+    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_lockfile(member.root, <<~LOCK)
+      GEM
+        remote: https://gem.coop/
+        specs:
+          alpha (1.0.0)
+
+      CHECKSUMS
+        alpha (1.0.0)
+    LOCK
+
+    results = described_class.new(
+      command: "reset",
+      reset_target: "Gemfile.lock",
+      config: config,
+      members: [member],
+      execute: true,
+      commit: false,
+      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[reset_gemfile_lock reset_gemfile_lock_readiness])
+    expect(results.last).not_to be_ok
+    expect(results.last.stderr).to include("Gemfile.lock has local path remote")
+    expect(results.last.stderr).to include("Gemfile.lock CHECKSUMS has no sha256 for alpha 1.0.0")
+  end
+
   it "plans GitHub Actions SHA pin writes with the default patch upgrade" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -217,5 +343,9 @@ RSpec.describe Kettle::Family::Workflow do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: File.join(root, "#{name}.gemspec"), version: "1.0.0", dependencies: [])
+  end
+
+  def write_lockfile(root, content)
+    File.write(File.join(root, "Gemfile.lock"), content)
   end
 end

@@ -10,8 +10,8 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[discover plan report metadata check clean-unreleased test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
-      WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb bex release push pull sync up].freeze
+      COMMANDS = %w[discover plan report metadata check clean-unreleased reset test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
+      WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb bex release push pull sync up].freeze
 
       command_name "kettle-family"
       usage "[options] COMMAND [ARGS...]"
@@ -158,6 +158,7 @@ module Kettle
             commit: !options.key?(:commit) || options[:commit],
             allow_dirty: truthy_option?(:allow_dirty),
             target_version: nil,
+            reset_target: nil,
             bup_args: [],
             bex_args: []
           }.merge(overrides)
@@ -286,6 +287,19 @@ module Kettle
         command_name "clean-unreleased"
         usage "[options]"
         description "Uninstall locally installed family gem versions newer than the latest released version."
+      end
+
+      class Reset < WorkflowCommand
+        command_name "reset"
+        usage "[options] TARGET"
+        description "Reset a managed family artifact. Initially supports Gemfile.lock."
+        argument :target, required: true, usage: "TARGET", desc: "Artifact to reset"
+
+        def run(target = nil)
+          raise Error, "reset requires TARGET" if target.to_s.empty?
+
+          run_family("reset", reset_target: target)
+        end
       end
 
       class Test < WorkflowCommand
@@ -512,6 +526,7 @@ module Kettle
       command Metadata
       command Check
       command CleanUnreleased
+      command Reset
       command Test
       command Lint
       command Docs
@@ -652,6 +667,7 @@ module Kettle
           verbose: options[:verbose],
           jobs: options[:jobs],
           progress_io: progress_io(command, options),
+          reset_target: options[:reset_target],
           bup_args: options[:bup_args],
           bex_args: options[:bex_args],
           start_member: start_at.member,

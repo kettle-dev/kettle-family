@@ -448,6 +448,23 @@ The cleanup command compares installed local gem versions with each member's
 latest released version and uninstalls only versions newer than the release
 state reports.
 
+If a member lockfile has captured local sibling paths or checksum-less gem
+versions from local development, reset the selected members' `Gemfile.lock`
+files:
+
+```console
+kettle-family reset Gemfile.lock
+kettle-family reset Gemfile.lock --execute
+```
+
+`reset Gemfile.lock` disables configured, inferred, and path-like local
+`*_DEV`/`*_LOCAL` environment variables while running Bundler. It uses
+`bundle lock --add-checksums`, and when a registry gem in `Gemfile.lock` has a
+missing or blank checksum entry it targets that gem with `--update` so Bundler
+can resolve the released version and write a `sha256=` checksum. Executed runs
+fail if the resulting lockfile still contains local path remotes or checksum
+gaps.
+
 Resume a failed family publish after fixing the failure. Already published
 versions are skipped automatically; `start_step` is passed to `kettle-release`
 for unreleased members that still need work. Use `--start-step` only after the

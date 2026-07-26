@@ -22,6 +22,7 @@ module Kettle
         push
         release
         release-state
+        reset
         sync
         template
         test

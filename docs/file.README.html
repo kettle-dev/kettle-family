@@ -662,6 +662,22 @@ keeps selecting them, clean selected family members before retrying:</p>
 latest released version and uninstalls only versions newer than the release<br>
 state reports.</p>
 
+<p>If a member lockfile has captured local sibling paths or checksum-less gem<br>
+versions from local development, reset the selected members’ <code>Gemfile.lock</code><br>
+files:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family reset Gemfile.lock
+kettle-family reset Gemfile.lock --execute
+</code></pre>
+
+<p><code>reset Gemfile.lock</code> disables configured, inferred, and path-like local<br>
+<code>*_DEV</code>/<code>*_LOCAL</code> environment variables while running Bundler. It uses<br>
+<code>bundle lock --add-checksums</code>, and when a registry gem in <code>Gemfile.lock</code> has a<br>
+missing or blank checksum entry it targets that gem with <code>--update</code> so Bundler<br>
+can resolve the released version and write a <code>sha256=</code> checksum. Executed runs<br>
+fail if the resulting lockfile still contains local path remotes or checksum<br>
+gaps.</p>
+
 <p>Resume a failed family publish after fixing the failure. Already published<br>
 versions are skipped automatically; <code>start_step</code> is passed to <code>kettle-release</code><br>
 for unreleased members that still need work. Use <code>--start-step</code> only after the<br>

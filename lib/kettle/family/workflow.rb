@@ -80,7 +80,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -108,6 +108,7 @@ module Kettle
         @secrets_provider = secrets_provider || Secrets::Provider.new
         @jobs = jobs
         @progress_io = progress_io
+        @reset_target = reset_target
         @bup_args = bup_args
         @bex_args = bex_args
         @start_member = start_member
@@ -127,14 +128,40 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
+        return reset_member_results(workflow_members) if command == "reset"
         return release_member_results(workflow_members, include_family_changelog: true) if command == "release"
         return git_sync_results(workflow_members) if GIT_SYNC_COMMANDS.key?(command)
 
         member_workflow_results(workflow_members)
+      end
+
+      def reset_member_results(workflow_members)
+        target = normalized_reset_target
+        runner = CommandRunner.new(execute: execute, accept: accept)
+        workflow_members.each_with_object([]) do |member, memo|
+          case target
+          when "Gemfile.lock"
+            reset_gemfile_lock(member: member, runner: runner, memo: memo)
+          else
+            raise Error, "reset target #{target.inspect} is not supported"
+          end
+          break memo unless memo.last&.ok?
+
+          commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "reset", force: true)
+          break memo unless memo.last&.ok?
+        end
+      end
+
+      def normalized_reset_target
+        target = reset_target.to_s.strip
+        raise Error, "reset requires TARGET" if target.empty?
+        return "Gemfile.lock" if target.casecmp("Gemfile.lock").zero?
+
+        raise Error, "reset target #{target.inspect} is not supported; supported targets: Gemfile.lock"
       end
 
       def member_workflow_results(workflow_members)
@@ -671,6 +698,84 @@ module Kettle
         ["bundle", "lock", "--update", *released_members.map(&:name), "--add-checksums"]
       end
 
+      def reset_gemfile_lock(member:, runner:, memo:)
+        result = runner.call(
+          member: member,
+          phase: "reset_gemfile_lock",
+          command: reset_gemfile_lock_command(member),
+          env: release_lockfile_env(member)
+        )
+        memo << result
+        return unless result.ok? && execute
+
+        validate_reset_gemfile_lock(member: member, memo: memo)
+      end
+
+      def reset_gemfile_lock_command(member)
+        update_gems = reset_gemfile_lock_update_gems(member)
+        return ["bundle", "lock", "--add-checksums"] if update_gems.empty?
+
+        ["bundle", "lock", "--update", *update_gems, "--add-checksums"]
+      end
+
+      def reset_gemfile_lock_update_gems(member)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return [] unless File.file?(lockfile)
+
+        lockfile_source = File.read(lockfile)
+        checksums = lockfile_checksum_entries(lockfile_source)
+        return [] unless checksums
+
+        lockfile_gem_specs(lockfile_source).filter_map do |name, version|
+          checksum = checksums[[name, version]]
+          name if checksum.nil? || !checksum.include?("sha256=")
+        end.uniq.sort
+      end
+
+      def validate_reset_gemfile_lock(member:, memo:)
+        diagnostics = reset_gemfile_lock_diagnostics(member)
+        return if diagnostics.empty?
+
+        memo << CommandResult.new(
+          member.name,
+          "reset_gemfile_lock_readiness",
+          ["internal", "validate", "Gemfile.lock"],
+          member.root,
+          1,
+          false,
+          "",
+          diagnostics.join("\n"),
+          0.0,
+          false,
+          "Gemfile.lock reset validation failed"
+        )
+      end
+
+      def reset_gemfile_lock_diagnostics(member)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return ["Gemfile.lock was not created by reset"] unless File.file?(lockfile)
+
+        lockfile_source = File.read(lockfile)
+        diagnostics = release_lockfile_local_path_remote_lines(lockfile_source).map do |line_number|
+          "Gemfile.lock has local path remote at line #{line_number}"
+        end
+        checksum_entries = lockfile_checksum_entries(lockfile_source)
+        if checksum_entries.nil?
+          diagnostics << "Gemfile.lock CHECKSUMS section is missing"
+          return diagnostics
+        end
+
+        lockfile_gem_specs(lockfile_source).each do |name, version|
+          checksum = checksum_entries[[name, version]]
+          if checksum.nil?
+            diagnostics << "Gemfile.lock CHECKSUMS is missing #{name} #{version}"
+          elsif !checksum.include?("sha256=")
+            diagnostics << "Gemfile.lock CHECKSUMS has no sha256 for #{name} #{version}"
+          end
+        end
+        diagnostics
+      end
+
       def release_lockfile_local_path_remote_lines(lockfile_source)
         lockfile_source.each_line.with_index(1).filter_map do |line, line_number|
           line_number if line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
@@ -691,6 +796,63 @@ module Kettle
           return stripped if stripped.start_with?("  #{member.name} (#{member.version})")
         end
         nil
+      end
+
+      def lockfile_checksum_entries(lockfile_source)
+        in_checksums = false
+        entries = {}
+        lockfile_source.each_line do |line|
+          stripped = line.chomp
+          if stripped == "CHECKSUMS"
+            in_checksums = true
+            next
+          end
+          next unless in_checksums
+          break if !stripped.empty? && stripped == stripped.upcase && !stripped.start_with?(" ")
+          next unless stripped.start_with?("  ")
+
+          parsed = parse_lockfile_spec_line(stripped)
+          entries[[parsed.fetch(:name), parsed.fetch(:version)]] = parsed.fetch(:suffix) if parsed
+        end
+        in_checksums ? entries : nil
+      end
+
+      def lockfile_gem_specs(lockfile_source)
+        in_gem = false
+        in_specs = false
+        specs = []
+        lockfile_source.each_line do |line|
+          stripped = line.chomp
+          if stripped == "GEM"
+            in_gem = true
+            in_specs = false
+            next
+          end
+          next unless in_gem
+          break if !stripped.empty? && stripped == stripped.upcase && !stripped.start_with?(" ")
+
+          if stripped == "  specs:"
+            in_specs = true
+            next
+          end
+          next unless in_specs
+          next unless line.start_with?("    ") && !line.start_with?("      ")
+
+          parsed = parse_lockfile_spec_line(stripped)
+          specs << [parsed.fetch(:name), parsed.fetch(:version)] if parsed
+        end
+        specs.uniq
+      end
+
+      def parse_lockfile_spec_line(line)
+        stripped = line.to_s.strip
+        return nil if stripped.empty? || !stripped.include?(" (")
+
+        name, remainder = stripped.split(" (", 2)
+        version, suffix = remainder.to_s.split(")", 2)
+        return nil if name.to_s.empty? || version.to_s.empty?
+
+        {name: name, version: version, suffix: suffix.to_s.strip}
       end
 
       def annotate_dependency_floor_lockfile_result(result, attempts)
@@ -1691,6 +1853,8 @@ module Kettle
         case reason
         when "release"
           "🔒️ Normalize lockfiles before release"
+        when "reset"
+          "🔒️ Reset lockfiles"
         else
           "🔒️ Normalize lockfiles after templating"
         end

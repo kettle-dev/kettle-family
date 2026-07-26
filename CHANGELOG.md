@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family reset Gemfile.lock` now resets selected member lockfiles with
+  local sibling paths disabled and repairs missing checksum entries by updating
+  the affected released gems.
+
 - `kettle-family release` can now use an opt-in `1password` release secrets
   provider to load the gem signing passphrase and RubyGems MFA OTP from the
   local `op` CLI during executed publish flows.
