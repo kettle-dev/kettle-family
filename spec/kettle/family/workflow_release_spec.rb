@@ -295,6 +295,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.stdout).to include("Enter PEM pass phrase:")
   end
 
+  it "uses a configured secrets provider for the gem signing password" do
+    write_release_config(
+      build_command: [
+        RbConfig.ruby,
+        "-e",
+        "print 'Enter PEM pass phrase:'; $stdout.flush; exit(STDIN.gets&.chomp == 'secret' ? 0 : 1)"
+      ]
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = signed_member("alpha")
+    provider = instance_double(Kettle::Family::Secrets::Provider, gem_signing_passphrase: "secret")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, secrets_provider: provider)
+
+    results = workflow.results
+
+    expect(results).to all(be_ok)
+    expect(provider).to have_received(:gem_signing_passphrase).once
+  end
+
   it "passes the cached gem signing password to member-local branch workflows" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = signed_member("alpha")

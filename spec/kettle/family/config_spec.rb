@@ -134,6 +134,26 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_target_branches).to eq(%w[r1_8-even-v0 r1_9-even-v2])
   end
 
+  it "loads release secrets provider config" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        secrets:
+          provider: 1password
+          item: Rubygems
+          gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE
+          rubygems_otp_field: one-time password
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_secrets).to eq(
+      "provider" => "1password",
+      "item" => "Rubygems",
+      "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE",
+      "rubygems_otp_field" => "one-time password"
+    )
+  end
+
   it "loads release target branches from branch aliases" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       branches:

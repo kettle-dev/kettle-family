@@ -7,9 +7,10 @@ module Kettle
   module Family
     class CommandRunner
       class OtpCoordinator
-        def initialize(input: $stdin, output: $stdout, queue_total: nil)
+        def initialize(input: $stdin, output: $stdout, queue_total: nil, secrets_provider: nil)
           @input = input
           @output = output
+          @secrets_provider = secrets_provider
           @mutex = Mutex.new
           @condition = ConditionVariable.new
           @prompting = false
@@ -61,6 +62,8 @@ module Kettle
 
         private
 
+        attr_reader :secrets_provider
+
         def wait_for_response(generation)
           @condition.wait(@mutex) while @prompting
           return @response if @completed_generation == generation
@@ -88,6 +91,12 @@ module Kettle
         end
 
         def read_response(chunk:)
+          provided = secrets_provider&.rubygems_otp.to_s
+          unless provided.empty?
+            @output.puts("RubyGems MFA code loaded from configured secrets provider.")
+            return provided
+          end
+
           @output.print("#{otp_prompt_label(chunk)} ")
           @output.flush if @output.respond_to?(:flush)
           if @input.respond_to?(:noecho) && @input.tty?

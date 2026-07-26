@@ -1168,6 +1168,37 @@ RSpec.describe Kettle::Family::CLI do
     expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --events"])
   end
 
+  it "accepts a release secrets provider override" do
+    write_ready_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(
+      ["release", "--root", @tmpdir, "--only", "alpha", "--publish", "--secrets-provider", "interactive", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    expect(report.fetch("results").map { |result| result.fetch("phase") }).to include("release_publish")
+  end
+
+  it "does not resolve configured release secrets for non-release commands" do
+    write_ready_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        secrets:
+          provider: nope
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["test", "--root", @tmpdir, "--only", "alpha", "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    expect(report.fetch("results").first.fetch("phase")).to eq("test")
+  end
+
   it "rejects unsafe release ci workflow subset values" do
     write_ready_gem("alpha")
     err = StringIO.new

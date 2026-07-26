@@ -311,6 +311,19 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(otp_output.string).to include("RubyGems MFA prompts queued: 1")
   end
 
+  it "writes OTP responses from a configured secrets provider" do
+    provider = instance_double(Kettle::Family::Secrets::Provider, rubygems_otp: "123456")
+    otp_output = StringIO.new
+    coordinator = described_class::OtpCoordinator.new(input: StringIO.new, output: otp_output, secrets_provider: provider)
+    runner = described_class.new(otp_coordinator: coordinator)
+    child_input = StringIO.new
+
+    runner.send(:handle_interactive_prompt, child_input, "Code: ", member_name: "alpha")
+
+    expect(child_input.string).to eq("123456\n")
+    expect(otp_output.string).to include("RubyGems MFA code loaded from configured secrets provider.")
+  end
+
   it "reuses one queued OTP response for concurrent requests" do
     otp_input, otp_writer = IO.pipe
     begin

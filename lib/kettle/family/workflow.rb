@@ -78,7 +78,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -103,6 +103,7 @@ module Kettle
         @debug = debug
         @verbose = verbose
         @gem_signing_password = gem_signing_password
+        @secrets_provider = secrets_provider || Secrets::Provider.new
         @jobs = jobs
         @progress_io = progress_io
         @bup_args = bup_args
@@ -361,6 +362,7 @@ module Kettle
           gha_sha_pins_check: gha_sha_pins_check,
           env_overrides: env_overrides,
           gem_signing_password: @gem_signing_password,
+          secrets_provider: @secrets_provider,
           jobs: jobs,
           progress_io: progress_io,
           bup_args: bup_args,
@@ -546,7 +548,7 @@ module Kettle
       def release_otp_coordinator
         return nil unless execute && release_command_interactive?
 
-        @release_otp_coordinator ||= CommandRunner::OtpCoordinator.new
+        @release_otp_coordinator ||= CommandRunner::OtpCoordinator.new(secrets_provider: @secrets_provider)
       end
 
       def parallel_release_members?(release_members)
@@ -959,6 +961,9 @@ module Kettle
 
       def prompt_for_gem_signing_password
         return if @gem_signing_password
+
+        @gem_signing_password = @secrets_provider.gem_signing_passphrase.to_s
+        return unless @gem_signing_password.empty?
 
         print("Gem signing key password (cached for this family release; MFA prompts still remain interactive): ")
         @gem_signing_password = if $stdin.respond_to?(:noecho) && $stdin.tty?

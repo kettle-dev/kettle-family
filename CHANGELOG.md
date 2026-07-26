@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family release` can now use an opt-in `1password` release secrets
+  provider to load the gem signing passphrase and RubyGems MFA OTP from the
+  local `op` CLI during executed publish flows.
+
 - `kettle-family clean-unreleased` now scans installed versions of selected
   family gems and can uninstall local versions newer than each gem's latest
   released version, helping recover from failed local release attempts that

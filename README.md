@@ -322,10 +322,42 @@ kettle-family release --execute --publish --skip-remotes cb,mirror2
 
 Publish through `kettle-release`. A full publish first runs the
 `kettle-pre-release` gate, then prompts once for the gem signing key password
-and leaves RubyGems MFA prompts interactive:
+and leaves RubyGems MFA prompts interactive by default:
 
 ```console
 kettle-family release --publish --execute
+```
+
+Executed publish runs can opt in to the local 1Password CLI for unattended
+release credentials. The gem signing passphrase is loaded once and cached only
+in memory for the current `kettle-family` process. RubyGems OTP values are
+loaded when each MFA prompt arrives, so long releases do not reuse a stale TOTP
+from release startup.
+
+```yaml
+release:
+  secrets:
+    provider: 1password
+    item: Rubygems
+    gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE
+    rubygems_otp_field: one-time password
+```
+
+```console
+kettle-family release --publish --execute --secrets-provider 1password
+```
+
+For vault-specific or field-specific references, configure explicit 1Password
+secret references. `rubygems_otp_reference` is read with `op read`; otherwise
+the OTP path uses `op item get ITEM --otp`.
+
+```yaml
+release:
+  secrets:
+    provider: 1password
+    account: my.1password.com
+    gem_signing_passphrase_reference: op://Private/Rubygems/GEM-SIGN-PASSPHRASE
+    rubygems_otp_reference: op://Private/Rubygems/one-time password?attribute=otp
 ```
 
 Resume a failed family publish after fixing the failure. Already published
