@@ -98,6 +98,43 @@ RSpec.describe Kettle::Family::CommandRunner do
     )
   end
 
+  it "keeps sensitive env out of mise command argv while passing it to the child process" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    runner = described_class.new
+    env = {
+      "KETTLE_RELEASE_SECRETS_PROVIDER" => "1password",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE" => "cached",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "secret"
+    }
+
+    result = runner.call(
+      member: member,
+      phase: "release_publish",
+      command: ["bundle", "exec", "kettle-release"],
+      env: env
+    )
+
+    expect(result.command).to eq(
+      [
+        "mise",
+        "exec",
+        "-C",
+        member.root,
+        "--",
+        "env",
+        "KETTLE_RELEASE_SECRETS_PROVIDER=1password",
+        "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE=cached",
+        "bundle",
+        "exec",
+        "kettle-release"
+      ]
+    )
+    expect(result.command.join(" ")).not_to include("secret")
+    expect(runner.send(:process_env, member: member, env: env))
+      .to include("KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "secret")
+  end
+
   it "wraps commands with mise when a member has .tool-versions" do
     member = member_at("alpha")
     File.write(File.join(member.root, ".tool-versions"), "ruby 4.0.5\n")

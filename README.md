@@ -259,9 +259,9 @@ abort by default; pass `--continue-ci-failures` to set
 `K_RELEASE_CI_CONTINUE=true` for the underlying `kettle-release` process.
 
 Executed publish runs can also use a release secrets provider. The default
-provider is `interactive`. The `1password` provider uses the local `op` CLI and
-expects that `op` is installed, unlocked, and signed in before the release
-starts.
+provider is `interactive`. The `1password` provider is supplied by
+`kettle-dev`, uses the local `op` CLI, and expects that `op` is installed,
+unlocked, and signed in before the release starts.
 
 ```yaml
 release:
@@ -274,7 +274,10 @@ release:
 
 Use `--secrets-provider 1password` to opt in explicitly for a release run, or
 `--secrets-provider interactive` to force prompts even when the family config
-has a provider configured.
+has a provider configured. When publishing through `kettle-release`,
+`kettle-family` loads the signing passphrase once and passes the cached value to
+each child process; `kettle-release` still fetches RubyGems OTP values directly
+from 1Password at prompt time.
 
 ## 🔧 Basic Usage
 
@@ -362,9 +365,11 @@ kettle-family release --publish --execute
 
 Executed publish runs can opt in to the local 1Password CLI for unattended
 release credentials. The gem signing passphrase is loaded once and cached only
-in memory for the current `kettle-family` process. RubyGems OTP values are
-loaded when each MFA prompt arrives, so long releases do not reuse a stale TOTP
-from release startup.
+in memory for the current `kettle-family` process. When the publish command is
+`kettle-release`, that cached value is passed through an internal environment
+integration so child releases do not query 1Password repeatedly for the same
+passphrase. RubyGems OTP values are loaded by `kettle-release` when each MFA
+prompt arrives, so long releases do not reuse a stale TOTP from release startup.
 
 ```yaml
 release:

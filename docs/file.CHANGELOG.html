@@ -102,6 +102,9 @@ version and exit.</li>
   <li>README release guidance now documents release secrets provider overrides,<br>
 release-state columns, default <code>--only</code> filters, JSON reports, and<br>
 unreleased-gem cleanup recovery.</li>
+  <li>Release secrets now use the shared <code>kettle-dev</code> provider implementation;<br>
+family publish runs cache the signing passphrase once and let child<br>
+<code>kettle-release</code> processes fetch RubyGems OTP values directly.</li>
 </ul>
 
 <h3 id="deprecated">Deprecated</h3>

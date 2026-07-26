@@ -125,6 +125,36 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --events"])
   end
 
+  it "delegates 1Password OTP handling to kettle-release while passing the cached signing passphrase" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      secrets: {
+        "provider" => "1password",
+        "item" => "Rubygems",
+        "rubygems_otp_field" => "one-time password"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+    workflow.instance_variable_set(:@gem_signing_password, "cached-secret")
+    workflow.instance_variable_set(:@secrets_provider, Kettle::Family::Secrets::OnePassword.new(config.release_secrets))
+    allow(workflow).to receive(:kettle_release_supports_direct_secrets?).and_return(true)
+
+    results = workflow.results
+
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --events"])
+    expect(results.last.command).not_to include("cached-secret")
+    expect(results.last.command).not_to include("one-time password")
+    release_env = workflow.send(:release_env)
+    expect(release_env).to include(
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE" => "cached",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "cached-secret",
+      "KETTLE_RELEASE_1PASSWORD_ITEM" => "Rubygems",
+      "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD" => "one-time password"
+    )
+  end
+
   it "rejects unsafe ci workflow subset values before building release commands" do
     write_release_config(publish_command: "bundle exec kettle-release")
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -1151,7 +1181,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -1161,6 +1191,7 @@ RSpec.describe Kettle::Family::Workflow do
     release["target_branches"] = target_branches if target_branches
     release["family_changelog"] = family_changelog if family_changelog
     release["env"] = release_env if release_env
+    release["secrets"] = secrets if secrets
     config = {"release" => release}
     config["template"] = template if template
     config["check"] = check if check

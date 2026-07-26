@@ -41,6 +41,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - README release guidance now documents release secrets provider overrides,
   release-state columns, default `--only` filters, JSON reports, and
   unreleased-gem cleanup recovery.
+- Release secrets now use the shared `kettle-dev` provider implementation;
+  family publish runs cache the signing passphrase once and let child
+  `kettle-release` processes fetch RubyGems OTP values directly.
 
 ### Deprecated
 

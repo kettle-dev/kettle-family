@@ -6,6 +6,10 @@ require "io/console"
 module Kettle
   module Family
     class CommandRunner
+      SENSITIVE_ENV_KEYS = [
+        "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE"
+      ].freeze
+
       class OtpCoordinator
         def initialize(input: $stdin, output: $stdout, queue_total: nil, secrets_provider: nil)
           @input = input
@@ -415,7 +419,8 @@ module Kettle
         argv = normalize_command(command)
         return argv unless mise_configured?(member)
 
-        unset_env, set_env = env.partition { |_key, value| value.nil? }
+        command_env = nonsensitive_env(env)
+        unset_env, set_env = command_env.partition { |_key, value| value.nil? }
         injected_env = [
           *unset_env.flat_map { |key, _value| ["-u", key.to_s] },
           *set_env.map { |key, value| "#{key}=#{value}" }
@@ -430,7 +435,19 @@ module Kettle
         base_env = unbundled_process_env
         return base_env.merge(env) unless mise_configured?(member)
 
-        base_env
+        base_env.merge(sensitive_env(env))
+      end
+
+      def nonsensitive_env(env)
+        env.reject { |key, _value| sensitive_env_key?(key) }
+      end
+
+      def sensitive_env(env)
+        env.select { |key, value| sensitive_env_key?(key) && !value.nil? }
+      end
+
+      def sensitive_env_key?(key)
+        SENSITIVE_ENV_KEYS.include?(key.to_s)
       end
 
       def unbundled_process_env

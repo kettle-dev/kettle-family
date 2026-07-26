@@ -465,9 +465,9 @@ abort by default; pass <code>--continue-ci-failures</code> to set<br>
 <code>K_RELEASE_CI_CONTINUE=true</code> for the underlying <code>kettle-release</code> process.</p>
 
 <p>Executed publish runs can also use a release secrets provider. The default<br>
-provider is <code>interactive</code>. The <code>1password</code> provider uses the local <code>op</code> CLI and<br>
-expects that <code>op</code> is installed, unlocked, and signed in before the release<br>
-starts.</p>
+provider is <code>interactive</code>. The <code>1password</code> provider is supplied by<br>
+<code>kettle-dev</code>, uses the local <code>op</code> CLI, and expects that <code>op</code> is installed,<br>
+unlocked, and signed in before the release starts.</p>
 
 <pre class="code language-yaml"><code class="language-yaml">release:
   secrets:
@@ -479,7 +479,10 @@ starts.</p>
 
 <p>Use <code>--secrets-provider 1password</code> to opt in explicitly for a release run, or<br>
 <code>--secrets-provider interactive</code> to force prompts even when the family config<br>
-has a provider configured.</p>
+has a provider configured. When publishing through <code>kettle-release</code>,<br>
+<code>kettle-family</code> loads the signing passphrase once and passes the cached value to<br>
+each child process; <code>kettle-release</code> still fetches RubyGems OTP values directly<br>
+from 1Password at prompt time.</p>
 
 <h2 id="-basic-usage">🔧 Basic Usage</h2>
 
@@ -580,9 +583,11 @@ and leaves RubyGems MFA prompts interactive by default:</p>
 
 <p>Executed publish runs can opt in to the local 1Password CLI for unattended<br>
 release credentials. The gem signing passphrase is loaded once and cached only<br>
-in memory for the current <code>kettle-family</code> process. RubyGems OTP values are<br>
-loaded when each MFA prompt arrives, so long releases do not reuse a stale TOTP<br>
-from release startup.</p>
+in memory for the current <code>kettle-family</code> process. When the publish command is<br>
+<code>kettle-release</code>, that cached value is passed through an internal environment<br>
+integration so child releases do not query 1Password repeatedly for the same<br>
+passphrase. RubyGems OTP values are loaded by <code>kettle-release</code> when each MFA<br>
+prompt arrives, so long releases do not reuse a stale TOTP from release startup.</p>
 
 <pre class="code language-yaml"><code class="language-yaml">release:
   secrets:

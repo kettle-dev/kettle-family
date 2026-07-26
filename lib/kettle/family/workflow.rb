@@ -540,8 +540,8 @@ module Kettle
         CommandRunner.new(
           execute: execute,
           accept: accept,
-          gem_signing_password: @gem_signing_password,
-          otp_coordinator: release_otp_coordinator
+          gem_signing_password: release_command_uses_kettle_release_secrets? ? nil : @gem_signing_password,
+          otp_coordinator: release_command_uses_kettle_release_secrets? ? nil : release_otp_coordinator
         )
       end
 
@@ -783,8 +783,12 @@ module Kettle
       end
 
       def release_command
-        command = publish ? config.release_publish_command : config.release_build_command
+        command = raw_release_command
         kettle_release_command?(command) ? append_kettle_release_args(command) : command
+      end
+
+      def raw_release_command
+        publish ? config.release_publish_command : config.release_build_command
       end
 
       def release_command_interactive?
@@ -810,6 +814,7 @@ module Kettle
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
         args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
+        args << "--secrets-provider=1password" if release_command_uses_kettle_release_secrets?
         args << "--events" unless command_includes_arg?(command, "--events")
         return command if args.empty?
 
@@ -850,7 +855,50 @@ module Kettle
         env["K_RELEASE_CI_WORKFLOWS"] = ci_workflows if ci_workflows && !ci_workflows.to_s.empty?
         env["KETTLE_DEV_SKIP_BUNDLE_AUDIT"] = "true" if skip_bundle_audit
         env["K_RELEASE_SKIP_REMOTES"] = skip_remotes if skip_remotes && !skip_remotes.to_s.empty?
+        env.merge!(kettle_release_secrets_env)
         env
+      end
+
+      def kettle_release_secrets_env
+        return {} unless release_secrets_provider_one_password?
+
+        secrets_config = config.release_secrets
+        env = {
+          "KETTLE_RELEASE_SECRETS_PROVIDER" => "1password",
+          "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE" => "cached",
+          "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => @gem_signing_password.to_s
+        }
+        {
+          "account" => "KETTLE_RELEASE_1PASSWORD_ACCOUNT",
+          "item" => "KETTLE_RELEASE_1PASSWORD_ITEM",
+          "gem_signing_passphrase_field" => "KETTLE_RELEASE_1PASSWORD_GEM_SIGNING_PASSPHRASE_FIELD",
+          "rubygems_otp_field" => "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD",
+          "gem_signing_passphrase_reference" => "KETTLE_RELEASE_1PASSWORD_GEM_SIGNING_PASSPHRASE_REFERENCE",
+          "rubygems_otp_reference" => "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_REFERENCE"
+        }.each do |key, env_key|
+          value = secrets_config.fetch(key, "").to_s
+          env[env_key] = value unless value.empty?
+        end
+        env
+      end
+
+      def release_command_uses_kettle_release_secrets?
+        kettle_release_supports_direct_secrets? &&
+          release_secrets_provider_one_password? &&
+          kettle_release_command?(raw_release_command)
+      end
+
+      def release_secrets_provider_one_password?
+        if defined?(Kettle::Dev::ReleaseSecrets::OnePassword) && @secrets_provider.is_a?(Kettle::Dev::ReleaseSecrets::OnePassword)
+          return true
+        end
+
+        defined?(Kettle::Family::Secrets::OnePassword) &&
+          @secrets_provider.is_a?(Kettle::Family::Secrets::OnePassword)
+      end
+
+      def kettle_release_supports_direct_secrets?
+        defined?(Kettle::Dev::ReleaseSecrets)
       end
 
       def append_release_git_phases(member:, runner:, memo:)
