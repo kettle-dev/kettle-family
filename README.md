@@ -457,13 +457,12 @@ kettle-family reset Gemfile.lock
 kettle-family reset Gemfile.lock --execute
 ```
 
-`reset Gemfile.lock` disables configured, inferred, and path-like local
-`*_DEV`/`*_LOCAL` environment variables while running Bundler. It uses
-`bundle lock --add-checksums`, and when a registry gem in `Gemfile.lock` has a
-missing or blank checksum entry it targets that gem with `--update` so Bundler
-can resolve the released version and write a `sha256=` checksum. Executed runs
-fail if the resulting lockfile still contains local path remotes or checksum
-gaps.
+`reset Gemfile.lock` runs each member's `bundle exec kettle-reset Gemfile.lock`
+with configured, inferred, and path-like local `*_DEV`/`*_LOCAL` environment
+variables disabled. The member-level reset rewrites local sibling paths and
+checksum-less local gem versions back to released registry versions with
+`sha256=` checksums. Executed family resets fail if the resulting lockfile still
+contains local path remotes or checksum gaps.
 
 Resume a failed family publish after fixing the failure. Already published
 versions are skipped automatically; `start_step` is passed to `kettle-release`

@@ -712,24 +712,7 @@ module Kettle
       end
 
       def reset_gemfile_lock_command(member)
-        update_gems = reset_gemfile_lock_update_gems(member)
-        return ["bundle", "lock", "--add-checksums"] if update_gems.empty?
-
-        ["bundle", "lock", "--update", *update_gems, "--add-checksums"]
-      end
-
-      def reset_gemfile_lock_update_gems(member)
-        lockfile = File.join(member.root, "Gemfile.lock")
-        return [] unless File.file?(lockfile)
-
-        lockfile_source = File.read(lockfile)
-        checksums = lockfile_checksum_entries(lockfile_source)
-        return [] unless checksums
-
-        lockfile_gem_specs(lockfile_source).filter_map do |name, version|
-          checksum = checksums[[name, version]]
-          name if checksum.nil? || !checksum.include?("sha256=")
-        end.uniq.sort
+        ["bundle", "exec", "kettle-reset", "Gemfile.lock"]
       end
 
       def validate_reset_gemfile_lock(member:, memo:)
@@ -778,7 +761,7 @@ module Kettle
 
       def release_lockfile_local_path_remote_lines(lockfile_source)
         lockfile_source.each_line.with_index(1).filter_map do |line, line_number|
-          line_number if line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+          line_number if line.start_with?("  remote: /", "  remote: .", "  remote: ./", "  remote: ../")
         end
       end
 

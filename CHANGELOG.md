@@ -39,6 +39,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- `kettle-family reset Gemfile.lock` now delegates to each member's
+  `kettle-reset`, keeping lockfile reset semantics aligned with `kettle-release`.
+
 - Explicit `members.roots` lists now remain open to member discovery by default:
   newly discovered gems are included in family operations and reported as
   unlisted until the config is updated. Set `members.discover: false` to operate
