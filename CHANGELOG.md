@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.1.9] - 2026-07-25
+
+- TAG: [v1.1.9][1.1.9t]
+- COVERAGE: 95.23% -- 3197/3357 lines in 25 files
+- BRANCH COVERAGE: 77.20% -- 1192/1544 branches in 25 files
+- 28.16% documented
+
+### Added
+
 - `kettle-family state` now marks mismatched GitHub release tags and reports
   kettle-jem transfer changelog replay lag in a `T📰` column.
 
@@ -34,17 +53,11 @@ Please file a bug if you notice a violation of semantic versioning.
   constants. Managed version specs are removed when `version_gem` is disabled
   or incompatible with the project's runtime Ruby floor.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Monorepo templating now passes a shared Git operation lock to `kettle-jem`,
   allowing template workers to serialize repo-wide Git config/index mutations
   instead of only bootstrap commits.
-
-### Security
 
 ## [1.1.8] - 2026-07-25
 
@@ -1059,7 +1072,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.8...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.9...HEAD
+[1.1.9]: https://github.com/kettle-dev/kettle-family/compare/v1.1.8...v1.1.9
+[1.1.9t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.9
 [1.1.8]: https://github.com/kettle-dev/kettle-family/compare/v1.1.7...v1.1.8
 [1.1.8t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.8
 [1.1.7]: https://github.com/kettle-dev/kettle-family/compare/v1.1.6...v1.1.7

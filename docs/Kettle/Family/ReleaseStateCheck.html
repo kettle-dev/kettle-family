@@ -103,6 +103,22 @@
 </div>
 
 
+  
+    <h2>
+      Constant Summary
+      <small><a href="#" class="constants_summary_toggle">collapse</a></small>
+    </h2>
+
+    <dl class="constants">
+      
+        <dt id="KETTLE_JEM_CONFIG_PATHS-constant" class="">KETTLE_JEM_CONFIG_PATHS =
+          
+        </dt>
+        <dd><pre class="code"><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.structuredmerge/kettle-jem.yml</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.kettle-jem.yml</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
+    </dl>
+  
+
 
 
 
@@ -197,19 +213,21 @@
       <pre class="lines">
 
 
-13
-14
-15
 16
-17</pre>
+17
+18
+19
+20
+21</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 13</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 16</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
   <span class='ivar'>@github_latest_release_by_repo</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='ivar'>@transfer_changelog_lag_by_key</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -238,10 +256,6 @@
       <pre class="lines">
 
 
-19
-20
-21
-22
 23
 24
 25
@@ -250,10 +264,14 @@
 28
 29
 30
-31</pre>
+31
+32
+33
+34
+35</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 19</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 23</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
