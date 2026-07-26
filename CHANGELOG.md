@@ -62,6 +62,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family release secrets now preserve `Kettle::Family::Error` failures when the
+  shared `kettle-dev` provider reports 1Password lookup errors.
+
 - Template summaries now count unique changed files from kettle-jem event
   streams instead of adding duplicate per-phase summary counts.
 - Family release lockfile refreshes now disable the generated local-path

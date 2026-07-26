@@ -10,8 +10,26 @@ module Kettle
   module Family
     module Secrets
       if defined?(Kettle::Dev::ReleaseSecrets)
+        Kettle::Dev.const_set(:Error, Class.new(StandardError)) unless Kettle::Dev.const_defined?(:Error, false)
         Provider = Kettle::Dev::ReleaseSecrets::Provider
-        OnePassword = Kettle::Dev::ReleaseSecrets::OnePassword
+
+        class OnePassword < Kettle::Dev::ReleaseSecrets::OnePassword
+          def self.configured?(name)
+            Kettle::Dev::ReleaseSecrets::OnePassword.configured?(name)
+          end
+
+          def gem_signing_passphrase
+            super
+          rescue StandardError => error
+            raise Error, error.message
+          end
+
+          def rubygems_otp
+            super
+          rescue StandardError => error
+            raise Error, error.message
+          end
+        end
       else
         class Provider
           def gem_signing_passphrase
@@ -104,10 +122,12 @@ module Kettle
       class Factory
         def self.build(config:, override_provider: nil)
           if defined?(Kettle::Dev::ReleaseSecrets)
-            return Kettle::Dev::ReleaseSecrets::Factory.build(
-              provider_name: override_provider,
-              config: config.release_secrets
-            )
+            secrets_config = config.release_secrets
+            provider_name = override_provider.to_s.empty? ? secrets_config.fetch("provider", nil) : override_provider
+            return Provider.new if provider_name.to_s.empty? || provider_name.to_s == "interactive"
+            return OnePassword.new(Kettle::Dev::ReleaseSecrets::Factory.env_config.merge(secrets_config)) if OnePassword.configured?(provider_name)
+
+            raise Error, "unsupported release secrets provider #{provider_name.inspect}"
           end
 
           secrets_config = config.release_secrets
