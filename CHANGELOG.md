@@ -32,6 +32,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Template summaries now count unique changed files from kettle-jem event
+  streams instead of adding duplicate per-phase summary counts.
+
 ### Security
 
 ## [1.1.9] - 2026-07-25

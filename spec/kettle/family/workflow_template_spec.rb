@@ -460,6 +460,57 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
   end
 
+  it "deduplicates changed files from repeated kettle-jem NDJSON summaries" do
+    event_script = [
+      "require 'json';",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_files: ['Gemfile', 'Rakefile'], changed_count: 2);",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_files: ['Gemfile', 'Rakefile', '.yard-lint.yml'], changed_count: 3);",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_files: ['Rakefile', '.yard-lint.yml'], changed_count: 2);"
+    ].join(" ")
+    write_template_config(command: [RbConfig.ruby, "-e", event_script])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    progress = StringIO.new
+
+    described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      execute: true,
+      jobs: 1,
+      progress_io: progress
+    ).results
+
+    expect(progress.string).to include("[alpha] done 3 files changed")
+    expect(progress.string).to include("template summary: 1/1 members ok, 3 files changed")
+    expect(progress.string).not_to include("7 files changed")
+  end
+
+  it "uses the last kettle-jem NDJSON changed count when changed files are unavailable" do
+    event_script = [
+      "require 'json';",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_count: 2);",
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_count: 3);"
+    ].join(" ")
+    write_template_config(command: [RbConfig.ruby, "-e", event_script])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    progress = StringIO.new
+
+    described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      execute: true,
+      jobs: 1,
+      progress_io: progress
+    ).results
+
+    expect(progress.string).to include("[alpha] done 3 files changed")
+    expect(progress.string).to include("template summary: 1/1 members ok, 3 files changed")
+    expect(progress.string).not_to include("5 files changed")
+  end
+
   it "streams kettle-jem NDJSON template events as member progress lines when verbose" do
     event_script = [
       "require 'json';",

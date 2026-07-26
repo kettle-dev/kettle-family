@@ -1413,7 +1413,12 @@ module Kettle
         end
         return nil if summaries.empty?
 
-        summaries.last["changed_count"].to_i
+        changed_files = summaries.flat_map { |event| Array(event["changed_files"] || event[:changed_files]) }
+        changed_files = changed_files.map(&:to_s).reject(&:empty?).uniq
+        return changed_files.length unless changed_files.empty?
+
+        summary = summaries.reverse.find { |event| event.key?("changed_count") }
+        summary&.fetch("changed_count")&.to_i
       end
 
       def normalize_lockfiles(member:, runner:, memo:, phase:)

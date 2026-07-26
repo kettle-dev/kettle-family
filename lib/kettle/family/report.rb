@@ -263,10 +263,15 @@ module Kettle
       end
 
       def template_changed_file_count_from_events(output)
-        summaries = template_events(output).select { |event| event["type"] == "summary" && event.key?("changed_count") }
+        summaries = template_events(output).select { |event| event["type"] == "summary" }
         return nil if summaries.empty?
 
-        summaries.sum { |event| event["changed_count"].to_i }
+        changed_files = summaries.flat_map { |event| Array(event["changed_files"] || event[:changed_files]) }
+        changed_files = changed_files.map(&:to_s).reject(&:empty?).uniq
+        return changed_files.length unless changed_files.empty?
+
+        summary = summaries.reverse.find { |event| event.key?("changed_count") }
+        summary&.fetch("changed_count")&.to_i
       end
 
       def template_events(output)
