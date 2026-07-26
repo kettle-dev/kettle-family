@@ -192,6 +192,10 @@ Monorepo families whose member gems share release metadata from the repository
 root can configure readiness and changelog ownership explicitly:
 
 ```yaml
+family:
+  name: structuredmerge-ruby
+  local_path_env: STRUCTUREDMERGE_DEV
+
 check:
   required_files:
     - Gemfile
@@ -213,10 +217,22 @@ changelog:
 release:
   env:
     KETTLE_DEV_DEV: false
+  disable_local_path_env:
+    - TSLP_DEV
   family_changelog:
     enabled: true
     command: bundle exec kettle-changelog
 ```
+
+`family.local_path_env` names the environment variable that activates local
+path dependencies for this family. It is the family identity used by other
+families when they scan lockfile `PATH` remotes and need to disable local
+resolution before writing CI-facing release lockfiles. Configure it when the
+env name is not the default derived from `family.name`.
+
+`release.disable_local_path_env` is different: it is an extra release-lockfile
+normalization shutoff list for path-injecting env vars that are not themselves
+discoverable as family roots, such as vendored parser/tooling paths.
 
 For `changelog.mode: root`, release commands pass `K_CHANGELOG_GEM_NAME` as the
 configured family name and `K_CHANGELOG_VERSION_FILE` when `version_file` is
