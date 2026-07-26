@@ -562,7 +562,8 @@ module Kettle
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
         start_at = parse_start_at(options[:start_at])
-        members = Discovery.new(config: config).members
+        discovery = Discovery.new(config: config)
+        members = discovery.members
         ordered = if command == "install"
           install_order(members, config)
         elsif %w[metadata release-state].include?(command)
@@ -587,7 +588,8 @@ module Kettle
           member_release_target_branches: member_release_target_branches(command: command, members: selected, config: config, start_at: start_at),
           release_mode: release_mode(command: command, options: options),
           command: command,
-          results: results
+          results: results,
+          warnings: discovery.warnings
         )
       end
 
@@ -745,6 +747,8 @@ module Kettle
         discovered = Discovery.new(config: config).members
         ordered = (command == "install") ? install_order(discovered, config) : Orderer.new(members: discovered, mode: config.order_mode, hints: config.order_hints).ordered
         ordered.select { |member| selected_names.include?(member.name) }
+      rescue Error
+        []
       end
 
       def family_member(config)

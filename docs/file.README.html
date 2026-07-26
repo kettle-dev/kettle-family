@@ -354,16 +354,33 @@ not practical for the current toolchain.</p>
 <p><code>kettle-family</code> reads <code>.kettle-family.yml</code> from the family root by default.<br>
 Use <code>--config PATH</code> to load a different file.</p>
 
-<p>Member discovery is recursive under the configured member roots. Discovery skips<br>
-gemspecs ignored by git and any configured <code>members.exclude</code> glob patterns before<br>
-loading gemspec metadata, so fixture or temporary gemspecs do not create duplicate<br>
-members. Exclude patterns are matched relative to the family root and to each<br>
-member root.</p>
+<p>Member discovery is recursive under the family member search roots. Discovery<br>
+skips gemspecs ignored by git and any configured <code>members.exclude</code> glob patterns<br>
+before loading gemspec metadata, so fixture or temporary gemspecs do not create<br>
+duplicate members. Exclude patterns are matched relative to the family root and<br>
+to each member root.</p>
+
+<p>Use <code>members.roots</code> as the normal configured member list. Each root is a member<br>
+directory with one primary gemspec. When <code>members.roots</code> is present,<br>
+<code>kettle-family</code> still discovers additional matching gems by default, includes<br>
+them in the operative member set, and reports warnings so the config can be<br>
+updated. Set <code>members.discover: false</code> when a family must operate only on the<br>
+configured roots.</p>
+
+<p>Use <code>members.explicit</code> only when the member directory and gemspec cannot be<br>
+resolved by the one-gemspec rule. For example, use it when a member directory has<br>
+multiple gemspecs or the intended gemspec filename does not match the directory.</p>
 
 <pre class="code language-yaml"><code class="language-yaml">family:
   members_root: gems
 
 members:
+  roots:
+    - gems/alpha
+    - gems/beta
+  explicit:
+    - root: gems/compat
+      gemspec: compat-runtime.gemspec
   exclude:
     - &quot;**/tmp/**&quot;
     - &quot;**/vendor/**&quot;
@@ -401,7 +418,11 @@ config when present.</p>
 <p>Monorepo families whose member gems share release metadata from the repository<br>
 root can configure readiness and changelog ownership explicitly:</p>
 
-<pre class="code language-yaml"><code class="language-yaml">check:
+<pre class="code language-yaml"><code class="language-yaml">family:
+  name: structuredmerge-ruby
+  local_path_env: STRUCTUREDMERGE_DEV
+
+check:
   required_files:
     - Gemfile
     - Rakefile
@@ -422,10 +443,22 @@ changelog:
 release:
   env:
     KETTLE_DEV_DEV: false
+  disable_local_path_env:
+    - TSLP_DEV
   family_changelog:
     enabled: true
     command: bundle exec kettle-changelog
 </code></pre>
+
+<p><code>family.local_path_env</code> names the environment variable that activates local<br>
+path dependencies for this family. It is the family identity used by other<br>
+families when they scan lockfile <code>PATH</code> remotes and need to disable local<br>
+resolution before writing CI-facing release lockfiles. Configure it when the<br>
+env name is not the default derived from <code>family.name</code>.</p>
+
+<p><code>release.disable_local_path_env</code> is different: it is an extra release-lockfile<br>
+normalization shutoff list for path-injecting env vars that are not themselves<br>
+discoverable as family roots, such as vendored parser/tooling paths.</p>
 
 <p>For <code>changelog.mode: root</code>, release commands pass <code>K_CHANGELOG_GEM_NAME</code> as the<br>
 configured family name and <code>K_CHANGELOG_VERSION_FILE</code> when <code>version_file</code> is<br>

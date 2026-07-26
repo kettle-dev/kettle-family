@@ -7,14 +7,28 @@ module Kettle
     class Discovery
       def initialize(config:)
         @config = config
+        @warnings = []
       end
 
+      attr_reader :warnings
+
       def members
+        @members ||= build_members
+      end
+
+      private
+
+      attr_reader :config
+
+      def build_members
+        @warnings = []
+        configured = configured_members
         discovered = config.discover_members? ? discover_members : []
-        explicit = explicit_members
         by_name = {}
 
-        (discovered + explicit).each do |member|
+        warn_unlisted_discovered_members(discovered, configured)
+
+        (configured + discovered).each do |member|
           existing = by_name[member.name]
           raise Error, "duplicate family member #{member.name.inspect}" if existing && existing.root != member.root
 
@@ -24,16 +38,20 @@ module Kettle
         by_name.values.sort_by(&:name)
       end
 
-      private
-
-      attr_reader :config
-
       def discover_members
-        gemspecs = config.member_roots.flat_map do |root|
+        gemspecs = config.discover_member_roots.flat_map do |root|
           Dir.glob(File.join(root, "**", "*.gemspec"))
         end
         gemspecs.reject! { |path| excluded_gemspec?(path) }
         gemspecs.map { |path| member_from_gemspec(path) }
+      end
+
+      def configured_members
+        configured_root_members + explicit_members
+      end
+
+      def configured_root_members
+        config.configured_member_roots.map { |root| member_from_gemspec(primary_gemspec(root)) }
       end
 
       def explicit_members
@@ -53,6 +71,26 @@ module Kettle
         return gemspecs.first if gemspecs.one?
 
         raise Error, "multiple gemspecs found in #{root}; configure the member gemspec explicitly"
+      end
+
+      def warn_unlisted_discovered_members(discovered, configured)
+        return unless config.configured_member_roots? || config.explicit_members.any?
+
+        configured_roots = configured.map { |member| normalized_path(member.root) }
+        discovered.each do |member|
+          next if configured_roots.include?(normalized_path(member.root))
+
+          warnings << {
+            "kind" => "unlisted_discovered_member",
+            "member" => member.name,
+            "root" => member.root,
+            "message" => "discovered family member #{member.name} is not listed in members.roots or members.explicit"
+          }
+        end
+      end
+
+      def normalized_path(path)
+        File.expand_path(path)
       end
 
       def member_from_gemspec(path)
@@ -162,7 +200,7 @@ module Kettle
       end
 
       def relative_candidates(path)
-        ([config.root] + config.member_roots).filter_map do |root|
+        ([config.root] + config.member_roots + config.discover_member_roots).uniq.filter_map do |root|
           relative_path(path, root)
         end
       end

@@ -93,6 +93,45 @@ RSpec.describe Kettle::Family::Discovery do
     expect(members.map(&:name)).to eq(["alpha"])
   end
 
+  it "loads configured root members when discovery is disabled" do
+    write_gem("alpha")
+    write_gem("beta")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        discover: false
+        roots:
+          - alpha
+    YAML
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    discovery = described_class.new(config: config)
+
+    expect(discovery.members.map(&:name)).to eq(["alpha"])
+    expect(discovery.warnings).to be_empty
+  end
+
+  it "adds unlisted discovered members and records warnings when roots are configured" do
+    write_gem("alpha")
+    write_gem("beta")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        roots:
+          - alpha
+    YAML
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    discovery = described_class.new(config: config)
+
+    expect(discovery.members.map(&:name)).to eq(%w[alpha beta])
+    expect(discovery.warnings).to contain_exactly(
+      include(
+        "kind" => "unlisted_discovered_member",
+        "member" => "beta",
+        "message" => "discovered family member beta is not listed in members.roots or members.explicit"
+      )
+    )
+  end
+
   it "loads explicit member gemspec paths" do
     root = File.join(@tmpdir, "alpha")
     FileUtils.mkdir_p(root)

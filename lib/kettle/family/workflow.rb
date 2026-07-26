@@ -736,6 +736,8 @@ module Kettle
         discovered = Discovery.new(config: config).members
         ordered = Orderer.new(members: discovered, mode: config.order_mode, hints: config.order_hints).ordered
         ordered.select { |member| selected_names.include?(member.name) }
+      rescue Error
+        []
       end
 
       def member_local_branch_targets?

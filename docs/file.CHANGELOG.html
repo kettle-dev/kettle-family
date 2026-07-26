@@ -96,6 +96,10 @@ before generated docs are refreshed.</p>
 <h3 id="changed">Changed</h3>
 
 <ul>
+  <li>Explicit <code>members.roots</code> lists now remain open to member discovery by default:<br>
+newly discovered gems are included in family operations and reported as<br>
+unlisted until the config is updated. Set <code>members.discover: false</code> to operate<br>
+only on configured members.</li>
   <li>The <code>kettle-family</code> executable startup header is now shown only when<br>
 <code>--verbose</code> is passed; <code>-v</code> and <code>--version</code> still print just the executable<br>
 version and exit.</li>
@@ -117,14 +121,15 @@ of being answered by terminal prompt detection.</li>
 <h3 id="fixed">Fixed</h3>
 
 <ul>
+  <li>Template summaries now count unique changed files from kettle-jem event<br>
+streams instead of adding duplicate per-phase summary counts.</li>
   <li>
-    <p>Template summaries now count unique changed files from kettle-jem event<br>
-streams instead of adding duplicate per-phase summary counts.</p>
+    <p>Family release lockfile refreshes now disable the generated local-path<br>
+toggles used by member Gemfiles, reject lockfile refreshes that still write<br>
+path sources, and re-normalize lockfiles before family-managed release pushes.</p>
   </li>
-  <li>
-    <p>kettle-jem-template-20260726-002 - Generated version files now document their<br>
-version namespace and constants, reducing warning-only YARD lint output.</p>
-  </li>
+  <li>kettle-jem-template-20260726-002 - Generated version files now document their<br>
+version namespace and constants, reducing warning-only YARD lint output.</li>
 </ul>
 
 <h3 id="security">Security</h3>

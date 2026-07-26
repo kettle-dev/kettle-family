@@ -72,8 +72,19 @@ module Kettle
       end
 
       def member_roots
-        configured = fetch_path("members", "roots")
-        return configured.map { |path| File.expand_path(path, root) } if configured
+        return configured_member_roots if configured_member_roots?
+        discover_member_roots
+      end
+
+      def configured_member_roots
+        Array(fetch_path("members", "roots")).map { |path| File.expand_path(path, root) }
+      end
+
+      def configured_member_roots?
+        !fetch_path("members", "roots").nil?
+      end
+
+      def discover_member_roots
         return sibling_member_roots if family_mode == "sibling_repos"
 
         [members_root]

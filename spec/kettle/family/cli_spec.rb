@@ -28,6 +28,26 @@ RSpec.describe Kettle::Family::CLI do
     expect(report.fetch("selected_members")).to eq(["alpha"])
   end
 
+  it "reports unlisted discovered members without excluding them from operation" do
+    write_gem("alpha")
+    write_gem("beta")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        roots:
+          - alpha
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["discover", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    expect(report.fetch("selected_members")).to eq(%w[alpha beta])
+    expect(report.fetch("warnings")).to contain_exactly(
+      include("kind" => "unlisted_discovered_member", "member" => "beta")
+    )
+  end
+
   it "prints a metadata table" do
     write_gem("alpha", license: "MIT", authors: ["Example Author"], required_ruby_version: ">= 3.2")
     out = StringIO.new

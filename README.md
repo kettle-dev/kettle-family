@@ -140,17 +140,34 @@ gem install kettle-family
 `kettle-family` reads `.kettle-family.yml` from the family root by default.
 Use `--config PATH` to load a different file.
 
-Member discovery is recursive under the configured member roots. Discovery skips
-gemspecs ignored by git and any configured `members.exclude` glob patterns before
-loading gemspec metadata, so fixture or temporary gemspecs do not create duplicate
-members. Exclude patterns are matched relative to the family root and to each
-member root.
+Member discovery is recursive under the family member search roots. Discovery
+skips gemspecs ignored by git and any configured `members.exclude` glob patterns
+before loading gemspec metadata, so fixture or temporary gemspecs do not create
+duplicate members. Exclude patterns are matched relative to the family root and
+to each member root.
+
+Use `members.roots` as the normal configured member list. Each root is a member
+directory with one primary gemspec. When `members.roots` is present,
+`kettle-family` still discovers additional matching gems by default, includes
+them in the operative member set, and reports warnings so the config can be
+updated. Set `members.discover: false` when a family must operate only on the
+configured roots.
+
+Use `members.explicit` only when the member directory and gemspec cannot be
+resolved by the one-gemspec rule. For example, use it when a member directory has
+multiple gemspecs or the intended gemspec filename does not match the directory.
 
 ```yaml
 family:
   members_root: gems
 
 members:
+  roots:
+    - gems/alpha
+    - gems/beta
+  explicit:
+    - root: gems/compat
+      gemspec: compat-runtime.gemspec
   exclude:
     - "**/tmp/**"
     - "**/vendor/**"

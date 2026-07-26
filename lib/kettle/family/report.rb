@@ -28,9 +28,9 @@ module Kettle
         up
       ].freeze
 
-      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode
+      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode, :warnings
 
-      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [])
+      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [], warnings: [])
         @family_name = family_name
         @family_mode = family_mode
         @order_mode = order_mode
@@ -43,6 +43,7 @@ module Kettle
         @release_target_branches = release_target_branches
         @member_release_target_branches = member_release_target_branches
         @release_mode = release_mode
+        @warnings = warnings
       end
 
       def to_h
@@ -57,6 +58,7 @@ module Kettle
           "release_target_branches" => release_target_branches,
           "member_release_target_branches" => member_release_target_branches,
           "release_mode" => release_mode,
+          "warnings" => warnings,
           "command" => command,
           "results" => results.map(&:to_h),
           "summary" => summary,
@@ -77,6 +79,7 @@ module Kettle
         lines << "release mode: #{release_mode}" if release_mode
         lines << "release targets: #{release_target_branches.join(", ")}" unless release_target_branches.empty?
         append_member_release_targets(lines)
+        append_warnings(lines)
         lines << "members:"
         selected_names = selected_members.map(&:name)
         members.each do |member|
@@ -94,6 +97,15 @@ module Kettle
       end
 
       private
+
+      def append_warnings(lines)
+        return if warnings.empty?
+
+        lines << "warnings:"
+        warnings.each do |warning|
+          lines << "  #{warning.fetch("message")}"
+        end
+      end
 
       def append_results(lines)
         return append_metadata_results(lines) if command == "metadata"
