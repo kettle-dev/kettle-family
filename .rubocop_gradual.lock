@@ -1,5 +1,5 @@
 {
-  "kettle-family.gemspec:2034091613": [
+  "kettle-family.gemspec:3478307484": [
     [19, 32, 10, "Gemspec/RequiredRubyVersion: `required_ruby_version` and `TargetRubyVersion` (3.2, which may be specified in .rubocop.yml) should be equal.", 3888670706]
   ]
 }
