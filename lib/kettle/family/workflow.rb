@@ -5,7 +5,9 @@ require "json"
 require "net/http"
 require "etc"
 require "open3"
+require "shellwords"
 require "uri"
+require "yaml"
 
 require_relative "workflow_progress"
 
@@ -626,7 +628,7 @@ module Kettle
             member: member,
             phase: "dependency_floor_lockfiles",
             command: dependency_floor_lockfile_command(released_members),
-            env: release_lockfile_env
+            env: release_lockfile_env(member)
           )
           validate_dependency_floor_lockfile_result(result: result, member: member, released_members: released_members) if result.ok?
           annotate_dependency_floor_lockfile_result(result, index + 1)
@@ -651,18 +653,28 @@ module Kettle
         return ["Gemfile.lock was not created by dependency floor lockfile refresh"] unless File.file?(lockfile)
 
         lockfile_source = File.read(lockfile)
-        released_members.filter_map do |released_member|
+        diagnostics = release_lockfile_local_path_remote_lines(lockfile_source).map do |line_number|
+          "Gemfile.lock has local path remote at line #{line_number}"
+        end
+        diagnostics.concat(released_members.filter_map do |released_member|
           checksum_line = checksum_line_for(lockfile_source: lockfile_source, member: released_member)
           if checksum_line.nil?
             "Gemfile.lock CHECKSUMS is missing #{released_member.name} #{released_member.version}"
           elsif !checksum_line.include?("sha256=")
             "Gemfile.lock CHECKSUMS has no sha256 for #{released_member.name} #{released_member.version}"
           end
-        end
+        end)
+        diagnostics
       end
 
       def dependency_floor_lockfile_command(released_members)
         ["bundle", "lock", "--update", *released_members.map(&:name), "--add-checksums"]
+      end
+
+      def release_lockfile_local_path_remote_lines(lockfile_source)
+        lockfile_source.each_line.with_index(1).filter_map do |line, line_number|
+          line_number if line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+        end
       end
 
       def checksum_line_for(lockfile_source:, member:)
@@ -907,10 +919,22 @@ module Kettle
       end
 
       def append_release_git_phases(member:, runner:, memo:)
+        append_pre_push_lockfile_normalization(member: member, runner: runner, memo: memo) if tag || push
+        return if memo.any? && !memo.last.ok?
+
         memo << runner.call(member: member, phase: "release_tag", command: config.release_tag_command) if tag
         return if memo.any? && !memo.last.ok?
 
         memo << runner.call(member: member, phase: "release_push", command: config.release_push_command) if push
+      end
+
+      def append_pre_push_lockfile_normalization(member:, runner:, memo:)
+        return unless normalize_release_lockfiles?(member)
+
+        normalize_release_lockfiles(member: member, runner: runner, memo: memo)
+        return unless memo.last&.ok?
+
+        commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "release", force: true)
       end
 
       def skip_already_released?(member)
@@ -1161,7 +1185,7 @@ module Kettle
       end
 
       def bundle_update_env
-        workflow_env.merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
+        workflow_env.merge(release_lockfile_local_path_env_overrides)
       end
 
       def monorepo_template?
@@ -1517,7 +1541,7 @@ module Kettle
           member: member,
           phase: "release_normalize_lockfiles",
           command: config.release_normalize_lockfiles_command,
-          env: release_lockfile_env
+          env: release_lockfile_env(member)
         )
         memo << result
       end
@@ -1535,19 +1559,98 @@ module Kettle
         end
       end
 
-      def release_lockfile_env
+      def release_lockfile_env(member = nil)
         base_release_env
           .merge(env_overrides)
-          .merge(config.release_disable_local_path_env.to_h { |key| [key, "false"] })
+          .merge(release_lockfile_local_path_env_overrides(member))
       end
 
       def release_allowed_local_path_roots
-        config.release_env.merge(env_overrides).filter_map do |key, value|
+        release_local_path_env_sources.filter_map do |key, value|
           next unless key.end_with?("_LOCAL", "_DEV")
           next if value.to_s.empty? || value.to_s.casecmp("false").zero?
 
           value
         end
+      end
+
+      def release_lockfile_local_path_env_overrides(member = nil)
+        explicit = config.release_disable_local_path_env.to_h { |key| [key.to_s, "false"] }
+        derived = release_local_path_env_sources.each_with_object({}) do |(key, value), memo|
+          key = key.to_s
+          next unless key.end_with?("_LOCAL", "_DEV")
+          next unless local_path_env_value?(value)
+
+          memo[key] = "false"
+        end
+        inferred = member ? release_lockfile_inferred_local_path_env(member).to_h { |key| [key, "false"] } : {}
+        explicit.merge(derived).merge(inferred)
+      end
+
+      def release_lockfile_inferred_local_path_env(member)
+        release_lockfile_local_path_remotes(member).filter_map do |path|
+          root = nearest_kettle_family_root(path)
+          next unless root
+
+          inferred_family_local_path_env_name(root)
+        end.uniq
+      end
+
+      def release_lockfile_local_path_remotes(member)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return [] unless File.file?(lockfile)
+
+        File.readlines(lockfile).filter_map do |line|
+          next unless line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+
+          remote = line.split("remote:", 2).last.to_s.strip
+          expanded = File.expand_path(remote, member.root)
+          File.realpath(expanded)
+        rescue Errno::ENOENT
+          expanded
+        end
+      end
+
+      def nearest_kettle_family_root(path)
+        current = File.directory?(path) ? path : File.dirname(path)
+        loop do
+          return current if File.file?(File.join(current, ".kettle-family.yml"))
+
+          parent = File.dirname(current)
+          return nil if parent == current
+
+          current = parent
+        end
+      end
+
+      def inferred_family_local_path_env_name(root)
+        data = YAML.load_file(File.join(root, ".kettle-family.yml")) || {}
+        family = data.fetch("family", {}) || {}
+        configured = family["local_path_env"]
+        return nil if configured == false
+        return configured.to_s unless configured.to_s.empty?
+
+        name = family["name"].to_s
+        return nil if name.empty?
+
+        "#{name.gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV"
+      rescue Psych::SyntaxError, Errno::ENOENT
+        nil
+      end
+
+      def release_local_path_env_sources
+        ENV.to_h
+          .merge(config.family_local_path_env)
+          .merge(config.release_env)
+          .merge(env_overrides)
+      end
+
+      def local_path_env_value?(value)
+        text = value.to_s.strip
+        return false if text.empty? || text.casecmp("false").zero?
+        return true if text.start_with?("/", "./", "../", "~")
+
+        text.include?(File::SEPARATOR)
       end
 
       def commit_normalized_lockfiles(branch_members:, runner:, memo:, reason: command, force: false)
@@ -1562,7 +1665,8 @@ module Kettle
               "sh",
               "-lc",
               "files=$(git ls-files --modified --others --exclude-standard -- Gemfile.lock '*.lock' '**/*.lock'); " \
-                "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m '🔒️ Normalize lockfiles after templating'; fi"
+                "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m " \
+                "#{Shellwords.escape(normalized_lockfiles_commit_message(reason))}; fi"
             ]
           )
           memo << result
@@ -1578,6 +1682,15 @@ module Kettle
           config.release_normalize_lockfiles?
         else
           false
+        end
+      end
+
+      def normalized_lockfiles_commit_message(reason)
+        case reason
+        when "release"
+          "🔒️ Normalize lockfiles before release"
+        else
+          "🔒️ Normalize lockfiles after templating"
         end
       end
 

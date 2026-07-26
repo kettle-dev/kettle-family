@@ -240,7 +240,7 @@ RSpec.describe Kettle::Family::Config do
 
     expect(config.release_normalize_lockfiles?).to be(true)
     expect(config.release_normalize_lockfiles_command).to eq(%w[bundle update nomono --bundler])
-    expect(config.release_disable_local_path_env).to include(config.family_local_path_env_name, "STRUCTUREDMERGE_DEV", "K_JEM_TEMPLATING")
+    expect(config.release_disable_local_path_env).to be_empty
   end
 
   it "allows release lockfile normalization overrides" do

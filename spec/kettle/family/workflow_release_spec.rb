@@ -403,10 +403,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to start_with("mise", "exec", "-C", member.root, "--", "env")
     expect(results.first.command).to include(
       "#{family_local_env_name}=false",
-      "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
-      "K_JEM_TEMPLATING=false",
-      "STRUCTUREDMERGE_DEV=false",
-      "KETTLE_DEV_DEV=false"
+      "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}"
     )
     expect(results.first.command).not_to include("#{family_local_env_name}=#{@tmpdir}")
     expect(results.first.command.last(4)).to eq(%w[bundle update nomono --bundler])
@@ -438,6 +435,38 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
   end
 
+  it "re-normalizes lockfiles dirtied by release commands before pushing" do
+    write_release_config(
+      build_command: [
+        RbConfig.ruby,
+        "-e",
+        "File.write('Gemfile.lock', \"PATH\\n  remote: #{@tmpdir}/beta\\n\")"
+      ]
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      execute: true,
+      commit: false,
+      push: true,
+      env_overrides: fake_bundle_env
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[
+      check
+      release_changelog
+      release_build
+      release_normalize_lockfiles
+      release_push
+    ])
+    expect(File.read(File.join(member.root, "Gemfile.lock"))).not_to include("PATH")
+    expect(results).to all(be_ok)
+  end
+
   it "forces configured local path envs off during lockfile normalization" do
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],
@@ -462,13 +491,60 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     expect(results.first.command).to include(
-      "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
+      "RUBOCOP_LTS_LOCAL=false",
       "#{family_local_env_name}=false",
       "STRUCTUREDMERGE_DEV=false"
     )
+    expect(results.first.command).not_to include("RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts")
     expect(results.first.command).not_to include("#{family_local_env_name}=/workspace/family")
     expect(results.first.command).not_to include("STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems")
-    expect(results.first.command).to include("KETTLE_DEV_DEV=false")
+  end
+
+  it "does not force non-path local env values off during lockfile normalization" do
+    write_release_config(
+      build_command: [RbConfig.ruby, "-e", "puts 'build'"],
+      template: {
+        "normalize_lockfiles" => true,
+        "normalize_lockfiles_command" => %w[bundle lock]
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      env_overrides: {
+        "SOME_TOOL_LOCAL" => "enabled",
+        "SOME_TOOL_DEV" => "1",
+        "OTHER_TOOL_DEV" => "./vendor/other"
+      }
+    )
+
+    lockfile_env = workflow.send(:release_lockfile_env)
+
+    expect(lockfile_env).to include("OTHER_TOOL_DEV" => "false")
+    expect(lockfile_env).to include("SOME_TOOL_LOCAL" => "enabled", "SOME_TOOL_DEV" => "1")
+  end
+
+  it "infers local path env names from family roots found in lockfile remotes" do
+    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    other_family = File.join(@tmpdir, "families", "ruby-oauth")
+    FileUtils.mkdir_p(File.join(other_family, "oauth2"))
+    File.write(File.join(other_family, ".kettle-family.yml"), <<~YAML)
+      family:
+        name: ruby-oauth
+        local_path_env: RUBY_OAUTH_DEV
+    YAML
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(other_family, "oauth2")}\n")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    lockfile_env = workflow.send(:release_lockfile_env, member)
+
+    expect(lockfile_env).to include("RUBY_OAUTH_DEV" => "false")
   end
 
   it "allows release readiness to use explicitly requested local source roots" do
@@ -491,7 +567,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.find { |result| result.phase == "check" }).to be_ok
   end
 
-  it "rejects implicit family-local lockfile paths during release readiness" do
+  it "allows implicit family-local lockfile paths during release readiness" do
     write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
@@ -500,8 +576,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "release", config: config, members: [member]).results
 
     check_result = results.find { |result| result.phase == "check" }
-    expect(check_result).not_to be_ok
-    expect(check_result.stdout).to include("local path remote")
+    expect(check_result).to be_ok
   end
 
   it "skips already published versions during executed publish releases" do
@@ -1022,6 +1097,40 @@ RSpec.describe Kettle::Family::Workflow do
     expect(lockfile_refresh.command).to eq(%w[bundle lock --update alpha --add-checksums])
     expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 1 attempt(s)")
     expect(workflow).not_to have_received(:sleep)
+  end
+
+  it "rejects dependent lockfile refreshes that still resolve local path sources" do
+    write_release_config(
+      release_env: fake_bundle_env(<<~BASH)
+        cat > Gemfile.lock <<'LOCK'
+        PATH
+          remote: /workspace/family/alpha
+          specs:
+            alpha (1.2.3)
+
+        GEM
+          specs:
+
+        CHECKSUMS
+          alpha (1.2.3) sha256=abc123
+        LOCK
+        exit 0
+      BASH
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).and_return(false)
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
+    expect(lockfile_refresh).not_to be_ok
+    expect(lockfile_refresh.stderr).to include("Gemfile.lock has local path remote at line 2")
   end
 
   it "retries dependent bundle refreshes when Bundler writes empty checksums for just-published floors" do

@@ -56,6 +56,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Template summaries now count unique changed files from kettle-jem event
   streams instead of adding duplicate per-phase summary counts.
+- Family release lockfile refreshes now disable the generated local-path
+  toggles used by member Gemfiles, reject lockfile refreshes that still write
+  path sources, and re-normalize lockfiles before family-managed release pushes.
 
 - kettle-jem-template-20260726-002 - Generated version files now document their
   version namespace and constants, reducing warning-only YARD lint output.

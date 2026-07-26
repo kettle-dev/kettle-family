@@ -219,8 +219,7 @@ module Kettle
       end
 
       def release_disable_local_path_env
-        configured = fetch_path("release", "disable_local_path_env")
-        Array(configured || default_release_disable_local_path_env)
+        Array(fetch_path("release", "disable_local_path_env"))
       end
 
       def install_local_dependencies
@@ -287,20 +286,6 @@ module Kettle
       end
 
       private
-
-      def default_release_disable_local_path_env
-        local_envs = %w[
-          K_JEM_TEMPLATING
-          STRUCTUREDMERGE_DEV
-          TSLP_DEV
-          KETTLE_DEV_DEV
-          RUBOCOP_LTS_DEV
-          PBOLING_DEV
-          GALTZO_FLOSS_DEV
-          UR_BRAIN_DEV
-        ]
-        [family_local_path_env_name, *local_envs].compact
-      end
 
       def expand_config_relative_path(value)
         text = value.to_s
