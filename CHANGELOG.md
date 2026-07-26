@@ -39,6 +39,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Template summaries now count unique changed files from kettle-jem event
   streams instead of adding duplicate per-phase summary counts.
 
+- kettle-jem-template-20260726-002 - Generated version files now document their
+  version namespace and constants, reducing warning-only YARD lint output.
+
 ### Security
 
 ## [1.1.9] - 2026-07-25
