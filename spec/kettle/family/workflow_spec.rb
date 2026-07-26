@@ -77,7 +77,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "reset", reset_target: "Gemfile.lock", config: config, members: [member], commit: false).results
 
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
-    expect(results.first.command).to eq(%w[bundle exec kettle-reset Gemfile.lock])
+    expect(results.first.command).to eq(%w[bundle exec kettle-reset release-lockfiles])
     expect(results.first.skipped).to be(true)
   end
 
@@ -132,7 +132,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
     expect(results.first).to be_ok
-    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("exec kettle-reset Gemfile.lock\nfalse")
+    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("exec kettle-reset release-lockfiles\nfalse")
   end
 
   it "fails Gemfile.lock resets that leave release-invalid lockfiles" do

@@ -712,7 +712,7 @@ module Kettle
       end
 
       def reset_gemfile_lock_command(member)
-        ["bundle", "exec", "kettle-reset", "Gemfile.lock"]
+        ["bundle", "exec", "kettle-reset", "release-lockfiles"]
       end
 
       def validate_reset_gemfile_lock(member:, memo:)
@@ -735,25 +735,35 @@ module Kettle
       end
 
       def reset_gemfile_lock_diagnostics(member)
-        lockfile = File.join(member.root, "Gemfile.lock")
-        return ["Gemfile.lock was not created by reset"] unless File.file?(lockfile)
+        lockfiles = [
+          File.join(member.root, "Gemfile.lock"),
+          File.join(member.root, "Appraisal.root.gemfile.lock")
+        ].select { |lockfile| File.file?(lockfile) }
+        return ["Gemfile.lock was not created by reset"] if lockfiles.empty?
 
+        lockfiles.flat_map do |lockfile|
+          reset_lockfile_diagnostics(lockfile)
+        end
+      end
+
+      def reset_lockfile_diagnostics(lockfile)
+        lockfile_name = File.basename(lockfile)
         lockfile_source = File.read(lockfile)
         diagnostics = release_lockfile_local_path_remote_lines(lockfile_source).map do |line_number|
-          "Gemfile.lock has local path remote at line #{line_number}"
+          "#{lockfile_name} has local path remote at line #{line_number}"
         end
         checksum_entries = lockfile_checksum_entries(lockfile_source)
         if checksum_entries.nil?
-          diagnostics << "Gemfile.lock CHECKSUMS section is missing"
+          diagnostics << "#{lockfile_name} CHECKSUMS section is missing"
           return diagnostics
         end
 
         lockfile_gem_specs(lockfile_source).each do |name, version|
           checksum = checksum_entries[[name, version]]
           if checksum.nil?
-            diagnostics << "Gemfile.lock CHECKSUMS is missing #{name} #{version}"
+            diagnostics << "#{lockfile_name} CHECKSUMS is missing #{name} #{version}"
           elsif !checksum.include?("sha256=")
-            diagnostics << "Gemfile.lock CHECKSUMS has no sha256 for #{name} #{version}"
+            diagnostics << "#{lockfile_name} CHECKSUMS has no sha256 for #{name} #{version}"
           end
         end
         diagnostics
@@ -761,6 +771,8 @@ module Kettle
 
       def release_lockfile_local_path_remote_lines(lockfile_source)
         lockfile_source.each_line.with_index(1).filter_map do |line, line_number|
+          next if line == "  remote: .\n"
+
           line_number if line.start_with?("  remote: /", "  remote: .", "  remote: ./", "  remote: ../")
         end
       end
