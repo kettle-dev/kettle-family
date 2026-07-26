@@ -1059,7 +1059,11 @@ module Kettle
           if command == "template"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
-            env["KETTLE_JEM_GIT_COMMIT_LOCK"] = template_git_commit_lock_path if monorepo_template?
+            if monorepo_template?
+              template_git_lock_path = template_git_commit_lock_path
+              env["KETTLE_JEM_GIT_LOCK"] = template_git_lock_path
+              env["KETTLE_JEM_GIT_COMMIT_LOCK"] = template_git_lock_path
+            end
             corporate_sponsors = config.readme_corporate_sponsors
             unless corporate_sponsors.empty?
               env["KETTLE_JEM_CORPORATE_SPONSORS_JSON"] = JSON.generate(corporate_sponsors)

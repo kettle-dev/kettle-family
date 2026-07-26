@@ -84,7 +84,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(template_command).to include("STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems")
   end
 
-  it "passes a shared git commit lock to monorepo kettle-jem templating" do
+  it "passes a shared git operation lock to monorepo kettle-jem templating" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -92,6 +92,9 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member]).results
 
+    expect(results.fetch(1).command).to include(
+      "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}"
+    )
     expect(results.fetch(1).command).to include(
       "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}"
     )
@@ -281,6 +284,7 @@ RSpec.describe Kettle::Family::Workflow do
         "#{family_local_env_name}=#{@tmpdir}",
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
+        "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "K_JEM_TEMPLATING=true",
         "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",

@@ -34,6 +34,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Monorepo templating now passes a shared Git operation lock to `kettle-jem`,
+  allowing template workers to serialize repo-wide Git config/index mutations
+  instead of only bootstrap commits.
+
 ### Security
 
 ## [1.1.8] - 2026-07-25
