@@ -38,7 +38,8 @@ is, avoiding duplicate release-prep commits after a failure/fix/retry cycle.
 `kettle-release` runs its own `kettle-pre-release` gate for full publish flows;
 options such as `start_step=N` and `--local-ci` pass through, CI failures still
 abort by default, and gem signing passphrases are cached once per family run
-while RubyGems MFA prompts remain interactive.
+while RubyGems MFA prompts remain interactive unless an opt-in release secrets
+provider supplies them.
 
 ## 💡 Info you can shake a stick at
 
@@ -257,6 +258,24 @@ Executed publish runs skip versions that are already published. CI failures
 abort by default; pass `--continue-ci-failures` to set
 `K_RELEASE_CI_CONTINUE=true` for the underlying `kettle-release` process.
 
+Executed publish runs can also use a release secrets provider. The default
+provider is `interactive`. The `1password` provider uses the local `op` CLI and
+expects that `op` is installed, unlocked, and signed in before the release
+starts.
+
+```yaml
+release:
+  secrets:
+    provider: 1password
+    item: Rubygems
+    gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE
+    rubygems_otp_field: one-time password
+```
+
+Use `--secrets-provider 1password` to opt in explicitly for a release run, or
+`--secrets-provider interactive` to force prompts even when the family config
+has a provider configured.
+
 ## 🔧 Basic Usage
 
 Inspect discovery and release plans before executing them:
@@ -270,12 +289,17 @@ Audit changelog release state across the selected family members:
 
 ```console
 kettle-family release-state
+kettle-family state
 ```
 
-The release-state report lists each gem's current `version.rb`, latest published
-release, latest versioned `CHANGELOG.md` section, whether pending changelog work
-exists in either `Unreleased` or an unpublished prepared release section, and
-how many commits the current branch is ahead of the latest release tag.
+`state` is an alias for `release-state`. The release-state report lists each
+gem's current `version.rb`, latest versioned `CHANGELOG.md` section, latest
+published RubyGems release, latest GitHub release tag, transfer-changelog lag,
+whether pending changelog work exists in either `Unreleased` or an unpublished
+prepared release section, and how many commits the current branch is ahead of or
+behind the latest release tag. The version columns are ordered as `V.rb`,
+`V.ch.md`, `V.rel`, and `GH.rel`; `GH.rel` is prefixed with a red circle when it
+does not match `V.rel`.
 
 Use release-state tokens with `--only` to select gems by state instead of by
 name. Multiple tokens are combined with logical AND, so this selects only gems
@@ -295,6 +319,14 @@ The supported release-state tokens are:
 | `unreleased` | The current `version.rb` is not the latest published gem version. |
 | `prepared` | The changelog already has a versioned section for the current `version.rb`. |
 | `pending` | The member has unreleased changelog work or an unpublished prepared release. |
+| `bump` | The member has unreleased changelog work and still needs a version bump. |
+
+When `--only` is omitted, `kettle-family bump` defaults to `--only bump` and
+`kettle-family release` defaults to `--only pending`.
+
+Most commands accept `--json` to print a machine-readable report instead of the
+text report, and `--report PATH` to write that JSON report while still printing
+the normal text report.
 
 Plan or update GitHub Actions workflow SHA pins across the selected family
 members:
@@ -359,6 +391,17 @@ release:
     gem_signing_passphrase_reference: op://Private/Rubygems/GEM-SIGN-PASSPHRASE
     rubygems_otp_reference: op://Private/Rubygems/one-time password?attribute=otp
 ```
+
+If an old failed release left local unpublished versions installed and Bundler
+keeps selecting them, clean selected family members before retrying:
+
+```console
+kettle-family clean-unreleased --execute
+```
+
+The cleanup command compares installed local gem versions with each member's
+latest released version and uninstalls only versions newer than the release
+state reports.
 
 Resume a failed family publish after fixing the failure. Already published
 versions are skipped automatically; `start_step` is passed to `kettle-release`

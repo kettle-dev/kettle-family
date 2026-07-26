@@ -100,7 +100,8 @@ is, avoiding duplicate release-prep commits after a failure/fix/retry cycle.<br>
 <code>kettle-release</code> runs its own <code>kettle-pre-release</code> gate for full publish flows;<br>
 options such as <code>start_step=N</code> and <code>--local-ci</code> pass through, CI failures still<br>
 abort by default, and gem signing passphrases are cached once per family run<br>
-while RubyGems MFA prompts remain interactive.</p>
+while RubyGems MFA prompts remain interactive unless an opt-in release secrets<br>
+provider supplies them.</p>
 
 <h2 id="-info-you-can-shake-a-stick-at">💡 Info you can shake a stick at</h2>
 
@@ -463,6 +464,23 @@ gate already passed or the failure was intentionally handled:</p>
 abort by default; pass <code>--continue-ci-failures</code> to set<br>
 <code>K_RELEASE_CI_CONTINUE=true</code> for the underlying <code>kettle-release</code> process.</p>
 
+<p>Executed publish runs can also use a release secrets provider. The default<br>
+provider is <code>interactive</code>. The <code>1password</code> provider uses the local <code>op</code> CLI and<br>
+expects that <code>op</code> is installed, unlocked, and signed in before the release<br>
+starts.</p>
+
+<pre class="code language-yaml"><code class="language-yaml">release:
+  secrets:
+    provider: 1password
+    item: Rubygems
+    gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE
+    rubygems_otp_field: one-time password
+</code></pre>
+
+<p>Use <code>--secrets-provider 1password</code> to opt in explicitly for a release run, or<br>
+<code>--secrets-provider interactive</code> to force prompts even when the family config<br>
+has a provider configured.</p>
+
 <h2 id="-basic-usage">🔧 Basic Usage</h2>
 
 <p>Inspect discovery and release plans before executing them:</p>
@@ -474,12 +492,17 @@ kettle-family release
 <p>Audit changelog release state across the selected family members:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release-state
+kettle-family state
 </code></pre>
 
-<p>The release-state report lists each gem’s current <code>version.rb</code>, latest published<br>
-release, latest versioned <code>CHANGELOG.md</code> section, whether pending changelog work<br>
-exists in either <code>Unreleased</code> or an unpublished prepared release section, and<br>
-how many commits the current branch is ahead of the latest release tag.</p>
+<p><code>state</code> is an alias for <code>release-state</code>. The release-state report lists each<br>
+gem’s current <code>version.rb</code>, latest versioned <code>CHANGELOG.md</code> section, latest<br>
+published RubyGems release, latest GitHub release tag, transfer-changelog lag,<br>
+whether pending changelog work exists in either <code>Unreleased</code> or an unpublished<br>
+prepared release section, and how many commits the current branch is ahead of or<br>
+behind the latest release tag. The version columns are ordered as <code>V.rb</code>,<br>
+<code>V.ch.md</code>, <code>V.rel</code>, and <code>GH.rel</code>; <code>GH.rel</code> is prefixed with a red circle when it<br>
+does not match <code>V.rel</code>.</p>
 
 <p>Use release-state tokens with <code>--only</code> to select gems by state instead of by<br>
 name. Multiple tokens are combined with logical AND, so this selects only gems<br>
@@ -513,8 +536,19 @@ kettle-family release --execute --only unreleased,pending
       <td><code>pending</code></td>
       <td>The member has unreleased changelog work or an unpublished prepared release.</td>
     </tr>
+    <tr>
+      <td><code>bump</code></td>
+      <td>The member has unreleased changelog work and still needs a version bump.</td>
+    </tr>
   </tbody>
 </table>
+
+<p>When <code>--only</code> is omitted, <code>kettle-family bump</code> defaults to <code>--only bump</code> and<br>
+<code>kettle-family release</code> defaults to <code>--only pending</code>.</p>
+
+<p>Most commands accept <code>--json</code> to print a machine-readable report instead of the<br>
+text report, and <code>--report PATH</code> to write that JSON report while still printing<br>
+the normal text report.</p>
 
 <p>Plan or update GitHub Actions workflow SHA pins across the selected family<br>
 members:</p>
@@ -572,6 +606,16 @@ the OTP path uses <code>op item get ITEM --otp</code>.</p>
     gem_signing_passphrase_reference: op://Private/Rubygems/GEM-SIGN-PASSPHRASE
     rubygems_otp_reference: op://Private/Rubygems/one-time password?attribute=otp
 </code></pre>
+
+<p>If an old failed release left local unpublished versions installed and Bundler<br>
+keeps selecting them, clean selected family members before retrying:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family clean-unreleased --execute
+</code></pre>
+
+<p>The cleanup command compares installed local gem versions with each member’s<br>
+latest released version and uninstalls only versions newer than the release<br>
+state reports.</p>
 
 <p>Resume a failed family publish after fixing the failure. Already published<br>
 versions are skipped automatically; <code>start_step</code> is passed to <code>kettle-release</code><br>
