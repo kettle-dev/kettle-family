@@ -65,6 +65,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("--report")
     expect(out.string).to include("branch-lanes")
     expect(out.string).to include("bump")
+    expect(out.string).to include("clean-unreleased")
     expect(out.string).not_to include("--only")
     expect(out.string).not_to include("--execute")
     expect(out.string).not_to include("--section")

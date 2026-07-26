@@ -20,6 +20,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `kettle-family clean-unreleased` now scans installed versions of selected
+  family gems and can uninstall local versions newer than each gem's latest
+  released version, helping recover from failed local release attempts that
+  leave unpublished gems installed.
+
 - kettle-jem-template-20260726-001 - Projects now include YARD lint
   configuration and documentation dependencies so documentation issues fail
   before generated docs are refreshed.

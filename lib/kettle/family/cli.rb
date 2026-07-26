@@ -10,7 +10,7 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[discover plan report metadata check test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
+      COMMANDS = %w[discover plan report metadata check clean-unreleased test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
       WORKFLOW_COMMANDS = %w[check test lint docs template gha-sha-pins bup bupb bex release push pull sync up].freeze
 
       command_name "kettle-family"
@@ -281,6 +281,12 @@ module Kettle
         description "Run internal read-only readiness checks."
       end
 
+      class CleanUnreleased < WorkflowCommand
+        command_name "clean-unreleased"
+        usage "[options]"
+        description "Uninstall locally installed family gem versions newer than the latest released version."
+      end
+
       class Test < WorkflowCommand
         command_name "test"
         usage "[options]"
@@ -502,6 +508,7 @@ module Kettle
       command "report", ReportCommand
       command Metadata
       command Check
+      command CleanUnreleased
       command Test
       command Lint
       command Docs
@@ -607,6 +614,7 @@ module Kettle
       def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))
         return bump_version_results(members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
+        return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members) if command == "release-state"
         return install_results(config: config, members: members, options: options) if command == "install"
@@ -834,6 +842,10 @@ module Kettle
 
       def branch_lane_results(config:, members:)
         BranchLaneAudit.new(config: config, members: members).results
+      end
+
+      def clean_unreleased_results(config:, members:, options:)
+        UnreleasedGemCleanup.new(config: config, members: members, execute: options[:execute]).results
       end
 
       def install_results(config:, members:, options:)

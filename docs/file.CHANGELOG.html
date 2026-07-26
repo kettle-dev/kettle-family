@@ -74,13 +74,44 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="added">Added</h3>
 
+<ul>
+  <li>
+    <p><code>kettle-family clean-unreleased</code> now scans installed versions of selected<br>
+family gems and can uninstall local versions newer than each gem’s latest<br>
+released version, helping recover from failed local release attempts that<br>
+leave unpublished gems installed.</p>
+  </li>
+  <li>
+    <p>kettle-jem-template-20260726-001 - Projects now include YARD lint<br>
+configuration and documentation dependencies so documentation issues fail<br>
+before generated docs are refreshed.</p>
+  </li>
+</ul>
+
 <h3 id="changed">Changed</h3>
+
+<ul>
+  <li>The <code>kettle-family</code> executable startup header is now shown only when<br>
+<code>--verbose</code> is passed; <code>-v</code> and <code>--version</code> still print just the executable<br>
+version and exit.</li>
+</ul>
 
 <h3 id="deprecated">Deprecated</h3>
 
 <h3 id="removed">Removed</h3>
 
 <h3 id="fixed">Fixed</h3>
+
+<ul>
+  <li>
+    <p>Template summaries now count unique changed files from kettle-jem event<br>
+streams instead of adding duplicate per-phase summary counts.</p>
+  </li>
+  <li>
+    <p>kettle-jem-template-20260726-002 - Generated version files now document their<br>
+version namespace and constants, reducing warning-only YARD lint output.</p>
+  </li>
+</ul>
 
 <h3 id="security">Security</h3>
 
