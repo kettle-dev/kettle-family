@@ -348,7 +348,7 @@ module Kettle
         @transfer_changelog_lag_by_key.fetch(cache_key) do
           @transfer_changelog_lag_by_key[cache_key] = in_process_transfer_changelog_lag(last_entry_key) || external_transfer_changelog_lag(cache_key)
         end
-      rescue StandardError
+      rescue
         nil
       end
 
@@ -356,7 +356,7 @@ module Kettle
         return nil unless load_kettle_jem_transfer_api
 
         normalize_transfer_changelog_lag(::Kettle::Jem.transfer_changelog_lag(last_entry_key))
-      rescue StandardError
+      rescue
         nil
       end
 
