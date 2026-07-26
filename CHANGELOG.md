@@ -44,6 +44,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Release secrets now use the shared `kettle-dev` provider implementation;
   family publish runs cache the signing passphrase once and let child
   `kettle-release` processes fetch RubyGems OTP values directly.
+- Family publish runs now pass `--yes` to child `kettle-release` commands by
+  default, so release-owned confirmation prompts are approved explicitly instead
+  of being answered by terminal prompt detection.
 
 ### Deprecated
 

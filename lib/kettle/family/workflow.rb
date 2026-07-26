@@ -539,7 +539,7 @@ module Kettle
       def release_command_runner
         CommandRunner.new(
           execute: execute,
-          accept: accept,
+          accept: release_command_uses_kettle_release_yes? ? false : accept,
           gem_signing_password: release_command_uses_kettle_release_secrets? ? nil : @gem_signing_password,
           otp_coordinator: release_command_uses_kettle_release_secrets? ? nil : release_otp_coordinator
         )
@@ -815,10 +815,15 @@ module Kettle
         args << "--skip-bundle-audit" if skip_bundle_audit
         args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
         args << "--secrets-provider=1password" if release_command_uses_kettle_release_secrets?
+        args << "--yes" if release_command_uses_kettle_release_yes? && !command_includes_arg?(command, "--yes")
         args << "--events" unless command_includes_arg?(command, "--events")
         return command if args.empty?
 
         command.is_a?(Array) ? [*command, *args] : "#{command} #{args.join(" ")}"
+      end
+
+      def release_command_uses_kettle_release_yes?
+        accept && kettle_release_command?(raw_release_command)
       end
 
       def validate_ci_workflows(value)

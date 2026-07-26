@@ -105,6 +105,9 @@ unreleased-gem cleanup recovery.</li>
   <li>Release secrets now use the shared <code>kettle-dev</code> provider implementation;<br>
 family publish runs cache the signing passphrase once and let child<br>
 <code>kettle-release</code> processes fetch RubyGems OTP values directly.</li>
+  <li>Family publish runs now pass <code>--yes</code> to child <code>kettle-release</code> commands by<br>
+default, so release-owned confirmation prompts are approved explicitly instead<br>
+of being answered by terminal prompt detection.</li>
 </ul>
 
 <h3 id="deprecated">Deprecated</h3>

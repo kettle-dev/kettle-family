@@ -122,7 +122,7 @@ RSpec.describe Kettle::Family::Workflow do
       skip_remotes: "cb"
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --yes --events"])
   end
 
   it "delegates 1Password OTP handling to kettle-release while passing the cached signing passphrase" do
@@ -143,7 +143,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = workflow.results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --yes --events"])
     expect(results.last.command).not_to include("cached-secret")
     expect(results.last.command).not_to include("one-time password")
     release_env = workflow.send(:release_env)
@@ -153,6 +153,22 @@ RSpec.describe Kettle::Family::Workflow do
       "KETTLE_RELEASE_1PASSWORD_ITEM" => "Rubygems",
       "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD" => "one-time password"
     )
+  end
+
+  it "does not pass --yes to kettle-release when accept mode is disabled" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true,
+      accept: false
+    ).results
+
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --events"])
   end
 
   it "rejects unsafe ci workflow subset values before building release commands" do

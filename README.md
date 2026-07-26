@@ -274,10 +274,13 @@ release:
 
 Use `--secrets-provider 1password` to opt in explicitly for a release run, or
 `--secrets-provider interactive` to force prompts even when the family config
-has a provider configured. When publishing through `kettle-release`,
-`kettle-family` loads the signing passphrase once and passes the cached value to
-each child process; `kettle-release` still fetches RubyGems OTP values directly
-from 1Password at prompt time.
+has a provider configured. Family publish runs pass `--yes` to child
+`kettle-release` commands by default, making release confirmation approval
+explicit instead of relying on terminal prompt detection. Pass `--no-accept` to
+leave child release confirmation prompts interactive. When publishing through
+`kettle-release`, `kettle-family` loads the signing passphrase once and passes
+the cached value to each child process; `kettle-release` still fetches RubyGems
+OTP values directly from 1Password at prompt time.
 
 ## 🔧 Basic Usage
 
@@ -362,6 +365,10 @@ and leaves RubyGems MFA prompts interactive by default:
 ```console
 kettle-family release --publish --execute
 ```
+
+By default, family publish runs pass `--yes` to child `kettle-release`
+commands. Use `--no-accept` when you want each child release command to ask its
+own confirmation prompts.
 
 Executed publish runs can opt in to the local 1Password CLI for unattended
 release credentials. The gem signing passphrase is loaded once and cached only

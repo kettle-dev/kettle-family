@@ -1165,7 +1165,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     report = JSON.parse(out.string)
     release = report.fetch("results").find { |result| result.fetch("phase") == "release_publish" }
-    expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --events"])
+    expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --yes --events"])
   end
 
   it "accepts a release secrets provider override" do
