@@ -84,8 +84,8 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="security">Security</h3>
 
-<h2 id="120---2026-07-26">
-<a href="https://github.com/kettle-dev/kettle-family/compare/v1.1.9...v1.2.0">1.2.0</a> - 2026-07-26</h2>
+<h2 id="120---2026-07-27">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v1.1.9...v1.2.0">1.2.0</a> - 2026-07-27</h2>
 
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.0">v1.2.0</a>
@@ -158,6 +158,11 @@ of being answered by terminal prompt detection.</li>
 <h3 id="fixed-1">Fixed</h3>
 
 <ul>
+  <li>
+    <p>Family releases now pass configured 1Password CLI paths through to child<br>
+<code>kettle-release</code> processes and derive direct secret handoff from normalized<br>
+provider config instead of parsing equivalent command-line spellings.</p>
+  </li>
   <li>
     <p>Family release secrets now preserve <code>Kettle::Family::Error</code> failures when the<br>
 shared <code>kettle-dev</code> provider reports 1Password lookup errors.</p>
