@@ -7,23 +7,29 @@ module Kettle
   module Family
     class WorkflowProgress
       MEMBER_WIDTH = 24
-      FORMAT = "%<member>-#{MEMBER_WIDTH}.#{MEMBER_WIDTH}s :events :status"
-      EVENT_WIDTH = 30
+      PROGRESS_WIDTH = 7
+      ELAPSED_WIDTH = 7
+      FORMAT = "%<member>-#{MEMBER_WIDTH}.#{MEMBER_WIDTH}s :progress :duration :events :status"
+      EVENT_WIDTH = 20
       MIN_STATUS_WIDTH = 12
       DEFAULT_TERMINAL_WIDTH = 80
       ELLIPSIS = "..."
 
-      def initialize(io:, label:, total:, jobs:, members: [], enabled: true)
+      def initialize(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil)
         @io = io
         @label = label
         @total = total.to_i
         @jobs = jobs.to_i
+        @clock = clock || lambda { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
         @enabled = enabled && !!io
         @bars = {}
         @line_order = members.map(&:name)
         @started = false
         @stopped = false
         @member_totals = {}
+        @member_counts = Hash.new(0)
+        @member_started_at = {}
+        @member_finished_elapsed = {}
         @member_events = Hash.new("")
         @member_statuses = Hash.new("")
         @mutex = Mutex.new
@@ -48,10 +54,13 @@ module Kettle
 
         synchronize do
           @member_totals[member.name] = total.to_i
+          @member_counts[member.name] = 0
+          @member_started_at[member.name] ||= monotonic_now
+          @member_finished_elapsed.delete(member.name)
           if @tty
             render(member, status: status)
           else
-            write_line("[#{member.name}] > #{status}")
+            write_line(non_tty_line(member, mark: ">", status: status))
           end
         end
       end
@@ -61,11 +70,12 @@ module Kettle
 
         synchronize do
           event_mark = mark || (success ? "." : "F")
+          increment_member_count(member)
           if @tty
             append_event(member, event_mark)
             render(member, status: status)
           else
-            write_line("[#{member.name}] #{event_mark} #{status}")
+            write_line(non_tty_line(member, mark: event_mark, status: status))
           end
         end
       end
@@ -79,7 +89,7 @@ module Kettle
             append_event(member, mark) if mark
             render(member, status: status)
           else
-            write_line("[#{member.name}] #{mark || ">"} #{status}")
+            write_line(non_tty_line(member, mark: mark || ">", status: status))
           end
         end
       end
@@ -88,10 +98,11 @@ module Kettle
         return unless @enabled
 
         synchronize do
+          @member_finished_elapsed[member.name] = elapsed_seconds(member)
           if @tty
             render(member, status: status)
           else
-            write_line("[#{member.name}] #{success ? "done" : "failed"} #{status}")
+            write_line(non_tty_line(member, mark: success ? "done" : "failed", status: status))
           end
         end
       end
@@ -132,15 +143,13 @@ module Kettle
         @member_events[member.name] = (@member_events[member.name] + mark.to_s).chars.last(EVENT_WIDTH).join
       end
 
-      def event_tape(member)
-        @member_events[member.name].rjust(EVENT_WIDTH)
-      end
-
       def render_name(member_name, status:)
         @member_statuses[member_name] = truncate_status(status)
         @line_order << member_name unless @line_order.include?(member_name)
         bar_for(member_name).advance(
           0,
+          progress: progress_text(member_name),
+          duration: elapsed_text(member_name),
           events: @member_events[member_name].rjust(EVENT_WIDTH),
           status: @member_statuses[member_name]
         )
@@ -154,6 +163,53 @@ module Kettle
         "s" unless count == 1
       end
 
+      def non_tty_line(member, mark:, status:)
+        "[#{member.name}] #{progress_text(member.name)} #{elapsed_text(member.name)} #{mark} #{status}"
+      end
+
+      def increment_member_count(member)
+        member_name = member.name
+        total = @member_totals[member_name].to_i
+        @member_counts[member_name] += 1
+        @member_counts[member_name] = total if total.positive? && @member_counts[member_name] > total
+      end
+
+      def progress_text(member_name)
+        count = @member_counts[member_name].to_i
+        total = @member_totals[member_name].to_i
+        denominator = total.positive? ? total.to_s : "*"
+        "(#{count}/#{denominator})".rjust(PROGRESS_WIDTH)
+      end
+
+      def elapsed_text(member_name)
+        format_elapsed(elapsed_seconds_by_name(member_name)).rjust(ELAPSED_WIDTH)
+      end
+
+      def elapsed_seconds(member)
+        elapsed_seconds_by_name(member.name)
+      end
+
+      def elapsed_seconds_by_name(member_name)
+        return @member_finished_elapsed[member_name] if @member_finished_elapsed.key?(member_name)
+
+        started_at = @member_started_at[member_name] || monotonic_now
+        [monotonic_now - started_at, 0].max
+      end
+
+      def format_elapsed(seconds)
+        total_seconds = seconds.to_i
+        hours = total_seconds / 3600
+        minutes = (total_seconds % 3600) / 60
+        remaining_seconds = total_seconds % 60
+        return Kernel.format("%d:%02d:%02d", hours, minutes, remaining_seconds) if hours.positive?
+
+        Kernel.format("%02d:%02d", minutes, remaining_seconds)
+      end
+
+      def monotonic_now
+        @clock.call.to_f
+      end
+
       def truncate_status(status)
         normalized = status.to_s.gsub(/\s+/, " ").strip
         width = status_width
@@ -164,7 +220,7 @@ module Kettle
       end
 
       def status_width
-        [terminal_width - MEMBER_WIDTH - 1 - EVENT_WIDTH - 1, MIN_STATUS_WIDTH].max
+        [terminal_width - MEMBER_WIDTH - 1 - PROGRESS_WIDTH - 1 - ELAPSED_WIDTH - 1 - EVENT_WIDTH - 1, MIN_STATUS_WIDTH].max
       end
 
       def terminal_width

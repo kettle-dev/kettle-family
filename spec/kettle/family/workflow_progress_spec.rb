@@ -34,9 +34,26 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     progress.stop
 
     expect(output.string).to include("alpha")
-    expect(output.string).to include("#{"*" * 30} Gemfile")
+    expect(output.string).to include("#{"*" * 20} Gemfile")
     expect(output.string).to include("1 file changed")
-    expect(output.string).not_to include("#{"*" * 31} Gemfile")
+    expect(output.string).not_to include("#{"*" * 21} Gemfile")
+  end
+
+  it "renders TTY step counters and elapsed member time" do
+    output = StringIO.new
+    now = 10.0
+    allow(output).to receive(:tty?).and_return(true)
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    progress = described_class.new(io: output, label: "templating", total: 1, jobs: 1, clock: -> { now })
+
+    progress.start_member(member, total: 4, status: "prepare_lockfiles")
+    now = 75.0
+    progress.advance(member, status: "prepare_template_dependencies")
+    progress.stop
+
+    expect(output.string).to include("(0/4)")
+    expect(output.string).to include("(1/4)")
+    expect(output.string).to include("01:05")
   end
 
   it "preallocates TTY progress rows in member order" do
@@ -70,17 +87,19 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     progress.update(member, status: long_status, mark: "!")
     progress.stop
 
-    expect(output.string).to include("plugin_lifecy...")
+    expect(output.string).to include("plugin_li...")
     expect(output.string).not_to include(long_status)
   end
 
   it "renders readable non-TTY progress lines without requiring flush" do
     output = progress_output_class.new
     member = instance_double(Kettle::Family::Member, name: "alpha")
-    progress = described_class.new(io: output, label: "releasing", total: 2, jobs: 1)
+    now = 100.0
+    progress = described_class.new(io: output, label: "releasing", total: 2, jobs: 1, clock: -> { now })
 
     progress.start
     progress.start_member(member, total: 1, status: "check")
+    now = 160.0
     progress.advance(member, status: "release_build", success: false)
     progress.update(member, status: "waiting")
     progress.finish_member(member, success: false, status: "release_build")
@@ -89,10 +108,11 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     progress.stop
 
     expect(output.string).to include("releasing 2 members with 1 job:")
-    expect(output.string).to include("[alpha] F release_build")
-    expect(output.string).to include("[alpha] > waiting")
-    expect(output.string).to include("[alpha] failed release_build")
-    expect(output.string).to include("[alpha] done release_build")
+    expect(output.string).to include("[alpha]   (0/1)   00:00 > check")
+    expect(output.string).to include("[alpha]   (1/1)   01:00 F release_build")
+    expect(output.string).to include("[alpha]   (1/1)   01:00 > waiting")
+    expect(output.string).to include("[alpha]   (1/1)   01:00 failed release_build")
+    expect(output.string).to include("[alpha]   (1/1)   01:00 done release_build")
     expect(output.string).to include("release summary: 0/1 members ok")
   end
 

@@ -508,7 +508,9 @@ kettle-family template --execute --only kettle-family
 
 Templating uses `kettle-jem --events` as the default child interface, so
 executed runs stream member-prefixed progress while still keeping the final
-family report. Progress marks include:
+family report. Each member line includes a scheduled family-step counter and a
+per-member elapsed timer. Child `kettle-jem` events can still add progress marks,
+but only completed family steps advance the counter. Progress marks include:
 
 | Mark | Meaning |
 |------|---------|
@@ -523,10 +525,12 @@ Example progress:
 
 ```text
 templating 1 member with 1 job:
-[kettle-family] > recipes
-[kettle-family] * Gemfile
-[kettle-family] * post_apply:git_hooks_executable
-[kettle-family] done 2 files changed
+[kettle-family]   (0/4)   00:00 > prepare_lockfiles
+[kettle-family]   (1/4)   00:01 . prepare_lockfiles
+[kettle-family]   (2/4)   00:05 . prepare_template_dependencies
+[kettle-family]   (3/4)   00:12 . template
+[kettle-family]   (4/4)   00:13 . normalize_lockfiles
+[kettle-family]   (4/4)   00:13 done 2 files changed
 .
 template summary: 1/1 members ok, 2 files changed
 ```

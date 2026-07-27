@@ -39,6 +39,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Templating and release progress rows now show a scheduled family-step counter
+  and per-member elapsed timer, making parallel family runs easier to scan.
+
 - `kettle-family reset Gemfile.lock` now delegates to each member's
   `kettle-reset release-lockfiles`, keeping `Gemfile.lock` and
   `Appraisal.root.gemfile.lock` reset semantics aligned with `kettle-release`.

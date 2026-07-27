@@ -418,10 +418,10 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.count { |result| result.phase == "template" }).to eq(2)
     expect(progress.string).to include("templating 2 members with 2 jobs:")
-    expect(progress.string).to include("[alpha] > prepare_lockfiles")
-    expect(progress.string).to include("[beta] > prepare_lockfiles")
-    expect(progress.string).to include("[alpha] . template")
-    expect(progress.string).to include("[beta] . template")
+    expect(progress.string).to match(/\[alpha\]\s+\(0\/3\)\s+\d{2}:\d{2}\s+>\s+prepare_lockfiles/)
+    expect(progress.string).to match(/\[beta\]\s+\(0\/3\)\s+\d{2}:\d{2}\s+>\s+prepare_lockfiles/)
+    expect(progress.string).to match(/\[alpha\]\s+\(2\/3\)\s+\d{2}:\d{2}\s+\.\s+template/)
+    expect(progress.string).to match(/\[beta\]\s+\(2\/3\)\s+\d{2}:\d{2}\s+\.\s+template/)
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
   end
 
@@ -452,11 +452,11 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.find { |result| result.phase == "template" }.stdout).to include("\"type\":\"recipe\"")
     expect(progress.string).to include("templating 2 members with 2 jobs:")
-    expect(progress.string).to include("[alpha] . template")
+    expect(progress.string).to match(/\[alpha\]\s+\(2\/3\)\s+\d{2}:\d{2}\s+\.\s+template/)
     expect(progress.string).not_to include("[alpha] > recipes")
     expect(progress.string).not_to include("[alpha] * Gemfile")
     expect(progress.string).not_to include("[alpha] ! example warning")
-    expect(progress.string).to include("[alpha] done 1 file changed")
+    expect(progress.string).to match(/\[alpha\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+done\s+1 file changed/)
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
   end
 
@@ -481,7 +481,7 @@ RSpec.describe Kettle::Family::Workflow do
       progress_io: progress
     ).results
 
-    expect(progress.string).to include("[alpha] done 3 files changed")
+    expect(progress.string).to match(/\[alpha\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+done\s+3 files changed/)
     expect(progress.string).to include("template summary: 1/1 members ok, 3 files changed")
     expect(progress.string).not_to include("7 files changed")
   end
@@ -506,7 +506,7 @@ RSpec.describe Kettle::Family::Workflow do
       progress_io: progress
     ).results
 
-    expect(progress.string).to include("[alpha] done 3 files changed")
+    expect(progress.string).to match(/\[alpha\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+done\s+3 files changed/)
     expect(progress.string).to include("template summary: 1/1 members ok, 3 files changed")
     expect(progress.string).not_to include("5 files changed")
   end
@@ -597,9 +597,9 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.find { |result| result.phase == "template" }.stdout).to include("\"type\":\"recipe\"")
     expect(progress.string).to include("templating 1 member with 1 job:")
-    expect(progress.string).to include("[alpha] . template")
+    expect(progress.string).to match(/\[alpha\]\s+\(2\/3\)\s+\d{2}:\d{2}\s+\.\s+template/)
     expect(progress.string).not_to include("[alpha] * Gemfile")
-    expect(progress.string).to include("[alpha] done 1 file changed")
+    expect(progress.string).to match(/\[alpha\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+done\s+1 file changed/)
     expect(progress.string).to include("template summary: 1/1 members ok, 1 file changed")
   end
 

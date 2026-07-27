@@ -221,7 +221,7 @@ module Kettle
       end
 
       def template_results_for_member(member, progress: nil)
-        progress&.start_member(member, total: template_phase_total, status: template_initial_status)
+        progress&.start_member(member, total: template_phase_total(member), status: template_initial_status(member))
         runner = CommandRunner.new(execute: execute, accept: accept)
         [].tap do |memo|
           if config.normalize_lockfiles?
@@ -1401,8 +1401,11 @@ module Kettle
         progress
       end
 
-      def template_phase_total
-        config.normalize_lockfiles? ? 4 : 2
+      def template_phase_total(member = nil)
+        total = 1
+        total += 2 if config.normalize_lockfiles?
+        total += 1 if member.nil? || template_prepares_dependencies?(member)
+        total
       end
 
       def release_phase_total
@@ -1421,8 +1424,16 @@ module Kettle
         end
       end
 
-      def template_initial_status
-        config.normalize_lockfiles? ? "prepare_lockfiles" : "prepare_template_dependencies"
+      def template_initial_status(member = nil)
+        return "prepare_lockfiles" if config.normalize_lockfiles?
+        return "prepare_template_dependencies" if member.nil? || template_prepares_dependencies?(member)
+
+        "template"
+      end
+
+      def template_prepares_dependencies?(member)
+        command_text = config.template_command || default_template_command(member)
+        kettle_jem_template_command?(command_text)
       end
 
       def emit_member_result_progress(member, result, progress:)

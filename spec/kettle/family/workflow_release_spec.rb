@@ -766,8 +766,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
     expect(results.count { |result| result.phase == "release_build" }).to eq(2)
     expect(progress.string).to include("releasing 2 members with 2 jobs:")
-    expect(progress.string).to include("[alpha] . release_build")
-    expect(progress.string).to include("[beta] . release_build")
+    expect(progress.string).to match(/\[alpha\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+\.\s+release_build/)
+    expect(progress.string).to match(/\[beta\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+\.\s+release_build/)
     expect(progress.string).to include("release summary: 2/2 members ok")
   end
 
