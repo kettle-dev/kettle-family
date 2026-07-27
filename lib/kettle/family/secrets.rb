@@ -20,13 +20,13 @@ module Kettle
 
           def gem_signing_passphrase
             super
-          rescue StandardError => error
+          rescue => error
             raise Error, error.message
           end
 
           def rubygems_otp
             super
-          rescue StandardError => error
+          rescue => error
             raise Error, error.message
           end
         end
