@@ -985,7 +985,7 @@ module Kettle
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
         args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
-        args << "--secrets-provider=1password" if release_command_uses_kettle_release_secrets?
+        args << "--secrets-provider=1password" if release_command_uses_kettle_release_secrets? && !command_includes_arg?(command, "--secrets-provider")
         args << "--yes" if release_command_uses_kettle_release_yes? && !command_includes_arg?(command, "--yes")
         args << "--events" unless command_includes_arg?(command, "--events")
         return command if args.empty?
@@ -1036,7 +1036,7 @@ module Kettle
       end
 
       def kettle_release_secrets_env
-        return {} unless release_secrets_provider_one_password?
+        return {} unless release_command_uses_kettle_release_secrets?
 
         secrets_config = config.release_secrets
         env = {
@@ -1046,6 +1046,7 @@ module Kettle
         }
         {
           "account" => "KETTLE_RELEASE_1PASSWORD_ACCOUNT",
+          "cli" => "KETTLE_RELEASE_1PASSWORD_CLI",
           "item" => "KETTLE_RELEASE_1PASSWORD_ITEM",
           "gem_signing_passphrase_field" => "KETTLE_RELEASE_1PASSWORD_GEM_SIGNING_PASSPHRASE_FIELD",
           "rubygems_otp_field" => "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD",
@@ -1060,8 +1061,8 @@ module Kettle
 
       def release_command_uses_kettle_release_secrets?
         kettle_release_supports_direct_secrets? &&
-          release_secrets_provider_one_password? &&
-          kettle_release_command?(raw_release_command)
+          kettle_release_command?(raw_release_command) &&
+          release_secrets_provider_one_password?
       end
 
       def release_secrets_provider_one_password?

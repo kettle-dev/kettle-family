@@ -87,6 +87,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family releases now pass configured 1Password CLI paths through to child
+  `kettle-release` processes and derive direct secret handoff from normalized
+  provider config instead of parsing equivalent command-line spellings.
+
 - Family release secrets now preserve `Kettle::Family::Error` failures when the
   shared `kettle-dev` provider reports 1Password lookup errors.
 

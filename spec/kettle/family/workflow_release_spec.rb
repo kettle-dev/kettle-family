@@ -130,6 +130,7 @@ RSpec.describe Kettle::Family::Workflow do
       publish_command: "bundle exec kettle-release",
       secrets: {
         "provider" => "1password",
+        "cli" => "/opt/1Password/op",
         "item" => "Rubygems",
         "rubygems_otp_field" => "one-time password"
       }
@@ -150,8 +151,35 @@ RSpec.describe Kettle::Family::Workflow do
     expect(release_env).to include(
       "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE" => "cached",
       "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "cached-secret",
+      "KETTLE_RELEASE_1PASSWORD_CLI" => "/opt/1Password/op",
       "KETTLE_RELEASE_1PASSWORD_ITEM" => "Rubygems",
       "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD" => "one-time password"
+    )
+  end
+
+  it "does not duplicate the secrets provider argument when the publish command already includes it" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release --secrets-provider=1password",
+      secrets: {
+        "provider" => "1password",
+        "item" => "Rubygems"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+    workflow.instance_variable_set(:@gem_signing_password, "cached-secret")
+    workflow.instance_variable_set(:@secrets_provider, Kettle::Family::Secrets::OnePassword.new(config.release_secrets))
+    allow(workflow).to receive(:kettle_release_supports_direct_secrets?).and_return(true)
+
+    results = workflow.results
+
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --yes --events"])
+    expect(results.last.command).not_to include("cached-secret")
+    expect(workflow.send(:release_env)).to include(
+      "KETTLE_RELEASE_SECRETS_PROVIDER" => "1password",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE" => "cached",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "cached-secret"
     )
   end
 
