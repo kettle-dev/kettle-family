@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.0] - 2026-07-26
+
+- TAG: [v1.2.0][1.2.0t]
+- COVERAGE: 94.80% -- 3593/3790 lines in 27 files
+- BRANCH COVERAGE: 76.49% -- 1344/1757 branches in 27 files
+- 28.20% documented
+
+### Added
+
 - `kettle-family reset Gemfile.lock` now resets selected member lockfiles with
   local sibling paths disabled and repairs missing checksum entries by updating
   the affected released gems.
@@ -63,10 +82,6 @@ Please file a bug if you notice a violation of semantic versioning.
   default, so release-owned confirmation prompts are approved explicitly instead
   of being answered by terminal prompt detection.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Family release secrets now preserve `Kettle::Family::Error` failures when the
@@ -84,8 +99,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - kettle-jem-template-20260726-003 - Coverage upload steps now treat Coveralls,
   QLTY, and Codecov as optional, so provider outages do not fail CI when local
   coverage thresholds still pass.
-
-### Security
 
 ## [1.1.9] - 2026-07-25
 
@@ -1129,7 +1142,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.1.9...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/kettle-dev/kettle-family/compare/v1.1.9...v1.2.0
+[1.2.0t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.0
 [1.1.9]: https://github.com/kettle-dev/kettle-family/compare/v1.1.8...v1.1.9
 [1.1.9t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.1.9
 [1.1.8]: https://github.com/kettle-dev/kettle-family/compare/v1.1.7...v1.1.8
