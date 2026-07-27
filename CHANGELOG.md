@@ -20,9 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- kettle-jem-template-20260727-001 - Spec harness documentation now lists the
-  RSpec helpers provided by `kettle-test`.
-
 ### Changed
 
 ### Deprecated
@@ -36,8 +33,8 @@ Please file a bug if you notice a violation of semantic versioning.
 ## [1.2.0] - 2026-07-26
 
 - TAG: [v1.2.0][1.2.0t]
-- COVERAGE: 94.80% -- 3593/3790 lines in 27 files
-- BRANCH COVERAGE: 76.49% -- 1344/1757 branches in 27 files
+- COVERAGE: 93.75% -- 3553/3790 lines in 27 files
+- BRANCH COVERAGE: 76.04% -- 1336/1757 branches in 27 files
 - 28.20% documented
 
 ### Added
@@ -58,6 +55,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - kettle-jem-template-20260726-001 - Projects now include YARD lint
   configuration and documentation dependencies so documentation issues fail
   before generated docs are refreshed.
+
+- kettle-jem-template-20260727-001 - Spec harness documentation now lists the
+  RSpec helpers provided by `kettle-test`.
 
 ### Changed
 
