@@ -79,7 +79,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
     expect(results.first.command).to eq(expected_reset_command)
     expect(results.first.command).not_to include("bundle", "exec", "kettle-reset")
-    expect(results.first.command.join("\n")).to include("gem", "install", "kettle-dev", "https://gem.coop")
+    expect(results.first.command.join("\n")).to include("bundler/inline", "gem \"kettle-dev\"", "https://gem.coop")
+    expect(results.first.command.join("\n")).not_to include("gem install")
     expect(results.first.skipped).to be(true)
   end
 

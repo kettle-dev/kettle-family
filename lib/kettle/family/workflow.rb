@@ -79,17 +79,18 @@ module Kettle
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
       RESET_LOCKFILE_HELPER = <<~RUBY
-        begin
-          gem "kettle-dev"
-        rescue Gem::MissingSpecError
-          source = ENV.fetch("KETTLE_FAMILY_RESET_GEM_SOURCE", "https://gem.coop")
-          command = ["gem", "install", "kettle-dev", "--no-document", "--source", source]
-          version = ENV["KETTLE_FAMILY_RESET_KETTLE_DEV_VERSION"].to_s
-          command.concat(["-v", version]) unless version.empty?
-          warn("kettle-family reset: kettle-dev is not installed; installing it from \#{source}.")
-          system(*command) || abort("kettle-family reset: failed to install kettle-dev for lockfile reset")
-          Gem.clear_paths
-          gem "kettle-dev"
+        require "bundler/inline"
+
+        source_url = ENV.fetch("KETTLE_FAMILY_RESET_GEM_SOURCE", "https://gem.coop")
+        kettle_dev_version = ENV["KETTLE_FAMILY_RESET_KETTLE_DEV_VERSION"].to_s
+
+        gemfile(true) do
+          source source_url
+          if kettle_dev_version.empty?
+            gem "kettle-dev"
+          else
+            gem "kettle-dev", kettle_dev_version
+          end
         end
 
         load Gem.bin_path("kettle-dev", "kettle-reset")

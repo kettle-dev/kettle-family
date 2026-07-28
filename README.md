@@ -458,15 +458,13 @@ kettle-family reset Gemfile.lock --execute
 ```
 
 `reset Gemfile.lock` runs each member's `kettle-reset release-lockfiles`
-through an unbundled RubyGems executable launch, with configured, inferred, and
-path-like local `*_DEV`/`*_LOCAL` environment variables disabled. The unbundled
-launch lets reset repair a member even when its current lockfile is too broken
-for `bundle exec` to materialize. If `kettle-dev` is not installed in the
-unbundled RubyGems environment, reset installs the released gem from
-`https://gem.coop` before loading `kettle-reset`. The member-level reset
-rewrites local sibling paths and checksum-less local gem versions back to
-released registry versions with `sha256=` checksums in `Gemfile.lock` and
-`Appraisal.root.gemfile.lock`.
+through an unbundled `bundler/inline` helper, with configured, inferred, and
+path-like local `*_DEV`/`*_LOCAL` environment variables disabled. The helper
+declares its own `kettle-dev` dependency from `https://gem.coop`, so reset can
+repair a member even when its current lockfile is too broken for `bundle exec`
+to materialize. The member-level reset rewrites local sibling paths and
+checksum-less local gem versions back to released registry versions with
+`sha256=` checksums in `Gemfile.lock` and `Appraisal.root.gemfile.lock`.
 Executed family resets fail if the resulting lockfiles still contain sibling
 path remotes or checksum gaps.
 
