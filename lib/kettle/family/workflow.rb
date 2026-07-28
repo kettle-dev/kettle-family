@@ -78,6 +78,22 @@ module Kettle
         "BUNDLE_SILENCE_ROOT_WARNING" => "true",
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
+      RESET_LOCKFILE_HELPER = <<~RUBY.freeze
+        begin
+          gem "kettle-dev"
+        rescue Gem::MissingSpecError
+          source = ENV.fetch("KETTLE_FAMILY_RESET_GEM_SOURCE", "https://gem.coop")
+          command = ["gem", "install", "kettle-dev", "--no-document", "--source", source]
+          version = ENV["KETTLE_FAMILY_RESET_KETTLE_DEV_VERSION"].to_s
+          command.concat(["-v", version]) unless version.empty?
+          warn("kettle-family reset: kettle-dev is not installed; installing it from \#{source}.")
+          system(*command) || abort("kettle-family reset: failed to install kettle-dev for lockfile reset")
+          Gem.clear_paths
+          gem "kettle-dev"
+        end
+
+        load Gem.bin_path("kettle-dev", "kettle-reset")
+      RUBY
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
@@ -713,26 +729,6 @@ module Kettle
       end
 
       def reset_gemfile_lock_command(member)
-        family_gemfile = ENV["BUNDLE_GEMFILE"].to_s
-        if !family_gemfile.empty? && File.file?(family_gemfile)
-          return [
-            "env",
-            "-u",
-            "BUNDLE_BIN_PATH",
-            "-u",
-            "BUNDLE_FROZEN",
-            "-u",
-            "BUNDLER_VERSION",
-            "-u",
-            "RUBYOPT",
-            "BUNDLE_GEMFILE=#{family_gemfile}",
-            "bundle",
-            "exec",
-            "kettle-reset",
-            "release-lockfiles"
-          ]
-        end
-
         [
           "env",
           "-u",
@@ -745,11 +741,15 @@ module Kettle
           "BUNDLER_VERSION",
           "-u",
           "RUBYOPT",
-          RbConfig.ruby,
+          reset_helper_ruby,
           "-e",
-          "gem 'kettle-dev'; load Gem.bin_path('kettle-dev', 'kettle-reset')",
+          RESET_LOCKFILE_HELPER,
           "release-lockfiles"
         ]
+      end
+
+      def reset_helper_ruby
+        env_overrides["KETTLE_FAMILY_RESET_RUBY"].to_s.empty? ? RbConfig.ruby : env_overrides["KETTLE_FAMILY_RESET_RUBY"].to_s
       end
 
       def validate_reset_gemfile_lock(member:, memo:)
