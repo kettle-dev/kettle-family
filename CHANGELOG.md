@@ -22,6 +22,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- GitHub workflows now use the setup-ruby-flash revision that supports
+  appraisal-only setup without installing the main Gemfile bundle.
+
 ### Deprecated
 
 ### Removed
