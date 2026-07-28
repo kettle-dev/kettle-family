@@ -77,25 +77,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "reset", reset_target: "Gemfile.lock", config: config, members: [member], commit: false).results
 
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
-    expect(results.first.command).to eq(
-      [
-        "env",
-        "-u",
-        "BUNDLE_BIN_PATH",
-        "-u",
-        "BUNDLE_FROZEN",
-        "-u",
-        "BUNDLE_GEMFILE",
-        "-u",
-        "BUNDLER_VERSION",
-        "-u",
-        "RUBYOPT",
-        RbConfig.ruby,
-        "-e",
-        "gem 'kettle-dev'; load Gem.bin_path('kettle-dev', 'kettle-reset')",
-        "release-lockfiles"
-      ]
-    )
+    expect(results.first.command).to eq(expected_reset_command)
     expect(results.first.skipped).to be(true)
   end
 
@@ -108,7 +90,7 @@ RSpec.describe Kettle::Family::Workflow do
     FileUtils.mkdir_p(fake_bin)
     File.write(File.join(fake_bin, "bundle"), <<~RUBY)
       #!/usr/bin/env ruby
-      File.write("bundle-reset.txt", [ARGV.join(" "), ENV["KETTLE_DEV_DEV"]].join("\\n"))
+      File.write("bundle-reset.txt", [ARGV.join(" "), ENV["KETTLE_DEV_DEV"], ENV["BUNDLE_GEMFILE"]].join("\\n"))
       File.write("Gemfile.lock", <<~LOCK)
         GEM
           remote: https://gem.coop/
@@ -151,7 +133,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
     expect(results.first).to be_ok
-    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update --add-checksums\nfalse")
+    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("exec kettle-reset release-lockfiles\nfalse\n#{ENV.fetch("BUNDLE_GEMFILE")}")
   end
 
   it "executes Gemfile.lock resets without materializing the broken member bundle" do
@@ -159,7 +141,7 @@ RSpec.describe Kettle::Family::Workflow do
     FileUtils.mkdir_p(fake_bin)
     File.write(File.join(fake_bin, "bundle"), <<~RUBY)
       #!/usr/bin/env ruby
-      File.write("bundle-reset.txt", ARGV.join(" "))
+      File.write("bundle-reset.txt", [ARGV.join(" "), ENV["BUNDLE_GEMFILE"]].join("\\n"))
       File.write("Gemfile.lock", <<~LOCK)
         PATH
           remote: .
@@ -207,7 +189,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
     expect(results.first).to be_ok
-    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update --add-checksums")
+    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("exec kettle-reset release-lockfiles\n#{ENV.fetch("BUNDLE_GEMFILE")}")
   end
 
   it "fails Gemfile.lock resets that leave release-invalid lockfiles" do
@@ -255,9 +237,9 @@ RSpec.describe Kettle::Family::Workflow do
       env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
     ).results
 
-    expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
-    expect(results.first).not_to be_ok
-    expect(results.first.stderr).to include("Gemfile.lock has local path remote")
+    expect(results.map(&:phase)).to eq(%w[reset_gemfile_lock reset_gemfile_lock_readiness])
+    expect(results.last).not_to be_ok
+    expect(results.last.stderr).to include("Gemfile.lock has local path remote")
   end
 
   it "plans GitHub Actions SHA pin writes with the default patch upgrade" do
@@ -429,5 +411,45 @@ RSpec.describe Kettle::Family::Workflow do
       source "https://gem.coop"
       gemspec
     RUBY
+  end
+
+  def expected_reset_command
+    family_gemfile = ENV["BUNDLE_GEMFILE"].to_s
+    if !family_gemfile.empty? && File.file?(family_gemfile)
+      return [
+        "env",
+        "-u",
+        "BUNDLE_BIN_PATH",
+        "-u",
+        "BUNDLE_FROZEN",
+        "-u",
+        "BUNDLER_VERSION",
+        "-u",
+        "RUBYOPT",
+        "BUNDLE_GEMFILE=#{family_gemfile}",
+        "bundle",
+        "exec",
+        "kettle-reset",
+        "release-lockfiles"
+      ]
+    end
+
+    [
+      "env",
+      "-u",
+      "BUNDLE_BIN_PATH",
+      "-u",
+      "BUNDLE_FROZEN",
+      "-u",
+      "BUNDLE_GEMFILE",
+      "-u",
+      "BUNDLER_VERSION",
+      "-u",
+      "RUBYOPT",
+      RbConfig.ruby,
+      "-e",
+      "gem 'kettle-dev'; load Gem.bin_path('kettle-dev', 'kettle-reset')",
+      "release-lockfiles"
+    ]
   end
 end

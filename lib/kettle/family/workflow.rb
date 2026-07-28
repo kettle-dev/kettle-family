@@ -713,6 +713,26 @@ module Kettle
       end
 
       def reset_gemfile_lock_command(member)
+        family_gemfile = ENV["BUNDLE_GEMFILE"].to_s
+        if !family_gemfile.empty? && File.file?(family_gemfile)
+          return [
+            "env",
+            "-u",
+            "BUNDLE_BIN_PATH",
+            "-u",
+            "BUNDLE_FROZEN",
+            "-u",
+            "BUNDLER_VERSION",
+            "-u",
+            "RUBYOPT",
+            "BUNDLE_GEMFILE=#{family_gemfile}",
+            "bundle",
+            "exec",
+            "kettle-reset",
+            "release-lockfiles"
+          ]
+        end
+
         [
           "env",
           "-u",
