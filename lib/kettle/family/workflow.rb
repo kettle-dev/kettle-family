@@ -78,7 +78,7 @@ module Kettle
         "BUNDLE_SILENCE_ROOT_WARNING" => "true",
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES" => "true"
       }.freeze
-      RESET_LOCKFILE_HELPER = <<~RUBY.freeze
+      RESET_LOCKFILE_HELPER = <<~RUBY
         begin
           gem "kettle-dev"
         rescue Gem::MissingSpecError
