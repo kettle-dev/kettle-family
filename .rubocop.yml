@@ -23,6 +23,7 @@ AllCops:
     - docs/**/*
     - examples/**/*
     - fixtures/**/*
+    - gemfiles/vendor/**/*
     - gemfiles/*.gemfile
     - pkg/**/*
     - results/**/*

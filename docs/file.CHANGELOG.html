@@ -150,14 +150,22 @@ unreleased-gem cleanup recovery.</li>
   <li>Release secrets now use the shared <code>kettle-dev</code> provider implementation;<br>
 family publish runs cache the signing passphrase once and let child<br>
 <code>kettle-release</code> processes fetch RubyGems OTP values directly.</li>
-  <li>Family publish runs now pass <code>--yes</code> to child <code>kettle-release</code> commands by<br>
+  <li>
+    <p>Family publish runs now pass <code>--yes</code> to child <code>kettle-release</code> commands by<br>
 default, so release-owned confirmation prompts are approved explicitly instead<br>
-of being answered by terminal prompt detection.</li>
+of being answered by terminal prompt detection.</p>
+  </li>
+  <li>GitHub workflows now use the setup-ruby-flash revision that supports<br>
+appraisal-only setup without installing the main Gemfile bundle.</li>
 </ul>
 
 <h3 id="fixed-1">Fixed</h3>
 
 <ul>
+  <li>
+    <p>RuboCop Gradual now ignores gems installed under <code>gemfiles/vendor/bundle</code>,<br>
+preventing vendored dependency source from being treated as project lint debt.</p>
+  </li>
   <li>
     <p>Family releases now pass configured 1Password CLI paths through to child<br>
 <code>kettle-release</code> processes and derive direct secret handoff from normalized<br>

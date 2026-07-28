@@ -22,9 +22,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- GitHub workflows now use the setup-ruby-flash revision that supports
-  appraisal-only setup without installing the main Gemfile bundle.
-
 ### Deprecated
 
 ### Removed
@@ -88,7 +85,13 @@ Please file a bug if you notice a violation of semantic versioning.
   default, so release-owned confirmation prompts are approved explicitly instead
   of being answered by terminal prompt detection.
 
+- GitHub workflows now use the setup-ruby-flash revision that supports
+  appraisal-only setup without installing the main Gemfile bundle.
+
 ### Fixed
+
+- RuboCop Gradual now ignores gems installed under `gemfiles/vendor/bundle`,
+  preventing vendored dependency source from being treated as project lint debt.
 
 - Family releases now pass configured 1Password CLI paths through to child
   `kettle-release` processes and derive direct secret handoff from normalized
