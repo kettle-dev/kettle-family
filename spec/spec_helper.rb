@@ -21,7 +21,6 @@ end
 # External RSpec & related config
 require "kettle/test/rspec"
 # `kettle/test/rspec` installs harness helpers documented in spec/README.md.
-
 require "kettle/family"
 
 SENSITIVE_ENV_KEYS = %w[

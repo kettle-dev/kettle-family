@@ -22,19 +22,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- kettle-jem-template-20260728-001 - Generated Ruby workflows now use clearer
-  setup-ruby-flash planning and can prepare appraisal-only jobs without
-  installing the main Gemfile bundle.
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
-
-- kettle-jem-template-20260728-002 - Generated RuboCop configs now ignore the
-  same `gemfiles/vendor/bundle` tree as `.gitignore`, so vendored dependency
-  installs are not reported as project lint debt.
 
 ### Security
 
@@ -96,6 +88,10 @@ Please file a bug if you notice a violation of semantic versioning.
 - GitHub workflows now use the setup-ruby-flash revision that supports
   appraisal-only setup without installing the main Gemfile bundle.
 
+- kettle-jem-template-20260728-001 - Generated Ruby workflows now use clearer
+  setup-ruby-flash planning and can prepare appraisal-only jobs without
+  installing the main Gemfile bundle.
+
 ### Fixed
 
 - RuboCop Gradual now ignores gems installed under `gemfiles/vendor/bundle`,
@@ -120,6 +116,10 @@ Please file a bug if you notice a violation of semantic versioning.
 - kettle-jem-template-20260726-003 - Coverage upload steps now treat Coveralls,
   QLTY, and Codecov as optional, so provider outages do not fail CI when local
   coverage thresholds still pass.
+
+- kettle-jem-template-20260728-002 - Generated RuboCop configs now ignore the
+  same `gemfiles/vendor/bundle` tree as `.gitignore`, so vendored dependency
+  installs are not reported as project lint debt.
 
 ## [1.1.9] - 2026-07-25
 

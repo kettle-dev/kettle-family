@@ -155,8 +155,13 @@ family publish runs cache the signing passphrase once and let child<br>
 default, so release-owned confirmation prompts are approved explicitly instead<br>
 of being answered by terminal prompt detection.</p>
   </li>
-  <li>GitHub workflows now use the setup-ruby-flash revision that supports<br>
-appraisal-only setup without installing the main Gemfile bundle.</li>
+  <li>
+    <p>GitHub workflows now use the setup-ruby-flash revision that supports<br>
+appraisal-only setup without installing the main Gemfile bundle.</p>
+  </li>
+  <li>kettle-jem-template-20260728-001 - Generated Ruby workflows now use clearer<br>
+setup-ruby-flash planning and can prepare appraisal-only jobs without<br>
+installing the main Gemfile bundle.</li>
 </ul>
 
 <h3 id="fixed-1">Fixed</h3>
@@ -186,9 +191,14 @@ path sources, and re-normalize lockfiles before family-managed release pushes.</
     <p>kettle-jem-template-20260726-002 - Generated version files now document their<br>
 version namespace and constants, reducing warning-only YARD lint output.</p>
   </li>
-  <li>kettle-jem-template-20260726-003 - Coverage upload steps now treat Coveralls,<br>
+  <li>
+    <p>kettle-jem-template-20260726-003 - Coverage upload steps now treat Coveralls,<br>
 QLTY, and Codecov as optional, so provider outages do not fail CI when local<br>
-coverage thresholds still pass.</li>
+coverage thresholds still pass.</p>
+  </li>
+  <li>kettle-jem-template-20260728-002 - Generated RuboCop configs now ignore the<br>
+same <code>gemfiles/vendor/bundle</code> tree as <code>.gitignore</code>, so vendored dependency<br>
+installs are not reported as project lint debt.</li>
 </ul>
 
 <h2 id="119---2026-07-25">
