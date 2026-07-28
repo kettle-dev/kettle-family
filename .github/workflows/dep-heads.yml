@@ -42,7 +42,7 @@ jobs:
           - ruby: "ruby"
             appraisal: "dep-heads"
             exec_cmd: "kettle-test"
-            # Run directly from the generated appraisal Gemfile so setup-ruby
+            # Run directly from the generated appraisal Gemfile so setup-ruby-flash
             # does not bootstrap Appraisal.root.gemfile against dependency
             # sources before this dep-heads appraisal is selected.
             # This makes gemfiles/dep_heads.gemfile required checked-in output
@@ -61,7 +61,7 @@ jobs:
 
       - name: Setup Ruby & RubyGems
         if: ${{ !env.ACT }}
-        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        uses: appraisal-rb/setup-ruby-flash@e1e8562fd2b806817af56d586cfc06d856bd67bd # setup-ruby-flash main e1e8562
         with:
           ruby-version: ${{ matrix.ruby }}
           rubygems: ${{ matrix.rubygems }}
