@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family reset Gemfile.lock` now launches `kettle-reset` outside each
+  member bundle, so it can repair lockfiles that reference uninstalled
+  unreleased dependency versions.
+
 ### Security
 
 ## [1.2.0] - 2026-07-27

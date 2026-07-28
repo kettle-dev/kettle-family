@@ -5,6 +5,7 @@ require "json"
 require "net/http"
 require "etc"
 require "open3"
+require "rbconfig"
 require "shellwords"
 require "uri"
 require "yaml"
@@ -712,7 +713,23 @@ module Kettle
       end
 
       def reset_gemfile_lock_command(member)
-        ["bundle", "exec", "kettle-reset", "release-lockfiles"]
+        [
+          "env",
+          "-u",
+          "BUNDLE_BIN_PATH",
+          "-u",
+          "BUNDLE_FROZEN",
+          "-u",
+          "BUNDLE_GEMFILE",
+          "-u",
+          "BUNDLER_VERSION",
+          "-u",
+          "RUBYOPT",
+          RbConfig.ruby,
+          "-e",
+          "gem 'kettle-dev'; load Gem.bin_path('kettle-dev', 'kettle-reset')",
+          "release-lockfiles"
+        ]
       end
 
       def validate_reset_gemfile_lock(member:, memo:)
