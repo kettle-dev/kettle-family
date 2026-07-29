@@ -28,13 +28,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.2] - 2026-07-28
+
+- TAG: [v1.2.2][1.2.2t]
+- COVERAGE: 93.87% -- 3569/3802 lines in 27 files
+- BRANCH COVERAGE: 76.29% -- 1345/1763 branches in 27 files
+- 28.10% documented
+
+### Fixed
+
 - `kettle-family template` now runs the `kettle-jem prepare` phase through the
   same member bundle shape as `kettle-jem install`, so local template-stack
   overrides are honored during preparation.
 - Failed template preparation event streams are now summarized instead of being
   dumped raw into the final text report.
-
-### Security
 
 ## [1.2.1] - 2026-07-28
 
@@ -1182,7 +1191,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/kettle-dev/kettle-family/compare/v1.2.1...v1.2.2
+[1.2.2t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.2
 [1.2.1]: https://github.com/kettle-dev/kettle-family/compare/v1.2.0...v1.2.1
 [1.2.1t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.1
 [1.2.0]: https://github.com/kettle-dev/kettle-family/compare/v1.1.9...v1.2.0
