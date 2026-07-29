@@ -244,6 +244,44 @@ RSpec.describe Kettle::Family::Report do
     expect(text).not_to include("\"phase_start\"")
   end
 
+  it "summarizes failed template preparation NDJSON without dumping the raw event stream" do
+    selected_member = member("alpha")
+    stdout = [
+      JSON.generate(event_version: 1, type: "phase_start", phase: "facts", status: "started"),
+      JSON.generate(event_version: 1, type: "diagnostic", message: "cannot load such file -- ast/merge/file_analyzable")
+    ].join("\n")
+    prepare_result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "prepare_template_dependencies",
+      ["bundle", "exec", "kettle-jem", "prepare", "--events"],
+      "/repo/alpha",
+      1,
+      false,
+      stdout,
+      "LoadError: cannot load such file -- ast/merge/file_analyzable\n",
+      1.0,
+      false,
+      "command failed"
+    )
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [selected_member],
+      selected_members: [selected_member],
+      config_path: nil,
+      command: "template",
+      results: [prepare_result]
+    )
+
+    text = report.to_text
+
+    expect(text).to include("diagnostic: cannot load such file -- ast/merge/file_analyzable")
+    expect(text).to include("template event stream omitted from text report")
+    expect(text).to include("LoadError: cannot load such file -- ast/merge/file_analyzable")
+    expect(text).not_to include("\"event_version\"")
+    expect(text).not_to include("\"phase_start\"")
+  end
+
   it "counts unique template changed files across duplicate NDJSON summaries" do
     selected_member = member("alpha")
     stdout = [

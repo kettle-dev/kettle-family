@@ -35,6 +35,21 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["sh", "-lc", "bundle exec rake rubocop_gradual"])
   end
 
+  it "plans template preparation through the member bundle when templating wiring is present" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gemspec
+      eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false") == "true"
+    RUBY
+
+    results = described_class.new(command: "template", config: config, members: [member]).results
+
+    expect(results.first.phase).to eq("prepare_template_dependencies")
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-jem prepare --quiet --events"])
+  end
+
   it "uses gitmoji-valid generated commit subjects" do
     # Commit subjects are embedded in shell command literals, so scan only the
     # generated command source rather than trying to parse shell with Ruby AST.

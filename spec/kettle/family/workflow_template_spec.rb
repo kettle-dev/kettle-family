@@ -187,7 +187,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member]).results
 
     expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle exec kettle-jem prepare --quiet --events"])
     expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --events"])
   end
 
@@ -200,7 +200,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], verbose: true).results
 
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --verbose --events"])
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle exec kettle-jem prepare --verbose --events"])
     expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --verbose --events"])
     expect(results.fetch(1).command.join(" ")).not_to include("--quiet")
     expect(results.fetch(1).command.join(" ")).to include("--events")
@@ -258,7 +258,7 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     expect(results.fetch(1).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(1).command.last(3)).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
+    expect(results.fetch(1).command.last(4)).to eq(["kettle-jem", "prepare", "--quiet", "--events"])
     expect(results.fetch(2).command).to eq(
       [
         "mise",

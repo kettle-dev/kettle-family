@@ -193,7 +193,7 @@ module Kettle
       end
 
       def template_event_stdout?(result)
-        command == "template" && result.phase == "template" && template_events(result.stdout).any?
+        command == "template" && template_events(result.stdout).any?
       end
 
       def release_event_stdout?(result)

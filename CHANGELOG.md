@@ -28,6 +28,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family template` now runs the `kettle-jem prepare` phase through the
+  same member bundle shape as `kettle-jem install`, so local template-stack
+  overrides are honored during preparation.
+- Failed template preparation event streams are now summarized instead of being
+  dumped raw into the final text report.
+
 ### Security
 
 ## [1.2.1] - 2026-07-28

@@ -1305,9 +1305,22 @@ module Kettle
       end
 
       def template_prepare_command(member)
-        command_text = "kettle-jem prepare"
+        command_text = template_prepare_command_from(config.template_command || default_template_command(member))
         command_text = append_template_family_args(command_text)
         append_template_skip_commit(command_text)
+      end
+
+      def template_prepare_command_from(command_text)
+        if command_text.is_a?(Array)
+          argv = command_text.map(&:to_s)
+          index = argv.index("install")
+          return argv unless index
+
+          argv[index] = "prepare"
+          argv
+        else
+          command_text.to_s.sub(/\bkettle-jem\s+install\b/, "kettle-jem prepare")
+        end
       end
 
       def append_template_skip_commit(command_text)
