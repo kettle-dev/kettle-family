@@ -36,6 +36,88 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command).to end_with("--skip-commit")
   end
 
+  it "removes Bundler-reported stale checksum entries and retries pre-template lockfile normalization" do
+    normalize_script = <<~RUBY
+      lockfile = File.read("Gemfile.lock")
+      if lockfile.include?("sha256=bad")
+        warn "Bundler found mismatched checksums. This is a potential security risk."
+        warn "token-resolver (2.0.6)"
+        warn "    from the lockfile CHECKSUMS at Gemfile.lock:9:26"
+        exit 1
+      end
+      File.write("normalized.txt", "ok")
+    RUBY
+    write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = [RbConfig.ruby, "-e", normalize_script]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      GEM
+        remote: https://gem.coop/
+        specs:
+          token-resolver (2.0.6)
+
+      CHECKSUMS
+        rake (13.3.1) sha256=good
+        rspec (3.13.1) sha256=good
+        token-resolver (2.0.6) sha256=bad
+    LOCK
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results.fetch(0).phase).to eq("prepare_lockfiles")
+    expect(results.fetch(0)).to be_ok
+    expect(File.read(File.join(member.root, "Gemfile.lock"))).not_to include("token-resolver (2.0.6) sha256=bad")
+    expect(File.read(File.join(member.root, "normalized.txt"))).to eq("ok")
+  end
+
+  it "updates locked template bootstrap gems before running template preparation for legacy members" do
+    write_template_config(
+      command: "bundle exec kettle-jem install",
+      normalize_lockfiles: true
+    )
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = "bundle update --bundler"
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      GEM
+        remote: https://gem.coop/
+        specs:
+          kettle-dev (2.5.0)
+          nomono (1.1.0)
+    LOCK
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: false).results
+
+    expect(results.fetch(0).phase).to eq("prepare_lockfiles")
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle update nomono kettle-dev --bundler"])
+    expect(results.fetch(3).phase).to eq("normalize_lockfiles")
+    expect(results.fetch(3).command).to eq(["sh", "-lc", "bundle update --bundler"])
+  end
+
+  it "installs the bundle before template preparation when the member has no lockfile" do
+    write_template_config(
+      command: "bundle exec kettle-jem install",
+      normalize_lockfiles: true
+    )
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = "bundle update --bundler"
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: false).results
+
+    expect(results.fetch(0).phase).to eq("prepare_lockfiles")
+    expect(results.fetch(0).command).to eq(%w[bundle install])
+    expect(results.fetch(3).phase).to eq("normalize_lockfiles")
+    expect(results.fetch(3).command).to eq(["sh", "-lc", "bundle update --bundler"])
+  end
+
   it "passes template profile and repository topology environment when executing" do
     write_template_config(
       command: [

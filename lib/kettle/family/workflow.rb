@@ -53,6 +53,7 @@ module Kettle
         ],
         "bupb" => %w[bundle update --bundler]
       }.freeze
+      PRE_TEMPLATE_BOOTSTRAP_GEMS = %w[nomono kettle-dev].freeze
       GIT_SYNC_COMMANDS = {
         "push" => [["push", %w[git push]]],
         "pull" => [["pull", %w[git pull --rebase]]],
@@ -1731,10 +1732,100 @@ module Kettle
         result = runner.call(
           member: member,
           phase: phase,
-          command: config.normalize_lockfiles_command,
+          command: normalize_lockfiles_command(member: member, phase: phase),
           env: workflow_env
         )
+        if template_prepare_lockfiles_phase?(phase) && repair_checksum_mismatches(member, result)
+          result = runner.call(
+            member: member,
+            phase: phase,
+            command: normalize_lockfiles_command(member: member, phase: phase),
+            env: workflow_env
+          )
+        end
         memo << result
+      end
+
+      def normalize_lockfiles_command(member:, phase:)
+        configured = config.normalize_lockfiles_command
+        return configured unless template_prepare_lockfiles_phase?(phase)
+        return %w[bundle install] if bundle_update_command?(configured) && !File.file?(File.join(member.root, "Gemfile.lock"))
+
+        PRE_TEMPLATE_BOOTSTRAP_GEMS.select { |gem_name| member_lockfile_contains_gem?(member, gem_name) }.reduce(configured) do |command_text, gem_name|
+          append_command_arg(command_text, gem_name)
+        end
+      end
+
+      def bundle_update_command?(command_text)
+        argv = command_text.is_a?(Array) ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
+        bundle_index = argv.index("bundle")
+        bundle_index && argv[bundle_index + 1] == "update"
+      rescue ArgumentError
+        false
+      end
+
+      def append_command_arg(command_text, arg)
+        return command_text if normalize_command_includes_arg?(command_text, arg)
+
+        argv = command_text.is_a?(Array) ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
+        update_index = argv.index("update")
+        if update_index
+          option_index = argv[(update_index + 1)..]&.index { |token| token.start_with?("-") }
+          insert_index = option_index ? update_index + 1 + option_index : argv.length
+          argv.insert(insert_index, arg)
+        else
+          argv << arg
+        end
+        return argv if command_text.is_a?(Array)
+
+        argv.shelljoin
+      rescue ArgumentError
+        "#{command_text} #{Shellwords.escape(arg)}"
+      end
+
+      def normalize_command_includes_arg?(command_text, arg)
+        argv = if command_text.is_a?(Array)
+          command_text.map(&:to_s)
+        else
+          Shellwords.split(command_text.to_s)
+        end
+        argv.include?(arg)
+      rescue ArgumentError
+        false
+      end
+
+      def member_lockfile_contains_gem?(member, gem_name)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return false unless File.file?(lockfile)
+
+        File.readlines(lockfile).any? { |line| line.match?(/\A    #{Regexp.escape(gem_name)} \(/) }
+      end
+
+      def template_prepare_lockfiles_phase?(phase)
+        command == "template" && phase == "prepare_lockfiles"
+      end
+
+      def repair_checksum_mismatches(member, result)
+        return false unless execute
+        return false if result.ok?
+
+        line_numbers = checksum_mismatch_lockfile_lines(result.stderr)
+        return false if line_numbers.empty?
+
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return false unless File.file?(lockfile)
+
+        lines = File.readlines(lockfile)
+        line_numbers.sort.reverse_each do |line_number|
+          index = line_number - 1
+          lines.delete_at(index) if index >= 0 && index < lines.length
+        end
+        File.write(lockfile, lines.join)
+        true
+      end
+
+      def checksum_mismatch_lockfile_lines(output)
+        output.to_s.scan(/from the lockfile CHECKSUMS at Gemfile\.lock:(\d+):\d+/).flatten.map(&:to_i).uniq
       end
 
       def prepare_template_dependencies(member:, runner:, memo:)

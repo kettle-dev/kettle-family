@@ -28,6 +28,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family template` now removes Bundler-reported stale CHECKSUMS entries
+  and retries pre-template lockfile normalization, allowing templating to
+  recover from local pre-release checksum drift.
+- `kettle-family template` now includes locked template bootstrap gems such as
+  `nomono` and `kettle-dev` in pre-template lockfile normalization so legacy
+  members can boot current `kettle-jem` preparation before their generated
+  templating gemfiles have been refreshed.
+- `kettle-family template` now uses `bundle install` for pre-template lockfile
+  preparation when a member has no `Gemfile.lock`, instead of running a
+  `bundle update` command before the bundle exists.
+
 ### Security
 
 ## [1.2.2] - 2026-07-28
