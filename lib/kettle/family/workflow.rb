@@ -265,6 +265,8 @@ module Kettle
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles")
           emit_member_result_progress(member, memo.last, progress: progress)
+          commit_template_changes(member: member, runner: runner, memo: memo)
+          emit_member_result_progress(member, memo.last, progress: progress) if memo.last&.phase == "commit_template"
         ensure
           template_result = memo.find { |result| result.phase == "template" } || memo.last
           if template_result
@@ -1348,12 +1350,21 @@ module Kettle
       end
 
       def append_template_skip_commit(command_text)
-        return command_text if commit
+        return command_text unless template_skip_commit?(command_text)
         return command_text if command_text.is_a?(Array) && command_text.include?("--skip-commit")
         return [*command_text, "--skip-commit"] if command_text.is_a?(Array)
         return command_text if command_text.include?("--skip-commit")
 
         "#{command_text} --skip-commit"
+      end
+
+      def template_skip_commit?(command_text)
+        !commit || deferred_monorepo_template_commit?(command_text: command_text)
+      end
+
+      def deferred_monorepo_template_commit?(member = nil, command_text: nil)
+        command_text ||= config.template_command || (member ? default_template_command(member) : DEFAULT_COMMANDS.fetch("template"))
+        execute && commit && monorepo_template? && kettle_jem_template_command?(command_text)
       end
 
       def default_template_command(member)
@@ -1481,6 +1492,7 @@ module Kettle
         total = 1
         total += 2 if config.normalize_lockfiles?
         total += 1 if member.nil? || template_prepares_dependencies?(member)
+        total += 1 if deferred_monorepo_template_commit?(member)
         total
       end
 
@@ -1863,6 +1875,35 @@ module Kettle
         )
         memo << result
         result.ok?
+      end
+
+      def commit_template_changes(member:, runner:, memo:)
+        return unless deferred_monorepo_template_commit?(member)
+        return unless memo.all?(&:ok?)
+
+        synchronize_template_commit do
+          memo << runner.call(
+            member: member,
+            phase: "commit_template",
+            command: [
+              "sh",
+              "-lc",
+              "if [ -n \"$(git status --porcelain -- .)\" ]; then " \
+                "git add -A -- . && git commit -m #{Shellwords.escape(template_commit_message(member))}; " \
+                "fi"
+            ],
+            env: workflow_env
+          )
+        end
+      end
+
+      def template_commit_message(member)
+        "🎨 Template #{member.name} by kettle-family"
+      end
+
+      def synchronize_template_commit(&block)
+        @template_commit_mutex ||= Mutex.new
+        @template_commit_mutex.synchronize(&block)
       end
 
       def template_prepare_env

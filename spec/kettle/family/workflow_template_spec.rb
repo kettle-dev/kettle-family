@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "open3"
+require "shellwords"
 require "tmpdir"
 require "yaml"
 
@@ -34,6 +36,78 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles])
     expect(results.fetch(1).command).to end_with("--skip-commit")
+  end
+
+  it "defers kettle-jem bootstrap commits during executed monorepo templating" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+
+    expect(workflow.send(:template_command, member)).to eq(%w[bundle exec kettle-jem install --quiet --events --skip-commit])
+    expect(workflow.send(:template_prepare_command, member)).to eq(%w[bundle exec kettle-jem prepare --quiet --events --skip-commit])
+  end
+
+  it "serializes deferred monorepo template commits with member-scoped pathspecs" do
+    write_template_config(
+      command: [RbConfig.ruby, "-e", "File.write('templated.txt', File.basename(Dir.pwd))"],
+      normalize_lockfiles: false
+    )
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["command"] = "bundle exec kettle-jem install"
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    initialize_git_repo(@tmpdir, branches: [])
+    commands = Queue.new
+    runner = lambda do |command, chdir:, env:, quiet:|
+      command_text = Array(command).join(" ")
+      if command_text.include?("kettle-jem prepare") && command_text.include?("--skip-commit")
+        {success: true, exitstatus: 0, stdout: "", stderr: ""}
+      elsif command_text.include?("kettle-jem install") && command_text.include?("--skip-commit")
+        File.write(File.join(chdir, "templated.txt"), File.basename(chdir))
+        {success: true, exitstatus: 0, stdout: "", stderr: ""}
+      else
+        commands << command
+        stdout, stderr, status = Open3.capture3(*command, chdir: chdir)
+        {success: status.success?, exitstatus: status.exitstatus, stdout: stdout, stderr: stderr}
+      end
+    end
+    allow_any_instance_of(Kettle::Family::CommandRunner).to receive(:call) do |_instance, member:, phase:, command:, env: {}, **_args|
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      result = runner.call(command, chdir: member.root, env: env, quiet: true)
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        result.fetch(:exitstatus),
+        result.fetch(:success),
+        result.fetch(:stdout),
+        result.fetch(:stderr),
+        (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).round(3),
+        false,
+        result.fetch(:success) ? nil : "command failed"
+      )
+    end
+
+    results = described_class.new(command: "template", config: config, members: [alpha, beta], execute: true, jobs: 2).results
+
+    expect(results).to all(be_ok)
+    expect(results.map(&:phase)).to eq(%w[prepare_template_dependencies template commit_template prepare_template_dependencies template commit_template])
+    expect(commands.size).to eq(2)
+    commands.size.times do
+      command = commands.pop
+      expect(command[0, 2]).to eq(["sh", "-lc"])
+      expect(command.fetch(2)).to include("git status --porcelain -- .")
+      expect(command.fetch(2)).to include("git add -A -- .")
+      expect(command.fetch(2)).to match(/git commit -m .*Template\\ (alpha|beta)\\ by\\ kettle-family/)
+    end
+    expect(`git -C #{Shellwords.escape(@tmpdir)} status --short`).to eq("")
+    log = `git -C #{Shellwords.escape(@tmpdir)} log --format=%s`
+    expect(log).to include("🎨 Template alpha by kettle-family")
+    expect(log).to include("🎨 Template beta by kettle-family")
   end
 
   it "removes Bundler-reported stale checksum entries and retries pre-template lockfile normalization" do

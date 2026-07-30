@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family template` now defers `kettle-jem` bootstrap commits for
+  executed monorepo templating and runs a serialized member-scoped
+  `commit_template` phase, avoiding parallel `.git/index.lock` races when many
+  members share one Git repository.
+
 ### Security
 
 ## [1.2.4] - 2026-07-29
