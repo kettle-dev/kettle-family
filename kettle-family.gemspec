@@ -51,12 +51,15 @@ Gem::Specification.new do |spec|
   relative_package_path = lambda do |path|
     path.delete_prefix("#{gemspec_root}/")
   end
-  enumerate_package_files = lambda do |root|
-    Dir.glob(File.join(gemspec_root, root, "**", "*"), File::FNM_DOTMATCH).filter_map do |path|
+  enumerate_package_glob = lambda do |glob|
+    Dir.glob(glob, File::FNM_DOTMATCH).filter_map do |path|
       next unless File.file?(path) && ![".", ".."].include?(File.basename(path))
 
       relative_package_path.call(path)
     end
+  end
+  enumerate_package_files = lambda do |root|
+    enumerate_package_glob.call(File.join(gemspec_root, root, "**", "*"))
   end
   package_metadata_files = %w[
     CHANGELOG.md
