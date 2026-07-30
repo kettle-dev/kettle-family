@@ -1945,7 +1945,8 @@ module Kettle
       def release_allowed_local_path_roots
         release_local_path_env_sources.filter_map do |key, value|
           next unless key.end_with?("_LOCAL", "_DEV")
-          next if value.to_s.empty? || value.to_s.casecmp("false").zero?
+          next unless local_path_env_value?(value)
+          next unless value.to_s.strip.start_with?("/", "./", "../", "~")
 
           value
         end
@@ -2025,6 +2026,7 @@ module Kettle
       def local_path_env_value?(value)
         text = value.to_s.strip
         return false if text.empty? || text.casecmp("false").zero?
+        return true if %w[true yes 1 on enabled].include?(text.downcase)
         return true if text.start_with?("/", "./", "../", "~")
 
         text.include?(File::SEPARATOR)

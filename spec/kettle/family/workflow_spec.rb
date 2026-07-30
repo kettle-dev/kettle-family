@@ -304,9 +304,32 @@ RSpec.describe Kettle::Family::Workflow do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
 
-    results = described_class.new(command: "bup", config: config, members: [member]).results
+    workflow = described_class.new(
+      command: "bup",
+      config: config,
+      members: [member],
+      env_overrides: {"KETTLE_DEV_DEV" => "true"}
+    )
 
-    expect(results.first.command).to include("KETTLE_DEV_DEV=false")
+    expect(workflow.send(:bundle_update_env).fetch("KETTLE_DEV_DEV")).to eq("false")
+  end
+
+  it "plans bundler updates with local path environments disabled" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        local_path_env: KETTLE_DEV_DEV
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    workflow = described_class.new(
+      command: "bupb",
+      config: config,
+      members: [member],
+      env_overrides: {"KETTLE_DEV_DEV" => "yes"}
+    )
+
+    expect(workflow.send(:bundle_update_env).fetch("KETTLE_DEV_DEV")).to eq("false")
   end
 
   it "does not commit bundle updates that produce local path lockfile remotes" do

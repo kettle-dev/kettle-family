@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family bup`, `bupb`, and release lockfile handling now treat truthy
+  `*_DEV` and `*_LOCAL` environment values as local path dependency mode, so
+  family local path envs such as `STRUCTUREDMERGE_DEV=true` are disabled for
+  release-style bundle refreshes.
+
 ### Security
 
 ## [1.2.6] - 2026-07-29

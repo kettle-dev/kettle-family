@@ -582,7 +582,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).not_to include("STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems")
   end
 
-  it "does not force non-path local env values off during lockfile normalization" do
+  it "forces truthy local path toggles off during lockfile normalization" do
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],
       template: {
@@ -607,7 +607,27 @@ RSpec.describe Kettle::Family::Workflow do
     lockfile_env = workflow.send(:release_lockfile_env)
 
     expect(lockfile_env).to include("OTHER_TOOL_DEV" => "false")
-    expect(lockfile_env).to include("SOME_TOOL_LOCAL" => "enabled", "SOME_TOOL_DEV" => "1")
+    expect(lockfile_env).to include("SOME_TOOL_LOCAL" => "false", "SOME_TOOL_DEV" => "false")
+  end
+
+  it "keeps truthy local path toggles out of release readiness path roots" do
+    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    local_root = File.join(@tmpdir, "rubocop-lts")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [ready_member("alpha")],
+      env_overrides: {
+        "SOME_TOOL_LOCAL" => "enabled",
+        "SOME_TOOL_DEV" => "1",
+        "OTHER_TOOL_DEV" => local_root
+      }
+    )
+
+    roots = workflow.send(:release_allowed_local_path_roots)
+    expect(roots).to include(local_root)
+    expect(roots).not_to include("enabled", "1")
   end
 
   it "infers local path env names from family roots found in lockfile remotes" do
