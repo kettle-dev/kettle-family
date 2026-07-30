@@ -132,6 +132,7 @@ module Kettle
         @bex_args = bex_args
         @start_member = start_member
         @start_branch = start_branch
+        @template_commit_mutex = Mutex.new
       end
 
       def results
@@ -1902,7 +1903,6 @@ module Kettle
       end
 
       def synchronize_template_commit(&block)
-        @template_commit_mutex ||= Mutex.new
         @template_commit_mutex.synchronize(&block)
       end
 

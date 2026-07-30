@@ -110,6 +110,38 @@ RSpec.describe Kettle::Family::Workflow do
     expect(log).to include("🎨 Template beta by kettle-family")
   end
 
+  it "initializes the template commit mutex before worker threads can race" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [member_at("alpha")], execute: true)
+
+    expect(workflow.instance_variable_get(:@template_commit_mutex)).to be_a(Mutex)
+
+    active = 0
+    max_active = 0
+    state_mutex = Mutex.new
+    start_queue = Queue.new
+    # rubocop:disable ThreadSafety/NewThread -- the race regression requires concurrent callers.
+    threads = Array.new(8) do
+      Thread.new do
+        start_queue.pop
+        workflow.send(:synchronize_template_commit) do
+          state_mutex.synchronize do
+            active += 1
+            max_active = [max_active, active].max
+          end
+          sleep 0.01
+          state_mutex.synchronize { active -= 1 }
+        end
+      end
+    end
+    # rubocop:enable ThreadSafety/NewThread
+    threads.length.times { start_queue << true }
+    threads.each(&:join)
+
+    expect(max_active).to eq(1)
+  end
+
   it "removes Bundler-reported stale checksum entries and retries pre-template lockfile normalization" do
     normalize_script = <<~RUBY
       lockfile = File.read("Gemfile.lock")
