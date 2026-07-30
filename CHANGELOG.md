@@ -20,15 +20,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- kettle-jem-template-20260729-005 - Gemspec metadata now publishes this
-  project's RubyForum tag as `mailing_list_uri`, and support docs link to the
-  tagged RubyForum community alongside Discord.
-
 ### Changed
 
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.4] - 2026-07-29
+
+- TAG: [v1.2.4][1.2.4t]
+- COVERAGE: 93.92% -- 3629/3864 lines in 27 files
+- BRANCH COVERAGE: 76.22% -- 1378/1808 branches in 27 files
+- 28.01% documented
+
+### Added
+
+- kettle-jem-template-20260729-005 - Gemspec metadata now publishes this
+  project's RubyForum tag as `mailing_list_uri`, and support docs link to the
+  tagged RubyForum community alongside Discord.
 
 ### Fixed
 
@@ -56,8 +69,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - kettle-jem-template-20260729-003 - Old-Ruby gems below the VersionGem runtime
   floor now get managed minimal `version.rb` files and anonymous-loader version
   specs without adding `version_gem`.
-
-### Security
 
 ## [1.2.3] - 2026-07-28
 
@@ -1240,7 +1251,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.3...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.4...HEAD
+[1.2.4]: https://github.com/kettle-dev/kettle-family/compare/v1.2.3...v1.2.4
+[1.2.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.4
 [1.2.3]: https://github.com/kettle-dev/kettle-family/compare/v1.2.2...v1.2.3
 [1.2.3t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.3
 [1.2.2]: https://github.com/kettle-dev/kettle-family/compare/v1.2.1...v1.2.2
