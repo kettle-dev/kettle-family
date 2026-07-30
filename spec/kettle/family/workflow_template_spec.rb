@@ -48,6 +48,44 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:template_prepare_command, member)).to eq(%w[bundle exec kettle-jem prepare --quiet --events --skip-commit])
   end
 
+  it "runs the local kettle-jem executable directly when templating from a local StructuredMerge stack" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
+    local_stack = File.join(@tmpdir, "gems")
+    local_exe = File.join(local_stack, "kettle-jem", "exe", "kettle-jem")
+    FileUtils.mkdir_p(File.dirname(local_exe))
+    File.write(local_exe, "#!/usr/bin/env ruby\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    workflow = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      execute: true,
+      env_overrides: {"STRUCTUREDMERGE_DEV" => local_stack}
+    )
+
+    expect(workflow.send(:template_command, member)).to eq([
+      "bundle",
+      "exec",
+      RbConfig.ruby,
+      local_exe,
+      "install",
+      "--quiet",
+      "--events",
+      "--skip-commit"
+    ])
+    expect(workflow.send(:template_prepare_command, member)).to eq([
+      "bundle",
+      "exec",
+      RbConfig.ruby,
+      local_exe,
+      "prepare",
+      "--quiet",
+      "--events",
+      "--skip-commit"
+    ])
+  end
+
   it "serializes deferred monorepo template commits with member-scoped pathspecs" do
     write_template_config(
       command: [RbConfig.ruby, "-e", "File.write('templated.txt', File.basename(Dir.pwd))"],

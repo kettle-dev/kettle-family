@@ -39,6 +39,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Monorepo `kettle-family template` now runs local `kettle-jem` through its
+  checked-out `exe/kettle-jem` when `STRUCTUREDMERGE_DEV` points at a local
+  stack, avoiding transient RubyGems executable wrapper failures during highly
+  parallel templating.
+- Deferred monorepo template commits now hold the same shared Git operation lock
+  passed to `kettle-jem`, preventing `.git/index.lock` races with member
+  templating Git preflight checks.
 - `kettle-family bup` and `bupb` now disable family local-path envs even when
   `release.env` already sets those keys to false, avoiding leaked monorepo roots
   such as `STRUCTUREDMERGE_DEV=/path/to/family/root` during bundle updates.

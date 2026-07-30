@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "io/console"
+require "fileutils"
 require "json"
 require "net/http"
 require "etc"
@@ -1327,12 +1328,14 @@ module Kettle
 
       def template_command(member)
         command_text = config.template_command || default_template_command(member)
+        command_text = localize_kettle_jem_template_command(command_text)
         command_text = append_template_family_args(command_text) if kettle_jem_template_command?(command_text)
         append_template_skip_commit(command_text)
       end
 
       def template_prepare_command(member)
         command_text = template_prepare_command_from(config.template_command || default_template_command(member))
+        command_text = localize_kettle_jem_template_command(command_text)
         command_text = append_template_family_args(command_text)
         append_template_skip_commit(command_text)
       end
@@ -1451,7 +1454,47 @@ module Kettle
       end
 
       def kettle_jem_template_command?(command_text)
-        command_text.is_a?(Array) ? command_text.map(&:to_s).include?("kettle-jem") : command_text.to_s.include?("kettle-jem")
+        if command_text.is_a?(Array)
+          command_text.map(&:to_s).any? { |token| token == "kettle-jem" || File.basename(token) == "kettle-jem" }
+        else
+          command_text.to_s.include?("kettle-jem")
+        end
+      end
+
+      def localize_kettle_jem_template_command(command_text)
+        executable = local_kettle_jem_executable
+        return command_text unless executable
+
+        if command_text.is_a?(Array)
+          argv = command_text.map(&:to_s)
+          index = argv.index("kettle-jem")
+          return command_text unless index
+
+          argv[0...index] + [RbConfig.ruby, executable] + argv[(index + 1)..]
+        else
+          command_text.to_s.sub(/\bkettle-jem\b/, "#{Shellwords.escape(RbConfig.ruby)} #{Shellwords.escape(executable)}")
+        end
+      end
+
+      def local_kettle_jem_executable
+        root = template_local_kettle_jem_root
+        return nil unless root
+
+        candidate = File.join(root, "kettle-jem", "exe", "kettle-jem")
+        File.file?(candidate) ? candidate : nil
+      end
+
+      def template_local_kettle_jem_root
+        values = [
+          env_overrides["STRUCTUREDMERGE_DEV"],
+          workflow_family_local_path_env["STRUCTUREDMERGE_DEV"],
+          ENV["STRUCTUREDMERGE_DEV"]
+        ].compact.map(&:to_s).map(&:strip)
+        values.find do |value|
+          !value.empty? &&
+            !%w[false 0 no off].include?(value.downcase) &&
+            File.directory?(File.join(value, "kettle-jem"))
+        end
       end
 
       def append_template_family_args(command_text)
@@ -1903,7 +1946,20 @@ module Kettle
       end
 
       def synchronize_template_commit(&block)
-        @template_commit_mutex.synchronize(&block)
+        @template_commit_mutex.synchronize do
+          lock_path = monorepo_template? ? template_git_commit_lock_path : nil
+          if lock_path
+            FileUtils.mkdir_p(File.dirname(lock_path))
+            File.open(lock_path, File::RDWR | File::CREAT, 0o644) do |lock|
+              lock.flock(File::LOCK_EX)
+              block.call
+            ensure
+              lock&.flock(File::LOCK_UN)
+            end
+          else
+            block.call
+          end
+        end
       end
 
       def template_prepare_env
