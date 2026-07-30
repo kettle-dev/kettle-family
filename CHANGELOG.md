@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Publish release skip checks now use `kettle-dev`'s shared RubyGems version
+  cache instead of a direct `gem.coop` HTTP request, matching the cached
+  release-state path used by `kettle-family state`.
+
 ### Security
 
 ## [1.2.11] - 2026-07-30

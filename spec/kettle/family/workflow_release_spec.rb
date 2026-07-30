@@ -791,6 +791,18 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.stdout).to include("already published")
   end
 
+  it "checks published versions through the shared RubyGems version cache API" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:fetch)
+      .with("alpha", version_hint: "1.0.0")
+      .and_return([{"number" => "0.9.0"}, {"number" => "1.0.0"}])
+
+    expect(workflow.send(:released_version?, "alpha", "1.0.0")).to be(true)
+  end
+
   it "fails published-version skips when release state reports unreleased changes" do
     write_release_config(publish_command: [RbConfig.ruby, "-e", "abort 'should not run'"])
     config = Kettle::Family::Config.load(root: @tmpdir)

@@ -3,13 +3,12 @@
 require "io/console"
 require "fileutils"
 require "json"
-require "net/http"
 require "etc"
 require "open3"
 require "rbconfig"
 require "shellwords"
-require "uri"
 require "yaml"
+require "kettle/dev/ruby_gems_versions"
 
 require_relative "workflow_progress"
 
@@ -1283,13 +1282,14 @@ module Kettle
       end
 
       def released_version?(gem_name, version)
-        uri = URI("https://gem.coop/api/v1/versions/#{gem_name}.json")
-        response = Net::HTTP.get_response(uri)
-        raise Error, "could not check published versions for #{gem_name}: HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+        data = Kettle::Dev::RubyGemsVersions.fetch(gem_name, version_hint: version)
+        raise Error, "could not check published versions for #{gem_name}" unless data.is_a?(Array)
 
-        JSON.parse(response.body).any? { |entry| entry["number"].to_s == version.to_s }
+        data.any? { |entry| entry["number"].to_s == version.to_s }
       rescue JSON::ParserError => error
         raise Error, "could not parse published versions for #{gem_name}: #{error.message}"
+      rescue => error
+        raise Error, "could not check published versions for #{gem_name}: #{error.message}"
       end
 
       def emit_dependency_floor_lockfile_progress(member:, attempt:)
