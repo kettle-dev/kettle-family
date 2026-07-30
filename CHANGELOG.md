@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Shared-root changelog release phases now collect coverage from the family root
+  bundle, preserving aggregate monorepo coverage stats while keeping
+  `kettle-changelog` execution inside a member gem.
+
 ### Security
 
 ## [1.2.9] - 2026-07-30

@@ -1012,6 +1012,7 @@ module Kettle
 
         env.merge(
           "K_CHANGELOG_GEM_NAME" => config.family_name.to_s,
+          "K_CHANGELOG_COVERAGE_ROOT" => File.expand_path(config.root),
           "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
           "K_CHANGELOG_VERSION_FILE" => File.expand_path(config.changelog_version_file, config.root)
         )

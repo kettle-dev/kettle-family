@@ -66,6 +66,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.skipped).to be(true)
     expect(workflow.send(:family_changelog_env)).to include(
       "K_CHANGELOG_GEM_NAME" => config.family_name,
+      "K_CHANGELOG_COVERAGE_ROOT" => @tmpdir,
       "K_CHANGELOG_PATH" => File.join(@tmpdir, "CHANGELOG.md"),
       "K_CHANGELOG_VERSION_FILE" => File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
     )
