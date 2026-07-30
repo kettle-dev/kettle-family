@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.11] - 2026-07-30
+
+- TAG: [v1.2.11][1.2.11t]
+- COVERAGE: 93.78% -- 3784/4035 lines in 27 files
+- BRANCH COVERAGE: 76.34% -- 1452/1902 branches in 27 files
+- 27.83% documented
+
+### Added
+
 - Release execution now prints a parent-process intent summary, a configurable
   countdown, and visible release preflight progress before member release work
   starts.
@@ -29,14 +48,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Releases using a configured secrets provider now authorize that provider as
   the first release preflight phase, making 1Password approval prompts appear
   before slower checks can consume operator attention.
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [1.2.10] - 2026-07-30
 
@@ -1347,7 +1358,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.10...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.11...HEAD
+[1.2.11]: https://github.com/kettle-dev/kettle-family/compare/v1.2.10...v1.2.11
+[1.2.11t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.11
 [1.2.10]: https://github.com/kettle-dev/kettle-family/compare/v1.2.9...v1.2.10
 [1.2.10t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.10
 [1.2.9]: https://github.com/kettle-dev/kettle-family/compare/v1.2.8...v1.2.9

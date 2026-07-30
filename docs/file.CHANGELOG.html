@@ -70,7 +70,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v1.2.10...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v1.2.11...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
 
@@ -83,6 +83,33 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="fixed">Fixed</h3>
 
 <h3 id="security">Security</h3>
+
+<h2 id="1211---2026-07-30">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v1.2.10...v1.2.11">1.2.11</a> - 2026-07-30</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.11">v1.2.11</a>
+</li>
+  <li>COVERAGE: 93.78% – 3784/4035 lines in 27 files</li>
+  <li>BRANCH COVERAGE: 76.34% – 1452/1902 branches in 27 files</li>
+  <li>27.83% documented</li>
+</ul>
+
+<h3 id="added-1">Added</h3>
+
+<ul>
+  <li>Release execution now prints a parent-process intent summary, a configurable<br>
+countdown, and visible release preflight progress before member release work<br>
+starts.</li>
+</ul>
+
+<h3 id="changed-1">Changed</h3>
+
+<ul>
+  <li>Releases using a configured secrets provider now authorize that provider as<br>
+the first release preflight phase, making 1Password approval prompts appear<br>
+before slower checks can consume operator attention.</li>
+</ul>
 
 <h2 id="1210---2026-07-30">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v1.2.9...v1.2.10">1.2.10</a> - 2026-07-30</h2>
@@ -222,7 +249,7 @@ even when the gemspec is loaded from another working directory.</p>
   <li>28.01% documented</li>
 </ul>
 
-<h3 id="added-1">Added</h3>
+<h3 id="added-2">Added</h3>
 
 <ul>
   <li>kettle-jem-template-20260729-005 - Gemspec metadata now publishes this<br>
@@ -342,7 +369,7 @@ unreleased dependency versions.</li>
   <li>28.20% documented</li>
 </ul>
 
-<h3 id="added-2">Added</h3>
+<h3 id="added-3">Added</h3>
 
 <ul>
   <li>
@@ -372,7 +399,7 @@ RSpec helpers provided by <code>kettle-test</code>.</p>
   </li>
 </ul>
 
-<h3 id="changed-1">Changed</h3>
+<h3 id="changed-2">Changed</h3>
 
 <ul>
   <li>
@@ -459,7 +486,7 @@ installs are not reported as project lint debt.</li>
   <li>28.16% documented</li>
 </ul>
 
-<h3 id="added-3">Added</h3>
+<h3 id="added-4">Added</h3>
 
 <ul>
   <li>
@@ -467,7 +494,7 @@ installs are not reported as project lint debt.</li>
 kettle-jem transfer changelog replay lag in a <code>T📰</code> column.</li>
 </ul>
 
-<h3 id="changed-2">Changed</h3>
+<h3 id="changed-3">Changed</h3>
 
 <ul>
   <li>
@@ -502,7 +529,7 @@ instead of only bootstrap commits.</li>
   <li>28.26% documented</li>
 </ul>
 
-<h3 id="added-4">Added</h3>
+<h3 id="added-5">Added</h3>
 
 <ul>
   <li>
@@ -560,7 +587,7 @@ NDJSON lines from terminal output while keeping them captured for progress and<b
 failure summaries.</li>
 </ul>
 
-<h3 id="changed-3">Changed</h3>
+<h3 id="changed-4">Changed</h3>
 
 <ul>
   <li>kettle-jem-template-20260725-001 - Generated JRuby and TruffleRuby workflow<br>
@@ -580,14 +607,14 @@ workflows as failures.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="added-5">Added</h3>
+<h3 id="added-6">Added</h3>
 
 <ul>
   <li>Release orchestration now passes <code>--events</code> through to <code>kettle-release</code> and<br>
 maps release NDJSON events into the family progress display.</li>
 </ul>
 
-<h3 id="changed-4">Changed</h3>
+<h3 id="changed-5">Changed</h3>
 
 <ul>
   <li>kettle-jem-template-initial - Initial templating by kettle-jem.</li>
@@ -691,7 +718,7 @@ disabled and refuse to auto-commit lockfiles containing local path remotes.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="changed-5">Changed</h3>
+<h3 id="changed-6">Changed</h3>
 
 <ul>
   <li>
@@ -784,7 +811,7 @@ release tag, allowing later pending members to continue.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="changed-6">Changed</h3>
+<h3 id="changed-7">Changed</h3>
 
 <ul>
   <li>
@@ -819,7 +846,7 @@ later member versions.</p>
   <li>28.63% documented</li>
 </ul>
 
-<h3 id="added-6">Added</h3>
+<h3 id="added-7">Added</h3>
 
 <ul>
   <li>
@@ -833,7 +860,7 @@ default branch onto it, then rebases the original checked-out branch onto the<br
 updated local default branch.</li>
 </ul>
 
-<h3 id="changed-7">Changed</h3>
+<h3 id="changed-8">Changed</h3>
 
 <ul>
   <li>
@@ -874,7 +901,7 @@ JRuby or TruffleRuby jobs for this MRI-only gem.</li>
   <li>29.10% documented</li>
 </ul>
 
-<h3 id="added-7">Added</h3>
+<h3 id="added-8">Added</h3>
 
 <ul>
   <li>
@@ -941,7 +968,7 @@ regeneration with the shared YARD postprocessing stack.</li>
   <li>29.29% documented</li>
 </ul>
 
-<h3 id="added-8">Added</h3>
+<h3 id="added-9">Added</h3>
 
 <ul>
   <li>
@@ -949,7 +976,7 @@ regeneration with the shared YARD postprocessing stack.</li>
 comma-separated workflow subset to member <code>kettle-release</code> runs.</li>
 </ul>
 
-<h3 id="changed-8">Changed</h3>
+<h3 id="changed-9">Changed</h3>
 
 <ul>
   <li>Promoted the gems that provide built-in <code>kettle-family</code> workflow commands to<br>
@@ -1033,7 +1060,7 @@ sibling path sources into release lockfiles.</li>
   <li>29.54% documented</li>
 </ul>
 
-<h3 id="added-9">Added</h3>
+<h3 id="added-10">Added</h3>
 
 <ul>
   <li>Family workflows now inject a derived local family path environment variable<br>
@@ -1048,7 +1075,7 @@ project-specific volatile image URLs.</li>
 <code>kettle-release</code> commands.</li>
 </ul>
 
-<h3 id="changed-9">Changed</h3>
+<h3 id="changed-10">Changed</h3>
 
 <ul>
   <li>
@@ -1070,7 +1097,7 @@ deterministically.</li>
   <li>30.04% documented</li>
 </ul>
 
-<h3 id="added-10">Added</h3>
+<h3 id="added-11">Added</h3>
 
 <ul>
   <li>Family releases now raise downstream family dependency floors after each<br>
@@ -1137,7 +1164,7 @@ worktree would block <code>git checkout</code> for configured release target bra
   <li>29.96% documented</li>
 </ul>
 
-<h3 id="changed-10">Changed</h3>
+<h3 id="changed-11">Changed</h3>
 
 <ul>
   <li>
@@ -1175,7 +1202,7 @@ each member’s editable version file.</li>
   <li>29.82% documented</li>
 </ul>
 
-<h3 id="added-11">Added</h3>
+<h3 id="added-12">Added</h3>
 
 <ul>
   <li>
@@ -1213,7 +1240,7 @@ TruffleRuby to avoid a TruffleRuby 24.2 internal <code>ENV.replace</code> crash 
   <li>37.71% documented</li>
 </ul>
 
-<h3 id="added-12">Added</h3>
+<h3 id="added-13">Added</h3>
 
 <ul>
   <li>
@@ -1243,7 +1270,7 @@ already-published version number.</li>
   <li>37.71% documented</li>
 </ul>
 
-<h3 id="added-13">Added</h3>
+<h3 id="added-14">Added</h3>
 
 <ul>
   <li>Family root configs can now set <code>release.member_target_branches</code> to override<br>
@@ -1262,7 +1289,7 @@ branch configs inherited.</li>
   <li>38.37% documented</li>
 </ul>
 
-<h3 id="added-14">Added</h3>
+<h3 id="added-15">Added</h3>
 
 <ul>
   <li>
@@ -1290,7 +1317,7 @@ soon as any member fails.</li>
   <li>38.37% documented</li>
 </ul>
 
-<h3 id="added-15">Added</h3>
+<h3 id="added-16">Added</h3>
 
 <ul>
   <li>
@@ -1309,7 +1336,7 @@ branch-stack workflows at a specific release target branch.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="added-16">Added</h3>
+<h3 id="added-17">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family bup [GEM]</code> for family-wide <code>bundle update --all</code> or<br>
@@ -1336,7 +1363,7 @@ successful member update so branch-stack runs can continue to the next branch.</
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="added-17">Added</h3>
+<h3 id="added-18">Added</h3>
 
 <ul>
   <li>
@@ -1436,7 +1463,7 @@ member release commands unless <code>--debug</code> is enabled.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="changed-11">Changed</h3>
+<h3 id="changed-12">Changed</h3>
 
 <ul>
   <li>Local path environment suppression now uses <code>TSLP_DEV</code> for<br>
@@ -1463,7 +1490,7 @@ unreleased siblings from a failed parallel wave.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="added-18">Added</h3>
+<h3 id="added-19">Added</h3>
 
 <ul>
   <li>
@@ -1479,7 +1506,7 @@ RubyGems MFA prompts.</li>
 dependency-safe waves, using <code>--jobs</code> for parallelism.</li>
 </ul>
 
-<h3 id="changed-12">Changed</h3>
+<h3 id="changed-13">Changed</h3>
 
 <ul>
   <li>Family templating now invokes <code>kettle-jem</code> in quiet JSON mode and suppresses<br>
@@ -1527,7 +1554,7 @@ avoiding encoding crashes when a release command fails after PTY output.</li>
   <li>39.63% documented</li>
 </ul>
 
-<h3 id="added-19">Added</h3>
+<h3 id="added-20">Added</h3>
 
 <ul>
   <li>
@@ -1554,7 +1581,7 @@ the signing password as input.</li>
   <li>39.63% documented</li>
 </ul>
 
-<h3 id="added-20">Added</h3>
+<h3 id="added-21">Added</h3>
 
 <ul>
   <li>
@@ -1701,7 +1728,7 @@ allowing mixed sibling workspaces to report stacked gems correctly.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-21">Added</h3>
+<h3 id="added-22">Added</h3>
 
 <ul>
   <li>
@@ -1716,7 +1743,7 @@ branch.</p>
   </li>
 </ul>
 
-<h3 id="changed-13">Changed</h3>
+<h3 id="changed-14">Changed</h3>
 
 <ul>
   <li>Retemplated project metadata and CI/development automation with <code>kettle-jem</code> v7.0.0.</li>
@@ -1750,7 +1777,7 @@ generated templating bundle wiring, and member command execution now respects<br
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="changed-14">Changed</h3>
+<h3 id="changed-15">Changed</h3>
 
 <ul>
   <li>
@@ -1759,7 +1786,7 @@ templating commit by default; use <code>--no-commit</code> to pass <code>--skip-
 member templating commands.</li>
 </ul>
 
-<h3 id="added-22">Added</h3>
+<h3 id="added-23">Added</h3>
 
 <ul>
   <li>Added <code>--env KEY=VALUE</code> workflow overrides so <code>kettle-family</code> commands can<br>
@@ -1778,7 +1805,7 @@ defaults have loaded.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="added-23">Added</h3>
+<h3 id="added-24">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family install</code> to build and install selected local family gems,<br>
@@ -1786,7 +1813,7 @@ including config-defined <code>install.local_dependencies</code> resolved relati
 <code>.kettle-family.yml</code> file.</li>
 </ul>
 
-<h3 id="changed-15">Changed</h3>
+<h3 id="changed-16">Changed</h3>
 
 <ul>
   <li>Development dependency <code>kettle-dev</code> now requires 2.2.10 or newer.</li>
@@ -1803,7 +1830,7 @@ including config-defined <code>install.local_dependencies</code> resolved relati
   <li>40.14% documented</li>
 </ul>
 
-<h3 id="added-24">Added</h3>
+<h3 id="added-25">Added</h3>
 
 <ul>
   <li>Added configurable readiness checks, root/shared changelog support, release<br>
@@ -1829,7 +1856,7 @@ Prism available.</li>
   <li>44.00% documented</li>
 </ul>
 
-<h3 id="changed-16">Changed</h3>
+<h3 id="changed-17">Changed</h3>
 
 <ul>
   <li>Runtime dependency <code>kettle-dev</code> now requires 2.2.8 or newer.</li>
@@ -1854,7 +1881,7 @@ member’s potentially stale bundle.</li>
 <code>test/</code> directories are ignored.</li>
 </ul>
 
-<h3 id="added-25">Added</h3>
+<h3 id="added-26">Added</h3>
 
 <ul>
   <li>Added <code>kettle-family metadata</code> to report each family member’s version, Ruby<br>
@@ -1883,7 +1910,7 @@ requirement, licenses, and authors.</li>
   <li>41.80% documented</li>
 </ul>
 
-<h3 id="added-26">Added</h3>
+<h3 id="added-27">Added</h3>
 
 <ul>
   <li>Added configurable member discovery excludes via <code>members.exclude</code> /<br>
@@ -1892,7 +1919,7 @@ requirement, licenses, and authors.</li>
 family members using <code>kettle-changelog --release-state --json</code>.</li>
 </ul>
 
-<h3 id="changed-17">Changed</h3>
+<h3 id="changed-18">Changed</h3>
 
 <ul>
   <li>Retemplated generated project files with <code>kettle-dev</code> &gt;= 2.2.7.</li>
@@ -1919,7 +1946,7 @@ loading gemspecs, avoiding fixture load failures in family roots.</li>
   <li>42.34% documented</li>
 </ul>
 
-<h3 id="added-27">Added</h3>
+<h3 id="added-28">Added</h3>
 
 <ul>
   <li>Added the initial <code>kettle-family</code> CLI discovery slice with config loading, gemspec discovery, dependency ordering, selection, and JSON reports.</li>
