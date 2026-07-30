@@ -352,7 +352,8 @@
 132
 133
 134
-135</pre>
+135
+136</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 102</span>
@@ -390,6 +391,7 @@
   <span class='ivar'>@bex_args</span> <span class='op'>=</span> <span class='id identifier rubyid_bex_args'>bex_args</span>
   <span class='ivar'>@start_member</span> <span class='op'>=</span> <span class='id identifier rubyid_start_member'>start_member</span>
   <span class='ivar'>@start_branch</span> <span class='op'>=</span> <span class='id identifier rubyid_start_branch'>start_branch</span>
+  <span class='ivar'>@template_commit_mutex</span> <span class='op'>=</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -418,7 +420,6 @@
       <pre class="lines">
 
 
-137
 138
 139
 140
@@ -427,10 +428,11 @@
 143
 144
 145
-146</pre>
+146
+147</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 137</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 138</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>=</span> <span class='id identifier rubyid_branch_checkout_dirty_preflight_results'>branch_checkout_dirty_preflight_results</span>
