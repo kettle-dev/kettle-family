@@ -68,6 +68,60 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'build'"])
   end
 
+  it "passes accept mode through configured kettle-changelog family changelog commands" do
+    write_release_config(
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
+      }
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", changelog: false)
+
+    results = described_class.new(command: "release", config: config, members: [member], publish: true).results
+
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog --yes"])
+  end
+
+  it "does not duplicate accept mode for configured kettle-changelog family changelog commands" do
+    write_release_config(
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog --yes"},
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
+      }
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", changelog: false)
+
+    results = described_class.new(command: "release", config: config, members: [member], publish: true).results
+
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog --yes"])
+  end
+
+  it "does not pass accept mode to kettle-changelog when accept mode is disabled" do
+    write_release_config(
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
+      }
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", changelog: false)
+
+    results = described_class.new(command: "release", config: config, members: [member], publish: true, accept: false).results
+
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog"])
+  end
+
   it "plans releases across configured target branches" do
     write_release_config(target_branches: %w[r1_8-even-v0 r1_9-even-v2])
     config = Kettle::Family::Config.load(root: @tmpdir)

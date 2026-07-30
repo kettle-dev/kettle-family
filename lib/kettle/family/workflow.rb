@@ -983,7 +983,7 @@ module Kettle
         memo << runner.call(
           member: family_member,
           phase: "family_changelog",
-          command: config.release_family_changelog_command,
+          command: family_changelog_command,
           env: release_env.merge(config.changelog_env)
         )
       end
@@ -995,6 +995,11 @@ module Kettle
       def release_command
         command = raw_release_command
         kettle_release_command?(command) ? append_kettle_release_args(command) : command
+      end
+
+      def family_changelog_command
+        command = config.release_family_changelog_command
+        kettle_changelog_command?(command) ? append_kettle_changelog_args(command) : command
       end
 
       def raw_release_command
@@ -1011,6 +1016,17 @@ module Kettle
           command.any? { |part| part.to_s.include?("kettle-release") }
         when String
           command.include?("kettle-release")
+        else
+          false
+        end
+      end
+
+      def kettle_changelog_command?(command)
+        case command
+        when Array
+          command.any? { |part| part.to_s.include?("kettle-changelog") }
+        when String
+          command.include?("kettle-changelog")
         else
           false
         end
@@ -1034,6 +1050,13 @@ module Kettle
 
       def release_command_uses_kettle_release_yes?
         accept && kettle_release_command?(raw_release_command)
+      end
+
+      def append_kettle_changelog_args(command)
+        return command unless accept
+        return command if command_includes_arg?(command, "--yes")
+
+        command.is_a?(Array) ? [*command, "--yes"] : "#{command} --yes"
       end
 
       def validate_ci_workflows(value)

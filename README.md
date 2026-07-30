@@ -399,9 +399,10 @@ and leaves RubyGems MFA prompts interactive by default:
 kettle-family release --publish --execute
 ```
 
-By default, family publish runs pass `--yes` to child `kettle-release`
-commands. Use `--no-accept` when you want each child release command to ask its
-own confirmation prompts.
+By default, family publish runs pass `--yes` to configured `kettle-changelog`
+family changelog commands and child `kettle-release` commands. Use
+`--no-accept` when you want each child command to ask its own confirmation
+prompts.
 
 Executed publish runs can opt in to the local 1Password CLI for unattended
 release credentials. The gem signing passphrase is loaded once and cached only

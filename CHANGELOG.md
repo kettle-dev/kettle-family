@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family release changelog phases now pass `--yes` to configured
+  `kettle-changelog` commands by default, matching child `kettle-release`
+  behavior and keeping publish runs non-interactive unless `--no-accept` is
+  used.
+
 ### Security
 
 ## [1.2.3] - 2026-07-28
