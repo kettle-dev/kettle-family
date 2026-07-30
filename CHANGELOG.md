@@ -33,6 +33,10 @@ Please file a bug if you notice a violation of semantic versioning.
   `commit_template` phase, avoiding parallel `.git/index.lock` races when many
   members share one Git repository.
 
+- kettle-jem-template-20260730-001 - Gemspec package file enumeration now runs
+  relative to the gemspec directory, so packaged template assets are included
+  even when the gemspec is loaded from another working directory.
+
 ### Security
 
 ## [1.2.4] - 2026-07-29
