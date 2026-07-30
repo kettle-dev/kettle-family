@@ -314,6 +314,24 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:bundle_update_env).fetch("KETTLE_DEV_DEV")).to eq("false")
   end
 
+  it "disables family local path environments for bundle updates even when release env already disables them" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        local_path_env: STRUCTUREDMERGE_DEV
+        members_root: gems
+      release:
+        env:
+          STRUCTUREDMERGE_DEV: false
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    workflow = described_class.new(command: "bup", config: config, members: [member])
+
+    expect(config.family_local_path_env).to eq("STRUCTUREDMERGE_DEV" => File.join(@tmpdir, "gems"))
+    expect(workflow.send(:bundle_update_env).fetch("STRUCTUREDMERGE_DEV")).to eq("false")
+  end
+
   it "plans bundler updates with local path environments disabled" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:

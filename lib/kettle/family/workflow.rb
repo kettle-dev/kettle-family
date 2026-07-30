@@ -1954,7 +1954,7 @@ module Kettle
 
       def release_lockfile_local_path_env_overrides(member = nil)
         explicit = config.release_disable_local_path_env.to_h { |key| [key.to_s, "false"] }
-        derived = release_local_path_env_sources.each_with_object({}) do |(key, value), memo|
+        derived = release_local_path_env_detection_sources.each_with_object({}) do |(key, value), memo|
           key = key.to_s
           next unless key.end_with?("_LOCAL", "_DEV")
           next unless local_path_env_value?(value)
@@ -2020,6 +2020,12 @@ module Kettle
         ENV.to_h
           .merge(config.family_local_path_env)
           .merge(config.release_env)
+          .merge(env_overrides)
+      end
+
+      def release_local_path_env_detection_sources
+        ENV.to_h
+          .merge(config.family_local_path_env)
           .merge(env_overrides)
       end
 

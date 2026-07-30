@@ -28,6 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family bup` and `bupb` now disable family local-path envs even when
+  `release.env` already sets those keys to false, avoiding leaked monorepo roots
+  such as `STRUCTUREDMERGE_DEV=/path/to/family/root` during bundle updates.
+- Family local-path env injection now defaults to `members_root` when no
+  explicit `family.local_path_root` is configured, matching monorepo families
+  whose sibling gems live under a subdirectory such as `gems/`.
+
 ### Security
 
 ## [1.2.7] - 2026-07-29

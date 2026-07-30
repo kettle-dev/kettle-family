@@ -85,6 +85,8 @@ RSpec.describe Kettle::Family::Config do
 
     expect(config.family_name).to eq("configured-family")
     expect(config.members_root).to eq(File.join(@tmpdir, "gems"))
+    expect(config.family_local_path_root).to eq(File.join(@tmpdir, "gems"))
+    expect(config.family_local_path_env).to eq("CONFIGURED_FAMILY_DEV" => File.join(@tmpdir, "gems"))
     expect(config.discover_members?).to be(false)
     expect(config.member_exclude_patterns).to eq([
       "vendor/**",

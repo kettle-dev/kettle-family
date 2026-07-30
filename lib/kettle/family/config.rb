@@ -52,7 +52,7 @@ module Kettle
 
       def family_local_path_root
         configured = fetch_path("family", "local_path_root")
-        configured ? expand_config_relative_path(configured) : root
+        configured ? expand_config_relative_path(configured) : members_root
       end
 
       def family_local_path_env
