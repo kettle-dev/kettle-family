@@ -984,12 +984,43 @@ module Kettle
       def append_family_changelog_result(runner:, memo:)
         return unless config.release_family_changelog?
 
+        member = family_changelog_member
         memo << runner.call(
-          member: family_member,
+          member: member,
           phase: "family_changelog",
           command: family_changelog_command,
-          env: release_env.merge(config.changelog_env)
+          env: family_changelog_env
         )
+      end
+
+      def family_changelog_member
+        return family_member unless config.shared_changelog?
+
+        version_file = config.changelog_version_file.to_s
+        raise Error, "shared root changelog release requires changelog.version_file" if version_file.empty?
+
+        version_path = File.expand_path(version_file, config.root)
+        member = members.find { |candidate| path_inside?(version_path, candidate.root) }
+        return member if member
+
+        raise Error, "shared root changelog version file #{version_file} is not inside any selected family member"
+      end
+
+      def family_changelog_env
+        env = release_env.merge(config.changelog_env)
+        return env unless config.shared_changelog?
+
+        env.merge(
+          "K_CHANGELOG_GEM_NAME" => config.family_name.to_s,
+          "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
+          "K_CHANGELOG_VERSION_FILE" => File.expand_path(config.changelog_version_file, config.root)
+        )
+      end
+
+      def path_inside?(path, root)
+        expanded_path = File.expand_path(path)
+        expanded_root = File.expand_path(root)
+        expanded_path == expanded_root || expanded_path.start_with?("#{expanded_root}#{File::SEPARATOR}")
       end
 
       def release_phase

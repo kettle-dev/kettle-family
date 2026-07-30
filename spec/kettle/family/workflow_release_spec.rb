@@ -48,23 +48,27 @@ RSpec.describe Kettle::Family::Workflow do
       changelog: {
         "mode" => "root",
         "path" => "CHANGELOG.md",
-        "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
+        "version_file" => "alpha/lib/alpha/version.rb"
       },
       release_env: {"KETTLE_DEV_DEV" => false}
     )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[env]\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
-    member = ready_member("alpha", changelog: false)
+    member = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
 
-    results = described_class.new(command: "release", config: config, members: [member]).results
+    workflow = described_class.new(command: "release", config: config, members: [member])
+    results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[family_changelog check release_changelog release_build])
-    expect(results.first.command).to include("K_CHANGELOG_GEM_NAME=#{config.family_name}")
-    expect(results.first.command).to include("K_CHANGELOG_VERSION_FILE=gems/tree_haver/lib/tree_haver/version.rb")
     expect(results.first.command).to end_with(RbConfig.ruby, "-e", "puts 'changelog'")
-    expect(results.first.workdir).to eq(@tmpdir)
+    expect(results.first.workdir).to eq(member.root)
     expect(results.first.skipped).to be(true)
+    expect(workflow.send(:family_changelog_env)).to include(
+      "K_CHANGELOG_GEM_NAME" => config.family_name,
+      "K_CHANGELOG_PATH" => File.join(@tmpdir, "CHANGELOG.md"),
+      "K_CHANGELOG_VERSION_FILE" => File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
+    )
     expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'build'"])
   end
 
@@ -74,12 +78,12 @@ RSpec.describe Kettle::Family::Workflow do
       changelog: {
         "mode" => "root",
         "path" => "CHANGELOG.md",
-        "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
+        "version_file" => "alpha/lib/alpha/version.rb"
       }
     )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
-    member = ready_member("alpha", changelog: false)
+    member = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
 
     results = described_class.new(command: "release", config: config, members: [member], publish: true).results
 
@@ -92,12 +96,12 @@ RSpec.describe Kettle::Family::Workflow do
       changelog: {
         "mode" => "root",
         "path" => "CHANGELOG.md",
-        "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
+        "version_file" => "alpha/lib/alpha/version.rb"
       }
     )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
-    member = ready_member("alpha", changelog: false)
+    member = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
 
     results = described_class.new(command: "release", config: config, members: [member], publish: true).results
 
@@ -110,6 +114,24 @@ RSpec.describe Kettle::Family::Workflow do
       changelog: {
         "mode" => "root",
         "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      }
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
+
+    results = described_class.new(command: "release", config: config, members: [member], publish: true, accept: false).results
+
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog"])
+  end
+
+  it "rejects shared root changelog releases when the configured version file is outside selected members" do
+    write_release_config(
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
         "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
       }
     )
@@ -117,9 +139,9 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha", changelog: false)
 
-    results = described_class.new(command: "release", config: config, members: [member], publish: true, accept: false).results
-
-    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog"])
+    expect do
+      described_class.new(command: "release", config: config, members: [member], publish: true).results
+    end.to raise_error(Kettle::Family::Error, /version file .* is not inside any selected family member/)
   end
 
   it "plans releases across configured target branches" do
@@ -1452,7 +1474,7 @@ RSpec.describe Kettle::Family::Workflow do
     }
   end
 
-  def ready_member(name, changelog: true, dependencies: [], release_dependencies: nil)
+  def ready_member(name, changelog: true, dependencies: [], release_dependencies: nil, version_file: nil)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))
     %w[Gemfile Rakefile README.md LICENSE.md].each do |path|
@@ -1464,7 +1486,11 @@ RSpec.describe Kettle::Family::Workflow do
       File.write(full_path, "#!/bin/sh\n")
       FileUtils.chmod("u+x", full_path)
     end
-    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: dependencies, release_dependencies: release_dependencies || dependencies)
+    if version_file
+      FileUtils.mkdir_p(File.dirname(version_file))
+      File.write(version_file, "module #{name.split(/[-_]/).map(&:capitalize).join}; VERSION = \"1.0.0\"; end\n")
+    end
+    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: version_file, version: "1.0.0", dependencies: dependencies, release_dependencies: release_dependencies || dependencies)
   end
 
   def ready_member_with_gemspec(name, version: "1.0.0", dependencies: {})

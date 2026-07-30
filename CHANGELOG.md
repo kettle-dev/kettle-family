@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Shared-root changelog release phases now run `kettle-changelog` inside the
+  member gem that owns the configured shared version file, while passing the
+  root changelog path explicitly.
+
 ### Security
 
 ## [1.2.8] - 2026-07-29
