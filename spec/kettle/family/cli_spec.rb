@@ -5,6 +5,7 @@ require "json"
 require "open3"
 require "stringio"
 require "tmpdir"
+require "yaml"
 
 RSpec.describe Kettle::Family::CLI do
   around do |example|
@@ -1201,6 +1202,42 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     report = JSON.parse(out.string)
     expect(report.fetch("results").map { |result| result.fetch("phase") }).to include("release_publish")
+  end
+
+  it "prints release execution intent before release preflight progress" do
+    write_ready_gem("alpha")
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump("release" => {"build_command" => [RbConfig.ruby, "-e", "puts 'built'"]})
+    )
+    out = StringIO.new
+    stub_env("KETTLE_FAMILY_RELEASE_COUNTDOWN" => "0")
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "alpha", "--execute"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("release intent:")
+    expect(out.string).to include("  family: #{File.basename(@tmpdir)}")
+    expect(out.string).to include("  mode: build-only")
+    expect(out.string).to include("  selected: 1 member")
+    expect(out.string).to include("  members: alpha")
+    expect(out.string.index("release intent:")).to be < out.string.index("release preflight")
+  end
+
+  it "keeps release execution intent and progress out of JSON output" do
+    write_ready_gem("alpha")
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump("release" => {"build_command" => [RbConfig.ruby, "-e", "puts 'built'"]})
+    )
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "alpha", "--execute", "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).not_to include("release intent:")
+    expect(out.string).not_to include("release preflight")
+    expect(JSON.parse(out.string).fetch("results").map { |result| result.fetch("phase") }).to include("release_build")
   end
 
   it "does not resolve configured release secrets for non-release commands" do

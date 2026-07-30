@@ -465,6 +465,79 @@ RSpec.describe Kettle::Family::Workflow do
     expect(provider).to have_received(:gem_signing_passphrase).once
   end
 
+  it "authorizes configured release secrets during the first release preflight phase" do
+    write_release_config(
+      publish_command: [RbConfig.ruby, "-e", "puts 'publish'"],
+      secrets: {
+        "provider" => "1password",
+        "item" => "Rubygems"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    provider = Kettle::Family::Secrets::OnePassword.new(config.release_secrets)
+    progress = StringIO.new
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true, secrets_provider: provider, progress_io: progress)
+    allow(provider).to receive(:authorize!).and_return("secret")
+    allow(workflow).to receive(:released_version?).and_return(false)
+
+    results = workflow.results
+
+    expect(results).to all(be_ok)
+    expect(provider).to have_received(:authorize!).once
+    expect(progress.string).to include("release preflight 3 phases:")
+    expect(progress.string).to include("[release preflight] (1/3) > secrets provider authorization")
+    expect(progress.string.index("secrets provider authorization")).to be < progress.string.index("branch checkout readiness")
+    expect(progress.string).to include("release preflight summary: 3/3 phases ok")
+  end
+
+  it "stops release execution when configured release secret authorization fails" do
+    write_release_config(
+      publish_command: [RbConfig.ruby, "-e", "abort 'should not publish'"],
+      secrets: {
+        "provider" => "1password",
+        "item" => "Rubygems"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    provider = Kettle::Family::Secrets::OnePassword.new(config.release_secrets)
+    progress = StringIO.new
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true, secrets_provider: provider, progress_io: progress)
+    allow(provider).to receive(:authorize!).and_raise(Kettle::Family::Error, "not signed in")
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(["secrets_provider_authorization"])
+    expect(results.first).not_to be_ok
+    expect(results.first.stderr).to eq("not signed in")
+    expect(progress.string).to include("[release preflight] F secrets provider authorization")
+    expect(progress.string).not_to include("release preflight summary")
+  end
+
+  it "runs release preflight without progress output when progress rendering is disabled" do
+    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[check release_changelog release_build])
+    expect(results).to all(be_ok)
+  end
+
+  it "renders a singular release preflight phase heading" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    progress = StringIO.new
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], execute: true, progress_io: progress)
+
+    workflow.send(:emit_release_preflight_start, [{label: "check", method: :release_preflight_branch_checkout_dirty_results}])
+
+    expect(progress.string).to include("release preflight 1 phase:")
+  end
+
   it "passes the cached gem signing password to member-local branch workflows" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = signed_member("alpha")

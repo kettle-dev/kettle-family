@@ -137,6 +137,16 @@ module Kettle
       end
 
       def results
+        if command == "release" && execute
+          release_preflight = release_preflight_results
+          return release_preflight unless release_preflight.empty?
+
+          return branch_target_results unless config.release_target_branches.empty?
+          return member_local_branch_target_results if member_local_branch_targets?
+
+          return current_branch_results(members)
+        end
+
         preflight = branch_checkout_dirty_preflight_results
         return preflight unless preflight.empty?
 
@@ -326,6 +336,79 @@ module Kettle
           end
           break memo unless memo.last&.ok?
         end
+      end
+
+      def release_preflight_results
+        phases = release_preflight_phases
+        emit_release_preflight_start(phases)
+        phases.each_with_index do |phase, index|
+          emit_release_preflight_phase(phase.fetch(:label), index: index, total: phases.length)
+          result = send(phase.fetch(:method))
+          emit_release_preflight_phase_finish(phase.fetch(:label), result)
+          return result unless result.empty?
+        end
+        emit_release_preflight_summary(phases)
+        []
+      end
+
+      def release_preflight_phases
+        dirty_phase = {label: "branch checkout readiness", method: :release_preflight_branch_checkout_dirty_results}
+        signing_phase = {label: "gem signing password", method: :release_preflight_signing_password_results}
+        secrets_phase = release_secrets_authorization_required? ? {label: "secrets provider authorization", method: :release_preflight_secrets_authorization_results} : nil
+
+        if secrets_phase
+          [secrets_phase, dirty_phase, signing_phase]
+        else
+          [dirty_phase, signing_phase]
+        end
+      end
+
+      def release_preflight_branch_checkout_dirty_results
+        branch_checkout_dirty_preflight_results
+      end
+
+      def release_preflight_secrets_authorization_results
+        authorize_release_secrets
+        []
+      rescue Error => error
+        [release_preflight_error_result("secrets_provider_authorization", error.message)]
+      end
+
+      def release_preflight_signing_password_results
+        prompt_for_gem_signing_password if release_signing_prompt_required?
+        []
+      rescue Error => error
+        [release_preflight_error_result("gem_signing_password", error.message)]
+      end
+
+      def authorize_release_secrets
+        secret = if @secrets_provider.respond_to?(:authorize!)
+          @secrets_provider.authorize!
+        else
+          @secrets_provider.gem_signing_passphrase
+        end
+        @gem_signing_password = secret.to_s unless secret.to_s.empty?
+        @gem_signing_password
+      end
+
+      def release_secrets_authorization_required?
+        @secrets_provider.is_a?(Secrets::OnePassword)
+      end
+
+      def release_preflight_error_result(phase, message)
+        CommandResult.new(
+          member_name: family_member.name,
+          phase: phase,
+          command: ["internal", phase],
+          workdir: config.root,
+          status: 1,
+          success: false,
+          stdout: "",
+          stderr: message,
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: "release preflight failed"
+        )
       end
 
       def branch_checkout_dirty_preflight_results
@@ -1282,6 +1365,7 @@ module Kettle
 
       def release_signing_prompt_required?
         return false unless gem_signing_required?
+        return false if @gem_signing_password && !@gem_signing_password.to_s.empty?
         return true if publish
 
         members.any? { |member| signed_gemspec?(member) }
@@ -1636,6 +1720,36 @@ module Kettle
         release_results = results.select { |result| result.phase == release_phase || result.phase == "release_skip" }
         progress.stop
         progress.summary("release summary: #{release_results.count(&:ok?)}/#{release_results.length} members ok")
+      end
+
+      def emit_release_preflight_start(phases)
+        return unless progress_io
+
+        phase_label = (phases.length == 1) ? "phase" : "phases"
+        progress_io.puts("release preflight #{phases.length} #{phase_label}:")
+        progress_io.flush
+      end
+
+      def emit_release_preflight_phase(label, index:, total:)
+        return unless progress_io
+
+        progress_io.puts("[release preflight] (#{index + 1}/#{total}) > #{label}")
+        progress_io.flush
+      end
+
+      def emit_release_preflight_phase_finish(label, results)
+        return unless progress_io
+
+        mark = results.empty? ? "." : "F"
+        progress_io.puts("[release preflight] #{mark} #{label}")
+        progress_io.flush
+      end
+
+      def emit_release_preflight_summary(phases)
+        return unless progress_io
+
+        progress_io.puts("release preflight summary: #{phases.length}/#{phases.length} phases ok")
+        progress_io.flush
       end
 
       def template_event_line_handler(member, progress: nil)

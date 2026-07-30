@@ -50,6 +50,18 @@ RSpec.describe Kettle::Family::Secrets do
     expect(provider.gem_signing_passphrase).to eq("secret")
   end
 
+  it "authorizes 1Password by loading the signing passphrase early" do
+    provider = described_class::OnePassword.new(
+      "item" => "Rubygems",
+      "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE"
+    )
+    allow(Open3).to receive(:capture3)
+      .with("op", "item", "get", "Rubygems", "--fields", "label=GEM-SIGN-PASSPHRASE", "--reveal")
+      .and_return(["secret\n", "", status(success: true)])
+
+    expect(provider.authorize!).to eq("secret")
+  end
+
   it "merges kettle-release secret environment defaults with family config" do
     config = instance_double(
       Kettle::Family::Config,

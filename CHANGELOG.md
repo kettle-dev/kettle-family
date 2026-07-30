@@ -20,7 +20,15 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Release execution now prints a parent-process intent summary, a configurable
+  countdown, and visible release preflight progress before member release work
+  starts.
+
 ### Changed
+
+- Releases using a configured secrets provider now authorize that provider as
+  the first release preflight phase, making 1Password approval prompts appear
+  before slower checks can consume operator attention.
 
 ### Deprecated
 

@@ -18,6 +18,12 @@ module Kettle
             Kettle::Dev::ReleaseSecrets::OnePassword.configured?(name)
           end
 
+          def authorize!
+            gem_signing_passphrase
+          rescue => error
+            raise Error, error.message
+          end
+
           def gem_signing_passphrase
             super
           rescue => error
@@ -32,6 +38,10 @@ module Kettle
         end
       else
         class Provider
+          def authorize!
+            nil
+          end
+
           def gem_signing_passphrase
             nil
           end
@@ -62,6 +72,10 @@ module Kettle
             return read_reference(reference) unless reference.empty?
 
             item_field("gem_signing_passphrase_field")
+          end
+
+          def authorize!
+            gem_signing_passphrase
           end
 
           def rubygems_otp

@@ -590,6 +590,7 @@ module Kettle
         release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only)
         selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
+        print_execution_intent(command: command, config: config, members: result_members, options: options, start_at: start_at)
         results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
         Report.new(
           family_name: config.family_name,
@@ -676,11 +677,53 @@ module Kettle
       end
 
       def progress_io(command, options)
-        return nil unless command == "template"
+        return nil unless %w[release template].include?(command)
         return nil unless options[:execute]
         return nil if options[:json]
 
         stdout
+      end
+
+      def print_execution_intent(command:, config:, members:, options:, start_at:)
+        return unless command == "release"
+        return unless options[:execute]
+        return if options[:json]
+
+        stdout.puts("release intent:")
+        stdout.puts("  family: #{config.family_name}")
+        stdout.puts("  mode: #{options[:publish] ? "publish" : "build-only"}")
+        selected_label = (members.length == 1) ? "1 member" : "#{members.length} members"
+        stdout.puts("  selected: #{selected_label}")
+        start_label = start_at.branch ? "#{start_at.member}@#{start_at.branch}" : start_at.member
+        stdout.puts("  start: #{start_label}") if start_at.member
+        stdout.puts("  members: #{members.map(&:name).join(", ")}")
+        stdout.flush
+        countdown_before_execution
+      end
+
+      def countdown_before_execution
+        seconds = release_countdown_seconds
+        return if seconds <= 0
+        return unless stdout.respond_to?(:tty?) && stdout.tty?
+
+        stdout.print("Continuing in #{seconds}...")
+        stdout.flush
+        seconds.downto(1) do |remaining|
+          sleep 1
+          next if remaining == 1
+
+          stdout.print(" #{remaining - 1}...")
+          stdout.flush
+        end
+        stdout.puts(" running...")
+        stdout.flush
+      end
+
+      def release_countdown_seconds
+        value = ENV.fetch("KETTLE_FAMILY_RELEASE_COUNTDOWN", "3")
+        Integer(value, 10)
+      rescue ArgumentError
+        3
       end
 
       def release_secrets_provider(command:, config:, options:)
