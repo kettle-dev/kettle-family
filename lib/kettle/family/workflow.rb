@@ -2113,6 +2113,8 @@ module Kettle
           emit_template_event_line(member, release_event_status_mark(event), secret_provider_event_label(event))
         when "remote_parity"
           emit_template_event_line(member, release_event_status_mark(event), remote_parity_event_label(event))
+        when "ci_monitor"
+          emit_template_event_line(member, release_event_status_mark(event), ci_monitor_event_label(event))
         when "diagnostic"
           emit_template_event_line(member, "!", diagnostic_event_label(event))
         when "summary"
@@ -2130,6 +2132,8 @@ module Kettle
           secret_provider_event_label(event)
         when "remote_parity"
           remote_parity_event_label(event)
+        when "ci_monitor"
+          ci_monitor_event_label(event)
         when "diagnostic"
           diagnostic_event_label(event)
         when "summary"
@@ -2148,6 +2152,8 @@ module Kettle
         when "secret_provider"
           template_event_mark(event)
         when "remote_parity"
+          template_event_mark(event)
+        when "ci_monitor"
           template_event_mark(event)
         when "diagnostic"
           "!"
@@ -2192,6 +2198,13 @@ module Kettle
         parts << action unless action.empty?
         parts << remote unless remote.empty?
         parts << trunk if remote.empty? && !trunk.empty?
+        parts.join(":")
+      end
+
+      def ci_monitor_event_label(event)
+        action = event["action"].to_s
+        parts = ["ci"]
+        parts << action unless action.empty?
         parts.join(":")
       end
 
