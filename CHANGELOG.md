@@ -27,8 +27,9 @@ Please file a bug if you notice a violation of semantic versioning.
   keeping remote fetch, skip, failure, and completion activity visible without
   scraping raw command output.
 
-- Release progress now renders child `kettle-release` `ci_monitor` events, so
-  CI monitor start, success, and failure are visible as structured progress.
+- Release progress now renders child `kettle-release` `ci_monitor` events with
+  provider and workflow or pipeline context, so CI activity is visible as
+  structured progress.
 
 ### Changed
 

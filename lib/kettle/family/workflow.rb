@@ -2203,8 +2203,13 @@ module Kettle
 
       def ci_monitor_event_label(event)
         action = event["action"].to_s
+        provider = event["provider"].to_s
+        target = event["workflow"].to_s
+        target = "pipeline" if target.empty? && provider == "gitlab"
         parts = ["ci"]
         parts << action unless action.empty?
+        parts << provider unless provider.empty?
+        parts << target unless target.empty?
         parts.join(":")
       end
 
