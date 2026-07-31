@@ -705,6 +705,12 @@ module Kettle
             commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "release", force: true)
             emit_member_result_progress(member, memo.last, progress: progress)
             return memo unless memo.last&.ok?
+
+            if !execute && release_lockfile_readiness_would_fail?(member)
+              memo << release_skipped_after_lockfile_normalization_result(member)
+              emit_member_result_progress(member, memo.last, progress: progress)
+              return memo
+            end
           end
 
           append_release_internal_checks(member: member, memo: memo)
@@ -1248,6 +1254,22 @@ module Kettle
       def append_release_internal_checks(member:, memo:)
         memo << ReadinessCheck.call(member: member, config: config, allowed_local_path_roots: release_allowed_local_path_roots)
         memo << ChangelogCheck.call(member: member, config: config) if memo.last.ok?
+      end
+
+      def release_skipped_after_lockfile_normalization_result(member)
+        CommandResult.new(
+          member_name: member.name,
+          phase: release_phase,
+          command: release_command,
+          workdir: member.root,
+          status: nil,
+          success: true,
+          stdout: "",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: true,
+          reason: "dry-run; release readiness requires lockfile normalization"
+        )
       end
 
       def append_family_changelog_result(runner:, memo:)
@@ -2338,6 +2360,11 @@ module Kettle
 
       def normalize_release_lockfiles?(member)
         config.release_normalize_lockfiles? || release_lockfile_has_local_path_remote?(member)
+      end
+
+      def release_lockfile_readiness_would_fail?(member)
+        result = ReadinessCheck.call(member: member, config: config, allowed_local_path_roots: release_allowed_local_path_roots)
+        result.stdout.lines.any? { |line| line.start_with?("release lockfile has local path remote at ") }
       end
 
       def release_lockfile_has_local_path_remote?(member)

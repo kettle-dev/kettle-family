@@ -105,6 +105,11 @@ sibling runtime dependencies when <code>KETTLE_DEV_DEV</code> is enabled, so unr
 floors such as <code>kettle-ndjson &gt;= 0.1.4</code> resolve during family development.</p>
   </li>
   <li>
+    <p>Release dry-runs now stop after planned lockfile normalization when a member<br>
+has local path remotes, avoiding a false readiness failure on lockfiles that<br>
+would be normalized under <code>--execute</code>.</p>
+  </li>
+  <li>
     <p><code>kettle-family state</code> now labels the transfer changelog column as <code>T(n)</code>,<br>
 where <code>n</code> is the total transfer changelog count and row values are the lag<br>
 after each member’s stored replay cursor.</p>

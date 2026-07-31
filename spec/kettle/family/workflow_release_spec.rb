@@ -633,6 +633,31 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
   end
 
+  it "skips dry-run release readiness when lockfiles require normalization first" do
+    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    external_root = File.join(Dir.home, ".cache", "kettle-family-spec-external")
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{external_root}/beta\n")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      execute: false,
+      env_overrides: fake_bundle_env
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[
+      release_normalize_lockfiles
+      commit_normalized_lockfiles
+      release_build
+    ])
+    expect(results).to all(be_ok)
+    expect(results).to all(have_attributes(skipped: true))
+    expect(results.last.reason).to eq("dry-run; release readiness requires lockfile normalization")
+  end
+
   it "re-normalizes lockfiles dirtied by release commands before pushing" do
     write_release_config(
       build_command: [
