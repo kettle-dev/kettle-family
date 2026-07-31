@@ -547,7 +547,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("ok")
     expect(progress.string).not_to include("[release preflight] (1/3) > secrets provider authorization")
     expect(progress.string).not_to include("[release preflight] . secrets provider authorization")
-    expect(progress.string).to include("release preflight summary: 3/3 phases ok")
+    expect(progress.string).not_to include("release preflight summary")
   end
 
   it "stops release execution when configured release secret authorization fails" do

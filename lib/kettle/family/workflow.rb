@@ -441,7 +441,6 @@ module Kettle
         end
         progress&.finish_member(preflight_member, success: true, status: "ok")
         progress&.stop
-        progress&.summary("release preflight summary: #{phases.length}/#{phases.length} phases ok")
         []
       end
 
