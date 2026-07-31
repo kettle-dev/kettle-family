@@ -205,7 +205,10 @@ module Kettle
       end
 
       def append_result_stdout(lines, result)
-        return if suppress_success_output?(result)
+        if suppress_success_output?(result)
+          append_result_log_path(lines, result) unless result.ok?
+          return
+        end
 
         if output_streamed?(result)
           append_streamed_output_summary(lines, result) unless result.ok?
@@ -216,6 +219,11 @@ module Kettle
         else
           append_indented_output(lines, result.stdout)
         end
+        append_result_log_path(lines, result) unless result.ok? || output_streamed?(result)
+      end
+
+      def append_result_log_path(lines, result)
+        lines << "    log: #{result.log_path}" if result.respond_to?(:log_path) && !result.log_path.to_s.empty?
       end
 
       def suppress_success_output?(result)
@@ -239,6 +247,7 @@ module Kettle
         lines << "    summary: #{summary}" if summary
         recommended_fix = streamed_recommended_fix(result)
         lines << "    recommended fix: #{recommended_fix}" if recommended_fix
+        append_result_log_path(lines, result)
         lines << "    output: omitted because it was already streamed"
       end
 

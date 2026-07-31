@@ -20,6 +20,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Release publish/build commands now write per-member transcript logs under
+  `tmp/kettle-family/release-*`, and failure summaries include the log path.
+
 ### Changed
 
 ### Deprecated

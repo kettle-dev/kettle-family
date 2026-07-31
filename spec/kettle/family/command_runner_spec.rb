@@ -24,6 +24,23 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.reason).to include("--execute")
   end
 
+  it "writes command output to a transcript log when requested" do
+    member = member_at("alpha")
+    log_path = File.join(@tmpdir, "tmp", "kettle-family", "release", "alpha-release_publish.log")
+
+    result = described_class.new(execute: true).call(
+      member: member,
+      phase: "release_publish",
+      command: [RbConfig.ruby, "-e", "$stdout.puts 'stdout line'; $stderr.puts 'stderr line'"],
+      log_path: log_path
+    )
+
+    expect(result).to be_ok
+    expect(result.log_path).to eq(log_path)
+    expect(File.read(log_path)).to include("stdout line")
+    expect(File.read(log_path)).to include("stderr line")
+  end
+
   it "wraps commands with mise when a member has mise.toml" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")

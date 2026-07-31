@@ -2,6 +2,7 @@
 
 require "open3"
 require "io/console"
+require "fileutils"
 
 module Kettle
   module Family
@@ -143,26 +144,32 @@ module Kettle
         @otp_coordinator = otp_coordinator
       end
 
-      def call(member:, phase:, command:, env: {}, interactive: false, stdout_line_handler: nil)
+      def call(member:, phase:, command:, env: {}, interactive: false, stdout_line_handler: nil, log_path: nil)
         argv = command_argv(member: member, command: command, env: env)
         process_env = process_env(member: member, env: env)
         spawn_options = process_options
         return skipped_result(member: member, phase: phase, argv: argv) unless execute
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        stdout, stderr, status = if interactive
-          run_interactive(
-            env: process_env,
-            argv: argv,
-            chdir: member.root,
-            member_name: member.name,
-            process_options: spawn_options,
-            stdout_line_handler: stdout_line_handler
-          )
-        elsif stdout_line_handler
-          run_streaming(env: process_env, argv: argv, chdir: member.root, process_options: spawn_options, stdout_line_handler: stdout_line_handler)
-        else
-          Open3.capture3(process_env, *argv, chdir: member.root, **spawn_options)
+        stdout, stderr, status = with_transcript(log_path, argv: argv, chdir: member.root) do |log_io|
+          if interactive
+            run_interactive(
+              env: process_env,
+              argv: argv,
+              chdir: member.root,
+              member_name: member.name,
+              process_options: spawn_options,
+              stdout_line_handler: stdout_line_handler,
+              log_io: log_io
+            )
+          elsif stdout_line_handler
+            run_streaming(env: process_env, argv: argv, chdir: member.root, process_options: spawn_options, stdout_line_handler: stdout_line_handler, log_io: log_io)
+          else
+            result = Open3.capture3(process_env, *argv, chdir: member.root, **spawn_options)
+            transcript_write(log_io, result[0])
+            transcript_write(log_io, result[1])
+            result
+          end
         end
         stdout = normalize_output(stdout)
         stderr = normalize_output(stderr)
@@ -179,7 +186,8 @@ module Kettle
           elapsed_seconds: elapsed.round(3),
           skipped: false,
           reason: status.success? ? nil : "command failed",
-          output_streamed: interactive
+          output_streamed: interactive,
+          log_path: log_path
         )
       end
 
@@ -187,7 +195,7 @@ module Kettle
 
       attr_reader :execute, :accept, :gem_signing_password, :otp_coordinator
 
-      def run_streaming(env:, argv:, chdir:, process_options:, stdout_line_handler:)
+      def run_streaming(env:, argv:, chdir:, process_options:, stdout_line_handler:, log_io: nil)
         captured_stdout = +""
         captured_stderr = +""
         stdout_line_buffer = +""
@@ -200,9 +208,12 @@ module Kettle
               if reader.equal?(output)
                 chunk = reader.readpartial(1024)
                 captured_stdout << chunk
+                transcript_write(log_io, chunk)
                 stdout_line_buffer = stream_stdout_lines(stdout_line_buffer, chunk, stdout_line_handler)
               else
-                captured_stderr << reader.readpartial(1024)
+                chunk = reader.readpartial(1024)
+                captured_stderr << chunk
+                transcript_write(log_io, chunk)
               end
             rescue EOFError
               readers.delete(reader)
@@ -222,7 +233,7 @@ module Kettle
         remainder
       end
 
-      def run_interactive(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:)
+      def run_interactive(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil)
         if pty_available?
           return run_interactive_pty(
             env: env,
@@ -230,7 +241,8 @@ module Kettle
             chdir: chdir,
             member_name: member_name,
             process_options: process_options,
-            stdout_line_handler: stdout_line_handler
+            stdout_line_handler: stdout_line_handler,
+            log_io: log_io
           )
         end
 
@@ -240,11 +252,12 @@ module Kettle
           chdir: chdir,
           member_name: member_name,
           process_options: process_options,
-          stdout_line_handler: stdout_line_handler
+          stdout_line_handler: stdout_line_handler,
+          log_io: log_io
         )
       end
 
-      def run_interactive_pty(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:)
+      def run_interactive_pty(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil)
         stdout = +""
         stderr = +""
         stdout_line_buffer = +""
@@ -259,10 +272,12 @@ module Kettle
                 if reader.equal?(output)
                   chunk = output.readpartial(1024)
                   stdout << chunk
+                  transcript_write(log_io, chunk)
                   stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler)
                   handle_interactive_prompt(input, chunk, member_name: member_name)
                 else
-                  input.write($stdin.readpartial(1024))
+                  chunk = $stdin.readpartial(1024)
+                  input.write(chunk)
                 end
               end
             end
@@ -270,6 +285,7 @@ module Kettle
             # PTY raises EIO when the child process exits after closing the slave.
           rescue Error => error
             stderr << "#{error.message}\n"
+            transcript_write(log_io, "#{error.message}\n")
             terminate_process(pid)
           end
           flush_interactive_stdout(stdout_line_buffer, stdout_line_handler)
@@ -279,7 +295,7 @@ module Kettle
         [stdout, stderr, status]
       end
 
-      def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:)
+      def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil)
         captured_stdout = +""
         captured_stderr = +""
         stdout_line_buffer = +""
@@ -303,13 +319,15 @@ module Kettle
                     readers,
                     member_name: member_name,
                     stdout_line_buffer: stdout_line_buffer,
-                    stdout_line_handler: stdout_line_handler
+                    stdout_line_handler: stdout_line_handler,
+                    log_io: log_io
                   )
                 end
               end
             end
           rescue Error => error
             captured_stderr << "#{error.message}\n"
+            transcript_write(log_io, "#{error.message}\n")
             terminate_process(wait_thread.pid)
             status = failure_status
           else
@@ -329,14 +347,17 @@ module Kettle
         readers,
         member_name:,
         stdout_line_buffer:,
-        stdout_line_handler:
+        stdout_line_handler:,
+        log_io: nil
       )
         chunk = reader.readpartial(1024)
         if reader.equal?(output)
           captured_stdout << chunk
+          transcript_write(log_io, chunk)
           stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler)
         else
           captured_stderr << chunk
+          transcript_write(log_io, chunk)
           $stderr.print(chunk)
         end
         handle_interactive_prompt(input, chunk, member_name: member_name)
@@ -344,6 +365,25 @@ module Kettle
       rescue EOFError
         readers.delete(reader)
         stdout_line_buffer
+      end
+
+      def with_transcript(log_path, argv:, chdir:)
+        return yield(nil) if log_path.to_s.empty?
+
+        FileUtils.mkdir_p(File.dirname(log_path))
+        File.open(log_path, "wb") do |log_io|
+          log_io.sync = true
+          log_io.puts("$ #{argv.join(" ")}")
+          log_io.puts("workdir: #{chdir}")
+          log_io.puts
+          yield(log_io)
+        end
+      end
+
+      def transcript_write(log_io, chunk)
+        return if log_io.nil? || chunk.to_s.empty?
+
+        log_io.write(chunk)
       end
 
       def print_interactive_stdout(buffer, chunk, stdout_line_handler)

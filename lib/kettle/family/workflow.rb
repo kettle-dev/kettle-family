@@ -746,7 +746,8 @@ module Kettle
             command: release_command,
             env: release_env,
             interactive: release_command_interactive?,
-            stdout_line_handler: release_event_line_handler(member, progress: progress)
+            stdout_line_handler: release_event_line_handler(member, progress: progress),
+            log_path: release_command_log_path(member, release_phase)
           )
           emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
@@ -1930,6 +1931,20 @@ module Kettle
         else
           "releasing"
         end
+      end
+
+      def release_command_log_path(member, phase)
+        return nil unless execute
+
+        File.join(release_log_dir, "#{safe_log_name(member.name)}-#{safe_log_name(phase)}.log")
+      end
+
+      def release_log_dir
+        @release_log_dir ||= File.join(config.root, "tmp", "kettle-family", "release-#{Time.now.strftime("%Y%m%d-%H%M%S")}-#{$$}")
+      end
+
+      def safe_log_name(value)
+        value.to_s.gsub(/[^A-Za-z0-9_.-]+/, "_")
       end
 
       def template_initial_status(member = nil)

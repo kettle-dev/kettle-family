@@ -417,7 +417,8 @@ RSpec.describe Kettle::Family::Report do
       false,
       "command failed",
       nil,
-      true
+      true,
+      "/repo/alpha/tmp/kettle-family/release/alpha-release_publish.log"
     )
     report = described_class.new(
       family_name: "kettle-dev",
@@ -434,9 +435,11 @@ RSpec.describe Kettle::Family::Report do
 
     expect(text).to include("summary: kettle-release: exited (status=1, msg=GitHub Actions SHA pin validation failed)")
     expect(text).to include("recommended fix: kettle-gha-sha-pins --write --upgrade major")
+    expect(text).to include("log: /repo/alpha/tmp/kettle-family/release/alpha-release_publish.log")
     expect(text).to include("output: omitted because it was already streamed")
     expect(text).not_to include("Running pre-release checks via kettle-pre-release")
     expect(report.to_h.fetch("results").first.fetch("output_streamed")).to be(true)
+    expect(report.to_h.fetch("results").first.fetch("log_path")).to eq("/repo/alpha/tmp/kettle-family/release/alpha-release_publish.log")
   end
 
   it "uses the last useful streamed line when no explicit failure line is present" do
@@ -468,6 +471,38 @@ RSpec.describe Kettle::Family::Report do
     )
 
     expect(report.to_text).to include("summary: Could not find json-2.21.2 in locally installed gems")
+  end
+
+  it "prints a release log path for failed release commands with no captured output" do
+    selected_member = member("alpha")
+    result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "release_publish",
+      ["bundle", "exec", "kettle-release"],
+      "/repo/alpha",
+      1,
+      false,
+      "",
+      "",
+      1.0,
+      false,
+      "command failed",
+      nil,
+      false,
+      "/repo/alpha/tmp/kettle-family/release/alpha-release_publish.log"
+    )
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [selected_member],
+      selected_members: [selected_member],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [result]
+    )
+
+    expect(report.to_text).to include("log: /repo/alpha/tmp/kettle-family/release/alpha-release_publish.log")
   end
 
   it "uses a full release resume hint for failed publish releases" do
