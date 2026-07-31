@@ -44,6 +44,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Family release now keeps raw child `kettle-release` output in the per-member
   transcript log by default and renders structured NDJSON progress in the
   terminal, with raw passthrough still available under verbose/debug output.
+- Release summary footers now include the transcript log directory when release
+  logs were written, including successful runs where raw output stayed quiet.
 
 ### Deprecated
 

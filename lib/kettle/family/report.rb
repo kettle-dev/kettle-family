@@ -134,6 +134,7 @@ module Kettle
         lines << "summary:"
         lines << "  outcome: #{data.fetch("outcome")}"
         lines << "  elapsed: #{format_elapsed(data.fetch("elapsed_seconds"))}"
+        lines << "  logs: #{data.fetch("release_log_dirs").join(", ")}" unless data.fetch("release_log_dirs").empty?
         lines << "  selected: #{data.fetch("selected_count")}"
         lines << "  results: #{data.fetch("result_count")}"
         lines << "  succeeded: #{summary_list(data.fetch("succeeded"))}"
@@ -164,8 +165,18 @@ module Kettle
           "skipped" => summary_skipped,
           "failed" => summary_failed,
           "pending" => summary_pending,
+          "release_log_dirs" => release_log_dirs,
           "resume_hint" => resume_hint
         }
+      end
+
+      def release_log_dirs
+        return [] unless command == "release"
+
+        visible_results.filter_map do |result|
+          path = result.log_path.to_s if result.respond_to?(:log_path)
+          File.dirname(path) unless path.to_s.empty?
+        end.uniq
       end
 
       def append_release_waves(lines)

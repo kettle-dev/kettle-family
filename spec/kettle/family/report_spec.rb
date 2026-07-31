@@ -601,6 +601,25 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("summary").fetch("elapsed_seconds")).to eq(3666.6)
   end
 
+  it "includes release transcript log directories in successful release summaries" do
+    release_result = result("alpha", phase: "release_publish")
+    release_result.log_path = "/repo/alpha/tmp/kettle-family/release-20260731-101010-123/alpha-release_publish.log"
+    report = described_class.new(
+      family_name: "structuredmerge-ruby",
+      order_mode: "dependency",
+      members: [member("alpha")],
+      selected_members: [member("alpha")],
+      config_path: nil,
+      command: "release",
+      results: [release_result]
+    )
+
+    expect(report.to_text).to include("  logs: /repo/alpha/tmp/kettle-family/release-20260731-101010-123")
+    expect(report.to_h.fetch("summary").fetch("release_log_dirs")).to eq(
+      ["/repo/alpha/tmp/kettle-family/release-20260731-101010-123"]
+    )
+  end
+
   it "summarizes successful bump members with their commit phases" do
     report = described_class.new(
       family_name: "rubocop-lts",
