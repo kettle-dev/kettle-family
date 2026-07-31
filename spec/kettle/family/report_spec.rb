@@ -486,6 +486,35 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("summary").fetch("outcome")).to eq("success")
   end
 
+  it "repeats command context in the final summary footer" do
+    report = described_class.new(
+      family_name: "structuredmerge-ruby",
+      family_mode: "monorepo",
+      order_mode: "dependency",
+      members: [member("alpha")],
+      selected_members: [member("alpha")],
+      config_path: "/repo/.kettle-family.yml",
+      command: "release",
+      release_mode: "publish",
+      release_target_branches: ["main"],
+      member_release_target_branches: {"alpha" => ["r1", "r2"]},
+      results: [result("alpha", phase: "release_publish")]
+    )
+
+    footer = report.to_text.split("\ncontext:\n").fetch(1)
+
+    expect(footer).to include("  kettle-family: #{Kettle::Family::VERSION}")
+    expect(footer).to include("  family: structuredmerge-ruby")
+    expect(footer).to include("  mode: monorepo")
+    expect(footer).to include("  config: /repo/.kettle-family.yml")
+    expect(footer).to include("  order: dependency")
+    expect(footer).to include("  command: release")
+    expect(footer).to include("  release mode: publish")
+    expect(footer).to include("  release targets: main")
+    expect(footer).to include("  member release targets:\n    alpha: r1, r2")
+    expect(footer).to include("summary:\n  outcome: success")
+  end
+
   it "summarizes successful bump members with their commit phases" do
     report = described_class.new(
       family_name: "rubocop-lts",

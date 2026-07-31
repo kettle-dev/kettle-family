@@ -72,13 +72,7 @@ module Kettle
       end
 
       def to_text
-        lines = ["kettle-family: #{Kettle::Family::VERSION}", "family: #{family_name}"]
-        lines << "mode: #{family_mode}" if family_mode
-        lines << "config: #{config_path || "none"}"
-        lines << "order: #{order_mode}"
-        lines << "command: #{command}" if command
-        lines << "release mode: #{release_mode}" if release_mode
-        lines << "release targets: #{release_target_branches.join(", ")}" unless release_target_branches.empty?
+        lines = report_context_lines
         append_member_release_targets(lines)
         append_warnings(lines)
         lines << "members:"
@@ -128,6 +122,14 @@ module Kettle
 
       def append_summary(lines)
         data = summary
+        lines << "context:"
+        report_context_lines.each { |line| lines << "  #{line}" }
+        unless member_release_target_branches.empty?
+          lines << "  member release targets:"
+          member_release_target_branches.each do |member_name, branches|
+            lines << "    #{member_name}: #{branches.join(", ")}"
+          end
+        end
         lines << "summary:"
         lines << "  outcome: #{data.fetch("outcome")}"
         lines << "  selected: #{data.fetch("selected_count")}"
@@ -137,6 +139,17 @@ module Kettle
         lines << "  failed: #{summary_list(data.fetch("failed").map { |entry| summary_entry(entry) })}"
         lines << "  pending: #{summary_list(data.fetch("pending").map { |entry| summary_entry(entry) })}"
         lines << "  resume: #{data.fetch("resume_hint")}" if data.fetch("resume_hint")
+      end
+
+      def report_context_lines
+        lines = ["kettle-family: #{Kettle::Family::VERSION}", "family: #{family_name}"]
+        lines << "mode: #{family_mode}" if family_mode
+        lines << "config: #{config_path || "none"}"
+        lines << "order: #{order_mode}"
+        lines << "command: #{command}" if command
+        lines << "release mode: #{release_mode}" if release_mode
+        lines << "release targets: #{release_target_branches.join(", ")}" unless release_target_branches.empty?
+        lines
       end
 
       def summary

@@ -35,6 +35,10 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family state` now uses an ASCII `^ / v` ahead/behind column header so
   terminal table alignment is stable in monospace output.
 
+- Text reports now repeat the command context in the final summary footer so the
+  command, family, mode, config, order, and release target details remain visible
+  after long runs.
+
 ### Security
 
 ## [1.2.12] - 2026-07-30
