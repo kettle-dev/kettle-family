@@ -110,6 +110,11 @@ has local path remotes, avoiding a false readiness failure on lockfiles that<br>
 would be normalized under <code>--execute</code>.</p>
   </li>
   <li>
+    <p>Release state now reads kettle-jem transfer changelog replay cursors from<br>
+<code>.structuredmerge/kettle-jem.lock</code>, so <code>T(n)</code> reports actual lag instead of<br>
+treating every member as missing all transfer changelogs.</p>
+  </li>
+  <li>
     <p><code>kettle-family state</code> now labels the transfer changelog column as <code>T(n)</code>,<br>
 where <code>n</code> is the total transfer changelog count and row values are the lag<br>
 after each member’s stored replay cursor.</p>

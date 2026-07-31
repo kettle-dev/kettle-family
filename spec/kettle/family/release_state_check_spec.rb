@@ -264,6 +264,35 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(state).to include("transfer_changelog_lag" => 3, "transfer_changelog_total" => 8)
   end
 
+  it "reads transfer changelog replay state from the kettle-jem lockfile before config" do
+    root = File.join(@tmpdir, "alpha")
+    FileUtils.mkdir_p(File.join(root, ".structuredmerge"))
+    File.write(File.join(root, ".structuredmerge", "kettle-jem.yml"), <<~YAML)
+      project_emoji: "kettle"
+      tokens: {}
+    YAML
+    File.write(File.join(root, ".structuredmerge", "kettle-jem.lock"), <<~YAML)
+      ---
+      version: 1
+      template_state:
+        version: 7.1.0
+        changelog_replay:
+          last_entry_key: "kettle-jem-template-20260730-001"
+        checksums: {}
+    YAML
+    kettle_jem = Module.new do
+      def self.transfer_changelog_lag(last_entry_key)
+        {"last_entry_key" => last_entry_key, "missing_count" => last_entry_key ? 0 : 23}
+      end
+    end
+    stub_const("Kettle::Jem", kettle_jem)
+    check = described_class.new(members: [])
+
+    state = check.send(:enrich_transfer_changelog_lag, root, {})
+
+    expect(state).to include("transfer_changelog_lag" => 0, "transfer_changelog_total" => 23)
+  end
+
   it "queries the total kettle-jem transfer changelog count once per checker" do
     roots = %w[alpha beta].map do |name|
       root = File.join(@tmpdir, name)

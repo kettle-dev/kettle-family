@@ -49,6 +49,10 @@ Please file a bug if you notice a violation of semantic versioning.
   has local path remotes, avoiding a false readiness failure on lockfiles that
   would be normalized under `--execute`.
 
+- Release state now reads kettle-jem transfer changelog replay cursors from
+  `.structuredmerge/kettle-jem.lock`, so `T(n)` reports actual lag instead of
+  treating every member as missing all transfer changelogs.
+
 - `kettle-family state` now labels the transfer changelog column as `T(n)`,
   where `n` is the total transfer changelog count and row values are the lag
   after each member's stored replay cursor.

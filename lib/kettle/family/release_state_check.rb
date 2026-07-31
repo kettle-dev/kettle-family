@@ -11,7 +11,12 @@ require "yaml"
 module Kettle
   module Family
     class ReleaseStateCheck
-      KETTLE_JEM_CONFIG_PATHS = [".structuredmerge/kettle-jem.yml", ".kettle-jem.yml"].freeze
+      KETTLE_JEM_STATE_PATHS = [
+        ".structuredmerge/kettle-jem.lock",
+        ".kettle-jem.lock",
+        ".structuredmerge/kettle-jem.yml",
+        ".kettle-jem.yml"
+      ].freeze
       TRANSFER_CHANGELOG_TOTAL_UNSET = Object.new.freeze
 
       def initialize(members:, config: nil)
@@ -338,14 +343,20 @@ module Kettle
       end
 
       def kettle_jem_config_state(root)
-        path = KETTLE_JEM_CONFIG_PATHS.map { |relative| File.join(root.to_s, relative) }.find { |candidate| File.file?(candidate) }
+        path = KETTLE_JEM_STATE_PATHS.map { |relative| File.join(root.to_s, relative) }.find { |candidate| File.file?(candidate) }
         return nil unless path
 
         data = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
-        state = data.is_a?(Hash) ? data["kettle-jem"] : nil
+        state = kettle_jem_state_from_yaml(data)
         state.is_a?(Hash) ? state : {}
       rescue Psych::Exception, SystemCallError
         nil
+      end
+
+      def kettle_jem_state_from_yaml(data)
+        return nil unless data.is_a?(Hash)
+
+        data["template_state"] || data["kettle-jem"]
       end
 
       def transfer_changelog_lag(last_entry_key)
