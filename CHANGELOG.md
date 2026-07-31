@@ -35,6 +35,10 @@ Please file a bug if you notice a violation of semantic versioning.
   pre-release checks are visible as structured progress while raw output stays
   in the transcript log.
 
+- Release progress now renders child `kettle-changelog` `changelog` events, so
+  release plan, coverage, and changelog update activity is visible as structured
+  progress.
+
 ### Changed
 
 - Family release now keeps raw child `kettle-release` output in the per-member

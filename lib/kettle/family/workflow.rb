@@ -2122,6 +2122,8 @@ module Kettle
           emit_template_event_line(member, release_event_status_mark(event), ci_monitor_event_label(event))
         when "pre_release"
           emit_template_event_line(member, release_event_status_mark(event), pre_release_event_label(event))
+        when "changelog"
+          emit_template_event_line(member, release_event_status_mark(event), changelog_event_label(event))
         when "diagnostic"
           emit_template_event_line(member, "!", diagnostic_event_label(event))
         when "summary"
@@ -2143,6 +2145,8 @@ module Kettle
           ci_monitor_event_label(event)
         when "pre_release"
           pre_release_event_label(event)
+        when "changelog"
+          changelog_event_label(event)
         when "diagnostic"
           diagnostic_event_label(event)
         when "summary"
@@ -2165,6 +2169,8 @@ module Kettle
         when "ci_monitor"
           template_event_mark(event)
         when "pre_release"
+          template_event_mark(event)
+        when "changelog"
           template_event_mark(event)
         when "diagnostic"
           "!"
@@ -2230,6 +2236,15 @@ module Kettle
         parts = ["pre"]
         parts << action unless action.empty?
         parts << check unless check.empty?
+        parts.join(":")
+      end
+
+      def changelog_event_label(event)
+        action = event["action"].to_s
+        plan = event["plan"].to_s
+        parts = ["changelog"]
+        parts << action unless action.empty?
+        parts << plan unless plan.empty? || action == "coverage"
         parts.join(":")
       end
 
