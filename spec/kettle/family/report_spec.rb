@@ -60,6 +60,7 @@ RSpec.describe Kettle::Family::Report do
         "latest_released" => "24.2.0",
         "github_latest_release" => "v24.2.0",
         "transfer_changelog_lag" => 2,
+        "transfer_changelog_total" => 9,
         "latest_changelog_version" => "24.2.0",
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
@@ -86,13 +87,14 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("prep: V.ch.md matches V.rb and is ready to publish")
     expect(text).to include("pend: unrel or prep")
     expect(text).to include("bump: unrel is yes and V.rb matches V.rel")
-    expect(text).to include("T📰: kettle-jem transfer changelog entries not yet replayed")
+    expect(text).to include("count columns:")
+    expect(text).to include("T(n): kettle-jem transfer changelog lag; n is the total transfer changelog entry count with no replay cursor")
     expect(text).to include("branch")
     expect(text).to include("V.rb")
     expect(text).to include("V.ch.md")
     expect(text).to include("V.rel")
     expect(text).to include("GH.rel")
-    expect(text).to include("T📰")
+    expect(text).to include("T(9)")
     expect(text).to include("🔼 / 🔽")
     expect(text).to include("unrel")
     expect(text).to include("prep")
@@ -106,7 +108,7 @@ RSpec.describe Kettle::Family::Report do
     expect(header.index("V.rb")).to be < header.index("V.ch.md")
     expect(header.index("V.ch.md")).to be < header.index("V.rel")
     expect(header.index("V.rel")).to be < header.index("GH.rel")
-    expect(header.index("GH.rel")).to be < header.index("T📰")
+    expect(header.index("GH.rel")).to be < header.index("T(9)")
   end
 
   it "marks GitHub release values that do not match the RubyGems release" do

@@ -253,7 +253,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     YAML
     kettle_jem = Module.new do
       def self.transfer_changelog_lag(last_entry_key)
-        {"last_entry_key" => last_entry_key, "missing_count" => 3}
+        {"last_entry_key" => last_entry_key, "missing_count" => last_entry_key ? 3 : 8}
       end
     end
     stub_const("Kettle::Jem", kettle_jem)
@@ -261,7 +261,34 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
     state = check.send(:enrich_transfer_changelog_lag, root, {})
 
-    expect(state).to include("transfer_changelog_lag" => 3)
+    expect(state).to include("transfer_changelog_lag" => 3, "transfer_changelog_total" => 8)
+  end
+
+  it "queries the total kettle-jem transfer changelog count once per checker" do
+    roots = %w[alpha beta].map do |name|
+      root = File.join(@tmpdir, name)
+      FileUtils.mkdir_p(File.join(root, ".structuredmerge"))
+      File.write(File.join(root, ".structuredmerge", "kettle-jem.yml"), <<~YAML)
+        kettle-jem:
+          changelog_replay:
+            last_entry_key: "kettle-jem-template-20260725-00#{name == "alpha" ? 1 : 2}"
+          checksums: {}
+      YAML
+      root
+    end
+    calls = []
+    kettle_jem = Module.new do
+      define_singleton_method(:transfer_changelog_lag) do |last_entry_key|
+        calls << last_entry_key
+        {"last_entry_key" => last_entry_key, "missing_count" => last_entry_key ? 2 : 12}
+      end
+    end
+    stub_const("Kettle::Jem", kettle_jem)
+    check = described_class.new(members: [])
+
+    roots.each { |root| check.send(:enrich_transfer_changelog_lag, root, {}) }
+
+    expect(calls.count(nil)).to eq(1)
   end
 
   it "leaves branch release state unchanged when the line version is unavailable" do

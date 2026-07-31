@@ -1315,6 +1315,7 @@ RSpec.describe Kettle::Family::CLI do
         "remote_behind" => 1,
         "github_latest_release" => "v1.2.2",
         "transfer_changelog_lag" => 4,
+        "transfer_changelog_total" => 11,
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
         "pending_release" => true,
@@ -1334,10 +1335,11 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("prep: V.ch.md matches V.rb and is ready to publish")
     expect(out.string).to include("pend: unrel or prep")
     expect(out.string).to include("bump: unrel is yes and V.rb matches V.rel")
-    expect(out.string).to include("T📰: kettle-jem transfer changelog entries not yet replayed")
+    expect(out.string).to include("count columns:")
+    expect(out.string).to include("T(n): kettle-jem transfer changelog lag; n is the total transfer changelog entry count with no replay cursor")
     expect(out.string).to include("V.rel")
     expect(out.string).to include("GH.rel")
-    expect(out.string).to include("T📰")
+    expect(out.string).to include("T(11)")
     expect(out.string).to include("bump")
     expect(out.string).to include("checkout")
     expect(out.string).to include("🔼 / 🔽")

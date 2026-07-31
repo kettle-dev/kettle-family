@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `kettle-family state` now labels the transfer changelog column as `T(n)`,
+  where `n` is the total transfer changelog count and row values are the lag
+  after each member's stored replay cursor.
+
 ### Security
 
 ## [1.2.12] - 2026-07-30

@@ -440,7 +440,8 @@ module Kettle
         lines << "    prep: V.ch.md matches V.rb and is ready to publish"
         lines << "    pend: unrel or prep"
         lines << "    bump: unrel is yes and V.rb matches V.rel"
-        lines << "    T📰: kettle-jem transfer changelog entries not yet replayed"
+        lines << "  count columns:"
+        lines << "    T(n): kettle-jem transfer changelog lag; n is the total transfer changelog entry count with no replay cursor"
         rows = release_state_header
         results.each do |result|
           rows << release_state_row(result)
@@ -478,10 +479,18 @@ module Kettle
       end
 
       def release_state_header
-        header = [["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", "T📰", "🔼 / 🔽", "unrel", "prep", "pend", "bump"]]
+        header = [["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", release_state_transfer_changelog_header, "🔼 / 🔽", "unrel", "prep", "pend", "bump"]]
         return header unless release_state_has_branches?
 
         [["branch", *header.first]]
+      end
+
+      def release_state_transfer_changelog_header
+        total = results.filter_map do |result|
+          value = (result.state || {}).fetch("transfer_changelog_total", nil)
+          value unless value.to_s.empty?
+        end.first
+        "T(#{total || "?"})"
       end
 
       def release_state_github_release(state)

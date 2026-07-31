@@ -12,12 +12,14 @@ module Kettle
   module Family
     class ReleaseStateCheck
       KETTLE_JEM_CONFIG_PATHS = [".structuredmerge/kettle-jem.yml", ".kettle-jem.yml"].freeze
+      TRANSFER_CHANGELOG_TOTAL_UNSET = Object.new.freeze
 
       def initialize(members:, config: nil)
         @members = members
         @config = config
         @github_latest_release_by_repo = {}
         @transfer_changelog_lag_by_key = {}
+        @transfer_changelog_total_count = TRANSFER_CHANGELOG_TOTAL_UNSET
       end
 
       def results
@@ -329,7 +331,10 @@ module Kettle
         lag = transfer_changelog_lag(last_entry_key)
         return state unless lag
 
-        state.merge("transfer_changelog_lag" => lag.fetch("missing_count", 0).to_i)
+        state.merge(
+          "transfer_changelog_lag" => lag.fetch("missing_count", 0).to_i,
+          "transfer_changelog_total" => transfer_changelog_total_count
+        )
       end
 
       def kettle_jem_config_state(root)
@@ -350,6 +355,13 @@ module Kettle
         end
       rescue
         nil
+      end
+
+      def transfer_changelog_total_count
+        return @transfer_changelog_total_count unless @transfer_changelog_total_count.equal?(TRANSFER_CHANGELOG_TOTAL_UNSET)
+
+        total_lag = transfer_changelog_lag(nil)
+        @transfer_changelog_total_count = total_lag ? total_lag.fetch("missing_count", 0).to_i : nil
       end
 
       def in_process_transfer_changelog_lag(last_entry_key)
