@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.14] - 2026-07-31
+
+- TAG: [v1.2.14][1.2.14t]
+- COVERAGE: 94.22% -- 4175/4431 lines in 28 files
+- BRANCH COVERAGE: 76.69% -- 1622/2115 branches in 28 files
+- 28.88% documented
+
+### Added
+
 - Release publish/build commands now write per-member transcript logs under
   `tmp/kettle-family/release-*`, and failure summaries include the log path.
 
@@ -57,10 +76,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Release preflight now renders through the shared progress event tape instead
   of printing separate start and finish lines for each successful phase.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Release preflight no longer prints a nested 1Password authorization alert
@@ -70,8 +85,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Family release runs can now pass configured required release remotes through
   to `kettle-release`, allowing mirrors to remain optional while primary remotes
   still block release parity failures.
-
-### Security
 
 ## [1.2.13] - 2026-07-31
 
@@ -1486,7 +1499,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.13...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.14...HEAD
+[1.2.14]: https://github.com/kettle-dev/kettle-family/compare/v1.2.13...v1.2.14
+[1.2.14t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.14
 [1.2.13]: https://github.com/kettle-dev/kettle-family/compare/v1.2.12...v1.2.13
 [1.2.13t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.13
 [1.2.12]: https://github.com/kettle-dev/kettle-family/compare/v1.2.11...v1.2.12

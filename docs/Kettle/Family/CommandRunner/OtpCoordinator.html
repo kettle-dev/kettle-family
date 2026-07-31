@@ -220,7 +220,6 @@
       <pre class="lines">
 
 
-14
 15
 16
 17
@@ -233,10 +232,11 @@
 24
 25
 26
-27</pre>
+27
+28</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 14</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 15</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>input:</span> <span class='gvar'>$stdin</span><span class='comma'>,</span> <span class='label'>output:</span> <span class='gvar'>$stdout</span><span class='comma'>,</span> <span class='label'>queue_total:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>secrets_provider:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@input</span> <span class='op'>=</span> <span class='id identifier rubyid_input'>input</span>
@@ -279,14 +279,14 @@
       <pre class="lines">
 
 
-29
 30
 31
 32
-33</pre>
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 29</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 30</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_queue_total='>queue_total=</span><span class='lparen'>(</span><span class='id identifier rubyid_value'>value</span><span class='rparen'>)</span>
   <span class='ivar'>@mutex</span><span class='period'>.</span><span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
@@ -313,7 +313,6 @@
       <pre class="lines">
 
 
-35
 36
 37
 38
@@ -343,10 +342,11 @@
 62
 63
 64
-65</pre>
+65
+66</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 35</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 36</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_request'>request</span><span class='lparen'>(</span><span class='label'>member_name:</span><span class='comma'>,</span> <span class='label'>chunk:</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_generation'>generation</span> <span class='op'>=</span> <span class='kw'>nil</span>
