@@ -129,6 +129,11 @@ command, family, mode, config, order, and release target details remain visible<
 after long runs.</p>
   </li>
   <li>
+    <p>Failed streamed release commands now report the last useful output line when<br>
+no explicit failure marker is present, avoiding empty <code>output omitted</code><br>
+summaries for Bundler boot failures.</p>
+  </li>
+  <li>
     <p>Template execution now aligns stale managed <code>nomono</code> Gemfile floors and<br>
 lockfiles before member bundles run, avoiding already-activated <code>nomono</code><br>
 conflicts during family templating.</p>
@@ -139,6 +144,11 @@ of direct nested implementation files.</p>
   </li>
   <li>
     <p>Command summaries now include total elapsed wall time in the final footer.</p>
+  </li>
+  <li>
+    <p>Parent-owned RubyGems MFA lookup failures during release now fall back to<br>
+manual OTP entry when possible, and otherwise fail the member cleanly instead<br>
+of escaping from a worker thread with a misleading release summary.</p>
   </li>
 </ul>
 

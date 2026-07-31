@@ -361,6 +361,45 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(otp_output.string).to include("RubyGems MFA code loaded from configured secrets provider.")
   end
 
+  it "falls back to manual OTP entry when an interactive secrets provider lookup fails" do
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+    allow(provider).to receive(:rubygems_otp).and_raise(Kettle::Family::Error, "1Password RubyGems OTP lookup failed: dismissed")
+    otp_input = StringIO.new("123456\n")
+    allow(otp_input).to receive(:tty?).and_return(true)
+    otp_output = StringIO.new
+    coordinator = described_class::OtpCoordinator.new(input: otp_input, output: otp_output, secrets_provider: provider)
+    runner = described_class.new(otp_coordinator: coordinator)
+    child_input = StringIO.new
+
+    runner.send(:handle_interactive_prompt, child_input, "Code: ", member_name: "alpha")
+
+    expect(child_input.string).to eq("123456\n")
+    expect(otp_output.string).to include("falling back to manual OTP entry.")
+  end
+
+  it "returns a failed interactive result when non-interactive OTP provider lookup fails" do
+    member = member_at("alpha")
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+    allow(provider).to receive(:rubygems_otp).and_raise(Kettle::Family::Error, "1Password RubyGems OTP lookup failed: dismissed")
+    coordinator = described_class::OtpCoordinator.new(input: StringIO.new, output: StringIO.new, secrets_provider: provider)
+    runner = described_class.new(execute: true, otp_coordinator: coordinator)
+    allow(runner).to receive(:pty_available?).and_return(false)
+    allow($stdin).to receive(:tty?).and_return(false)
+
+    result = Timeout.timeout(5) do
+      runner.call(
+        member: member,
+        phase: "release_publish",
+        command: [RbConfig.ruby, "-e", "STDOUT.write 'Code: '; STDOUT.flush; sleep 10"],
+        interactive: true
+      )
+    end
+
+    expect(result).not_to be_ok
+    expect(result.stderr).to include("1Password RubyGems OTP lookup failed: dismissed")
+    expect(result.reason).to eq("command failed")
+  end
+
   it "reuses one queued OTP response for concurrent requests" do
     otp_input, otp_writer = IO.pipe
     begin

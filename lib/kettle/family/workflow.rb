@@ -665,6 +665,12 @@ module Kettle
               end
             rescue ThreadError
               break
+            rescue => error
+              mutex.synchronize do
+                ordered_results[index] = [release_worker_error_result(member, error)]
+                stop = true
+              end
+              break
             end
           end
         end.each(&:join)
@@ -684,6 +690,22 @@ module Kettle
           elapsed_seconds: 0.0,
           skipped: false,
           reason: "jobs=#{release_jobs(wave)} total=#{total}"
+        )
+      end
+
+      def release_worker_error_result(member, error)
+        CommandResult.new(
+          member_name: member.name,
+          phase: release_phase,
+          command: ["internal", "release-worker"],
+          workdir: member.root,
+          status: 1,
+          success: false,
+          stdout: "",
+          stderr: "#{error.class}: #{error.message}\n",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: error.message
         )
       end
 

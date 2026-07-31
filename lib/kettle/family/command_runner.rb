@@ -95,7 +95,7 @@ module Kettle
         end
 
         def read_response(chunk:)
-          provided = secrets_provider&.rubygems_otp.to_s
+          provided = read_provider_response
           unless provided.empty?
             @output.puts("RubyGems MFA code loaded from configured secrets provider.")
             return provided
@@ -115,7 +115,26 @@ module Kettle
         def otp_prompt_label(chunk)
           chunk.to_s.lines.last&.strip.to_s.empty? ? "Code:" : chunk.to_s.lines.last.strip
         end
+
+        def read_provider_response
+          return "" unless secrets_provider
+
+          @output.print("\a") if @output.respond_to?(:print)
+          secrets_provider.rubygems_otp.to_s
+        rescue Error => error
+          raise unless @input.respond_to?(:tty?) && @input.tty?
+
+          @output.puts("#{error.message}; falling back to manual OTP entry.")
+          ""
+        end
       end
+
+      FailureStatus = Struct.new(:exitstatus) do
+        def success?
+          false
+        end
+      end
+      private_constant :FailureStatus
 
       def initialize(execute: false, accept: true, gem_signing_password: nil, otp_coordinator: nil)
         @execute = execute
@@ -227,6 +246,7 @@ module Kettle
 
       def run_interactive_pty(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:)
         stdout = +""
+        stderr = +""
         stdout_line_buffer = +""
         status = nil
         PTY.spawn(env, *argv, chdir: chdir, **process_options) do |output, input, pid|
@@ -248,11 +268,15 @@ module Kettle
             end
           rescue Errno::EIO
             # PTY raises EIO when the child process exits after closing the slave.
+          rescue Error => error
+            stderr << "#{error.message}\n"
+            terminate_process(pid)
           end
           flush_interactive_stdout(stdout_line_buffer, stdout_line_handler)
           _, status = Process.wait2(pid)
+          status = failure_status if !stderr.empty? && status.success?
         end
-        [stdout, "", status]
+        [stdout, stderr, status]
       end
 
       def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:)
@@ -263,28 +287,35 @@ module Kettle
         Open3.popen3(env, *argv, chdir: chdir, **process_options) do |input, output, error, wait_thread|
           readers = [output, error]
           readers << $stdin if $stdin.tty? && !otp_coordinator
-          until readers.empty?
-            ready = IO.select(readers)
-            ready.first.each do |reader|
-              if reader.equal?($stdin)
-                input.write($stdin.readpartial(1024))
-              else
-                stdout_line_buffer = read_interactive_stream(
-                  reader,
-                  output,
-                  input,
-                  captured_stdout,
-                  captured_stderr,
-                  readers,
-                  member_name: member_name,
-                  stdout_line_buffer: stdout_line_buffer,
-                  stdout_line_handler: stdout_line_handler
-                )
+          begin
+            until readers.empty?
+              ready = IO.select(readers)
+              ready.first.each do |reader|
+                if reader.equal?($stdin)
+                  input.write($stdin.readpartial(1024))
+                else
+                  stdout_line_buffer = read_interactive_stream(
+                    reader,
+                    output,
+                    input,
+                    captured_stdout,
+                    captured_stderr,
+                    readers,
+                    member_name: member_name,
+                    stdout_line_buffer: stdout_line_buffer,
+                    stdout_line_handler: stdout_line_handler
+                  )
+                end
               end
             end
+          rescue Error => error
+            captured_stderr << "#{error.message}\n"
+            terminate_process(wait_thread.pid)
+            status = failure_status
+          else
+            status = wait_thread.value
           end
           flush_interactive_stdout(stdout_line_buffer, stdout_line_handler)
-          status = wait_thread.value
         end
         [captured_stdout, captured_stderr, status]
       end
@@ -413,6 +444,16 @@ module Kettle
 
       def normalize_output(output)
         output.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+      end
+
+      def failure_status
+        FailureStatus.new(1)
+      end
+
+      def terminate_process(pid)
+        Process.kill("TERM", pid)
+      rescue Errno::ESRCH, Errno::EPERM
+        nil
       end
 
       def command_argv(member:, command:, env: {})

@@ -77,6 +77,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Command summaries now include total elapsed wall time in the final footer.
 
+- Parent-owned RubyGems MFA lookup failures during release now fall back to
+  manual OTP entry when possible, and otherwise fail the member cleanly instead
+  of escaping from a worker thread with a misleading release summary.
+
 ### Security
 
 ## [1.2.12] - 2026-07-30

@@ -1587,6 +1587,23 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.flatten.first).not_to be_ok
   end
 
+  it "records release worker exceptions as failed member results" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, jobs: 1)
+
+    allow(workflow).to receive(:release_results_for_member).and_raise(Kettle::Family::Error, "1Password RubyGems OTP lookup failed: dismissed")
+
+    results = workflow.send(:run_release_wave, [member]).flatten
+
+    expect(results.size).to eq(1)
+    expect(results.first.member_name).to eq("alpha")
+    expect(results.first.phase).to eq("release_build")
+    expect(results.first).not_to be_ok
+    expect(results.first.reason).to eq("1Password RubyGems OTP lookup failed: dismissed")
+    expect(results.first.stderr).to include("Kettle::Family::Error")
+  end
+
   it "builds release waves from selected member dependencies" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member("alpha")
