@@ -5,6 +5,7 @@ require "fileutils"
 require "json"
 require "etc"
 require "open3"
+require "pathname"
 require "rbconfig"
 require "shellwords"
 require "yaml"
@@ -728,6 +729,9 @@ module Kettle
         append_dependency_floor_lockfile_results(released_members: released_members, dependent_members: affected_dependent_members, runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
+        append_dependency_floor_ci_bundle_results(released_members: released_members, dependent_members: affected_dependent_members, runner: runner, memo: memo)
+        return if memo.any? && !memo.last.ok?
+
         commit_dependency_floor_changes(dependent_members: floor_results.map(&:member_name), runner: runner, memo: memo) if floor_results.any? && execute && commit
       end
 
@@ -752,6 +756,19 @@ module Kettle
         end
       end
 
+      def append_dependency_floor_ci_bundle_results(released_members:, dependent_members:, runner:, memo:)
+        return unless execute && publish
+        return if dependent_members.empty?
+
+        dependent_members.each do |member|
+          dependency_floor_ci_bundle_gemfiles(member).each do |gemfile|
+            memo << wait_for_dependency_floor_ci_bundle_result(member: member, gemfile: gemfile, released_members: released_members, runner: runner)
+            break unless memo.last.ok?
+          end
+          break if memo.any? && !memo.last.ok?
+        end
+      end
+
       def wait_for_dependency_floor_lockfiles_result(member:, released_members:, runner:)
         result = nil
         REGISTRY_WAIT_ATTEMPTS.times do |index|
@@ -764,6 +781,25 @@ module Kettle
           )
           validate_dependency_floor_lockfile_result(result: result, member: member, released_members: released_members) if result.ok?
           annotate_dependency_floor_lockfile_result(result, index + 1)
+          break if result.ok?
+
+          sleep(REGISTRY_WAIT_INTERVAL_SECONDS) if index + 1 < REGISTRY_WAIT_ATTEMPTS
+        end
+        result
+      end
+
+      def wait_for_dependency_floor_ci_bundle_result(member:, gemfile:, released_members:, runner:)
+        result = nil
+        REGISTRY_WAIT_ATTEMPTS.times do |index|
+          emit_dependency_floor_ci_bundle_progress(member: member, gemfile: gemfile, attempt: index + 1)
+          FileUtils.mkdir_p(File.dirname(dependency_floor_ci_bundle_lockfile_path(member: member, gemfile: gemfile)))
+          result = runner.call(
+            member: member,
+            phase: "dependency_floor_ci_bundle",
+            command: dependency_floor_ci_bundle_command(released_members),
+            env: dependency_floor_ci_bundle_env(member: member, gemfile: gemfile)
+          )
+          annotate_dependency_floor_ci_bundle_result(result, index + 1, gemfile: gemfile)
           break if result.ok?
 
           sleep(REGISTRY_WAIT_INTERVAL_SECONDS) if index + 1 < REGISTRY_WAIT_ATTEMPTS
@@ -801,6 +837,64 @@ module Kettle
 
       def dependency_floor_lockfile_command(released_members)
         ["bundle", "lock", "--update", *released_members.map(&:name), "--add-checksums"]
+      end
+
+      def dependency_floor_ci_bundle_command(released_members)
+        ["bundle", "lock", "--update", *released_members.map(&:name), "--add-checksums"]
+      end
+
+      def dependency_floor_ci_bundle_env(member:, gemfile:)
+        release_lockfile_env(member).merge(
+          "BUNDLE_GEMFILE" => gemfile,
+          "BUNDLE_LOCKFILE" => dependency_floor_ci_bundle_lockfile_path(member: member, gemfile: gemfile)
+        )
+      end
+
+      def dependency_floor_ci_bundle_lockfile_path(member:, gemfile:)
+        relative = relative_path_from_member_root(member: member, path: gemfile)
+        safe_name = relative.gsub(%r{[^A-Za-z0-9_.-]+}, "_")
+        File.join(member.root, "tmp", "kettle-family", "dependency-floor-ci-bundles", "#{safe_name}.lock")
+      end
+
+      def dependency_floor_ci_bundle_gemfiles(member)
+        workflow_bundle_gemfiles(member).select do |gemfile|
+          File.file?(gemfile)
+        end.uniq.sort
+      end
+
+      def workflow_bundle_gemfiles(member)
+        Dir.glob(File.join(member.root, ".github", "workflows", "*.{yml,yaml}")).flat_map do |path|
+          workflow_bundle_gemfile_entries(path).map do |entry|
+            File.expand_path(entry, member.root)
+          end
+        end
+      end
+
+      def workflow_bundle_gemfile_entries(path)
+        data = YAML.safe_load_file(path, permitted_classes: [], permitted_symbols: [], aliases: true) || {}
+        recursive_values_for_key(data, "bundle_gemfile").map(&:to_s).reject(&:empty?)
+      rescue Psych::Exception
+        []
+      end
+
+      def recursive_values_for_key(value, key)
+        case value
+        when Hash
+          value.flat_map do |entry_key, entry_value|
+            matches = (entry_key.to_s == key) ? [entry_value] : []
+            matches.concat(recursive_values_for_key(entry_value, key))
+          end
+        when Array
+          value.flat_map { |entry| recursive_values_for_key(entry, key) }
+        else
+          []
+        end
+      end
+
+      def relative_path_from_member_root(member:, path:)
+        Pathname.new(path).relative_path_from(Pathname.new(member.root)).to_s
+      rescue ArgumentError
+        path.to_s
       end
 
       def reset_gemfile_lock(member:, runner:, memo:)
@@ -983,6 +1077,18 @@ module Kettle
           result.stdout = [result.stdout, message].reject(&:empty?).join("\n")
         else
           result.reason = "dependency floor lockfile refresh failed after #{attempts} attempt(s)"
+        end
+      end
+
+      def annotate_dependency_floor_ci_bundle_result(result, attempts, gemfile:)
+        return unless result
+
+        relative = File.basename(gemfile)
+        if result.ok?
+          message = "validated CI bundle #{relative} after #{attempts} attempt(s)"
+          result.stdout = [result.stdout, message].reject(&:empty?).join("\n")
+        else
+          result.reason = "dependency floor CI bundle validation failed for #{relative} after #{attempts} attempt(s)"
         end
       end
 
@@ -1294,6 +1400,11 @@ module Kettle
 
       def emit_dependency_floor_lockfile_progress(member:, attempt:)
         @release_progress&.update(member, status: "lockfiles #{attempt}/#{REGISTRY_WAIT_ATTEMPTS}", mark: ">")
+      end
+
+      def emit_dependency_floor_ci_bundle_progress(member:, gemfile:, attempt:)
+        relative = relative_path_from_member_root(member: member, path: gemfile)
+        @release_progress&.update(member, status: "ci bundle #{relative} #{attempt}/#{REGISTRY_WAIT_ATTEMPTS}", mark: ">")
       end
 
       def already_released_result(member)

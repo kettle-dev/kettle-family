@@ -1216,6 +1216,74 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).to have_received(:sleep).with(15).twice
   end
 
+  it "validates direct CI appraisal gemfiles after just-published dependency floors" do
+    write_release_config(
+      release_env: fake_bundle_env(<<~BASH)
+        if [[ "$BUNDLE_GEMFILE" == *"gemfiles/dep_heads.gemfile" ]]; then
+          printf 'ci bundle gemfile: %s\\n' "$BUNDLE_GEMFILE"
+          printf 'ci bundle lockfile: %s\\n' "$BUNDLE_LOCKFILE"
+          if [ "$*" != "lock --update alpha --add-checksums" ]; then
+            printf 'unexpected bundle command: %s\\n' "$*" >&2
+            exit 1
+          fi
+        fi
+      BASH
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    write_direct_bundle_workflow(beta, "gemfiles/dep_heads.gemfile")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).and_return(false)
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[
+      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_ci_bundle
+      check release_changelog release_publish
+    ])
+    ci_bundle = results.find { |result| result.phase == "dependency_floor_ci_bundle" }
+    expect(ci_bundle).to be_ok
+    expect(ci_bundle.stdout).to include("ci bundle gemfile:")
+    expect(ci_bundle.stdout).to include("gemfiles/dep_heads.gemfile")
+    expect(ci_bundle.stdout).to include("validated CI bundle dep_heads.gemfile after 1 attempt(s)")
+    expect(workflow).not_to have_received(:sleep)
+  end
+
+  it "stops before releasing a dependent when direct CI appraisal gemfiles cannot resolve just-published floors" do
+    write_release_config(
+      release_env: fake_bundle_env(<<~BASH)
+        if [[ "$BUNDLE_GEMFILE" == *"gemfiles/dep_heads.gemfile" ]]; then
+          printf 'missing alpha from CI bundle\\n' >&2
+          exit 1
+        fi
+      BASH
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    write_direct_bundle_workflow(beta, "gemfiles/dep_heads.gemfile")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).and_return(false)
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[
+      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_ci_bundle
+    ])
+    ci_bundle = results.last
+    expect(ci_bundle).not_to be_ok
+    expect(ci_bundle.stderr).to include("missing alpha from CI bundle")
+    expect(ci_bundle.reason).to eq("dependency floor CI bundle validation failed for dep_heads.gemfile after 15 attempt(s)")
+    expect(workflow).to have_received(:sleep).with(15).exactly(14).times
+  end
+
   it "waits and refreshes dependent lockfiles before committing dependency floors" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -1593,6 +1661,29 @@ RSpec.describe Kettle::Family::Workflow do
       end
     RUBY
     Kettle::Family::Member.new(name: name, root: member.root, gemspec_path: gemspec, version_file: nil, version: version, dependencies: dependencies.keys)
+  end
+
+  def write_direct_bundle_workflow(member, bundle_gemfile)
+    workflow_path = File.join(member.root, ".github", "workflows", "dep-heads.yml")
+    gemfile_path = File.join(member.root, bundle_gemfile)
+    FileUtils.mkdir_p(File.dirname(workflow_path))
+    FileUtils.mkdir_p(File.dirname(gemfile_path))
+    File.write(gemfile_path, <<~RUBY)
+      source "https://gem.coop"
+      gemspec path: "../"
+    RUBY
+    File.write(workflow_path, <<~YAML)
+      name: Runtime Deps @ HEAD
+      jobs:
+        ruby:
+          strategy:
+            matrix:
+              include:
+                - ruby: "ruby"
+                  appraisal: "dep-heads"
+                  bundle_gemfile: #{bundle_gemfile.inspect}
+                  direct_bundle: true
+    YAML
   end
 
   def signed_member(name)

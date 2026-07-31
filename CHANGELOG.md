@@ -28,6 +28,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family release dependency-floor readiness now validates CI-facing direct
+  appraisal Gemfiles, so generated workflows such as `dep-heads.yml` cannot fail
+  after a just-published family dependency was only checked through release
+  lockfiles.
+
 ### Security
 
 ## [1.2.12] - 2026-07-30
