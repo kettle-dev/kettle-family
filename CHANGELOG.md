@@ -28,6 +28,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.13] - 2026-07-31
+
+- TAG: [v1.2.13][1.2.13t]
+- COVERAGE: 94.09% -- 4043/4297 lines in 28 files
+- BRANCH COVERAGE: 76.48% -- 1538/2011 branches in 28 files
+- 28.84% documented
+
+### Fixed
+
 - Family publish runs now keep release secrets provider interaction in
   `kettle-family` by default, so `--secrets-provider` no longer gets passed down
   to child `kettle-release` commands unless the configured publish command
@@ -85,8 +96,6 @@ Please file a bug if you notice a violation of semantic versioning.
   BUNDLE_GEMFILE` entries, including `${{ github.workspace }}` paths, so
   release waves wait for just-published floors before pushing dependent CI
   workflows that install through setup-ruby-flash.
-
-### Security
 
 ## [1.2.12] - 2026-07-30
 
@@ -1434,7 +1443,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.12...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.13...HEAD
+[1.2.13]: https://github.com/kettle-dev/kettle-family/compare/v1.2.12...v1.2.13
+[1.2.13t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.13
 [1.2.12]: https://github.com/kettle-dev/kettle-family/compare/v1.2.11...v1.2.12
 [1.2.12t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.12
 [1.2.11]: https://github.com/kettle-dev/kettle-family/compare/v1.2.10...v1.2.11
