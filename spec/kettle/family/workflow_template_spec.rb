@@ -466,6 +466,61 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(0).command).not_to include("#{family_local_env_name}=false")
   end
 
+  it "aligns stale nomono bootstrap dependencies before member template preparation runs" do
+    write_template_config(
+      command: ["bundle", "exec", "kettle-jem", "install"],
+      normalize_lockfiles: false,
+      family_mode: "sibling_repos"
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    write_nomono_bundle(alpha, floor: "1.1.0", locked: "1.1.0")
+    write_nomono_bundle(beta, floor: "1.1.1", locked: "1.1.1")
+    captured_calls = []
+    stub_latest_nomono("1.1.1")
+    stub_successful_runner(captured_calls)
+
+    results = described_class.new(command: "template", config: config, members: [alpha, beta], execute: true, jobs: 1).results
+
+    expect(results).to all(be_ok)
+    expect(results.map { |result| [result.member_name, result.phase] }).to eq([
+      ["alpha", "template_bootstrap_dependencies"],
+      ["alpha", "template_bootstrap_dependencies"],
+      ["alpha", "prepare_template_dependencies"],
+      ["alpha", "template"],
+      ["beta", "prepare_template_dependencies"],
+      ["beta", "template"]
+    ])
+    bundle_update = captured_calls.find do |call|
+      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == %w[bundle update nomono --bundler]
+    end
+    expect(bundle_update).not_to be_nil
+    expect(bundle_update.fetch(:env)).to include(family_local_env_name => "false")
+    expect(File.read(File.join(alpha.root, "Gemfile"))).to include('gem "nomono", "~> 1.1", ">= 1.1.1", require: false')
+  end
+
+  it "fails before member bundles run when an already activated nomono is stale" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_nomono_bundle(member, floor: "1.1.0", locked: "1.1.0")
+    stub_latest_nomono("1.1.1")
+    allow(Gem).to receive(:loaded_specs).and_return(
+      "nomono" => instance_double(Gem::Specification, version: Gem::Version.new("1.1.0"))
+    )
+    command_runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(command_runner)
+    expect(command_runner).not_to receive(:call)
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true, jobs: 1).results
+
+    expect(results.length).to eq(1)
+    expect(results.first).not_to be_ok
+    expect(results.first.phase).to eq("template_bootstrap_dependencies")
+    expect(results.first.stderr).to include("activated nomono 1.1.0 is older than latest released 1.1.1")
+  end
+
   it "passes explicit environment overrides through member mise execution" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -951,6 +1006,48 @@ RSpec.describe Kettle::Family::Workflow do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: File.join(root, "#{name}.gemspec"), version: "1.0.0", dependencies: [])
+  end
+
+  def write_nomono_bundle(member, floor:, locked:)
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+
+      gem "nomono", "~> 1.1", ">= #{floor}", require: false
+    RUBY
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      GEM
+        remote: https://gem.coop/
+        specs:
+          nomono (#{locked})
+
+      DEPENDENCIES
+        nomono (~> 1.1, >= #{floor})
+    LOCK
+  end
+
+  def stub_latest_nomono(version)
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:fetch).with("nomono").and_return([{"number" => version}])
+  end
+
+  def stub_successful_runner(captured_calls)
+    command_runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(command_runner)
+    allow(command_runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      captured_calls << {member: member.name, phase: phase, command: command, env: env}
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        0,
+        true,
+        (phase == "template") ? "{\"event_version\":1,\"type\":\"summary\",\"changed_count\":0}\n" : "",
+        "",
+        0.0,
+        false,
+        nil
+      )
+    end
   end
 
   def initialize_git_repo(root, branches:)

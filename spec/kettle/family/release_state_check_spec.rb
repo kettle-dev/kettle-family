@@ -271,7 +271,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       File.write(File.join(root, ".structuredmerge", "kettle-jem.yml"), <<~YAML)
         kettle-jem:
           changelog_replay:
-            last_entry_key: "kettle-jem-template-20260725-00#{name == "alpha" ? 1 : 2}"
+            last_entry_key: "kettle-jem-template-20260725-00#{(name == "alpha") ? 1 : 2}"
           checksums: {}
       YAML
       root

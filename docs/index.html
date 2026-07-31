@@ -523,12 +523,14 @@ kettle-family state
 
 <p><code>state</code> is an alias for <code>release-state</code>. The release-state report lists each<br>
 gem’s current <code>version.rb</code>, latest versioned <code>CHANGELOG.md</code> section, latest<br>
-published RubyGems release, latest GitHub release tag, transfer-changelog lag,<br>
+published RubyGems release, latest GitHub release tag, transfer-changelog count,<br>
 whether pending changelog work exists in either <code>Unreleased</code> or an unpublished<br>
 prepared release section, and how many commits the current branch is ahead of or<br>
 behind the latest release tag. The version columns are ordered as <code>V.rb</code>,<br>
-<code>V.ch.md</code>, <code>V.rel</code>, and <code>GH.rel</code>; <code>GH.rel</code> is prefixed with a red circle when it<br>
-does not match <code>V.rel</code>.</p>
+<code>V.ch.md</code>, <code>V.rel</code>, <code>GH.rel</code>, and <code>T(n)</code>; <code>GH.rel</code> is prefixed with a red circle<br>
+when it does not match <code>V.rel</code>. The <code>T(n)</code> header shows the total number of<br>
+kettle-jem transfer changelog entries. Each row value in that column shows how<br>
+many entries are after that member’s stored replay cursor.</p>
 
 <p>Use release-state tokens with <code>--only</code> to select gems by state instead of by<br>
 name. Multiple tokens are combined with logical AND, so this selects only gems<br>

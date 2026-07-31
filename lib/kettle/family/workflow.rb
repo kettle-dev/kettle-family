@@ -225,6 +225,9 @@ module Kettle
       end
 
       def template_member_workflow_results(workflow_members)
+        bootstrap_results = template_bootstrap_dependency_results(workflow_members)
+        return bootstrap_results unless bootstrap_results.all?(&:ok?)
+
         queue = Queue.new
         workflow_members.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(workflow_members.length)
@@ -248,7 +251,85 @@ module Kettle
         end.each(&:join)
         flattened = ordered_results.compact.flatten
         emit_template_progress_summary(flattened, progress: template_progress)
-        flattened
+        bootstrap_results + flattened
+      end
+
+      def template_bootstrap_dependency_results(workflow_members)
+        return [] if workflow_members.empty?
+
+        candidate_members = workflow_members.select { |member| nomono_bootstrap_candidate?(member) }
+        return [] if candidate_members.empty?
+
+        latest_nomono_version = latest_released_nomono_version
+        active_nomono_version = Gem.loaded_specs["nomono"]&.version
+        if active_nomono_version && active_nomono_version < latest_nomono_version
+          return [template_bootstrap_failure_result(
+            candidate_members.first,
+            "activated nomono #{active_nomono_version} is older than latest released #{latest_nomono_version}"
+          )]
+        end
+
+        bootstrap = NomonoBootstrap.new(latest_version: latest_nomono_version, mode: :execute)
+        runner = CommandRunner.new(execute: execute, accept: accept)
+        candidate_members.each_with_object([]) do |member, memo|
+          next unless bootstrap.member_needs_bootstrap?(member)
+
+          memo << bootstrap.bootstrap_member(member)
+          break memo unless memo.last.ok?
+
+          memo << runner.call(
+            member: member,
+            phase: "template_bootstrap_dependencies",
+            command: %w[bundle update nomono --bundler],
+            env: template_bootstrap_dependency_env(member)
+          )
+          break memo unless memo.last.ok?
+        end
+      rescue => error
+        [template_bootstrap_failure_result(workflow_members.first, error.message)]
+      end
+
+      def nomono_bootstrap_candidate?(member)
+        %w[Gemfile Gemfile.lock].any? do |basename|
+          path = File.join(member.root, basename)
+          File.file?(path) && File.read(path).include?(NomonoBootstrap::GEM_NAME)
+        end
+      end
+
+      def template_bootstrap_failure_result(member, message)
+        CommandResult.new(
+          member.name,
+          "template_bootstrap_dependencies",
+          ["internal", "nomono-bootstrap"],
+          member.root,
+          1,
+          false,
+          "",
+          message,
+          0.0,
+          false,
+          "command failed"
+        )
+      end
+
+      def latest_released_nomono_version
+        versions = Kettle::Dev::RubyGemsVersions.fetch(NomonoBootstrap::GEM_NAME).filter_map do |entry|
+          number = entry["number"] || entry[:number]
+          next if number.to_s.empty?
+
+          version = Gem::Version.new(number)
+          version unless version.prerelease?
+        end
+        raise Error, "could not determine latest released nomono version" if versions.empty?
+
+        versions.max
+      end
+
+      def template_bootstrap_dependency_env(member)
+        env = workflow_env.merge(release_lockfile_local_path_env_overrides(member))
+        family_env_name = config.family_local_path_env_name
+        env[family_env_name] = "false" if family_env_name && !env_overrides.key?(family_env_name)
+        env
       end
 
       def template_results_for_member(member, progress: nil)

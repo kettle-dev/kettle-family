@@ -116,6 +116,11 @@
         </dt>
         <dd><pre class="code"><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.structuredmerge/kettle-jem.yml</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.kettle-jem.yml</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
+        <dt id="TRANSFER_CHANGELOG_TOTAL_UNSET-constant" class="">TRANSFER_CHANGELOG_TOTAL_UNSET =
+          
+        </dt>
+        <dd><pre class="code"><span class='const'>Object</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
     </dl>
   
 
@@ -213,21 +218,23 @@
       <pre class="lines">
 
 
-16
 17
 18
 19
 20
-21</pre>
+21
+22
+23</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 16</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 17</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
   <span class='ivar'>@github_latest_release_by_repo</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_lag_by_key</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='ivar'>@transfer_changelog_total_count</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#TRANSFER_CHANGELOG_TOTAL_UNSET-constant" title="Kettle::Family::ReleaseStateCheck::TRANSFER_CHANGELOG_TOTAL_UNSET (constant)">TRANSFER_CHANGELOG_TOTAL_UNSET</a></span></span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -256,8 +263,6 @@
       <pre class="lines">
 
 
-23
-24
 25
 26
 27
@@ -268,10 +273,12 @@
 32
 33
 34
-35</pre>
+35
+36
+37</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 23</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 25</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>

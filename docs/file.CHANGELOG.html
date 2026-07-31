@@ -82,6 +82,28 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="fixed">Fixed</h3>
 
+<ul>
+  <li>
+    <p><code>kettle-family state</code> now labels the transfer changelog column as <code>T(n)</code>,<br>
+where <code>n</code> is the total transfer changelog count and row values are the lag<br>
+after each member’s stored replay cursor.</p>
+  </li>
+  <li>
+    <p><code>kettle-family state</code> now uses an ASCII <code>^ / v</code> ahead/behind column header so<br>
+terminal table alignment is stable in monospace output.</p>
+  </li>
+  <li>
+    <p>Text reports now repeat the command context in the final summary footer so the<br>
+command, family, mode, config, order, and release target details remain visible<br>
+after long runs.</p>
+  </li>
+  <li>
+    <p>Template execution now aligns stale managed <code>nomono</code> Gemfile floors and<br>
+lockfiles before member bundles run, avoiding already-activated <code>nomono</code><br>
+conflicts during family templating.</p>
+  </li>
+</ul>
+
 <h3 id="security">Security</h3>
 
 <h2 id="1212---2026-07-30">
