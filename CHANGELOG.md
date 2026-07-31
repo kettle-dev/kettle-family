@@ -33,6 +33,10 @@ Please file a bug if you notice a violation of semantic versioning.
   to child `kettle-release` commands unless the configured publish command
   explicitly includes it.
 
+- Family release progress now renders child `kettle-release` `secret_provider`
+  events, keeping keepalive and prompt-response activity visible when a release
+  command emits NDJSON.
+
 - `kettle-family state` now labels the transfer changelog column as `T(n)`,
   where `n` is the total transfer changelog count and row values are the lag
   after each member's stored replay cursor.

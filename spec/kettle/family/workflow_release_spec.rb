@@ -1012,12 +1012,14 @@ RSpec.describe Kettle::Family::Workflow do
     [
       {event_version: 1, type: "run_start", command: "release"},
       {event_version: 1, type: "command_step", phase: "release", name: "bundle_exec", status: "started", mark: ">"},
+      {event_version: 1, type: "secret_provider", action: "keepalive", purpose: "CI monitoring", status: "started", mark: ">"},
       {event_version: 1, type: "diagnostic", kind: "remote_fetch", message: "cb unavailable"},
       {event_version: 1, type: "summary", status: "failed"}
     ].each { |event| handler.call(JSON.generate(event)) }
 
     expect(progress.string).to include("[alpha] > release")
     expect(progress.string).to include("[alpha] > release:bundle_exec")
+    expect(progress.string).to include("[alpha] > secret:keepalive:CI monitoring")
     expect(progress.string).to include("[alpha] ! cb unavailable")
     expect(progress.string).to include("[alpha] F failed")
   end
@@ -1052,12 +1054,14 @@ RSpec.describe Kettle::Family::Workflow do
     [
       {event_version: 1, type: "run_start", command: "release"},
       {event_version: 1, type: "command_step", phase: "release", name: "bundle_exec", status: "ok", mark: "."},
+      {event_version: 1, type: "secret_provider", action: "prompt_response", label: "RubyGems MFA code", status: "ok", mark: "."},
       {event_version: 1, type: "diagnostic", kind: "remote_fetch", message: ""},
       {event_version: 1, type: "summary", status: "ok"}
     ].each { |event| handler.call(JSON.generate(event)) }
 
     expect(updates).to include(["release", ">"])
     expect(updates).to include(["release:bundle_exec", "."])
+    expect(updates).to include(["secret:prompt_response:RubyGems MFA code", "."])
     expect(updates).to include(["remote_fetch", "!"])
     expect(updates).to include(["ok", "."])
   end

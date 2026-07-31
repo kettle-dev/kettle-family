@@ -2026,6 +2026,8 @@ module Kettle
         when "command_step"
           label = [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
           emit_template_event_line(member, template_event_mark(event), label)
+        when "secret_provider"
+          emit_template_event_line(member, release_event_status_mark(event), secret_provider_event_label(event))
         when "diagnostic"
           emit_template_event_line(member, "!", diagnostic_event_label(event))
         when "summary"
@@ -2039,6 +2041,8 @@ module Kettle
           "release"
         when "command_step"
           [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
+        when "secret_provider"
+          secret_provider_event_label(event)
         when "diagnostic"
           diagnostic_event_label(event)
         when "summary"
@@ -2053,6 +2057,8 @@ module Kettle
         when "run_start"
           ">"
         when "command_step"
+          template_event_mark(event)
+        when "secret_provider"
           template_event_mark(event)
         when "diagnostic"
           "!"
@@ -2074,6 +2080,19 @@ module Kettle
         when "diagnostic"
           "!"
         end
+      end
+
+      def secret_provider_event_label(event)
+        action = event["action"].to_s
+        purpose = event["purpose"].to_s
+        label = event["label"].to_s
+        source = event["source"].to_s
+        parts = ["secret"]
+        parts << action unless action.empty?
+        parts << purpose unless purpose.empty?
+        parts << label unless label.empty?
+        parts << source if purpose.empty? && label.empty? && !source.empty?
+        parts.join(":")
       end
 
       def diagnostic_event_label(event)

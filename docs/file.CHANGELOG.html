@@ -90,6 +90,11 @@ to child <code>kettle-release</code> commands unless the configured publish comm
 explicitly includes it.</p>
   </li>
   <li>
+    <p>Family release progress now renders child <code>kettle-release</code> <code>secret_provider</code><br>
+events, keeping keepalive and prompt-response activity visible when a release<br>
+command emits NDJSON.</p>
+  </li>
+  <li>
     <p><code>kettle-family state</code> now labels the transfer changelog column as <code>T(n)</code>,<br>
 where <code>n</code> is the total transfer changelog count and row values are the lag<br>
 after each member’s stored replay cursor.</p>
