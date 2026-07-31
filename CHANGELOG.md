@@ -28,13 +28,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.17] - 2026-07-31
+
+- TAG: [v1.2.17][1.2.17t]
+- COVERAGE: 94.10% -- 4225/4490 lines in 28 files
+- BRANCH COVERAGE: 76.58% -- 1658/2165 branches in 28 files
+- 28.88% documented
+
+### Fixed
+
 - Template branch-target workflows now recover a sole locally sourced
   `Gemfile.lock` with the existing release-safe reset helper before checkout,
   and retry a failed Bundler lock normalization once after recovery.
 - Checksum-aware template lock normalization now upgrades Bundler and retries
   once when the active Bundler rejects `--add-checksums`.
-
-### Security
 
 ## [1.2.16] - 2026-07-31
 
@@ -1531,7 +1540,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.16...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.17...HEAD
+[1.2.17]: https://github.com/kettle-dev/kettle-family/compare/v1.2.16...v1.2.17
+[1.2.17t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.17
 [1.2.16]: https://github.com/kettle-dev/kettle-family/compare/v1.2.15...v1.2.16
 [1.2.16t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.16
 [1.2.15]: https://github.com/kettle-dev/kettle-family/compare/v1.2.14...v1.2.15
