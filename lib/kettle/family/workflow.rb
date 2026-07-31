@@ -974,14 +974,17 @@ module Kettle
       def workflow_bundle_gemfiles(member)
         Dir.glob(File.join(member.root, ".github", "workflows", "*.{yml,yaml}")).flat_map do |path|
           workflow_bundle_gemfile_entries(path).map do |entry|
-            File.expand_path(entry, member.root)
+            File.expand_path(normalize_workflow_workspace_path(entry), member.root)
           end
         end
       end
 
       def workflow_bundle_gemfile_entries(path)
         data = YAML.safe_load_file(path, permitted_classes: [], permitted_symbols: [], aliases: true) || {}
-        recursive_values_for_key(data, "bundle_gemfile").map(&:to_s).reject(&:empty?)
+        [
+          *recursive_values_for_key(data, "bundle_gemfile"),
+          *recursive_env_values_for_key(data, "BUNDLE_GEMFILE")
+        ].map(&:to_s).reject(&:empty?)
       rescue Psych::Exception
         []
       end
@@ -998,6 +1001,22 @@ module Kettle
         else
           []
         end
+      end
+
+      def recursive_env_values_for_key(value, key)
+        case value
+        when Hash
+          matches = value.fetch("env", nil).is_a?(Hash) ? [value["env"][key]] : []
+          matches.concat(value.flat_map { |_entry_key, entry_value| recursive_env_values_for_key(entry_value, key) })
+        when Array
+          value.flat_map { |entry| recursive_env_values_for_key(entry, key) }
+        else
+          []
+        end
+      end
+
+      def normalize_workflow_workspace_path(path)
+        path.to_s.sub(%r{\A\$\{\{\s*github\.workspace\s*\}\}/?}, "").sub(%r{\A\$GITHUB_WORKSPACE/?}, "")
       end
 
       def relative_path_from_member_root(member:, path:)

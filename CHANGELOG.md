@@ -81,6 +81,11 @@ Please file a bug if you notice a violation of semantic versioning.
   manual OTP entry when possible, and otherwise fail the member cleanly instead
   of escaping from a worker thread with a misleading release summary.
 
+- Dependency-floor CI bundle validation now recognizes workflow `env:
+  BUNDLE_GEMFILE` entries, including `${{ github.workspace }}` paths, so
+  release waves wait for just-published floors before pushing dependent CI
+  workflows that install through setup-ruby-flash.
+
 ### Security
 
 ## [1.2.12] - 2026-07-30

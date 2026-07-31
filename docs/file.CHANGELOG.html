@@ -150,6 +150,12 @@ of direct nested implementation files.</p>
 manual OTP entry when possible, and otherwise fail the member cleanly instead<br>
 of escaping from a worker thread with a misleading release summary.</p>
   </li>
+  <li>
+    <p>Dependency-floor CI bundle validation now recognizes workflow <code>env:
+BUNDLE_GEMFILE</code> entries, including <code>${{ github.workspace }}</code> paths, so<br>
+release waves wait for just-published floors before pushing dependent CI<br>
+workflows that install through setup-ruby-flash.</p>
+  </li>
 </ul>
 
 <h3 id="security">Security</h3>

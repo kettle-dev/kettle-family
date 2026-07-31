@@ -1302,6 +1302,42 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).not_to have_received(:sleep)
   end
 
+  it "validates CI job env BUNDLE_GEMFILE before releasing dependents" do
+    write_release_config(
+      release_env: fake_bundle_env(<<~BASH)
+        if [[ "$BUNDLE_GEMFILE" == *"Appraisal.root.gemfile" && "$BUNDLE_LOCKFILE" == *"dependency-floor-ci-bundles"* ]]; then
+          printf 'ci env bundle gemfile: %s\\n' "$BUNDLE_GEMFILE"
+          if [ "$*" != "lock --update alpha --add-checksums" ]; then
+            printf 'unexpected bundle command: %s\\n' "$*" >&2
+            exit 1
+          fi
+        fi
+      BASH
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    write_env_bundle_workflow(beta, "Appraisal.root.gemfile")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).and_return(false)
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(%w[
+      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_ci_bundle
+      check release_changelog release_publish
+    ])
+    ci_bundle = results.find { |result| result.phase == "dependency_floor_ci_bundle" }
+    expect(ci_bundle).to be_ok
+    expect(ci_bundle.stdout).to include("ci env bundle gemfile:")
+    expect(ci_bundle.stdout).to include("Appraisal.root.gemfile")
+    expect(ci_bundle.stdout).to include("validated CI bundle Appraisal.root.gemfile after 1 attempt(s)")
+    expect(workflow).not_to have_received(:sleep)
+  end
+
   it "stops before releasing a dependent when direct CI appraisal gemfiles cannot resolve just-published floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)
@@ -1749,6 +1785,27 @@ RSpec.describe Kettle::Family::Workflow do
                   appraisal: "dep-heads"
                   bundle_gemfile: #{bundle_gemfile.inspect}
                   direct_bundle: true
+    YAML
+  end
+
+  def write_env_bundle_workflow(member, bundle_gemfile)
+    workflow_path = File.join(member.root, ".github", "workflows", "truffleruby-24.2.yml")
+    gemfile_path = File.join(member.root, bundle_gemfile)
+    FileUtils.mkdir_p(File.dirname(workflow_path))
+    File.write(gemfile_path, <<~RUBY)
+      source "https://gem.coop"
+      gemspec
+    RUBY
+    File.write(workflow_path, <<~YAML)
+      name: TruffleRuby 24.2
+      jobs:
+        test:
+          env:
+            BUNDLE_GEMFILE: ${{ github.workspace }}/#{bundle_gemfile}
+          steps:
+            - uses: appraisal-rb/setup-ruby-flash@b22cb587431e9611d9e0a624a43872e2bbfbcd66
+              with:
+                bundler-cache: true
     YAML
   end
 
