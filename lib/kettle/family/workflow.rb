@@ -2251,8 +2251,16 @@ module Kettle
 
       def release_lockfile_env(member = nil)
         base_release_env
+          .merge(release_lockfile_bundler_env_resets)
           .merge(env_overrides)
           .merge(release_lockfile_local_path_env_overrides(member))
+      end
+
+      def release_lockfile_bundler_env_resets
+        {
+          "BUNDLE_GEMFILE" => nil,
+          "BUNDLE_LOCKFILE" => nil
+        }
       end
 
       def release_allowed_local_path_roots

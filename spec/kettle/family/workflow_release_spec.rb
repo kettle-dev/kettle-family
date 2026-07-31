@@ -1219,7 +1219,7 @@ RSpec.describe Kettle::Family::Workflow do
   it "validates direct CI appraisal gemfiles after just-published dependency floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)
-        if [[ "$BUNDLE_GEMFILE" == *"gemfiles/dep_heads.gemfile" ]]; then
+        if [[ "$BUNDLE_GEMFILE" == *"gemfiles/dep_heads.gemfile" && "$BUNDLE_LOCKFILE" == *"dependency-floor-ci-bundles"* ]]; then
           printf 'ci bundle gemfile: %s\\n' "$BUNDLE_GEMFILE"
           printf 'ci bundle lockfile: %s\\n' "$BUNDLE_LOCKFILE"
           if [ "$*" != "lock --update alpha --add-checksums" ]; then
@@ -1256,7 +1256,7 @@ RSpec.describe Kettle::Family::Workflow do
   it "stops before releasing a dependent when direct CI appraisal gemfiles cannot resolve just-published floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)
-        if [[ "$BUNDLE_GEMFILE" == *"gemfiles/dep_heads.gemfile" ]]; then
+        if [[ "$BUNDLE_GEMFILE" == *"gemfiles/dep_heads.gemfile" && "$BUNDLE_LOCKFILE" == *"dependency-floor-ci-bundles"* ]]; then
           printf 'missing alpha from CI bundle\\n' >&2
           exit 1
         fi
