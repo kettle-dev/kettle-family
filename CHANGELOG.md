@@ -46,6 +46,9 @@ Please file a bug if you notice a violation of semantic versioning.
   terminal, with raw passthrough still available under verbose/debug output.
 - Release summary footers now include the transcript log directory when release
   logs were written, including successful runs where raw output stayed quiet.
+- Release progress now renders child `command_step` summaries, so phases can
+  show context such as `release:bundle_lock:Gemfile` or
+  `release:yard:documentation`.
 
 ### Deprecated
 
