@@ -591,7 +591,9 @@ module Kettle
         selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
         print_execution_intent(command: command, config: config, members: result_members, options: options, start_at: start_at)
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
+        elapsed_seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
         Report.new(
           family_name: config.family_name,
           family_mode: config.family_mode,
@@ -605,7 +607,8 @@ module Kettle
           release_mode: release_mode(command: command, options: options),
           command: command,
           results: results,
-          warnings: discovery.warnings
+          warnings: discovery.warnings,
+          elapsed_seconds: elapsed_seconds
         )
       end
 

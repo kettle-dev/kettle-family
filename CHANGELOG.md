@@ -46,6 +46,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family` now loads `kettle-dev` through its public entrypoint instead
   of direct nested implementation files.
 
+- Command summaries now include total elapsed wall time in the final footer.
+
 ### Security
 
 ## [1.2.12] - 2026-07-30

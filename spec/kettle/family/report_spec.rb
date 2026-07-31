@@ -5,7 +5,7 @@ RSpec.describe Kettle::Family::Report do
     Kettle::Family::Member.new(name: name, root: "/repo/#{name}", gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: [])
   end
 
-  def result(member_name, phase: "release_publish", success: true, skipped: false, reason: nil)
+  def result(member_name, phase: "release_publish", success: true, skipped: false, reason: nil, elapsed_seconds: 1.0)
     Kettle::Family::CommandResult.new(
       member_name,
       phase,
@@ -15,7 +15,7 @@ RSpec.describe Kettle::Family::Report do
       success,
       "",
       "",
-      1.0,
+      elapsed_seconds,
       skipped,
       reason
     )
@@ -513,6 +513,26 @@ RSpec.describe Kettle::Family::Report do
     expect(footer).to include("  release targets: main")
     expect(footer).to include("  member release targets:\n    alpha: r1, r2")
     expect(footer).to include("summary:\n  outcome: success")
+    expect(footer).to include("  elapsed: 00:01")
+  end
+
+  it "includes total visible result elapsed time in the summary" do
+    report = described_class.new(
+      family_name: "structuredmerge-ruby",
+      order_mode: "dependency",
+      members: [member("alpha")],
+      selected_members: [member("alpha")],
+      config_path: nil,
+      command: "release",
+      results: [
+        result("alpha", phase: "release_wave", elapsed_seconds: 300),
+        result("alpha", phase: "release_changelog", elapsed_seconds: 65.4),
+        result("alpha", phase: "release_publish", elapsed_seconds: 3601.2)
+      ]
+    )
+
+    expect(report.to_text).to include("  elapsed: 1:01:07")
+    expect(report.to_h.fetch("summary").fetch("elapsed_seconds")).to eq(3666.6)
   end
 
   it "summarizes successful bump members with their commit phases" do

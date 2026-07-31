@@ -31,7 +31,7 @@ module Kettle
 
       attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode, :warnings
 
-      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [], warnings: [])
+      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [], warnings: [], elapsed_seconds: nil)
         @family_name = family_name
         @family_mode = family_mode
         @order_mode = order_mode
@@ -45,6 +45,7 @@ module Kettle
         @member_release_target_branches = member_release_target_branches
         @release_mode = release_mode
         @warnings = warnings
+        @elapsed_seconds = elapsed_seconds
       end
 
       def to_h
@@ -132,6 +133,7 @@ module Kettle
         end
         lines << "summary:"
         lines << "  outcome: #{data.fetch("outcome")}"
+        lines << "  elapsed: #{format_elapsed(data.fetch("elapsed_seconds"))}"
         lines << "  selected: #{data.fetch("selected_count")}"
         lines << "  results: #{data.fetch("result_count")}"
         lines << "  succeeded: #{summary_list(data.fetch("succeeded"))}"
@@ -155,6 +157,7 @@ module Kettle
       def summary
         {
           "outcome" => success? ? "success" : "failure",
+          "elapsed_seconds" => elapsed_seconds,
           "selected_count" => selected_members.length,
           "result_count" => visible_results.length,
           "succeeded" => summary_succeeded,
@@ -181,6 +184,20 @@ module Kettle
 
       def visible_results
         results.reject { |result| release_wave_result?(result) }
+      end
+
+      def elapsed_seconds
+        (@elapsed_seconds || visible_results.sum { |result| result.elapsed_seconds.to_f }).round(3)
+      end
+
+      def format_elapsed(seconds)
+        total = seconds.to_f.round
+        hours = total / 3600
+        minutes = (total % 3600) / 60
+        remaining_seconds = total % 60
+        return format("%d:%02d:%02d", hours, minutes, remaining_seconds) if hours.positive?
+
+        format("%02d:%02d", minutes, remaining_seconds)
       end
 
       def append_indented_output(lines, output)
