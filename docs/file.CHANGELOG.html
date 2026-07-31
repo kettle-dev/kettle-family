@@ -82,6 +82,14 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="fixed">Fixed</h3>
 
+<ul>
+  <li>Template branch-target workflows now recover a sole locally sourced<br>
+<code>Gemfile.lock</code> with the existing release-safe reset helper before checkout,<br>
+and retry a failed Bundler lock normalization once after recovery.</li>
+  <li>Checksum-aware template lock normalization now upgrades Bundler and retries<br>
+once when the active Bundler rejects <code>--add-checksums</code>.</li>
+</ul>
+
 <h3 id="security">Security</h3>
 
 <h2 id="1216---2026-07-31">

@@ -151,13 +151,13 @@ module Kettle
         end
 
         preflight = branch_checkout_dirty_preflight_results
-        return preflight unless preflight.empty?
+        return preflight if preflight.any? { |result| !result.ok? }
 
         prompt_for_gem_signing_password if command == "release" && execute && release_signing_prompt_required?
-        return branch_target_results unless config.release_target_branches.empty?
-        return member_local_branch_target_results if member_local_branch_targets?
+        return preflight + branch_target_results unless config.release_target_branches.empty?
+        return preflight + member_local_branch_target_results if member_local_branch_targets?
 
-        current_branch_results(members)
+        preflight + current_branch_results(members)
       end
 
       private
@@ -509,12 +509,24 @@ module Kettle
         return [] if allow_dirty
         return [] unless branch_checkout_preflight_required?
 
-        branch_checkout_preflight_members.filter_map do |member|
+        branch_checkout_preflight_members.each_with_object([]) do |member, results|
           dirty_paths = GitStatus.dirty_paths(member.root)
           next if dirty_paths.empty?
 
-          branch_checkout_dirty_result(member, dirty_paths)
+          if recoverable_template_lockfile_dirt?(member, dirty_paths)
+            recover_template_lockfiles(member: member, runner: command_runner, memo: results, phase: "template_lockfile_recovery")
+            next if results.last&.ok? && GitStatus.dirty_paths(member.root).empty?
+          end
+
+          results << branch_checkout_dirty_result(member, GitStatus.dirty_paths(member.root))
         end
+      end
+
+      def recoverable_template_lockfile_dirt?(member, dirty_paths)
+        return false unless command == "template" && config.normalize_lockfiles?
+        return false unless dirty_paths.length == 1 && dirty_paths.first.end_with?(" Gemfile.lock")
+
+        release_lockfile_has_local_path_remote?(member)
       end
 
       def branch_checkout_preflight_required?
@@ -1061,17 +1073,17 @@ module Kettle
         path.to_s
       end
 
-      def reset_gemfile_lock(member:, runner:, memo:)
+      def reset_gemfile_lock(member:, runner:, memo:, phase: "reset_gemfile_lock", env: release_lockfile_env(member))
         result = runner.call(
           member: member,
-          phase: "reset_gemfile_lock",
+          phase: phase,
           command: reset_gemfile_lock_command(member),
-          env: release_lockfile_env(member)
+          env: env
         )
         memo << result
         return unless result.ok? && execute
 
-        validate_reset_gemfile_lock(member: member, memo: memo)
+        validate_reset_gemfile_lock(member: member, memo: memo, phase: phase)
       end
 
       def reset_gemfile_lock_command(member)
@@ -1098,13 +1110,13 @@ module Kettle
         env_overrides["KETTLE_FAMILY_RESET_RUBY"].to_s.empty? ? RbConfig.ruby : env_overrides["KETTLE_FAMILY_RESET_RUBY"].to_s
       end
 
-      def validate_reset_gemfile_lock(member:, memo:)
+      def validate_reset_gemfile_lock(member:, memo:, phase: "reset_gemfile_lock")
         diagnostics = reset_gemfile_lock_diagnostics(member)
         return if diagnostics.empty?
 
         memo << CommandResult.new(
           member.name,
-          "reset_gemfile_lock_readiness",
+          "#{phase}_readiness",
           ["internal", "validate", "Gemfile.lock"],
           member.root,
           1,
@@ -2399,7 +2411,71 @@ module Kettle
             env: workflow_env
           )
         end
+        if checksum_option_unsupported?(result)
+          recovery = runner.call(
+            member: member,
+            phase: "#{phase}_bundler_recovery",
+            command: %w[bundle update --bundler],
+            env: workflow_env
+          )
+          memo << recovery
+          return unless recovery.ok?
+
+          result = runner.call(
+            member: member,
+            phase: phase,
+            command: normalize_lockfiles_command(member: member, phase: phase),
+            env: workflow_env
+          )
+        end
+        if template_lockfile_phase?(phase) && recoverable_bundle_failure?(result)
+          recover_template_lockfiles(member: member, runner: runner, memo: memo, phase: "#{phase}_recovery")
+          return unless memo.last&.ok?
+
+          result = runner.call(
+            member: member,
+            phase: phase,
+            command: normalize_lockfiles_command(member: member, phase: phase),
+            env: workflow_env
+          )
+        end
         memo << result
+      end
+
+      def recover_template_lockfiles(member:, runner:, memo:, phase:)
+        reset_gemfile_lock(
+          member: member,
+          runner: runner,
+          memo: memo,
+          phase: phase,
+          env: template_lockfile_recovery_env(member)
+        )
+        return unless memo.last&.ok?
+
+        commit_normalized_lockfiles(
+          branch_members: [member],
+          runner: runner,
+          memo: memo,
+          reason: "reset",
+          force: true
+        )
+      end
+
+      def recoverable_bundle_failure?(result)
+        return false unless execute && !result.ok?
+
+        output = [result.stdout, result.stderr].join("\n")
+        output.match?(/Bundler::(?:GemNotFound|VersionConflict)|Could not (?:find|resolve) |already activated .* but your Gemfile requires/)
+      end
+
+      def checksum_option_unsupported?(result)
+        return false unless execute && !result.ok?
+
+        [result.stdout, result.stderr].join("\n").match?(/Unknown switches? .*--add-checksums/)
+      end
+
+      def template_lockfile_recovery_env(member)
+        release_lockfile_env(member).merge("K_JEM_TEMPLATING" => "false")
       end
 
       def normalize_lockfiles_command(member:, phase:)
@@ -2459,6 +2535,10 @@ module Kettle
 
       def template_prepare_lockfiles_phase?(phase)
         command == "template" && phase == "prepare_lockfiles"
+      end
+
+      def template_lockfile_phase?(phase)
+        command == "template" && %w[prepare_lockfiles normalize_lockfiles].include?(phase)
       end
 
       def repair_checksum_mismatches(member, result)

@@ -949,6 +949,114 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.stderr).to include("Gemfile.lock")
   end
 
+  it "recovers a sole local-path Gemfile.lock before branch target checkout" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_template_config(root: member.root, release_target_branches: %w[r1 r2])
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      PATH
+        remote: /workspace/alpha
+        specs:
+    LOCK
+
+    calls = []
+    stub_successful_runner(calls)
+    allow(Kettle::Family::GitStatus).to receive(:dirty_paths).with(member.root).and_return([" M Gemfile.lock"], [])
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    allow(workflow).to receive(:validate_reset_gemfile_lock)
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to include("template_lockfile_recovery", "release_checkout")
+    expect(calls.find { |call| call[:phase] == "template_lockfile_recovery" }.fetch(:env)).to include(
+      "BUNDLE_GEMFILE" => nil,
+      "K_JEM_TEMPLATING" => "false"
+    )
+  end
+
+  it "retries template lockfile normalization once after a Bundler materialization failure" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    calls = []
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      calls << {phase: phase, command: command, env: env}
+      failure = phase == "prepare_lockfiles" && calls.count { |call| call[:phase] == "prepare_lockfiles" } == 1
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        failure ? 1 : 0,
+        !failure,
+        "",
+        failure ? "Bundler::GemNotFound: Could not find stale-gem-1.0.0" : "",
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    allow(workflow).to receive(:validate_reset_gemfile_lock)
+
+    results = workflow.results
+
+    expect(results).to all(be_ok)
+    expect(calls.map { |call| call[:phase] }).to start_with(
+      "prepare_lockfiles",
+      "prepare_lockfiles_recovery",
+      "commit_normalized_lockfiles",
+      "prepare_lockfiles"
+    )
+    expect(calls.count { |call| call[:phase] == "prepare_lockfiles" }).to eq(2)
+    expect(calls.find { |call| call[:phase] == "prepare_lockfiles_recovery" }.fetch(:env)).to include(
+      "BUNDLE_GEMFILE" => nil,
+      "K_JEM_TEMPLATING" => "false"
+    )
+  end
+
+  it "updates Bundler and retries checksum-aware template normalization when required" do
+    write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    calls = []
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      calls << {phase: phase, command: command, env: env}
+      unsupported = phase == "prepare_lockfiles" && calls.count { |call| call[:phase] == "prepare_lockfiles" } == 1
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        unsupported ? 1 : 0,
+        !unsupported,
+        "",
+        unsupported ? "Unknown switches \"--add-checksums\"" : "",
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results).to all(be_ok)
+    expect(calls.map { |call| call[:phase] }).to start_with(
+      "prepare_lockfiles",
+      "prepare_lockfiles_bundler_recovery",
+      "prepare_lockfiles"
+    )
+    expect(calls.fetch(1).fetch(:command)).to eq(%w[bundle update --bundler])
+    expect(calls.count { |call| call[:phase] == "prepare_lockfiles" }).to eq(2)
+  end
+
   it "allows dirty member target branch checkout preflight when explicitly requested" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)

@@ -28,6 +28,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Template branch-target workflows now recover a sole locally sourced
+  `Gemfile.lock` with the existing release-safe reset helper before checkout,
+  and retry a failed Bundler lock normalization once after recovery.
+- Checksum-aware template lock normalization now upgrades Bundler and retries
+  once when the active Bundler rejects `--add-checksums`.
+
 ### Security
 
 ## [1.2.16] - 2026-07-31
