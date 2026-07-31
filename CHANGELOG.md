@@ -23,6 +23,10 @@ Please file a bug if you notice a violation of semantic versioning.
 - Release publish/build commands now write per-member transcript logs under
   `tmp/kettle-family/release-*`, and failure summaries include the log path.
 
+- Release progress now renders child `kettle-release` `remote_parity` events,
+  keeping remote fetch, skip, failure, and completion activity visible without
+  scraping raw command output.
+
 ### Changed
 
 ### Deprecated

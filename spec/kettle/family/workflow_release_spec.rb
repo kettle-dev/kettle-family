@@ -1057,6 +1057,7 @@ RSpec.describe Kettle::Family::Workflow do
       {event_version: 1, type: "run_start", command: "release"},
       {event_version: 1, type: "command_step", phase: "release", name: "bundle_exec", status: "started", mark: ">"},
       {event_version: 1, type: "secret_provider", action: "keepalive", purpose: "CI monitoring", status: "started", mark: ">"},
+      {event_version: 1, type: "remote_parity", action: "fetch", remote: "cb", status: "started", mark: ">"},
       {event_version: 1, type: "diagnostic", kind: "remote_fetch", message: "cb unavailable"},
       {event_version: 1, type: "summary", status: "failed"}
     ].each { |event| handler.call(JSON.generate(event)) }
@@ -1064,6 +1065,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("[alpha] > release")
     expect(progress.string).to include("[alpha] > release:bundle_exec")
     expect(progress.string).to include("[alpha] > secret:keepalive:CI monitoring")
+    expect(progress.string).to include("[alpha] > remote:fetch:cb")
     expect(progress.string).to include("[alpha] ! cb unavailable")
     expect(progress.string).to include("[alpha] F failed")
   end
@@ -1099,6 +1101,7 @@ RSpec.describe Kettle::Family::Workflow do
       {event_version: 1, type: "run_start", command: "release"},
       {event_version: 1, type: "command_step", phase: "release", name: "bundle_exec", status: "ok", mark: "."},
       {event_version: 1, type: "secret_provider", action: "prompt_response", label: "RubyGems MFA code", status: "ok", mark: "."},
+      {event_version: 1, type: "remote_parity", action: "skip", remote: "cb", status: "skipped", mark: "."},
       {event_version: 1, type: "diagnostic", kind: "remote_fetch", message: ""},
       {event_version: 1, type: "summary", status: "ok"}
     ].each { |event| handler.call(JSON.generate(event)) }
@@ -1106,6 +1109,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(updates).to include(["release", ">"])
     expect(updates).to include(["release:bundle_exec", "."])
     expect(updates).to include(["secret:prompt_response:RubyGems MFA code", "."])
+    expect(updates).to include(["remote:skip:cb", "."])
     expect(updates).to include(["remote_fetch", "!"])
     expect(updates).to include(["ok", "."])
   end

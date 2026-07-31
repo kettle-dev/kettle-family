@@ -2111,6 +2111,8 @@ module Kettle
           emit_template_event_line(member, template_event_mark(event), label)
         when "secret_provider"
           emit_template_event_line(member, release_event_status_mark(event), secret_provider_event_label(event))
+        when "remote_parity"
+          emit_template_event_line(member, release_event_status_mark(event), remote_parity_event_label(event))
         when "diagnostic"
           emit_template_event_line(member, "!", diagnostic_event_label(event))
         when "summary"
@@ -2126,6 +2128,8 @@ module Kettle
           [event["phase"], event["name"]].map(&:to_s).reject(&:empty?).join(":")
         when "secret_provider"
           secret_provider_event_label(event)
+        when "remote_parity"
+          remote_parity_event_label(event)
         when "diagnostic"
           diagnostic_event_label(event)
         when "summary"
@@ -2142,6 +2146,8 @@ module Kettle
         when "command_step"
           template_event_mark(event)
         when "secret_provider"
+          template_event_mark(event)
+        when "remote_parity"
           template_event_mark(event)
         when "diagnostic"
           "!"
@@ -2175,6 +2181,17 @@ module Kettle
         parts << purpose unless purpose.empty?
         parts << label unless label.empty?
         parts << source if purpose.empty? && label.empty? && !source.empty?
+        parts.join(":")
+      end
+
+      def remote_parity_event_label(event)
+        action = event["action"].to_s
+        remote = event["remote"].to_s
+        trunk = event["trunk"].to_s
+        parts = ["remote"]
+        parts << action unless action.empty?
+        parts << remote unless remote.empty?
+        parts << trunk if remote.empty? && !trunk.empty?
         parts.join(":")
       end
 
