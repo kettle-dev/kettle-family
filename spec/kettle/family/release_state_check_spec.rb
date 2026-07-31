@@ -291,6 +291,23 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(calls.count(nil)).to eq(1)
   end
 
+  it "runs the external kettle-jem transfer changelog query outside the active bundle" do
+    check = described_class.new(members: [])
+    status = instance_double(Process::Status, success?: true)
+    allow(check).to receive(:in_process_transfer_changelog_lag).and_return(nil)
+    allow(Bundler).to receive(:with_unbundled_env).and_yield
+    allow(Open3).to receive(:capture3)
+      .with(RbConfig.ruby, "-rjson", "-rkettle/jem", "-e", kind_of(String), "")
+      .and_return([JSON.generate("missing_count" => 23), "", status])
+
+    lag = check.send(:transfer_changelog_lag, nil)
+
+    expect(lag).to include("missing_count" => 23)
+    expect(Bundler).to have_received(:with_unbundled_env)
+    expect(Open3).to have_received(:capture3)
+      .with(RbConfig.ruby, "-rjson", "-rkettle/jem", "-e", kind_of(String), "")
+  end
+
   it "leaves branch release state unchanged when the line version is unavailable" do
     member = member("alpha")
     check = described_class.new(members: [member])

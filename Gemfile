@@ -23,6 +23,9 @@ gem "nomono", "~> 1.1", ">= 1.1.1", require: false # ruby >= 3.2.0
 
 # Direct sibling dependencies (env-switched via KETTLE_DEV_DEV)
 direct_sibling_gems = %w[
+  kettle-gha-pins
+  kettle-ndjson
+  kettle-rb
   kettle-dev
   kettle-test
 ]

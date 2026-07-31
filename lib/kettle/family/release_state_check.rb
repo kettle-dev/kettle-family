@@ -387,7 +387,12 @@ module Kettle
           last_entry_key = nil if last_entry_key.empty?
           puts JSON.generate(Kettle::Jem.transfer_changelog_lag(last_entry_key))
         RUBY
-        stdout, _stderr, status = Open3.capture3(RbConfig.ruby, "-rjson", "-rkettle/jem", "-e", code, cache_key)
+        command = [RbConfig.ruby, "-rjson", "-rkettle/jem", "-e", code, cache_key]
+        stdout, _stderr, status = if defined?(::Bundler)
+          ::Bundler.with_unbundled_env { Open3.capture3(*command) }
+        else
+          Open3.capture3(*command)
+        end
         status.success? ? normalize_transfer_changelog_lag(JSON.parse(stdout)) : nil
       rescue JSON::ParserError, SystemCallError
         nil
