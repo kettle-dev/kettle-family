@@ -249,6 +249,10 @@ module Kettle
         fetch_path("release", "publish_command") || command_for("release_publish") || "bundle exec kettle-release"
       end
 
+      def release_required_remotes
+        fetch_path("release", "required_remotes")
+      end
+
       def release_env
         stringify_env(fetch_path("release", "env") || {})
       end

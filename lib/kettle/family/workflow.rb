@@ -100,7 +100,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -117,7 +117,8 @@ module Kettle
         @continue_ci_failures = continue_ci_failures
         @ci_workflows = validate_ci_workflows(ci_workflows)
         @skip_bundle_audit = skip_bundle_audit
-        @skip_remotes = validate_skip_remotes(skip_remotes)
+        @skip_remotes = validate_remote_list(skip_remotes, "--skip-remotes")
+        @required_remotes = validate_remote_list(required_remotes.nil? ? config.release_required_remotes : required_remotes, "--required-remotes")
         @auto_dependency_floors = auto_dependency_floors.nil? ? config.release_auto_dependency_floors? : auto_dependency_floors
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
         @gha_sha_pins_check = gha_sha_pins_check
@@ -159,7 +160,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -1408,6 +1409,7 @@ module Kettle
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
         args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
+        args << "--required-remotes=#{required_remotes}" if required_remotes && !required_remotes.to_s.empty?
         args << "--yes" if release_command_uses_kettle_release_yes? && !command_includes_arg?(command, "--yes")
         args << "--events" unless command_includes_arg?(command, "--events")
         return command if args.empty?
@@ -1436,12 +1438,14 @@ module Kettle
         workflows.join(",")
       end
 
-      def validate_skip_remotes(value)
-        return nil if value.nil? || value.to_s.empty?
+      def validate_remote_list(value, option_name)
+        return nil if value.nil?
 
-        remotes = value.to_s.split(",").map(&:strip)
+        remotes = Array(value).flat_map { |entry| entry.to_s.split(",") }.map(&:strip)
+        return nil if remotes.all?(&:empty?)
+
         invalid = remotes.find { |remote| remote.empty? || !remote.match?(/\A[A-Za-z0-9_.-]+\z/) }
-        raise Error, "invalid --skip-remotes value #{value.inspect}" if invalid
+        raise Error, "invalid #{option_name} value #{value.inspect}" if invalid
 
         remotes.join(",")
       end
@@ -1460,6 +1464,7 @@ module Kettle
         env["K_RELEASE_CI_WORKFLOWS"] = ci_workflows if ci_workflows && !ci_workflows.to_s.empty?
         env["KETTLE_DEV_SKIP_BUNDLE_AUDIT"] = "true" if skip_bundle_audit
         env["K_RELEASE_SKIP_REMOTES"] = skip_remotes if skip_remotes && !skip_remotes.to_s.empty?
+        env["K_RELEASE_REQUIRED_REMOTES"] = required_remotes if required_remotes && !required_remotes.to_s.empty?
         env.merge!(kettle_release_secrets_env)
         env
       end

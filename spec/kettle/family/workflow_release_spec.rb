@@ -196,10 +196,29 @@ RSpec.describe Kettle::Family::Workflow do
       continue_ci_failures: true,
       ci_workflows: "current,style.yml",
       skip_bundle_audit: true,
-      skip_remotes: "cb"
+      skip_remotes: "cb",
+      required_remotes: "origin"
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --yes --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --required-remotes=origin --yes --events"])
+  end
+
+  it "passes configured required release remotes through kettle-release commands" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      required_remotes: %w[origin github]
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true
+    ).results
+
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --required-remotes=origin,github --yes --events"])
   end
 
   it "keeps 1Password OTP handling in kettle-family by default while passing no child secrets env" do
@@ -1686,7 +1705,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -1697,6 +1716,7 @@ RSpec.describe Kettle::Family::Workflow do
     release["family_changelog"] = family_changelog if family_changelog
     release["env"] = release_env if release_env
     release["secrets"] = secrets if secrets
+    release["required_remotes"] = required_remotes if required_remotes
     config = {"release" => release}
     config["template"] = template if template
     config["check"] = check if check

@@ -151,6 +151,7 @@ module Kettle
             release_ci_workflows: nil,
             release_skip_bundle_audit: false,
             release_skip_remotes: nil,
+            release_required_remotes: nil,
             release_secrets_provider: nil,
             accept: true,
             tag: false,
@@ -464,6 +465,7 @@ module Kettle
         option :ci_workflows, long: "--ci-workflows", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated CI workflow monitor subset through to kettle-release commands"
         option :skip_bundle_audit, long: "--skip-bundle-audit", desc: "Skip bundle:audit/update during release rake checks"
         option :skip_remotes, long: "--skip-remotes", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated git remote skip list through to kettle-release commands"
+        option :required_remotes, long: "--required-remotes", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated required git remote list through to kettle-release commands"
         option :secrets_provider, long: "--secrets-provider", value: {type: String, usage: "NAME"}, desc: "Release secrets provider: interactive, 1password"
         option :no_auto_floors, long: "--no-auto-floors", desc: "Do not raise family dependency floors between member releases" do
           options[:no_auto_floors] = true
@@ -487,6 +489,7 @@ module Kettle
             release_ci_workflows: options[:ci_workflows],
             release_skip_bundle_audit: truthy_option?(:skip_bundle_audit),
             release_skip_remotes: options[:skip_remotes],
+            release_required_remotes: options[:required_remotes],
             release_secrets_provider: options[:secrets_provider],
             release_auto_dependency_floors: !truthy_option?(:no_auto_floors),
             accept: !options.key?(:accept) || options[:accept],
@@ -662,6 +665,7 @@ module Kettle
           ci_workflows: options[:release_ci_workflows],
           skip_bundle_audit: options[:release_skip_bundle_audit],
           skip_remotes: options[:release_skip_remotes],
+          required_remotes: options[:release_required_remotes],
           secrets_provider: release_secrets_provider(command: command, config: config, options: options),
           auto_dependency_floors: options[:release_auto_dependency_floors],
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],

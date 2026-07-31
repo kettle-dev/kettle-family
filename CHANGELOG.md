@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family release runs can now pass configured required release remotes through
+  to `kettle-release`, allowing mirrors to remain optional while primary remotes
+  still block release parity failures.
+
 ### Security
 
 ## [1.2.13] - 2026-07-31
