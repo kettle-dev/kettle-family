@@ -503,9 +503,11 @@ has a provider configured. Family publish runs pass <code>--yes</code> to child<
 <code>kettle-release</code> commands by default, making release confirmation approval<br>
 explicit instead of relying on terminal prompt detection. Pass <code>--no-accept</code> to<br>
 leave child release confirmation prompts interactive. When publishing through<br>
-<code>kettle-release</code>, <code>kettle-family</code> loads the signing passphrase once and passes<br>
-the cached value to each child process; <code>kettle-release</code> still fetches RubyGems<br>
-OTP values directly from 1Password at prompt time.</p>
+<code>kettle-release</code>, <code>kettle-family</code> owns release secret prompts by default: it<br>
+loads the signing passphrase once, watches child release prompts, and fetches<br>
+RubyGems OTP values from 1Password when each MFA prompt arrives. A child<br>
+<code>kettle-release</code> command owns its own secrets provider only when the configured<br>
+publish command explicitly includes <code>--secrets-provider</code>.</p>
 
 <h2 id="-basic-usage">🔧 Basic Usage</h2>
 
@@ -614,10 +616,11 @@ prompts.</p>
 <p>Executed publish runs can opt in to the local 1Password CLI for unattended<br>
 release credentials. The gem signing passphrase is loaded once and cached only<br>
 in memory for the current <code>kettle-family</code> process. When the publish command is<br>
-<code>kettle-release</code>, that cached value is passed through an internal environment<br>
-integration so child releases do not query 1Password repeatedly for the same<br>
-passphrase. RubyGems OTP values are loaded by <code>kettle-release</code> when each MFA<br>
-prompt arrives, so long releases do not reuse a stale TOTP from release startup.</p>
+<code>kettle-release</code>, <code>kettle-family</code> watches the child release process and answers<br>
+signing and RubyGems MFA prompts itself, so long releases do not reuse a stale<br>
+TOTP from release startup. If a publish command explicitly includes<br>
+<code>--secrets-provider</code>, that child <code>kettle-release</code> owns its own provider<br>
+interaction instead.</p>
 
 <pre class="code language-yaml"><code class="language-yaml">release:
   secrets:

@@ -756,8 +756,8 @@ module Kettle
         CommandRunner.new(
           execute: execute,
           accept: release_command_uses_kettle_release_yes? ? false : accept,
-          gem_signing_password: release_command_uses_kettle_release_secrets? ? nil : @gem_signing_password,
-          otp_coordinator: release_command_uses_kettle_release_secrets? ? nil : release_otp_coordinator
+          gem_signing_password: release_command_delegates_secrets_to_kettle_release? ? nil : @gem_signing_password,
+          otp_coordinator: release_command_delegates_secrets_to_kettle_release? ? nil : release_otp_coordinator
         )
       end
 
@@ -1345,7 +1345,6 @@ module Kettle
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
         args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
-        args << "--secrets-provider=1password" if release_command_uses_kettle_release_secrets? && !command_includes_arg?(command, "--secrets-provider")
         args << "--yes" if release_command_uses_kettle_release_yes? && !command_includes_arg?(command, "--yes")
         args << "--events" unless command_includes_arg?(command, "--events")
         return command if args.empty?
@@ -1403,7 +1402,7 @@ module Kettle
       end
 
       def kettle_release_secrets_env
-        return {} unless release_command_uses_kettle_release_secrets?
+        return {} unless release_command_delegates_secrets_to_kettle_release?
 
         secrets_config = config.release_secrets
         env = {
@@ -1426,9 +1425,10 @@ module Kettle
         env
       end
 
-      def release_command_uses_kettle_release_secrets?
+      def release_command_delegates_secrets_to_kettle_release?
         kettle_release_supports_direct_secrets? &&
           kettle_release_command?(raw_release_command) &&
+          command_includes_arg?(raw_release_command, "--secrets-provider") &&
           release_secrets_provider_one_password?
       end
 

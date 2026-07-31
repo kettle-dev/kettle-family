@@ -202,7 +202,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --yes --events"])
   end
 
-  it "delegates 1Password OTP handling to kettle-release while passing the cached signing passphrase" do
+  it "keeps 1Password OTP handling in kettle-family by default while passing no child secrets env" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
       secrets: {
@@ -221,20 +221,40 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = workflow.results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --yes --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --yes --events"])
     expect(results.last.command).not_to include("cached-secret")
     expect(results.last.command).not_to include("one-time password")
     release_env = workflow.send(:release_env)
-    expect(release_env).to include(
-      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE" => "cached",
-      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "cached-secret",
-      "KETTLE_RELEASE_1PASSWORD_CLI" => "/opt/1Password/op",
-      "KETTLE_RELEASE_1PASSWORD_ITEM" => "Rubygems",
-      "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD" => "one-time password"
+    expect(release_env.keys).not_to include(
+      "KETTLE_RELEASE_SECRETS_PROVIDER",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE",
+      "KETTLE_RELEASE_1PASSWORD_CLI",
+      "KETTLE_RELEASE_1PASSWORD_ITEM",
+      "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD"
     )
   end
 
-  it "does not duplicate the secrets provider argument when the publish command already includes it" do
+  it "uses the family OTP coordinator for default kettle-release publish commands" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      secrets: {"provider" => "1password"}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    provider = instance_double(Kettle::Family::Secrets::OnePassword)
+    coordinator = instance_double(Kettle::Family::CommandRunner::OtpCoordinator)
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true, secrets_provider: provider)
+    workflow.instance_variable_set(:@gem_signing_password, "cached-secret")
+    allow(workflow).to receive(:release_otp_coordinator).and_return(coordinator)
+
+    runner = workflow.send(:release_command_runner)
+
+    expect(runner.instance_variable_get(:@gem_signing_password)).to eq("cached-secret")
+    expect(runner.instance_variable_get(:@otp_coordinator)).to eq(coordinator)
+  end
+
+  it "delegates secrets to kettle-release when the publish command explicitly includes a secrets provider" do
     write_release_config(
       publish_command: "bundle exec kettle-release --secrets-provider=1password",
       secrets: {

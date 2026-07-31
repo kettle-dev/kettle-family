@@ -84,6 +84,12 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <ul>
   <li>
+    <p>Family publish runs now keep release secrets provider interaction in<br>
+<code>kettle-family</code> by default, so <code>--secrets-provider</code> no longer gets passed down<br>
+to child <code>kettle-release</code> commands unless the configured publish command<br>
+explicitly includes it.</p>
+  </li>
+  <li>
     <p><code>kettle-family state</code> now labels the transfer changelog column as <code>T(n)</code>,<br>
 where <code>n</code> is the total transfer changelog count and row values are the lag<br>
 after each member’s stored replay cursor.</p>

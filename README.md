@@ -309,9 +309,11 @@ has a provider configured. Family publish runs pass `--yes` to child
 `kettle-release` commands by default, making release confirmation approval
 explicit instead of relying on terminal prompt detection. Pass `--no-accept` to
 leave child release confirmation prompts interactive. When publishing through
-`kettle-release`, `kettle-family` loads the signing passphrase once and passes
-the cached value to each child process; `kettle-release` still fetches RubyGems
-OTP values directly from 1Password at prompt time.
+`kettle-release`, `kettle-family` owns release secret prompts by default: it
+loads the signing passphrase once, watches child release prompts, and fetches
+RubyGems OTP values from 1Password when each MFA prompt arrives. A child
+`kettle-release` command owns its own secrets provider only when the configured
+publish command explicitly includes `--secrets-provider`.
 
 ## 🔧 Basic Usage
 
@@ -407,10 +409,11 @@ prompts.
 Executed publish runs can opt in to the local 1Password CLI for unattended
 release credentials. The gem signing passphrase is loaded once and cached only
 in memory for the current `kettle-family` process. When the publish command is
-`kettle-release`, that cached value is passed through an internal environment
-integration so child releases do not query 1Password repeatedly for the same
-passphrase. RubyGems OTP values are loaded by `kettle-release` when each MFA
-prompt arrives, so long releases do not reuse a stale TOTP from release startup.
+`kettle-release`, `kettle-family` watches the child release process and answers
+signing and RubyGems MFA prompts itself, so long releases do not reuse a stale
+TOTP from release startup. If a publish command explicitly includes
+`--secrets-provider`, that child `kettle-release` owns its own provider
+interaction instead.
 
 ```yaml
 release:
