@@ -27,7 +27,11 @@ module Kettle
         branches = config.member_release_target_branches.fetch(member.name, nil)
         return if branches.nil? || branches.empty?
 
+        family_data = config.data.fetch("family", {}).merge(
+          "local_path_root" => config.family_local_path_root
+        )
         data = config.data.merge(
+          "family" => family_data,
           "members" => config.data.fetch("members", {}).merge("roots" => ["."]),
           "release" => config.data.fetch("release", {}).merge("target_branches" => branches)
         )

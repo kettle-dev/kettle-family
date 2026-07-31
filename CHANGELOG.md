@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Configured per-member branch-target workflows now preserve the parent
+  family's local dependency root, preventing sibling local gems from resolving
+  beneath the target member checkout.
+
 ### Security
 
 ## [1.2.15] - 2026-07-31
