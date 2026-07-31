@@ -43,6 +43,9 @@ Please file a bug if you notice a violation of semantic versioning.
   lockfiles before member bundles run, avoiding already-activated `nomono`
   conflicts during family templating.
 
+- `kettle-family` now loads `kettle-dev` through its public entrypoint instead
+  of direct nested implementation files.
+
 ### Security
 
 ## [1.2.12] - 2026-07-30

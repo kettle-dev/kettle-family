@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 begin
-  require "kettle/dev/release_secrets"
+  require "kettle/dev"
 rescue LoadError
   require "open3"
 end

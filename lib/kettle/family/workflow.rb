@@ -9,7 +9,7 @@ require "pathname"
 require "rbconfig"
 require "shellwords"
 require "yaml"
-require "kettle/dev/ruby_gems_versions"
+require "kettle/dev"
 
 require_relative "workflow_progress"
 

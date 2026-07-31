@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "rubygems"
-require "kettle/dev/version_bump"
+require "kettle/dev"
 
 module Kettle
   module Family
