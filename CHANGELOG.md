@@ -54,6 +54,8 @@ Please file a bug if you notice a violation of semantic versioning.
   as structured progress.
 - Release progress now renders GitHub CI wait/start/tick events with completion
   counts, so CI monitoring no longer appears stuck while waiting for workflows.
+- Release preflight now renders through the shared progress event tape instead
+  of printing separate start and finish lines for each successful phase.
 
 ### Deprecated
 

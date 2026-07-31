@@ -16,6 +16,8 @@ require_relative "workflow_progress"
 module Kettle
   module Family
     class Workflow
+      PreflightProgressMember = Struct.new(:name)
+
       DEFAULT_COMMANDS = {
         "template" => "bundle exec kettle-jem install",
         "test" => "bundle exec kettle-test",
@@ -422,14 +424,24 @@ module Kettle
 
       def release_preflight_results
         phases = release_preflight_phases
-        emit_release_preflight_start(phases)
+        progress = start_release_preflight_progress(phases)
+        progress&.start
+        preflight_member = release_preflight_progress_member
+        progress&.start_member(preflight_member, total: phases.length, status: phases.first.fetch(:label))
         phases.each_with_index do |phase, index|
-          emit_release_preflight_phase(phase.fetch(:label), index: index, total: phases.length)
+          label = phase.fetch(:label)
+          progress&.update(preflight_member, status: label, mark: ">")
           result = send(phase.fetch(:method))
-          emit_release_preflight_phase_finish(phase.fetch(:label), result)
+          progress&.advance(preflight_member, status: label, success: result.empty?, mark: result.empty? ? "." : "F")
+          unless result.empty?
+            progress&.finish_member(preflight_member, success: false, status: label)
+            progress&.stop
+          end
           return result unless result.empty?
         end
-        emit_release_preflight_summary(phases)
+        progress&.finish_member(preflight_member, success: true, status: "ok")
+        progress&.stop
+        progress&.summary("release preflight summary: #{phases.length}/#{phases.length} phases ok")
         []
       end
 
@@ -1914,6 +1926,24 @@ module Kettle
         progress
       end
 
+      def start_release_preflight_progress(phases)
+        return nil unless progress_io
+
+        phase_label = (phases.length == 1) ? "phase" : "phases"
+        WorkflowProgress.new(
+          io: progress_io,
+          label: "release preflight",
+          total: phases.length,
+          jobs: 1,
+          members: [release_preflight_progress_member],
+          heading: "release preflight #{phases.length} #{phase_label}:"
+        )
+      end
+
+      def release_preflight_progress_member
+        @release_preflight_progress_member ||= PreflightProgressMember.new("preflight")
+      end
+
       def template_phase_total(member = nil)
         total = 1
         total += 2 if config.normalize_lockfiles?
@@ -2000,36 +2030,6 @@ module Kettle
         release_results = results.select { |result| result.phase == release_phase || result.phase == "release_skip" }
         progress.stop
         progress.summary("release summary: #{release_results.count(&:ok?)}/#{release_results.length} members ok")
-      end
-
-      def emit_release_preflight_start(phases)
-        return unless progress_io
-
-        phase_label = (phases.length == 1) ? "phase" : "phases"
-        progress_io.puts("release preflight #{phases.length} #{phase_label}:")
-        progress_io.flush
-      end
-
-      def emit_release_preflight_phase(label, index:, total:)
-        return unless progress_io
-
-        progress_io.puts("[release preflight] (#{index + 1}/#{total}) > #{label}")
-        progress_io.flush
-      end
-
-      def emit_release_preflight_phase_finish(label, results)
-        return unless progress_io
-
-        mark = results.empty? ? "." : "F"
-        progress_io.puts("[release preflight] #{mark} #{label}")
-        progress_io.flush
-      end
-
-      def emit_release_preflight_summary(phases)
-        return unless progress_io
-
-        progress_io.puts("release preflight summary: #{phases.length}/#{phases.length} phases ok")
-        progress_io.flush
       end
 
       def template_event_line_handler(member, progress: nil)

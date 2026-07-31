@@ -532,6 +532,7 @@ RSpec.describe Kettle::Family::Workflow do
     member = ready_member("alpha")
     provider = Kettle::Family::Secrets::OnePassword.new(config.release_secrets)
     progress = StringIO.new
+    allow(progress).to receive(:tty?).and_return(true)
     workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true, secrets_provider: provider, progress_io: progress)
     allow(provider).to receive(:authorize!).and_return("secret")
     allow(workflow).to receive(:released_version?).and_return(false)
@@ -541,8 +542,11 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
     expect(provider).to have_received(:authorize!).once
     expect(progress.string).to include("release preflight 3 phases:")
-    expect(progress.string).to include("[release preflight] (1/3) > secrets provider authorization")
-    expect(progress.string.index("secrets provider authorization")).to be < progress.string.index("branch checkout readiness")
+    expect(progress.string).to include("preflight")
+    expect(progress.string).to include(">.>.>.")
+    expect(progress.string).to include("ok")
+    expect(progress.string).not_to include("[release preflight] (1/3) > secrets provider authorization")
+    expect(progress.string).not_to include("[release preflight] . secrets provider authorization")
     expect(progress.string).to include("release preflight summary: 3/3 phases ok")
   end
 
@@ -566,7 +570,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).to eq(["secrets_provider_authorization"])
     expect(results.first).not_to be_ok
     expect(results.first.stderr).to eq("not signed in")
-    expect(progress.string).to include("[release preflight] F secrets provider authorization")
+    expect(progress.string).to include("[preflight]   (1/3)")
+    expect(progress.string).to include("F secrets provider authorization")
     expect(progress.string).not_to include("release preflight summary")
   end
 
@@ -588,7 +593,8 @@ RSpec.describe Kettle::Family::Workflow do
     progress = StringIO.new
     workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], execute: true, progress_io: progress)
 
-    workflow.send(:emit_release_preflight_start, [{label: "check", method: :release_preflight_branch_checkout_dirty_results}])
+    progress_renderer = workflow.send(:start_release_preflight_progress, [{label: "check", method: :release_preflight_branch_checkout_dirty_results}])
+    progress_renderer.start
 
     expect(progress.string).to include("release preflight 1 phase:")
   end

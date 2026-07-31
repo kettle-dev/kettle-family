@@ -15,11 +15,12 @@ module Kettle
       DEFAULT_TERMINAL_WIDTH = 80
       ELLIPSIS = "..."
 
-      def initialize(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil)
+      def initialize(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil)
         @io = io
         @label = label
         @total = total.to_i
         @jobs = jobs.to_i
+        @heading = heading
         @clock = clock || lambda { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
         @enabled = enabled && !!io
         @bars = {}
@@ -43,7 +44,7 @@ module Kettle
         synchronize do
           next if @started
 
-          write_line("#{@label} #{@total} member#{plural(@total)} with #{@jobs} job#{plural(@jobs)}:")
+          write_line(@heading || "#{@label} #{@total} member#{plural(@total)} with #{@jobs} job#{plural(@jobs)}:")
           @started = true
           @line_order.each { |member_name| render_name(member_name, status: "") } if @tty
         end
