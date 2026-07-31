@@ -243,9 +243,10 @@ module Kettle
       end
 
       def streamed_output_summary(result)
-        streamed_output_lines(result).reverse.find do |line|
+        lines = streamed_output_lines(result)
+        lines.reverse.find do |line|
           line.match?(/(?:failed|failure|error|exited|aborted)/i) && !line.match?(/\A(?:Files|CI|Actions)/)
-        end
+        end || lines.reverse.find { |line| !line.match?(/\A(?:Files|CI|Actions)/) }
       end
 
       def streamed_recommended_fix(result)

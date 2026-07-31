@@ -64,6 +64,10 @@ Please file a bug if you notice a violation of semantic versioning.
   command, family, mode, config, order, and release target details remain visible
   after long runs.
 
+- Failed streamed release commands now report the last useful output line when
+  no explicit failure marker is present, avoiding empty `output omitted`
+  summaries for Bundler boot failures.
+
 - Template execution now aligns stale managed `nomono` Gemfile floors and
   lockfiles before member bundles run, avoiding already-activated `nomono`
   conflicts during family templating.

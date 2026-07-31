@@ -439,6 +439,37 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("results").first.fetch("output_streamed")).to be(true)
   end
 
+  it "uses the last useful streamed line when no explicit failure line is present" do
+    selected_member = member("alpha")
+    result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "release_publish",
+      ["bundle", "exec", "kettle-release"],
+      "/repo/alpha",
+      1,
+      false,
+      "Fetching metadata\nCould not find json-2.21.2 in locally installed gems\n",
+      "",
+      1.0,
+      false,
+      "command failed",
+      nil,
+      true
+    )
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [selected_member],
+      selected_members: [selected_member],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [result]
+    )
+
+    expect(report.to_text).to include("summary: Could not find json-2.21.2 in locally installed gems")
+  end
+
   it "uses a full release resume hint for failed publish releases" do
     result = Kettle::Family::CommandResult.new(
       "rubocop-ruby3_2",
