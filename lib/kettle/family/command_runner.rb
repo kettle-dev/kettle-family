@@ -206,13 +206,12 @@ module Kettle
           until readers.empty?
             ready = IO.select(readers)
             ready.first.each do |reader|
+              chunk = reader.readpartial(1024)
               if reader.equal?(output)
-                chunk = reader.readpartial(1024)
                 captured_stdout << chunk
                 transcript_write(log_io, chunk)
                 stdout_line_buffer = stream_stdout_lines(stdout_line_buffer, chunk, stdout_line_handler)
               else
-                chunk = reader.readpartial(1024)
                 captured_stderr << chunk
                 transcript_write(log_io, chunk)
               end

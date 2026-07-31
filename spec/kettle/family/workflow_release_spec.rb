@@ -1074,7 +1074,9 @@ RSpec.describe Kettle::Family::Workflow do
       {event_version: 1, type: "command_step", phase: "release", name: "bundle_lock", summary: "Gemfile", status: "started", mark: ">"},
       {event_version: 1, type: "secret_provider", action: "keepalive", purpose: "CI monitoring", status: "started", mark: ">"},
       {event_version: 1, type: "remote_parity", action: "fetch", remote: "cb", status: "started", mark: ">"},
+      {event_version: 1, type: "ci_monitor", action: "github_wait", provider: "github", completed: 0, total: 2, status: "started", mark: ">"},
       {event_version: 1, type: "ci_monitor", action: "github_workflow", provider: "github", workflow: "ci.yml", status: "started", mark: ">"},
+      {event_version: 1, type: "ci_monitor", action: "github_tick", provider: "github", workflow: "style.yml", completed: 1, total: 2, completed_workflow: "ci.yml", status: "started", mark: ">"},
       {event_version: 1, type: "pre_release", action: "check", check: "image_links", status: "started", mark: ">"},
       {event_version: 1, type: "changelog", action: "coverage", status: "started", mark: ">"},
       {
@@ -1106,7 +1108,9 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("[alpha] > release:bundle_lock:Gemfile")
     expect(progress.string).to include("[alpha] > secret:keepalive:CI monitoring")
     expect(progress.string).to include("[alpha] > remote:fetch:cb")
+    expect(progress.string).to include("[alpha] > ci:github_wait:github:0/2")
     expect(progress.string).to include("[alpha] > ci:github_workflow:github:ci.yml")
+    expect(progress.string).to include("[alpha] > ci:github_tick:github:style.yml:1/2:ci.yml")
     expect(progress.string).to include("[alpha] > pre:check:image_links")
     expect(progress.string).to include("[alpha] > changelog:coverage")
     expect(progress.string).to include("[alpha] > lockfile:reset:before_release_task_bundle_installs:1/2")
@@ -1147,6 +1151,7 @@ RSpec.describe Kettle::Family::Workflow do
       {event_version: 1, type: "command_step", phase: "release", name: "yard", summary: "documentation", status: "ok", mark: "."},
       {event_version: 1, type: "secret_provider", action: "prompt_response", label: "RubyGems MFA code", status: "ok", mark: "."},
       {event_version: 1, type: "remote_parity", action: "skip", remote: "cb", status: "skipped", mark: "."},
+      {event_version: 1, type: "ci_monitor", action: "github_started", provider: "github", completed: 0, total: 2, started: 2, status: "ok", mark: "."},
       {event_version: 1, type: "ci_monitor", action: "gitlab_pipeline", provider: "gitlab", status: "ok", mark: "."},
       {event_version: 1, type: "pre_release", action: "image_links", status: "ok", mark: "."},
       {event_version: 1, type: "changelog", action: "plan", plan: "create_release", status: "ok", mark: "."},
@@ -1170,6 +1175,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(updates).to include(["release:yard:documentation", "."])
     expect(updates).to include(["secret:prompt_response:RubyGems MFA code", "."])
     expect(updates).to include(["remote:skip:cb", "."])
+    expect(updates).to include(["ci:github_started:github:0/2", "."])
     expect(updates).to include(["ci:gitlab_pipeline:gitlab:pipeline", "."])
     expect(updates).to include(["pre:image_links", "."])
     expect(updates).to include(["changelog:plan:create_release", "."])

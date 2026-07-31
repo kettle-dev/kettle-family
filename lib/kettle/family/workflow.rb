@@ -2245,6 +2245,11 @@ module Kettle
         parts << action unless action.empty?
         parts << provider unless provider.empty?
         parts << target unless target.empty?
+        if %w[github_wait github_started github_tick].include?(action) && event["completed"] && event["total"]
+          parts << "#{event["completed"]}/#{event["total"]}"
+        end
+        completed_workflow = event["completed_workflow"].to_s
+        parts << completed_workflow unless completed_workflow.empty? || completed_workflow == target
         parts.join(":")
       end
 

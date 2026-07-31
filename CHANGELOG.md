@@ -52,6 +52,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Release progress now renders child `release_lockfile` and `release_probe`
   events, so lockfile reset retries and published-gem availability probes show
   as structured progress.
+- Release progress now renders GitHub CI wait/start/tick events with completion
+  counts, so CI monitoring no longer appears stuck while waiting for workflows.
 
 ### Deprecated
 
