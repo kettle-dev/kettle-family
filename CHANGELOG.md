@@ -61,6 +61,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release preflight no longer prints a nested 1Password authorization alert
+  between the phase start and finish lines; the preflight phase itself is the
+  user-facing authorization notice.
+
 - Family release runs can now pass configured required release remotes through
   to `kettle-release`, allowing mirrors to remain optional while primary remotes
   still block release parity failures.

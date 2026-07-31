@@ -62,6 +62,34 @@ RSpec.describe Kettle::Family::Secrets do
     expect(provider.authorize!).to eq("secret")
   end
 
+  it "does not print a nested release notifier alert during family preflight authorization" do
+    provider = described_class::OnePassword.new(
+      "item" => "Rubygems",
+      "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE"
+    )
+    stub_env("KETTLE_RELEASE_SECRET_BELL" => "false")
+    allow(Open3).to receive(:capture3)
+      .with("op", "item", "get", "Rubygems", "--fields", "label=GEM-SIGN-PASSPHRASE", "--reveal")
+      .and_return(["secret\n", "", status(success: true)])
+
+    expect { provider.authorize! }.not_to output.to_stderr
+  end
+
+  it "keeps notifier alerts for prompt-time OTP lookups" do
+    provider = described_class::OnePassword.new(
+      "item" => "Rubygems",
+      "rubygems_otp_field" => "one-time password"
+    )
+    allow(Kettle::Dev::ReleaseNotifier).to receive(:alert)
+    allow(Open3).to receive(:capture3)
+      .with("op", "item", "get", "Rubygems", "--otp")
+      .and_return(["123456\n", "", status(success: true)])
+
+    expect(provider.rubygems_otp).to eq("123456")
+    expect(Kettle::Dev::ReleaseNotifier).to have_received(:alert)
+      .with("1Password RubyGems OTP lookup starting; watch for authorization prompt.")
+  end
+
   it "merges kettle-release secret environment defaults with family config" do
     config = instance_double(
       Kettle::Family::Config,

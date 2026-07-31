@@ -19,7 +19,7 @@ module Kettle
           end
 
           def authorize!
-            gem_signing_passphrase
+            with_release_secret_alert_suppressed { gem_signing_passphrase }
           rescue => error
             raise Error, error.message
           end
@@ -34,6 +34,16 @@ module Kettle
             super
           rescue => error
             raise Error, error.message
+          end
+
+          private
+
+          def with_release_secret_alert_suppressed
+            previous = ENV.fetch("KETTLE_RELEASE_SECRET_ALERT", nil)
+            ENV["KETTLE_RELEASE_SECRET_ALERT"] = "false"
+            yield
+          ensure
+            previous.nil? ? ENV.delete("KETTLE_RELEASE_SECRET_ALERT") : ENV["KETTLE_RELEASE_SECRET_ALERT"] = previous
           end
         end
       else
