@@ -2123,6 +2123,10 @@ module Kettle
           emit_template_event_line(member, release_event_status_mark(event), pre_release_event_label(event))
         when "changelog"
           emit_template_event_line(member, release_event_status_mark(event), changelog_event_label(event))
+        when "release_lockfile"
+          emit_template_event_line(member, release_event_status_mark(event), release_lockfile_event_label(event))
+        when "release_probe"
+          emit_template_event_line(member, release_event_status_mark(event), release_probe_event_label(event))
         when "diagnostic"
           emit_template_event_line(member, "!", diagnostic_event_label(event))
         when "summary"
@@ -2146,6 +2150,10 @@ module Kettle
           pre_release_event_label(event)
         when "changelog"
           changelog_event_label(event)
+        when "release_lockfile"
+          release_lockfile_event_label(event)
+        when "release_probe"
+          release_probe_event_label(event)
         when "diagnostic"
           diagnostic_event_label(event)
         when "summary"
@@ -2170,6 +2178,10 @@ module Kettle
         when "pre_release"
           template_event_mark(event)
         when "changelog"
+          template_event_mark(event)
+        when "release_lockfile"
+          template_event_mark(event)
+        when "release_probe"
           template_event_mark(event)
         when "diagnostic"
           "!"
@@ -2252,6 +2264,28 @@ module Kettle
         parts << action unless action.empty?
         parts << plan unless plan.empty? || action == "coverage"
         parts.join(":")
+      end
+
+      def release_lockfile_event_label(event)
+        action = event["action"].to_s
+        stage = event["stage"].to_s
+        stage = stage.tr(" ", "_")
+        parts = ["lockfile"]
+        parts << action unless action.empty?
+        parts << stage unless stage.empty?
+        parts << "#{event["attempt"]}/#{event["attempts"]}" if event["attempt"] && event["attempts"]
+        parts.join(":")
+      end
+
+      def release_probe_event_label(event)
+        action = event["action"].to_s
+        gem_name = event["gem"].to_s
+        version = event["version"].to_s
+        parts = ["probe"]
+        parts << action unless action.empty?
+        parts << [gem_name, version].reject(&:empty?).join("-")
+        parts << "#{event["attempt"]}/#{event["attempts"]}" if event["attempt"] && event["attempts"]
+        parts.reject(&:empty?).join(":")
       end
 
       def diagnostic_event_label(event)

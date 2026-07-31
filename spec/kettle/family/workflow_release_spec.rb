@@ -1077,6 +1077,27 @@ RSpec.describe Kettle::Family::Workflow do
       {event_version: 1, type: "ci_monitor", action: "github_workflow", provider: "github", workflow: "ci.yml", status: "started", mark: ">"},
       {event_version: 1, type: "pre_release", action: "check", check: "image_links", status: "started", mark: ">"},
       {event_version: 1, type: "changelog", action: "coverage", status: "started", mark: ">"},
+      {
+        event_version: 1,
+        type: "release_lockfile",
+        action: "reset",
+        stage: "before release task bundle installs",
+        attempt: 1,
+        attempts: 2,
+        status: "started",
+        mark: ">"
+      },
+      {
+        event_version: 1,
+        type: "release_probe",
+        action: "availability",
+        gem: "alpha",
+        version: "1.2.3",
+        attempt: 1,
+        attempts: 3,
+        status: "started",
+        mark: ">"
+      },
       {event_version: 1, type: "diagnostic", kind: "remote_fetch", message: "cb unavailable"},
       {event_version: 1, type: "summary", status: "failed"}
     ].each { |event| handler.call(JSON.generate(event)) }
@@ -1088,6 +1109,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("[alpha] > ci:github_workflow:github:ci.yml")
     expect(progress.string).to include("[alpha] > pre:check:image_links")
     expect(progress.string).to include("[alpha] > changelog:coverage")
+    expect(progress.string).to include("[alpha] > lockfile:reset:before_release_task_bundle_installs:1/2")
+    expect(progress.string).to include("[alpha] > probe:availability:alpha-1.2.3:1/3")
     expect(progress.string).to include("[alpha] ! cb unavailable")
     expect(progress.string).to include("[alpha] F failed")
   end
@@ -1127,6 +1150,18 @@ RSpec.describe Kettle::Family::Workflow do
       {event_version: 1, type: "ci_monitor", action: "gitlab_pipeline", provider: "gitlab", status: "ok", mark: "."},
       {event_version: 1, type: "pre_release", action: "image_links", status: "ok", mark: "."},
       {event_version: 1, type: "changelog", action: "plan", plan: "create_release", status: "ok", mark: "."},
+      {event_version: 1, type: "release_lockfile", action: "validate", stage: "before push", status: "ok", mark: "."},
+      {
+        event_version: 1,
+        type: "release_probe",
+        action: "availability",
+        gem: "alpha",
+        version: "1.2.3",
+        attempt: 2,
+        attempts: 3,
+        status: "ok",
+        mark: "."
+      },
       {event_version: 1, type: "diagnostic", kind: "remote_fetch", message: ""},
       {event_version: 1, type: "summary", status: "ok"}
     ].each { |event| handler.call(JSON.generate(event)) }
@@ -1138,6 +1173,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(updates).to include(["ci:gitlab_pipeline:gitlab:pipeline", "."])
     expect(updates).to include(["pre:image_links", "."])
     expect(updates).to include(["changelog:plan:create_release", "."])
+    expect(updates).to include(["lockfile:validate:before_push", "."])
+    expect(updates).to include(["probe:availability:alpha-1.2.3:2/3", "."])
     expect(updates).to include(["remote_fetch", "!"])
     expect(updates).to include(["ok", "."])
   end

@@ -49,6 +49,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Release progress now renders child `command_step` summaries, so phases can
   show context such as `release:bundle_lock:Gemfile` or
   `release:yard:documentation`.
+- Release progress now renders child `release_lockfile` and `release_probe`
+  events, so lockfile reset retries and published-gem availability probes show
+  as structured progress.
 
 ### Deprecated
 
