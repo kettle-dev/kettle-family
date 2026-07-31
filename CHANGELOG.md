@@ -31,6 +31,10 @@ Please file a bug if you notice a violation of semantic versioning.
   provider and workflow or pipeline context, so CI activity is visible as
   structured progress.
 
+- Release progress now renders child `kettle-release` `pre_release` events, so
+  pre-release checks are visible as structured progress while raw output stays
+  in the transcript log.
+
 ### Changed
 
 - Family release now keeps raw child `kettle-release` output in the per-member
