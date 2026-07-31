@@ -747,7 +747,8 @@ module Kettle
             env: release_env,
             interactive: release_command_interactive?,
             stdout_line_handler: release_event_line_handler(member, progress: progress),
-            log_path: release_command_log_path(member, release_phase)
+            log_path: release_command_log_path(member, release_phase),
+            passthrough_output: release_command_passthrough_output?
           )
           emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
@@ -1378,6 +1379,10 @@ module Kettle
 
       def release_command_interactive?
         publish || !!@gem_signing_password
+      end
+
+      def release_command_passthrough_output?
+        verbose || debug
       end
 
       def kettle_release_command?(command)

@@ -311,6 +311,47 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(events).to contain_exactly(include("type" => "summary", "status" => "ok"))
   end
 
+  it "can keep unconsumed interactive output in the transcript without printing it" do
+    member = member_at("alpha")
+    log_path = File.join(@tmpdir, "tmp", "kettle-family", "release", "alpha-release_publish.log")
+    runner = described_class.new(execute: true)
+    allow(runner).to receive(:pty_available?).and_return(false)
+    result = nil
+    events = []
+
+    expect do
+      expect do
+        result = runner.call(
+          member: member,
+          phase: "release_publish",
+          command: [
+            RbConfig.ruby,
+            "-rjson",
+            "-e",
+            "puts 'raw stdout'; warn 'raw stderr'; puts JSON.generate(event_version: 1, type: 'summary', status: 'ok')"
+          ],
+          interactive: true,
+          stdout_line_handler: lambda do |line|
+            payload = JSON.parse(line)
+            events << payload
+            payload["event_version"]
+          rescue JSON::ParserError
+            false
+          end,
+          log_path: log_path,
+          passthrough_output: false
+        )
+      end.not_to output.to_stdout
+    end.not_to output.to_stderr
+
+    expect(result).to be_ok
+    expect(result.stdout).to include("raw stdout")
+    expect(result.stderr).to include("raw stderr")
+    expect(File.read(log_path)).to include("raw stdout")
+    expect(File.read(log_path)).to include("raw stderr")
+    expect(events).to contain_exactly(include("type" => "summary", "status" => "ok"))
+  end
+
   it "reports PTY availability from the runtime" do
     runner = described_class.new
 

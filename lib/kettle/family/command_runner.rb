@@ -144,7 +144,7 @@ module Kettle
         @otp_coordinator = otp_coordinator
       end
 
-      def call(member:, phase:, command:, env: {}, interactive: false, stdout_line_handler: nil, log_path: nil)
+      def call(member:, phase:, command:, env: {}, interactive: false, stdout_line_handler: nil, log_path: nil, passthrough_output: true)
         argv = command_argv(member: member, command: command, env: env)
         process_env = process_env(member: member, env: env)
         spawn_options = process_options
@@ -160,7 +160,8 @@ module Kettle
               member_name: member.name,
               process_options: spawn_options,
               stdout_line_handler: stdout_line_handler,
-              log_io: log_io
+              log_io: log_io,
+              passthrough_output: passthrough_output
             )
           elsif stdout_line_handler
             run_streaming(env: process_env, argv: argv, chdir: member.root, process_options: spawn_options, stdout_line_handler: stdout_line_handler, log_io: log_io)
@@ -233,7 +234,7 @@ module Kettle
         remainder
       end
 
-      def run_interactive(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil)
+      def run_interactive(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil, passthrough_output: true)
         if pty_available?
           return run_interactive_pty(
             env: env,
@@ -242,7 +243,8 @@ module Kettle
             member_name: member_name,
             process_options: process_options,
             stdout_line_handler: stdout_line_handler,
-            log_io: log_io
+            log_io: log_io,
+            passthrough_output: passthrough_output
           )
         end
 
@@ -253,11 +255,12 @@ module Kettle
           member_name: member_name,
           process_options: process_options,
           stdout_line_handler: stdout_line_handler,
-          log_io: log_io
+          log_io: log_io,
+          passthrough_output: passthrough_output
         )
       end
 
-      def run_interactive_pty(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil)
+      def run_interactive_pty(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil, passthrough_output: true)
         stdout = +""
         stderr = +""
         stdout_line_buffer = +""
@@ -273,7 +276,7 @@ module Kettle
                   chunk = output.readpartial(1024)
                   stdout << chunk
                   transcript_write(log_io, chunk)
-                  stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler)
+                  stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler, passthrough_output: passthrough_output)
                   handle_interactive_prompt(input, chunk, member_name: member_name)
                 else
                   chunk = $stdin.readpartial(1024)
@@ -288,14 +291,14 @@ module Kettle
             transcript_write(log_io, "#{error.message}\n")
             terminate_process(pid)
           end
-          flush_interactive_stdout(stdout_line_buffer, stdout_line_handler)
+          flush_interactive_stdout(stdout_line_buffer, stdout_line_handler, passthrough_output: passthrough_output)
           _, status = Process.wait2(pid)
           status = failure_status if !stderr.empty? && status.success?
         end
         [stdout, stderr, status]
       end
 
-      def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil)
+      def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil, passthrough_output: true)
         captured_stdout = +""
         captured_stderr = +""
         stdout_line_buffer = +""
@@ -320,7 +323,8 @@ module Kettle
                     member_name: member_name,
                     stdout_line_buffer: stdout_line_buffer,
                     stdout_line_handler: stdout_line_handler,
-                    log_io: log_io
+                    log_io: log_io,
+                    passthrough_output: passthrough_output
                   )
                 end
               end
@@ -333,7 +337,7 @@ module Kettle
           else
             status = wait_thread.value
           end
-          flush_interactive_stdout(stdout_line_buffer, stdout_line_handler)
+          flush_interactive_stdout(stdout_line_buffer, stdout_line_handler, passthrough_output: passthrough_output)
         end
         [captured_stdout, captured_stderr, status]
       end
@@ -348,17 +352,18 @@ module Kettle
         member_name:,
         stdout_line_buffer:,
         stdout_line_handler:,
-        log_io: nil
+        log_io: nil,
+        passthrough_output: true
       )
         chunk = reader.readpartial(1024)
         if reader.equal?(output)
           captured_stdout << chunk
           transcript_write(log_io, chunk)
-          stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler)
+          stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler, passthrough_output: passthrough_output)
         else
           captured_stderr << chunk
           transcript_write(log_io, chunk)
-          $stderr.print(chunk)
+          $stderr.print(chunk) if passthrough_output
         end
         handle_interactive_prompt(input, chunk, member_name: member_name)
         stdout_line_buffer
@@ -386,36 +391,36 @@ module Kettle
         log_io.write(chunk)
       end
 
-      def print_interactive_stdout(buffer, chunk, stdout_line_handler)
-        return print_interactive_chunk(chunk) unless stdout_line_handler
+      def print_interactive_stdout(buffer, chunk, stdout_line_handler, passthrough_output: true)
+        return print_interactive_chunk(chunk, passthrough_output: passthrough_output) unless stdout_line_handler
 
         pending = buffer + chunk
         lines = pending.lines
         remainder = pending.end_with?("\n") ? +"" : lines.pop.to_s
-        lines.each { |line| print_interactive_line(line, stdout_line_handler) }
+        lines.each { |line| print_interactive_line(line, stdout_line_handler, passthrough_output: passthrough_output) }
         return +"" if remainder.empty?
         unless possible_event_line?(remainder)
-          $stdout.print(remainder)
+          $stdout.print(remainder) if passthrough_output
           return +""
         end
 
         remainder
       end
 
-      def flush_interactive_stdout(buffer, stdout_line_handler)
+      def flush_interactive_stdout(buffer, stdout_line_handler, passthrough_output: true)
         return if buffer.empty?
 
-        print_interactive_line(buffer, stdout_line_handler)
+        print_interactive_line(buffer, stdout_line_handler, passthrough_output: passthrough_output)
       end
 
-      def print_interactive_chunk(chunk)
-        $stdout.print(chunk)
+      def print_interactive_chunk(chunk, passthrough_output: true)
+        $stdout.print(chunk) if passthrough_output
         +""
       end
 
-      def print_interactive_line(line, stdout_line_handler)
+      def print_interactive_line(line, stdout_line_handler, passthrough_output: true)
         consumed = possible_event_line?(line) && stdout_line_handler.call(line.chomp)
-        $stdout.print(line) unless consumed
+        $stdout.print(line) if !consumed && passthrough_output
       end
 
       def possible_event_line?(line)

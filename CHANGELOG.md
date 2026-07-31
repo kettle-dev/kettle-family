@@ -33,6 +33,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Family release now keeps raw child `kettle-release` output in the per-member
+  transcript log by default and renders structured NDJSON progress in the
+  terminal, with raw passthrough still available under verbose/debug output.
+
 ### Deprecated
 
 ### Removed
