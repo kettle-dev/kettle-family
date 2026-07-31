@@ -36,6 +36,22 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
+  it "keeps raw kettle-release output in the transcript by default" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")])
+
+    expect(workflow.send(:release_command_passthrough_output?)).to be(false)
+  end
+
+  it "streams raw kettle-release output when verbose output is requested" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], verbose: true)
+
+    expect(workflow.send(:release_command_passthrough_output?)).to be(true)
+  end
+
   it "plans a configured family changelog phase and shared root changelog checks" do
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],
