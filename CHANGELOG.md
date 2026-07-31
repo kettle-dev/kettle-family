@@ -28,18 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Family release dependency-floor readiness now validates CI-facing direct
-  appraisal Gemfiles, so generated workflows such as `dep-heads.yml` cannot fail
-  after a just-published family dependency was only checked through release
-  lockfiles.
-
 ### Security
 
 ## [1.2.12] - 2026-07-30
 
 - TAG: [v1.2.12][1.2.12t]
-- COVERAGE: 93.85% -- 3786/4034 lines in 27 files
-- BRANCH COVERAGE: 76.39% -- 1453/1902 branches in 27 files
+- COVERAGE: 93.89% -- 3844/4094 lines in 27 files
+- BRANCH COVERAGE: 76.54% -- 1475/1927 branches in 27 files
 - 27.83% documented
 
 ### Fixed
@@ -47,6 +42,11 @@ Please file a bug if you notice a violation of semantic versioning.
 - Publish release skip checks now use `kettle-dev`'s shared RubyGems version
   cache instead of a direct `gem.coop` HTTP request, matching the cached
   release-state path used by `kettle-family state`.
+
+- Family release dependency-floor readiness now validates CI-facing direct
+  appraisal Gemfiles, so generated workflows such as `dep-heads.yml` cannot fail
+  after a just-published family dependency was only checked through release
+  lockfiles.
 
 ## [1.2.11] - 2026-07-30
 
