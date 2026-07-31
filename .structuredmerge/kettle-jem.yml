@@ -314,7 +314,7 @@ min_divergence_threshold:
 yard_host: "kettle-family.galtzo.com"
 
 # Full URL used for gemspec metadata["homepage_uri"].
-# Defaults to https://{KJ|YARD_HOST}.
+# Defaults to https://kettle-family.galtzo.com.
 # ENV override: KJ_HOMEPAGE_URI
 homepage_uri: "https://kettle-family.galtzo.com"
 
