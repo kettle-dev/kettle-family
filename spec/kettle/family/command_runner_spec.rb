@@ -409,14 +409,26 @@ RSpec.describe Kettle::Family::CommandRunner do
   it "writes OTP responses from a configured secrets provider" do
     provider = instance_double(Kettle::Family::Secrets::Provider, rubygems_otp: "123456")
     otp_output = StringIO.new
-    coordinator = described_class::OtpCoordinator.new(input: StringIO.new, output: otp_output, secrets_provider: provider)
+    events = []
+    coordinator = described_class::OtpCoordinator.new(
+      input: StringIO.new,
+      output: otp_output,
+      secrets_provider: provider,
+      event_handler: lambda { |member_name, event| events << [member_name, event] }
+    )
     runner = described_class.new(otp_coordinator: coordinator)
     child_input = StringIO.new
 
     runner.send(:handle_interactive_prompt, child_input, "Code: ", member_name: "alpha")
 
     expect(child_input.string).to eq("123456\n")
-    expect(otp_output.string).to include("RubyGems MFA code loaded from configured secrets provider.")
+    expect(otp_output.string).not_to include("RubyGems MFA code loaded from configured secrets provider.")
+    expect(events.map { |member_name, event| [member_name, event.fetch("action"), event.fetch("label")] }).to include(
+      ["alpha", "mfa_requested", "RubyGems MFA"],
+      ["alpha", "otp_queue", "RubyGems MFA prompts"],
+      ["alpha", "prompt_request", "👀 🔒 watch for authorization prompt"],
+      ["alpha", "prompt_response", "RubyGems MFA code"]
+    )
   end
 
   it "falls back to manual OTP entry when an interactive secrets provider lookup fails" do

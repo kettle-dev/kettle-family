@@ -12,10 +12,11 @@ module Kettle
       ].freeze
 
       class OtpCoordinator
-        def initialize(input: $stdin, output: $stdout, queue_total: nil, secrets_provider: nil)
+        def initialize(input: $stdin, output: $stdout, queue_total: nil, secrets_provider: nil, event_handler: nil)
           @input = input
           @output = output
           @secrets_provider = secrets_provider
+          @event_handler = event_handler
           @mutex = Mutex.new
           @condition = ConditionVariable.new
           @prompting = false
@@ -41,7 +42,7 @@ module Kettle
             if @prompting
               generation = @generation
               @queued_count += 1
-              render_queue_status_locked
+              render_queue_status_locked(member_name: member_name)
               return wait_for_response(generation)
             end
 
@@ -53,7 +54,7 @@ module Kettle
             start_prompt_locked(member_name: member_name)
           end
 
-          response = read_response(chunk: chunk)
+          response = read_response(chunk: chunk, member_name: member_name)
           close_queue
           @mutex.synchronize do
             @response = response
@@ -67,7 +68,7 @@ module Kettle
 
         private
 
-        attr_reader :secrets_provider
+        attr_reader :secrets_provider, :event_handler
 
         def wait_for_response(generation)
           @condition.wait(@mutex) while @prompting
@@ -83,22 +84,49 @@ module Kettle
         end
 
         def start_prompt_locked(member_name:)
-          @output.puts
-          @output.puts("[#{member_name}] RubyGems MFA requested.")
-          render_queue_status_locked
+          unless emit_event(
+            member_name: member_name,
+            action: "mfa_requested",
+            label: "RubyGems MFA",
+            status: "requested",
+            mark: ">"
+          )
+            @output.puts
+            @output.puts("[#{member_name}] RubyGems MFA requested.")
+          end
+          render_queue_status_locked(member_name: member_name)
+          return if event_handler
+
           @output.puts("Queued prompts at entry will share this code; later prompts will ask again.")
         end
 
-        def render_queue_status_locked
+        def render_queue_status_locked(member_name:)
           suffix = @queue_total ? " / #{@queue_total}" : ""
+          return if emit_event(
+            member_name: member_name,
+            action: "otp_queue",
+            label: "RubyGems MFA prompts",
+            status: "queued",
+            mark: ">",
+            queued: @queued_count,
+            total: @queue_total
+          )
+
           @output.puts("RubyGems MFA prompts queued: #{@queued_count}#{suffix}")
           @output.flush if @output.respond_to?(:flush)
         end
 
-        def read_response(chunk:)
-          provided = read_provider_response
+        def read_response(chunk:, member_name:)
+          provided = read_provider_response(member_name: member_name)
           unless provided.empty?
-            @output.puts("RubyGems MFA code loaded from configured secrets provider.")
+            emit_event(
+              member_name: member_name,
+              action: "prompt_response",
+              label: "RubyGems MFA code",
+              source: secret_provider_source,
+              status: "ok",
+              mark: "."
+            ) || @output.puts("RubyGems MFA code loaded from configured secrets provider.")
             return provided
           end
 
@@ -117,16 +145,56 @@ module Kettle
           chunk.to_s.lines.last&.strip.to_s.empty? ? "Code:" : chunk.to_s.lines.last.strip
         end
 
-        def read_provider_response
+        def read_provider_response(member_name:)
           return "" unless secrets_provider
 
           @output.print("\a") if @output.respond_to?(:print)
+          emit_event(
+            member_name: member_name,
+            action: "prompt_request",
+            label: "👀 🔒 watch for authorization prompt",
+            source: secret_provider_source,
+            status: "started",
+            mark: ">"
+          )
           secrets_provider.rubygems_otp.to_s
         rescue Error => error
           raise unless @input.respond_to?(:tty?) && @input.tty?
 
+          emit_event(
+            member_name: member_name,
+            action: "prompt_response",
+            label: "RubyGems MFA code",
+            source: secret_provider_source,
+            status: "failed",
+            mark: "F"
+          )
           @output.puts("#{error.message}; falling back to manual OTP entry.")
           ""
+        end
+
+        def emit_event(member_name:, action:, label:, status:, mark:, **payload)
+          return false unless event_handler
+
+          event_handler.call(
+            member_name,
+            {
+              "event_version" => 1,
+              "type" => "secret_provider",
+              "action" => action,
+              "label" => label,
+              "status" => status,
+              "mark" => mark
+            }.merge(payload.transform_keys(&:to_s))
+          )
+          true
+        end
+
+        def secret_provider_source
+          return "" unless secrets_provider
+          return "1Password" if secrets_provider.is_a?(Secrets::OnePassword)
+
+          secrets_provider.class.name.to_s.split("::").last.to_s
         end
       end
 

@@ -1155,6 +1155,8 @@ RSpec.describe Kettle::Family::Workflow do
     [
       {event_version: 1, type: "run_start", command: "release"},
       {event_version: 1, type: "command_step", phase: "release", name: "yard", summary: "documentation", status: "ok", mark: "."},
+      {event_version: 1, type: "secret_provider", action: "prompt_request", label: "👀 🔒 watch for authorization prompt", source: "1Password", status: "started", mark: ">"},
+      {event_version: 1, type: "secret_provider", action: "otp_queue", label: "RubyGems MFA prompts", queued: 1, total: 4, status: "queued", mark: ">"},
       {event_version: 1, type: "secret_provider", action: "prompt_response", label: "RubyGems MFA code", status: "ok", mark: "."},
       {event_version: 1, type: "remote_parity", action: "skip", remote: "cb", status: "skipped", mark: "."},
       {event_version: 1, type: "ci_monitor", action: "github_started", provider: "github", completed: 0, total: 2, started: 2, status: "ok", mark: "."},
@@ -1179,6 +1181,8 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(updates).to include(["release", ">"])
     expect(updates).to include(["release:yard:documentation", "."])
+    expect(updates).to include(["secret:prompt_request:👀 🔒 watch for authorization prompt", ">"])
+    expect(updates).to include(["secret:otp_queue:RubyGems MFA prompts:1/4", ">"])
     expect(updates).to include(["secret:prompt_response:RubyGems MFA code", "."])
     expect(updates).to include(["remote:skip:cb", "."])
     expect(updates).to include(["ci:github_started:github:0/2", "."])

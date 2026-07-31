@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family-owned release OTP lookups now render as structured secret-provider
+  progress events, including a visible `👀 🔒` authorization prompt cue, instead
+  of printing loose MFA status lines through the release tape.
+
 ### Security
 
 ## [1.2.14] - 2026-07-31

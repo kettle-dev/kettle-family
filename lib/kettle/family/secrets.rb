@@ -31,7 +31,7 @@ module Kettle
           end
 
           def rubygems_otp
-            super
+            with_release_secret_alert_suppressed { super }
           rescue => error
             raise Error, error.message
           end

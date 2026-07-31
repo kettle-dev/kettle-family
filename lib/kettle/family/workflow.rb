@@ -806,7 +806,29 @@ module Kettle
       def release_otp_coordinator
         return nil unless execute && release_command_interactive?
 
-        @release_otp_coordinator ||= CommandRunner::OtpCoordinator.new(secrets_provider: @secrets_provider)
+        @release_otp_coordinator ||= CommandRunner::OtpCoordinator.new(
+          secrets_provider: @secrets_provider,
+          event_handler: method(:handle_release_otp_event)
+        )
+      end
+
+      def handle_release_otp_event(member_name, event)
+        progress = @release_progress
+        return unless progress
+
+        member = release_progress_member_for(member_name)
+        if progress_io
+          if verbose || debug
+            emit_release_event_progress(member, event)
+          elsif progress.tty?
+            emit_release_event_status(member, event, progress: progress)
+          end
+        end
+      end
+
+      def release_progress_member_for(member_name)
+        @release_progress_members_by_name ||= members.to_h { |member| [member.name, member] }
+        @release_progress_members_by_name.fetch(member_name.to_s) { PreflightProgressMember.new(member_name.to_s) }
       end
 
       def parallel_release_members?(release_members)
@@ -2214,6 +2236,7 @@ module Kettle
         parts << purpose unless purpose.empty?
         parts << label unless label.empty?
         parts << source if purpose.empty? && label.empty? && !source.empty?
+        parts << "#{event["queued"]}/#{event["total"]}" if event["queued"] && event["total"]
         parts.join(":")
       end
 
