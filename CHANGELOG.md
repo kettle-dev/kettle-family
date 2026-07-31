@@ -32,6 +32,9 @@ Please file a bug if you notice a violation of semantic versioning.
   where `n` is the total transfer changelog count and row values are the lag
   after each member's stored replay cursor.
 
+- `kettle-family state` now uses an ASCII `^ / v` ahead/behind column header so
+  terminal table alignment is stable in monospace output.
+
 ### Security
 
 ## [1.2.12] - 2026-07-30

@@ -95,7 +95,7 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("V.rel")
     expect(text).to include("GH.rel")
     expect(text).to include("T(9)")
-    expect(text).to include("🔼 / 🔽")
+    expect(text).to include("^ / v")
     expect(text).to include("unrel")
     expect(text).to include("prep")
     expect(text).to include("pend")

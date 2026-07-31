@@ -1342,7 +1342,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("T(11)")
     expect(out.string).to include("bump")
     expect(out.string).to include("checkout")
-    expect(out.string).to include("🔼 / 🔽")
+    expect(out.string).to include("^ / v")
     expect(out.string).to include("alpha")
     expect(out.string).to include("feature/re")
     expect(out.string).not_to include("feature/release-state-compaction")

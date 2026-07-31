@@ -479,7 +479,7 @@ module Kettle
       end
 
       def release_state_header
-        header = [["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", release_state_transfer_changelog_header, "🔼 / 🔽", "unrel", "prep", "pend", "bump"]]
+        header = [["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", release_state_transfer_changelog_header, "^ / v", "unrel", "prep", "pend", "bump"]]
         return header unless release_state_has_branches?
 
         [["branch", *header.first]]
