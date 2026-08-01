@@ -938,7 +938,7 @@ RSpec.describe Kettle::Family::Workflow do
     member = member_at("alpha")
     write_template_config(root: member.root, release_target_branches: %w[r1 r2])
     initialize_git_repo(member.root, branches: %w[r1 r2])
-    File.write(File.join(member.root, "Gemfile.lock"), "dirty\n")
+    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
@@ -946,10 +946,10 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
     expect(results.first.member_name).to eq("alpha")
     expect(results.first.stderr).to include("local changes would block release target branch checkout")
-    expect(results.first.stderr).to include("Gemfile.lock")
+    expect(results.first.stderr).to include("scratch.txt")
   end
 
-  it "recovers a sole local-path Gemfile.lock before branch target checkout" do
+  it "resets a sole local-path Gemfile.lock before branch target checkout" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -974,6 +974,29 @@ RSpec.describe Kettle::Family::Workflow do
       "BUNDLE_GEMFILE" => nil,
       "K_JEM_TEMPLATING" => "false"
     )
+  end
+
+  it "commits a sole released-dependency Gemfile.lock before branch target checkout" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_template_config(root: member.root, release_target_branches: %w[r1 r2])
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      GEM
+        remote: https://gem.coop/
+        specs:
+    LOCK
+
+    calls = []
+    stub_successful_runner(calls)
+    allow(Kettle::Family::GitStatus).to receive(:dirty_paths).with(member.root).and_return([" M Gemfile.lock"], [])
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results.map(&:phase)).to include("commit_normalized_lockfiles", "release_checkout")
+    commit_command = calls.find { |call| call[:phase] == "commit_normalized_lockfiles" }.fetch(:command).join(" ")
+    expect(commit_command).to include("Normalize\\ lockfiles\\ after\\ templating")
+    expect(calls.map { |call| call[:phase] }).not_to include("template_lockfile_recovery")
   end
 
   it "retries template lockfile normalization once after a Bundler materialization failure" do

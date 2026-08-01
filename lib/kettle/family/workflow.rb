@@ -513,8 +513,8 @@ module Kettle
           dirty_paths = GitStatus.dirty_paths(member.root)
           next if dirty_paths.empty?
 
-          if recoverable_template_lockfile_dirt?(member, dirty_paths)
-            recover_template_lockfiles(member: member, runner: command_runner, memo: results, phase: "template_lockfile_recovery")
+          if recoverable_template_lockfile_dirt?(dirty_paths)
+            recover_dirty_template_lockfile_before_branch_checkout(member: member, runner: command_runner, memo: results)
             next if results.last&.ok? && GitStatus.dirty_paths(member.root).empty?
           end
 
@@ -522,11 +522,25 @@ module Kettle
         end
       end
 
-      def recoverable_template_lockfile_dirt?(member, dirty_paths)
+      def recoverable_template_lockfile_dirt?(dirty_paths)
         return false unless command == "template" && config.normalize_lockfiles?
         return false unless dirty_paths.length == 1 && dirty_paths.first.end_with?(" Gemfile.lock")
 
-        release_lockfile_has_local_path_remote?(member)
+        true
+      end
+
+      def recover_dirty_template_lockfile_before_branch_checkout(member:, runner:, memo:)
+        if release_lockfile_has_local_path_remote?(member)
+          recover_template_lockfiles(member: member, runner: runner, memo: memo, phase: "template_lockfile_recovery")
+        else
+          commit_normalized_lockfiles(
+            branch_members: [member],
+            runner: runner,
+            memo: memo,
+            reason: "template",
+            force: true
+          )
+        end
       end
 
       def branch_checkout_preflight_required?
