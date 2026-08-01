@@ -20,12 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Family template progress and final reports now aggregate checksum write
-  bypasses, rendered-but-unchanged files, and changed files from Kettle-Jem
-  NDJSON summaries.
-- Template summaries now distinguish exact checksum hits from source-matched
-  local destination changes protected by the template-only checksum policy.
-
 ### Changed
 
 ### Deprecated
@@ -35,6 +29,21 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.2.18] - 2026-07-31
+
+- TAG: [v1.2.18][1.2.18t]
+- COVERAGE: 94.14% -- 4277/4543 lines in 28 files
+- BRANCH COVERAGE: 76.75% -- 1680/2189 branches in 28 files
+- 28.88% documented
+
+### Added
+
+- Family template progress and final reports now aggregate checksum write
+  bypasses, rendered-but-unchanged files, and changed files from Kettle-Jem
+  NDJSON summaries.
+- Template summaries now distinguish exact checksum hits from source-matched
+  local destination changes protected by the template-only checksum policy.
 
 ## [1.2.17] - 2026-07-31
 
@@ -1546,7 +1555,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.17...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.18...HEAD
+[1.2.18]: https://github.com/kettle-dev/kettle-family/compare/v1.2.17...v1.2.18
+[1.2.18t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.18
 [1.2.17]: https://github.com/kettle-dev/kettle-family/compare/v1.2.16...v1.2.17
 [1.2.17t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.17
 [1.2.16]: https://github.com/kettle-dev/kettle-family/compare/v1.2.15...v1.2.16
