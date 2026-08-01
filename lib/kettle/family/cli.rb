@@ -10,7 +10,7 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[version mise-trust discover plan report metadata check clean-unreleased reset test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
+      COMMANDS = %w[version mise-trust discover plan report metadata check clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
       WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb bex release push pull sync up].freeze
 
       command_name "kettle-family"
@@ -314,6 +314,19 @@ module Kettle
         description "Uninstall locally installed family gem versions newer than the latest released version."
       end
 
+      class ReconcileReleases < BaseCommand
+        include ExecutionOptions
+
+        command_name "reconcile-releases"
+        usage "[options]"
+        description "Check RubyGems releases for missing GitHub Releases; --execute creates only verified backfills."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("reconcile-releases")
+        end
+      end
+
       class Reset < WorkflowCommand
         command_name "reset"
         usage "[options] TARGET"
@@ -555,6 +568,7 @@ module Kettle
       command Metadata
       command Check
       command CleanUnreleased
+      command ReconcileReleases
       command Reset
       command Test
       command Lint
@@ -669,6 +683,7 @@ module Kettle
         return bump_version_results(members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
+        return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members) if command == "release-state"
         return install_results(config: config, members: members, options: options) if command == "install"
@@ -962,6 +977,10 @@ module Kettle
 
       def clean_unreleased_results(config:, members:, options:)
         UnreleasedGemCleanup.new(config: config, members: members, execute: options[:execute]).results
+      end
+
+      def reconcile_release_results(config:, members:, options:)
+        ReleaseReconciler.new(config: config, members: members, execute: options[:execute]).results
       end
 
       def install_results(config:, members:, options:)

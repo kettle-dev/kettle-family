@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Add version and mise-trust commands and run template members in dependency waves.
 
+- Add reconcile-releases for verified RubyGems to GitHub Release backfills.
+
 ### Changed
 
 ### Deprecated
