@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rbconfig"
+require "json"
 
 module Kettle
   module Family
@@ -45,6 +46,7 @@ module Kettle
 
         check = runner.call(member: member, phase: CHECK_PHASE, command: gh_release_command("--check", "--release-version", version, "--events"))
         return [check] unless check.ok?
+        check = summarize_check(check: check, member: member, version: version)
         return [check] unless execute
 
         [check, runner.call(member: member, phase: CREATE_PHASE, command: gh_release_command("--release-version", version, "--events"))]
@@ -83,6 +85,33 @@ module Kettle
           elapsed_seconds: 0.0,
           skipped: false,
           reason: nil
+        )
+      end
+
+      def summarize_check(check:, member:, version:)
+        payload = check.stdout.to_s.each_line.filter_map do |line|
+          candidate = JSON.parse(line)
+          candidate if candidate["type"] == "github_release"
+        rescue JSON::ParserError
+          nil
+        end.last
+        message = payload&.fetch("message", nil) || "GitHub release v#{version} is eligible to be created"
+
+        CommandResult.new(
+          member_name: member.name,
+          phase: check.phase,
+          command: check.command,
+          workdir: check.workdir,
+          status: check.status,
+          success: check.success,
+          stdout: message,
+          stderr: check.stderr,
+          elapsed_seconds: check.elapsed_seconds,
+          skipped: check.skipped,
+          reason: check.reason,
+          branch: check.branch,
+          output_streamed: check.output_streamed,
+          log_path: check.log_path
         )
       end
 

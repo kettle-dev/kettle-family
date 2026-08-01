@@ -20,6 +20,7 @@ module Kettle
         lint
         pull
         push
+        reconcile-releases
         release
         release-state
         reset

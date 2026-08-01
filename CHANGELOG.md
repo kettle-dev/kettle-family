@@ -40,6 +40,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Skip nomono-specific lockfile normalization until a legacy member declares nomono.
 
+- Report actionable GitHub release reconciliation checks in family summaries.
+
 ### Security
 
 ## [1.2.20] - 2026-07-31

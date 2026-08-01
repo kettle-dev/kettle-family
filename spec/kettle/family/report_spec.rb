@@ -37,7 +37,7 @@ RSpec.describe Kettle::Family::Report do
   it "tracks every command that reports selected member results" do
     expected = (
       Kettle::Family::CLI::WORKFLOW_COMMANDS +
-      %w[add-changelog bump bump-version clean-unreleased install release-state]
+      %w[add-changelog bump bump-version clean-unreleased install reconcile-releases release-state]
     ).sort
 
     expect(described_class::MEMBER_RESULT_COMMANDS.sort).to eq(expected)

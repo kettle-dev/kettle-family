@@ -41,7 +41,7 @@ RSpec.describe Kettle::Family::ReleaseReconciler do
 
   it "creates a release only after the executable check succeeds" do
     alpha = member("alpha")
-    check = Kettle::Family::CommandResult.new("alpha", "reconcile_github_release_check", [], alpha.root, 0, true, "", "", 0.0, false, nil)
+    check = Kettle::Family::CommandResult.new("alpha", "reconcile_github_release_check", [], alpha.root, 0, true, "{\"type\":\"github_release\",\"message\":\"ready\"}\n", "", 0.0, false, nil)
     create = Kettle::Family::CommandResult.new("alpha", "reconcile_github_release", [], alpha.root, 0, true, "", "", 0.0, false, nil)
     runner = instance_double(Kettle::Family::CommandRunner)
     allow(Kettle::Family::ReleaseStateCheck).to receive(:new)
@@ -52,7 +52,9 @@ RSpec.describe Kettle::Family::ReleaseReconciler do
 
     results = reconciler.results
 
-    expect(results).to eq([check, create])
+    expect(results.map(&:phase)).to eq(["reconcile_github_release_check", "reconcile_github_release"])
+    expect(results.first.stdout).to eq("ready")
+    expect(results.last).to eq(create)
     expect(runner).to have_received(:call).with(
       member: alpha,
       phase: "reconcile_github_release_check",
