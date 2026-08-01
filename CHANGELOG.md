@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Preserve the original template bootstrap failure when lockfile recovery finds no release lockfiles.
 
+- Replace obsolete byebug debugger dependency stacks with debug before templating legacy members.
+
 ### Security
 
 ## [1.2.20] - 2026-07-31
