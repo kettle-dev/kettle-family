@@ -102,7 +102,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, autostash: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -151,7 +151,7 @@ module Kettle
           return current_branch_results(members)
         end
 
-        return template_with_worktree_sync_results if command == "template" && execute && (autostash || !branch_checkout_preflight_required?)
+        return template_with_worktree_sync_results if command == "template" && execute
 
         preflight = branch_checkout_dirty_preflight_results
         return preflight if preflight.any? { |result| !result.ok? }
@@ -169,9 +169,15 @@ module Kettle
 
       def template_with_worktree_sync_results
         runner = command_runner
+        checkout_preflight = branch_checkout_dirty_preflight_results
+        if checkout_preflight.any? { |result| !result.ok? } && !autostash
+          return checkout_preflight
+        end
+        checkout_preflight = [] unless checkout_preflight.all?(&:ok?)
+
         sync_results, stashes = template_worktree_sync_results(runner: runner)
         unless sync_results.all?(&:ok?)
-          return sync_results + restore_template_autostashes(stashes, runner: runner)
+          return checkout_preflight + sync_results + restore_template_autostashes(stashes, runner: runner)
         end
 
         workflow_results = branch_checkout_dirty_preflight_results
@@ -185,7 +191,7 @@ module Kettle
                               end
         end
 
-        sync_results + workflow_results + restore_template_autostashes(stashes, runner: runner)
+        checkout_preflight + sync_results + workflow_results + restore_template_autostashes(stashes, runner: runner)
       end
 
       def template_worktree_sync_results(runner:)
@@ -267,7 +273,7 @@ module Kettle
         template_sync_failure_result(
           member,
           [
-            "dirty worktree blocks template sync; commit or stash changes, or rerun with --autostash",
+            "dirty worktree blocks template sync; remove --no-autostash, or commit or stash changes before retrying",
             *dirty_paths
           ].join("\n"),
           reason: "dirty worktree blocks template sync"

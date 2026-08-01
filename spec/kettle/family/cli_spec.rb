@@ -1292,6 +1292,18 @@ RSpec.describe Kettle::Family::CLI do
     expect(Kettle::Family::Workflow).to have_received(:new).with(hash_including(auto_dependency_floors: false))
   end
 
+  it "enables template autostash by default and accepts its explicit opt-out" do
+    write_gem("alpha")
+    workflow = instance_double(Kettle::Family::Workflow, results: [])
+    allow(Kettle::Family::Workflow).to receive(:new).and_return(workflow)
+
+    described_class.call(["template", "--root", @tmpdir, "--only", "alpha"], out: StringIO.new, err: StringIO.new)
+    expect(Kettle::Family::Workflow).to have_received(:new).with(hash_including(autostash: true))
+
+    described_class.call(["template", "--root", @tmpdir, "--only", "alpha", "--no-autostash"], out: StringIO.new, err: StringIO.new)
+    expect(Kettle::Family::Workflow).to have_received(:new).with(hash_including(autostash: false))
+  end
+
   it "prints a release-state table" do
     write_gem("alpha")
     result = Kettle::Family::ReleaseStateResult.new(

@@ -59,7 +59,10 @@ module Kettle
             options[:commit] = false
           end
           base.option :allow_dirty, long: "--allow-dirty", desc: "Reserved for compatibility; member repos manage their own commit safety"
-          base.option :autostash, long: "--autostash", desc: "Temporarily stash dirty member worktrees while templating syncs and runs"
+          base.option :autostash, long: "--autostash", desc: "Use the default template autostash behavior"
+          base.option :no_autostash, long: "--no-autostash", desc: "Fail template runs when a member worktree is dirty" do
+            options[:autostash] = false
+          end
         end
       end
 
@@ -159,7 +162,7 @@ module Kettle
             push: false,
             commit: !options.key?(:commit) || options[:commit],
             allow_dirty: truthy_option?(:allow_dirty),
-            autostash: truthy_option?(:autostash),
+            autostash: !options.key?(:autostash) || options[:autostash],
             target_version: nil,
             reset_target: nil,
             bup_args: [],

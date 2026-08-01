@@ -26,6 +26,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Template runs now pull configured upstream branches before planning; branch-target runs synchronize each checked-out branch.
 
+- Template autostash is now enabled by default; use --no-autostash to fail on dirty worktrees.
+
 ### Deprecated
 
 ### Removed

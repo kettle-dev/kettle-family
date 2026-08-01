@@ -959,7 +959,7 @@ RSpec.describe Kettle::Family::Workflow do
     initialize_git_repo(member.root, branches: %w[r1 r2])
     File.write(File.join(member.root, "scratch.txt"), "dirty\n")
 
-    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+    results = described_class.new(command: "template", config: config, members: [member], execute: true, autostash: false).results
 
     expect(results.map(&:phase)).to eq(["release_checkout_preflight"])
     expect(results.first).not_to be_ok
@@ -1198,17 +1198,17 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
   end
 
-  it "blocks template sync on a dirty worktree unless autostash is explicit" do
+  it "blocks template sync on a dirty worktree when autostash is disabled" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     initialize_git_repo(member.root, branches: [])
     File.write(File.join(member.root, "scratch.txt"), "dirty\n")
 
-    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+    results = described_class.new(command: "template", config: config, members: [member], execute: true, autostash: false).results
 
     expect(results).to contain_exactly(have_attributes(phase: "template_sync_preflight", success: false))
-    expect(results.first.stderr).to include("rerun with --autostash")
+    expect(results.first.stderr).to include("remove --no-autostash")
   end
 
   it "keeps an autostash out of template work and restores it afterward" do
@@ -1218,7 +1218,7 @@ RSpec.describe Kettle::Family::Workflow do
     initialize_git_repo(member.root, branches: [])
     File.write(File.join(member.root, "scratch.txt"), "dirty\n")
 
-    workflow = described_class.new(command: "template", config: config, members: [member], execute: true, autostash: true)
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
     runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
     results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
 
