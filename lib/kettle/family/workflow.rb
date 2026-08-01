@@ -2575,7 +2575,19 @@ module Kettle
       def append_command_arg(command_text, arg)
         return command_text if normalize_command_includes_arg?(command_text, arg)
 
-        argv = command_text.is_a?(Array) ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
+        return append_command_arg_to_argv(command_text.map(&:to_s), arg) if command_text.is_a?(Array)
+
+        # CommandRunner executes String commands through `sh -lc`. Ruby has no
+        # shell AST, so only parse the leading command segment and retain a
+        # configured compound-command operator and its remaining segments.
+        command, separator, remainder = command_text.to_s.partition(/\s(?:&&|\|\||;)\s/)
+        argv = append_command_arg_to_argv(Shellwords.split(command), arg)
+        [argv.shelljoin, separator, remainder].join
+      rescue ArgumentError
+        "#{command_text} #{Shellwords.escape(arg)}"
+      end
+
+      def append_command_arg_to_argv(argv, arg)
         update_index = argv.index("update")
         if update_index
           option_index = argv[(update_index + 1)..]&.index { |token| token.start_with?("-") }
@@ -2584,11 +2596,7 @@ module Kettle
         else
           argv << arg
         end
-        return argv if command_text.is_a?(Array)
-
-        argv.shelljoin
-      rescue ArgumentError
-        "#{command_text} #{Shellwords.escape(arg)}"
+        argv
       end
 
       def remove_command_arg(command_text, arg)

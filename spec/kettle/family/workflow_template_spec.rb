@@ -1130,7 +1130,14 @@ RSpec.describe Kettle::Family::Workflow do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
-    File.write(File.join(member.root, "Gemfile.lock"), "GEM\n\nBUNDLED WITH\n   2.0.0\n")
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      GEM
+        specs:
+          kettle-dev (2.5.14)
+
+      BUNDLED WITH
+         2.0.0
+    LOCK
     calls = []
     runner = instance_double(Kettle::Family::CommandRunner)
     allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
@@ -1146,7 +1153,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
     expect(results).to all(be_ok)
-    expect(calls.fetch(2).fetch(:command)).to eq("bundle update nomono --bundler && bundle lock")
+    expect(calls.fetch(0).fetch(:command)).to eq("bundle update nomono kettle-dev --bundler && bundle lock --add-checksums")
+    expect(calls.fetch(2).fetch(:command)).to eq("bundle update nomono kettle-dev --bundler && bundle lock")
   end
 
   it "allows dirty member target branch checkout preflight when explicitly requested" do
