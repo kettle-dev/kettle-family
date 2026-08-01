@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Template lockfile recovery preserves compound shell commands when appending lockfile bootstrap gems.
 
+- Preserve the original template bootstrap failure when lockfile recovery finds no release lockfiles.
+
 ### Security
 
 ## [1.2.20] - 2026-07-31

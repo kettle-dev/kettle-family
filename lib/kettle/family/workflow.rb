@@ -2699,6 +2699,11 @@ module Kettle
             memo: memo,
             phase: "prepare_template_dependencies_recovery"
           )
+          if no_release_lockfiles_failure?(memo.last)
+            memo.pop
+            memo << result
+            return false
+          end
           return false unless memo.last&.ok?
 
           result = runner.call(
@@ -2710,6 +2715,10 @@ module Kettle
         end
         memo << result
         result.ok?
+      end
+
+      def no_release_lockfiles_failure?(result)
+        result && !result.ok? && [result.stdout, result.stderr].join("\n").include?("kettle-reset: no release lockfiles found")
       end
 
       def commit_template_changes(member:, runner:, memo:)
