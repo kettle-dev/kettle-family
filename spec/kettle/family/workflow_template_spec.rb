@@ -1198,6 +1198,57 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
   end
 
+  it "blocks template sync on a dirty worktree unless autostash is explicit" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results).to contain_exactly(have_attributes(phase: "template_sync_preflight", success: false))
+    expect(results.first.stderr).to include("rerun with --autostash")
+  end
+
+  it "keeps an autostash out of template work and restores it afterward" do
+    write_template_config(command: [RbConfig.ruby, "-e", "File.write('templated.txt', 'ok')"], normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true, autostash: true)
+    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
+    results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
+
+    expect(results).to all(be_ok)
+    expect(stashes).to contain_exactly(include(member: member))
+    expect(File).not_to exist(File.join(member.root, "scratch.txt"))
+
+    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
+
+    expect(restores).to all(be_ok)
+    expect(File.read(File.join(member.root, "scratch.txt"))).to eq("dirty\n")
+  end
+
+  it "pulls an upstream branch before a clean template run" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    remote = File.join(@tmpdir, "alpha-origin.git")
+    run_git(@tmpdir, "init", "--bare", "--quiet", remote)
+    run_git(member.root, "remote", "add", "origin", remote)
+    run_git(member.root, "push", "--quiet", "--set-upstream", "origin", "HEAD")
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
+    results, = workflow.send(:template_worktree_sync_results, runner: runner)
+
+    expect(results).to contain_exactly(have_attributes(phase: "template_sync", success: true))
+  end
+
   it "bootstraps legacy members without bundle exec when templating wiring is absent" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")

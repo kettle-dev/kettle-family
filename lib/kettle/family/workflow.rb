@@ -102,7 +102,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, autostash: false, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -110,6 +110,7 @@ module Kettle
         @accept = accept
         @commit = commit
         @allow_dirty = allow_dirty
+        @autostash = autostash
         @publish = publish
         @push = push
         @tag = tag
@@ -150,6 +151,8 @@ module Kettle
           return current_branch_results(members)
         end
 
+        return template_with_worktree_sync_results if command == "template" && execute && (autostash || !branch_checkout_preflight_required?)
+
         preflight = branch_checkout_dirty_preflight_results
         return preflight if preflight.any? { |result| !result.ok? }
 
@@ -162,7 +165,130 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+
+      def template_with_worktree_sync_results
+        runner = command_runner
+        sync_results, stashes = template_worktree_sync_results(runner: runner)
+        unless sync_results.all?(&:ok?)
+          return sync_results + restore_template_autostashes(stashes, runner: runner)
+        end
+
+        workflow_results = branch_checkout_dirty_preflight_results
+        if workflow_results.all?(&:ok?)
+          workflow_results += if !config.release_target_branches.empty?
+                                branch_target_results
+                              elsif member_local_branch_targets?
+                                member_local_branch_target_results
+                              else
+                                current_branch_results(members)
+                              end
+        end
+
+        sync_results + workflow_results + restore_template_autostashes(stashes, runner: runner)
+      end
+
+      def template_worktree_sync_results(runner:)
+        stashes = []
+        results = []
+        template_sync_members.each do |member|
+          dirty_paths = GitStatus.dirty_paths(member.root)
+          if dirty_paths.any?
+            unless autostash
+              results << template_dirty_worktree_result(member, dirty_paths)
+              break
+            end
+
+            stash_result = runner.call(
+              member: member,
+              phase: "template_autostash",
+              command: ["sh", "-lc", template_autostash_command(member)]
+            )
+            results << stash_result
+            break unless stash_result.ok?
+
+            stash_ref = stash_result.stdout.to_s.lines.last.to_s.strip
+            if stash_ref.empty?
+              results << template_sync_failure_result(member, "could not determine the temporary template autostash reference")
+              break
+            end
+            stashes << {member: member, ref: stash_ref}
+          end
+
+          upstream = git_upstream_for(member)
+          next unless upstream
+
+          results << runner.call(member: member, phase: "template_sync", command: ["git", "pull", "--rebase"])
+          break unless results.last.ok?
+        end
+        [results, stashes]
+      end
+
+      def restore_template_autostashes(stashes, runner:)
+        stashes.reverse_each.map do |stash|
+          runner.call(
+            member: stash.fetch(:member),
+            phase: "template_autostash_restore",
+            command: ["git", "stash", "pop", stash.fetch(:ref)]
+          )
+        end
+      end
+
+      def template_branch_sync_results(branch_members, runner:)
+        template_sync_members_for(branch_members).each_with_object([]) do |member, memo|
+          next unless git_upstream_for(member)
+
+          memo << runner.call(member: member, phase: "template_sync", command: ["git", "pull", "--rebase"])
+          break memo unless memo.last.ok?
+        end
+      end
+
+      def template_sync_members
+        template_sync_members_for(members)
+      end
+
+      def template_sync_members_for(candidates)
+        candidates.each_with_object([]) do |member, unique_members|
+          unique_members << member unless unique_members.any? { |candidate| git_root_for(candidate) == git_root_for(member) }
+        end
+      end
+
+      def git_upstream_for(member)
+        stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}", chdir: member.root)
+        status.success? ? stdout.strip : nil
+      end
+
+      def template_autostash_command(member)
+        label = "kettle-family-template-#{member.name}-#{Process.pid}-#{Time.now.to_i}"
+        "git stash push --include-untracked --message #{Shellwords.escape(label)} && git stash list -1 --format=%gd"
+      end
+
+      def template_dirty_worktree_result(member, dirty_paths)
+        template_sync_failure_result(
+          member,
+          [
+            "dirty worktree blocks template sync; commit or stash changes, or rerun with --autostash",
+            *dirty_paths
+          ].join("\n"),
+          reason: "dirty worktree blocks template sync"
+        )
+      end
+
+      def template_sync_failure_result(member, message, reason: "template sync failed")
+        CommandResult.new(
+          member_name: member.name,
+          phase: "template_sync_preflight",
+          command: ["internal", "template-sync"],
+          workdir: member.root,
+          status: 1,
+          success: false,
+          stdout: "",
+          stderr: message,
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: reason
+        )
+      end
 
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
@@ -433,6 +559,10 @@ module Kettle
 
           branch_members = rediscovered_selected_members(selected_names)
           branch_members = members if branch_members.empty?
+          if command == "template" && execute
+            memo.concat(template_branch_sync_results(branch_members, runner: runner))
+            break memo unless memo.last&.ok?
+          end
           branch_results = current_branch_results(branch_members)
           tag_branch_results(branch_results, branch)
           memo.concat(branch_results)

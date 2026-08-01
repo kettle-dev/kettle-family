@@ -20,7 +20,11 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Template runs can now use --autostash to preserve dirty worktrees while synchronizing and templating.
+
 ### Changed
+
+- Template runs now pull configured upstream branches before planning; branch-target runs synchronize each checked-out branch.
 
 ### Deprecated
 
