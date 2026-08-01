@@ -2060,8 +2060,7 @@ module Kettle
       end
 
       def template_member_finish_status(result)
-        changed_files = template_changed_file_count(result)
-        "#{changed_files} file#{"s" unless changed_files == 1} changed"
+        template_summary_label(template_changed_file_count(result), template_file_outcomes(result))
       end
 
       def release_member_finish_status(result)
@@ -2073,8 +2072,9 @@ module Kettle
 
         template_results = results.select { |result| result.phase == "template" }
         changed_files = template_results.sum { |result| template_changed_file_count(result) }
+        outcome_counts = template_results.map { |result| template_file_outcomes(result) }
         progress.stop
-        progress.summary("template summary: #{template_results.count(&:ok?)}/#{template_results.length} members ok, #{changed_files} file#{"s" unless changed_files == 1} changed")
+        progress.summary(template_progress_summary_label(template_results, changed_files, outcome_counts))
       end
 
       def emit_release_progress_summary(results, progress:)
@@ -2139,7 +2139,7 @@ module Kettle
         when "diagnostic"
           emit_template_event_line(member, "!", diagnostic_event_label(event))
         when "summary"
-          emit_template_event_line(member, "done", "#{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed")
+          emit_template_event_line(member, "done", template_event_summary_label(event))
         end
       end
 
@@ -2154,7 +2154,7 @@ module Kettle
         when "diagnostic"
           diagnostic_event_label(event)
         when "summary"
-          "#{event["changed_count"].to_i} file#{"s" unless event["changed_count"].to_i == 1} changed"
+          template_event_summary_label(event)
         end
         mark = template_event_status_mark(event)
         progress&.update(member, status: status, mark: mark) if status && !status.empty?
@@ -2412,6 +2412,53 @@ module Kettle
 
         summary = summaries.reverse.find { |event| event.key?("changed_count") }
         summary&.fetch("changed_count")&.to_i
+      end
+
+      def template_file_outcomes(result)
+        summaries = result.stdout.to_s.lines.filter_map do |line|
+          event = parse_template_event(line)
+          event if event && event["type"] == "summary"
+        end
+        summary = summaries.reverse.find { |event| template_file_outcome_event?(event) }
+        return unless summary
+
+        {
+          checksum_hits: summary.fetch("checksum_hit_count").to_i,
+          unchanged: summary.fetch("unchanged_count").to_i
+        }
+      end
+
+      def template_file_outcome_event?(event)
+        event.key?("checksum_hit_count") && event.key?("unchanged_count")
+      end
+
+      def template_event_summary_label(event)
+        template_summary_label(
+          event["changed_count"].to_i,
+          template_file_outcome_event?(event) ? {
+            checksum_hits: event.fetch("checksum_hit_count").to_i,
+            unchanged: event.fetch("unchanged_count").to_i
+          } : nil
+        )
+      end
+
+      def template_progress_summary_label(template_results, changed_files, outcome_counts)
+        label = "template summary: #{template_results.count(&:ok?)}/#{template_results.length} members ok"
+        return "#{label}, #{template_summary_label(changed_files)}" unless outcome_counts.all?
+
+        totals = outcome_counts.each_with_object({checksum_hits: 0, unchanged: 0}) do |outcomes, memo|
+          memo[:checksum_hits] += outcomes.fetch(:checksum_hits)
+          memo[:unchanged] += outcomes.fetch(:unchanged)
+          memo
+        end
+        "#{label}, #{template_summary_label(changed_files, totals)}"
+      end
+
+      def template_summary_label(changed_files, outcomes = nil)
+        changed_label = "#{changed_files} file#{"s" unless changed_files == 1} changed"
+        return changed_label unless outcomes
+
+        "#{outcomes.fetch(:checksum_hits)} checksum hits, #{outcomes.fetch(:unchanged)} unchanged, #{changed_label}"
       end
 
       def normalize_lockfiles(member:, runner:, memo:, phase:)

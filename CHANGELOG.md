@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Family template progress and final reports now aggregate checksum write
+  bypasses, rendered-but-unchanged files, and changed files from Kettle-Jem
+  NDJSON summaries.
+
 ### Changed
 
 ### Deprecated

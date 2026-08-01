@@ -320,6 +320,31 @@ RSpec.describe Kettle::Family::Report do
     expect(text).not_to include("7 files changed")
   end
 
+  it "reports checksum hits and unchanged template files from NDJSON summaries" do
+    selected_member = member("alpha")
+    stdout = JSON.generate(
+      event_version: 1,
+      type: "summary",
+      changed_count: 3,
+      checksum_hit_count: 17,
+      unchanged_count: 12
+    )
+    template_result = Kettle::Family::CommandResult.new(
+      "alpha", "template", ["kettle-jem", "install", "--events"], "/repo/alpha",
+      0, true, stdout, "", 1.0, false, nil
+    )
+    report = described_class.new(
+      family_name: "rubocop-lts", order_mode: "dependency", members: [selected_member],
+      selected_members: [selected_member], config_path: nil, command: "template", results: [template_result]
+    )
+
+    text = report.to_text
+
+    expect(text).to include("17 checksum hits")
+    expect(text).to include("12 unchanged")
+    expect(text).to include("3 files changed")
+  end
+
   it "uses the last template changed count when NDJSON summaries omit changed files" do
     selected_member = member("alpha")
     stdout = [
