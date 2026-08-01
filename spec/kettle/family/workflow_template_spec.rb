@@ -80,6 +80,10 @@ RSpec.describe Kettle::Family::Workflow do
       "--events",
       "--skip-commit"
     ])
+
+    expect(workflow.send(:localize_kettle_jem_template_command, "bundle exec kettle-jem install")).to eq(
+      "#{RbConfig.ruby} #{local_exe} install"
+    )
   end
 
   it "serializes deferred monorepo template commits with member-scoped pathspecs" do
