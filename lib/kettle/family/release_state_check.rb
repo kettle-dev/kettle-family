@@ -72,8 +72,8 @@ module Kettle
         state = success ? JSON.parse(stdout) : {}
         state = branch_filtered_state(member, state, branch) if success && branch
         state = state_with_computed_booleans(state) if success
-        state = enrich_git_state(member.root, state) if success
-        state = enrich_github_release(member.root, state) if success
+        state = enrich_git_state(member.root, state, branch: branch) if success
+        state = enrich_github_release(member.root, state, branch: branch) if success
         state = enrich_transfer_changelog_lag(member.root, state) if success
         result(member: member, command: command, stdout: stdout, stderr: stderr, status: status.exitstatus, elapsed: elapsed, success: success, state: state, branch: branch)
       rescue JSON::ParserError => error
@@ -98,8 +98,8 @@ module Kettle
         success = status.success?
         state = success ? JSON.parse(stdout) : {}
         state = branch_filtered_state(member, state, branch) if success && branch
-        state = enrich_git_state(member.root, state) if success
-        state = enrich_github_release(member.root, state) if success
+        state = enrich_git_state(member.root, state, branch: branch) if success
+        state = enrich_github_release(member.root, state, branch: branch) if success
         state = enrich_transfer_changelog_lag(member.root, state) if success
         result(
           member: member,
@@ -219,29 +219,29 @@ module Kettle
         status.success?
       end
 
-      def enrich_git_state(root, state)
+      def enrich_git_state(root, state, branch: nil)
         return state unless git_work_tree?(root)
 
         enriched = state.dup
-        current_branch = git_output(root, "branch", "--show-current")
+        current_branch = branch || git_output(root, "branch", "--show-current")
         enriched["current_branch"] = current_branch unless current_branch.to_s.empty?
 
         version = state["latest_released"].to_s.empty? ? state["latest_changelog_version"] : state["latest_released"]
         return enriched if version.to_s.empty?
 
-        local_default = default_branch(root)
-        if local_default
-          enriched["default_branch"] = local_default
-          if (counts = release_counts_for_ref(root, version, local_default))
+        local_ref = branch || default_branch(root)
+        if local_ref
+          enriched["default_branch"] = local_ref
+          if (counts = release_counts_for_ref(root, version, local_ref))
             enriched["behind"] = counts.fetch(:behind)
             enriched["ahead"] = counts.fetch(:ahead)
           end
         end
 
-        remote_default = remote_default_branch(root, local_default)
-        if remote_default
-          enriched["remote_default_branch"] = remote_default
-          if (counts = release_counts_for_ref(root, version, remote_default))
+        remote_ref = branch ? "origin/#{branch}" : remote_default_branch(root, local_ref)
+        if remote_ref && git_ref_exists?(root, "refs/remotes/#{remote_ref}")
+          enriched["remote_default_branch"] = remote_ref
+          if (counts = release_counts_for_ref(root, version, remote_ref))
             enriched["remote_behind"] = counts.fetch(:behind)
             enriched["remote_ahead"] = counts.fetch(:ahead)
           end
@@ -319,11 +319,24 @@ module Kettle
         state["unreleased_entries"] == true && state["version"].to_s == state["latest_released"].to_s
       end
 
-      def enrich_github_release(root, state)
-        tag = github_latest_release(root)
+      def enrich_github_release(root, state, branch: nil)
+        tag = branch ? github_release_for_version(root, state["latest_released"]) : github_latest_release(root)
         return state unless tag
 
         state.merge("github_latest_release" => tag)
+      end
+
+      def github_release_for_version(root, version)
+        return nil if version.to_s.empty?
+
+        repo = github_repo_slug(root)
+        return nil unless repo
+
+        tag = "v#{version.to_s.delete_prefix("v")}"
+        stdout, _stderr, status = Open3.capture3("gh", "release", "view", tag, "--repo", repo, "--json", "tagName", "--jq", ".tagName")
+        status.success? ? normalize_github_release_tag(stdout) : nil
+      rescue SystemCallError
+        nil
       end
 
       def enrich_transfer_changelog_lag(root, state)

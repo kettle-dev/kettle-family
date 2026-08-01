@@ -182,6 +182,29 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     )
   end
 
+  it "uses the requested release target instead of main for branch checkout state" do
+    repo = File.join(@tmpdir, "repo")
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(repo, "README.md"), "initial\n")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "branch", "-M", "main")
+    run_git(repo, "tag", "-m", "v1.0.0", "v1.0.0")
+    run_git(repo, "switch", "--quiet", "-c", "release-branch")
+    File.write(File.join(repo, "README.md"), "release\n")
+    run_git(repo, "commit", "--quiet", "-am", "Release change")
+    run_git(repo, "switch", "--quiet", "main")
+    File.write(File.join(repo, "README.md"), "main\n")
+    run_git(repo, "commit", "--quiet", "-am", "Main change")
+    check = described_class.new(members: [])
+
+    state = check.send(:enrich_git_state, repo, {"latest_released" => "1.0.0"}, branch: "release-branch")
+
+    expect(state).to include("current_branch" => "release-branch", "default_branch" => "release-branch", "ahead" => 1, "behind" => 0)
+  end
+
   it "enriches release state with divergent remote default ahead/behind counts" do
     repo = File.join(@tmpdir, "repo")
     remote = File.join(@tmpdir, "origin.git")
@@ -231,6 +254,18 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     end
 
     state = check.send(:enrich_github_release, @tmpdir, {})
+
+    expect(state).to include("github_latest_release" => "v1.1.7")
+  end
+
+  it "looks up the branch release version instead of the repository-wide latest release" do
+    check = described_class.new(members: [])
+    allow(check).to receive(:github_repo_slug).with(@tmpdir).and_return("kettle-dev/kettle-family")
+    allow(Open3).to receive(:capture3).with(
+      "gh", "release", "view", "v1.1.7", "--repo", "kettle-dev/kettle-family", "--json", "tagName", "--jq", ".tagName"
+    ).and_return(["v1.1.7\n", "", status(0, true)])
+
+    state = check.send(:enrich_github_release, @tmpdir, {"latest_released" => "1.1.7"}, branch: "release-branch")
 
     expect(state).to include("github_latest_release" => "v1.1.7")
   end

@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Evaluate release-state GitHub release and commit counts against each configured target branch.
+
 ### Security
 
 ## [1.2.21] - 2026-08-01
