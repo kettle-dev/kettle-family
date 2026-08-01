@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Retry CI dependency installation while newly published family runtime floors propagate through gem.coop.
+
 ### Security
 
 ## [1.2.21] - 2026-08-01
