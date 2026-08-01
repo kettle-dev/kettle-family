@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Legacy Bundler recovery now retries template lock normalization without
+  `--add-checksums` after that flag is rejected, instead of repeating the same
+  unsupported command.
+
 ### Security
 
 ## [1.2.18] - 2026-07-31
@@ -53,7 +57,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - 28.88% documented
 
 ### Fixed
-
 - Template branch-target workflows now recover a sole locally sourced
   `Gemfile.lock` with the existing release-safe reset helper before checkout,
   and retry a failed Bundler lock normalization once after recovery.

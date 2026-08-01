@@ -1084,6 +1084,9 @@ RSpec.describe Kettle::Family::Workflow do
 
   it "updates Bundler and retries checksum-aware template normalization when required" do
     write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = %w[bundle lock --update --add-checksums]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     calls = []
@@ -1116,6 +1119,7 @@ RSpec.describe Kettle::Family::Workflow do
       "prepare_lockfiles"
     )
     expect(calls.fetch(1).fetch(:command)).to eq(%w[bundle update --bundler])
+    expect(calls.fetch(2).fetch(:command)).to eq(%w[bundle lock --update])
     expect(calls.count { |call| call[:phase] == "prepare_lockfiles" }).to eq(2)
   end
 

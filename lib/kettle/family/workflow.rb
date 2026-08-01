@@ -2499,7 +2499,7 @@ module Kettle
           result = runner.call(
             member: member,
             phase: phase,
-            command: normalize_lockfiles_command(member: member, phase: phase),
+            command: normalize_lockfiles_command(member: member, phase: phase, skip_checksum_option: true),
             env: workflow_env
           )
         end
@@ -2553,14 +2553,15 @@ module Kettle
         release_lockfile_env(member).merge("K_JEM_TEMPLATING" => "false")
       end
 
-      def normalize_lockfiles_command(member:, phase:)
+      def normalize_lockfiles_command(member:, phase:, skip_checksum_option: false)
         configured = config.normalize_lockfiles_command
         return configured unless template_prepare_lockfiles_phase?(phase)
         return %w[bundle install] if bundle_update_command?(configured) && !File.file?(File.join(member.root, "Gemfile.lock"))
 
-        PRE_TEMPLATE_BOOTSTRAP_GEMS.select { |gem_name| member_lockfile_contains_gem?(member, gem_name) }.reduce(configured) do |command_text, gem_name|
+        command = PRE_TEMPLATE_BOOTSTRAP_GEMS.select { |gem_name| member_lockfile_contains_gem?(member, gem_name) }.reduce(configured) do |command_text, gem_name|
           append_command_arg(command_text, gem_name)
         end
+        skip_checksum_option ? remove_command_arg(command, "--add-checksums") : command
       end
 
       def bundle_update_command?(command_text)
@@ -2588,6 +2589,14 @@ module Kettle
         argv.shelljoin
       rescue ArgumentError
         "#{command_text} #{Shellwords.escape(arg)}"
+      end
+
+      def remove_command_arg(command_text, arg)
+        argv = command_text.is_a?(Array) ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
+        argv.delete(arg)
+        command_text.is_a?(Array) ? argv : Shellwords.join(argv)
+      rescue ArgumentError
+        command_text
       end
 
       def normalize_command_includes_arg?(command_text, arg)
