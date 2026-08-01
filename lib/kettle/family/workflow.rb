@@ -2588,6 +2588,22 @@ module Kettle
           command: template_prepare_command(member),
           env: template_prepare_env
         )
+        if recoverable_bundle_failure?(result)
+          recover_template_lockfiles(
+            member: member,
+            runner: runner,
+            memo: memo,
+            phase: "prepare_template_dependencies_recovery"
+          )
+          return false unless memo.last&.ok?
+
+          result = runner.call(
+            member: member,
+            phase: "prepare_template_dependencies",
+            command: template_prepare_command(member),
+            env: template_prepare_env
+          )
+        end
         memo << result
         result.ok?
       end

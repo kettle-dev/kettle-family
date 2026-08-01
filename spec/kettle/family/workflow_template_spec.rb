@@ -999,6 +999,45 @@ RSpec.describe Kettle::Family::Workflow do
     expect(calls.map { |call| call[:phase] }).not_to include("template_lockfile_recovery")
   end
 
+  it "resets and retries template preparation when its bundled executable cannot boot" do
+    write_template_config(command: "bundle exec kettle-jem install")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    calls = []
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      calls << {phase: phase, command: command, env: env}
+      failure = phase == "prepare_template_dependencies" && calls.count { |call| call[:phase] == phase } == 1
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        failure ? 1 : 0,
+        !failure,
+        "",
+        failure ? "Bundler::GemNotFound: Could not find kettle-soup-cover-3.0.0.rc6" : "",
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    allow(workflow).to receive(:validate_reset_gemfile_lock)
+
+    results = workflow.results
+
+    expect(results).to all(be_ok)
+    expect(calls.map { |call| call[:phase] }).to include(
+      "prepare_template_dependencies",
+      "prepare_template_dependencies_recovery",
+      "commit_normalized_lockfiles"
+    )
+    expect(calls.count { |call| call[:phase] == "prepare_template_dependencies" }).to eq(2)
+  end
+
   it "retries template lockfile normalization once after a Bundler materialization failure" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
