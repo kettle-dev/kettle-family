@@ -1911,9 +1911,12 @@ module Kettle
           index = argv.index("kettle-jem")
           return command_text unless index
 
-          argv[0...index] + [RbConfig.ruby, executable] + argv[(index + 1)..]
+          prefix = argv[0...index]
+          prefix = prefix[0...-2] if prefix.last(2) == %w[bundle exec]
+          prefix + [RbConfig.ruby, executable] + argv[(index + 1)..]
         else
-          command_text.to_s.sub(/\bkettle-jem\b/, "#{Shellwords.escape(RbConfig.ruby)} #{Shellwords.escape(executable)}")
+          replacement = "#{Shellwords.escape(RbConfig.ruby)} #{Shellwords.escape(executable)}"
+          command_text.to_s.sub(/\bbundle\s+exec\s+kettle-jem\b/, replacement).sub(/\bkettle-jem\b/, replacement)
         end
       end
 

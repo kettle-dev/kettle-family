@@ -65,8 +65,6 @@ RSpec.describe Kettle::Family::Workflow do
     )
 
     expect(workflow.send(:template_command, member)).to eq([
-      "bundle",
-      "exec",
       RbConfig.ruby,
       local_exe,
       "install",
@@ -75,8 +73,6 @@ RSpec.describe Kettle::Family::Workflow do
       "--skip-commit"
     ])
     expect(workflow.send(:template_prepare_command, member)).to eq([
-      "bundle",
-      "exec",
       RbConfig.ruby,
       local_exe,
       "prepare",
