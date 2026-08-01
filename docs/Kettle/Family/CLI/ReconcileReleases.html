@@ -4,7 +4,7 @@
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>
-  Class: Kettle::Family::CLI::ReportCommand
+  Class: Kettle::Family::CLI::ReconcileReleases
   
     &mdash; Documentation by YARD 0.9.45
   
@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="../../../css/common.css" type="text/css">
 
 <script type="text/javascript">
-  pathId = "Kettle::Family::CLI::ReportCommand";
+  pathId = "Kettle::Family::CLI::ReconcileReleases";
   relpath = '../../../';
 </script>
 
@@ -41,7 +41,7 @@
     <a href="../../../_index.html">Index (R)</a> &raquo;
     <span class='title'><span class='object_link'><a href="../../../Kettle.html" title="Kettle (module)">Kettle</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../../Family.html" title="Kettle::Family (module)">Family</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../CLI.html" title="Kettle::Family::CLI (class)">CLI</a></span></span>
      &raquo; 
-    <span class="title">ReportCommand</span>
+    <span class="title">ReconcileReleases</span>
   
 </div>
 
@@ -61,7 +61,7 @@
         <div class="clear"></div>
       </div>
 
-      <div id="content"><h1>Class: Kettle::Family::CLI::ReportCommand
+      <div id="content"><h1>Class: Kettle::Family::CLI::ReconcileReleases
   
   
   
@@ -71,7 +71,7 @@
   <dl>
     <dt>Inherits:</dt>
     <dd>
-      <span class="inheritName"><span class='object_link'><a href="Discover.html" title="Kettle::Family::CLI::Discover (class)">Discover</a></span></span>
+      <span class="inheritName"><span class='object_link'><a href="BaseCommand.html" title="Kettle::Family::CLI::BaseCommand (class)">BaseCommand</a></span></span>
       
         <ul class="fullTree">
           <li>Object</li>
@@ -80,9 +80,7 @@
           
             <li class="next"><span class='object_link'><a href="BaseCommand.html" title="Kettle::Family::CLI::BaseCommand (class)">BaseCommand</a></span></li>
           
-            <li class="next"><span class='object_link'><a href="Discover.html" title="Kettle::Family::CLI::Discover (class)">Discover</a></span></li>
-          
-            <li class="next">Kettle::Family::CLI::ReportCommand</li>
+            <li class="next">Kettle::Family::CLI::ReconcileReleases</li>
           
         </ul>
         <a href="#" class="inheritanceTree">show all</a>
@@ -94,6 +92,11 @@
   
   
   
+  
+  <dl>
+      <dt>Includes:</dt>
+      <dd><span class='object_link'><a href="ExecutionOptions.html" title="Kettle::Family::CLI::ExecutionOptions (module)">ExecutionOptions</a></span></dd>
+  </dl>
   
   
 
@@ -158,6 +161,11 @@
   
   
   
+  
+  
+  <h3 class="inherited">Methods included from <span class='object_link'><a href="ExecutionOptions.html" title="Kettle::Family::CLI::ExecutionOptions (module)">ExecutionOptions</a></span></h3>
+  <p class="inherited"><span class='object_link'><a href="ExecutionOptions.html#included-class_method" title="Kettle::Family::CLI::ExecutionOptions.included (method)">included</a></span></p>
+
   
   
   
@@ -233,17 +241,17 @@
       <pre class="lines">
 
 
-245
-246
-247
-248</pre>
+324
+325
+326
+327</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 245</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 324</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_run'>run</span><span class='lparen'>(</span><span class='op'>*</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_unexpected_arguments!'>unexpected_arguments!</span><span class='lparen'>(</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_run_family'>run_family</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>report</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_run_family'>run_family</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>reconcile-releases</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -255,7 +263,7 @@
 </div>
 
       <div id="footer">
-  Generated on Fri Jul 17 22:40:18 2026 by
+  Generated on Sat Aug  1 13:33:05 2026 by
   <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
   0.9.45 (ruby-4.0.6).
 </div>

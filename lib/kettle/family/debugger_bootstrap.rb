@@ -95,7 +95,7 @@ module Kettle
       def debugger_replacement(node, name_node)
         receiver = node.receiver ? "#{node.receiver.location.slice}." : ""
         quote = Kettle::Dev::VersionBump.quote_like(name_node.location.slice, DEBUG_GEM)
-        suffix = node.name == :gem ? ", require: false" : ""
+        suffix = (node.name == :gem) ? ", require: false" : ""
         "#{receiver}#{node.name} #{quote}#{suffix}"
       end
     end

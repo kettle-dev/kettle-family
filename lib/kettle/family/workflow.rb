@@ -8,7 +8,6 @@ require "open3"
 require "pathname"
 require "rbconfig"
 require "shellwords"
-require "set"
 require "yaml"
 require "kettle/dev"
 

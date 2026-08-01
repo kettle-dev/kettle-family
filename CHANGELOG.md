@@ -20,15 +20,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Add version and mise-trust commands and run template members in dependency waves.
-
-- Add reconcile-releases for verified RubyGems to GitHub Release backfills.
-
 ### Changed
 
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.21] - 2026-08-01
+
+- TAG: [v1.2.21][1.2.21t]
+- COVERAGE: 93.95% -- 4454/4741 lines in 30 files
+- BRANCH COVERAGE: 76.28% -- 1733/2272 branches in 30 files
+- 29.12% documented
+
+### Added
+
+- Add version and mise-trust commands and run template members in dependency waves.
+
+- Add reconcile-releases for verified RubyGems to GitHub Release backfills.
 
 ### Fixed
 
@@ -43,8 +56,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Report actionable GitHub release reconciliation checks in family summaries.
 
 - Honor KETTLE_DEV_DEV when release reconciliation invokes kettle-gh-release.
-
-### Security
 
 ## [1.2.20] - 2026-07-31
 
@@ -1595,7 +1606,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.20...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.21...HEAD
+[1.2.21]: https://github.com/kettle-dev/kettle-family/compare/v1.2.20...v1.2.21
+[1.2.21t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.21
 [1.2.20]: https://github.com/kettle-dev/kettle-family/compare/v1.2.19...v1.2.20
 [1.2.20t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.20
 [1.2.19]: https://github.com/kettle-dev/kettle-family/compare/v1.2.18...v1.2.19

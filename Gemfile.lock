@@ -158,6 +158,8 @@ GEM
       racc (~> 1.4)
     nokogiri (1.19.4-arm64-darwin)
       racc (~> 1.4)
+    nokogiri (1.19.4-x86_64-darwin)
+      racc (~> 1.4)
     nokogiri (1.19.4-x86_64-linux-gnu)
       racc (~> 1.4)
     nokogiri (1.19.4-x86_64-linux-musl)
@@ -402,7 +404,7 @@ GEM
     yard-yaml (0.2.4)
       version_gem (~> 1.1, >= 1.1.14)
       yaml-converter (~> 0.2)
-    zeitwerk (2.8.2)
+    zeitwerk (2.8.3)
     zlib (3.2.3)
 
 PLATFORMS
@@ -411,7 +413,7 @@ PLATFORMS
   arm-linux-gnu
   arm-linux-musl
   arm64-darwin
-  x86_64-linux
+  x86_64-darwin
   x86_64-linux-gnu
   x86_64-linux-musl
 
@@ -522,6 +524,7 @@ CHECKSUMS
   nokogiri (1.19.4-arm-linux-gnu) sha256=a301313e38bb065d68239e79734bcd6f56fb6efaacebde29e9abf2a4735340ca
   nokogiri (1.19.4-arm-linux-musl) sha256=588923c101bcfa78869734d247d25b598674323e7f22474fc468f6e5647311eb
   nokogiri (1.19.4-arm64-darwin) sha256=a46db9853286e6597b36ebc6953817d15acf3a299583eb3f89fdc6f91dd63527
+  nokogiri (1.19.4-x86_64-darwin) sha256=7fd17057d3e1f00e9954a74b3cd76595d3d4a5ef233b7ed9599047c204f70551
   nokogiri (1.19.4-x86_64-linux-gnu) sha256=379fae440b28915e3f19d752ce2dcf8465ed2b2fbefd2a7ca0dd497bc981a06a
   nokogiri (1.19.4-x86_64-linux-musl) sha256=17dfb7c1fa194ae02fbf7c51a7afc8d278045ab3fdacfd86f91d02d7b274470b
   nomono (1.1.2) sha256=a3ec711217c978635e35b22a1451773a0f3995f68e40b085fbb97bd6eed77109
@@ -611,7 +614,7 @@ CHECKSUMS
   yard-relative_markdown_links (0.6.0) sha256=3e5ffa85cbad9bac70bee5421774b190fb25d3bdf489323a5b3534f647d1a70e
   yard-timekeeper (0.2.5) sha256=f9cee32ce1d17dbbfbd161e66b1ee4611aad93d3a91a89a5a114d956c6a24bb2
   yard-yaml (0.2.4) sha256=78c4040090268b3f5cf4a8f5a48a6ea592af3c06436e1ec8d31c78be9b34aec9
-  zeitwerk (2.8.2) sha256=7212a61311083c604184b1ea2574b9aa05cd14f855a0841c06985cabe9181d12
+  zeitwerk (2.8.3) sha256=2c85125a8467ce069e20123d1e709a08955c9d29c118c25b46b7b7fafdbb92e5
   zlib (3.2.3) sha256=5bd316698b32f31a64ab910a8b6c282442ca1626a81bbd6a1674e8522e319c20
 
 BUNDLED WITH
