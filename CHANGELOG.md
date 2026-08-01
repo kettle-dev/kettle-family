@@ -28,14 +28,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Retry CI dependency installation while newly published family runtime floors propagate through gem.coop.
-
 ### Security
 
 ## [1.2.21] - 2026-08-01
 
 - TAG: [v1.2.21][1.2.21t]
-- COVERAGE: 93.95% -- 4454/4741 lines in 30 files
+- COVERAGE: 93.95% -- 4453/4740 lines in 30 files
 - BRANCH COVERAGE: 76.28% -- 1733/2272 branches in 30 files
 - 29.12% documented
 
@@ -58,6 +56,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Report actionable GitHub release reconciliation checks in family summaries.
 
 - Honor KETTLE_DEV_DEV when release reconciliation invokes kettle-gh-release.
+
+- Retry CI dependency installation while newly published family runtime floors propagate through gem.coop.
 
 ## [1.2.20] - 2026-07-31
 
