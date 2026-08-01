@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Legacy Bundler recovery preserves shell operators in configured compound lockfile commands while removing an unsupported `--add-checksums` flag.
-
 ### Security
+
+## [1.2.20] - 2026-07-31
+
+- TAG: [v1.2.20][1.2.20t]
+- COVERAGE: 94.15% -- 4281/4547 lines in 28 files
+- BRANCH COVERAGE: 76.79% -- 1684/2193 branches in 28 files
+- 28.88% documented
+
+### Fixed
+
+- Legacy Bundler recovery preserves shell operators in configured compound lockfile commands while removing an unsupported `--add-checksums` flag.
 
 ## [1.2.19] - 2026-07-31
 
@@ -1570,7 +1579,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.19...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.20...HEAD
+[1.2.20]: https://github.com/kettle-dev/kettle-family/compare/v1.2.19...v1.2.20
+[1.2.20t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.20
 [1.2.19]: https://github.com/kettle-dev/kettle-family/compare/v1.2.18...v1.2.19
 [1.2.19t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.19
 [1.2.18]: https://github.com/kettle-dev/kettle-family/compare/v1.2.17...v1.2.18
