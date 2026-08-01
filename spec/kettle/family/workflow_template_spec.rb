@@ -262,6 +262,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(3).command).to eq(["sh", "-lc", "bundle update --bundler"])
   end
 
+  it "does not update nomono before a legacy member declares it" do
+    write_template_config(command: "bundle exec kettle-jem install", normalize_lockfiles: true)
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = "bundle update nomono --bundler"
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile"), "source \"https://rubygems.org\"\n")
+    File.write(File.join(member.root, "Gemfile.lock"), "GEM\n")
+
+    results = described_class.new(
+      command: "template",
+      config: Kettle::Family::Config.load(root: @tmpdir),
+      members: [member],
+      execute: false
+    ).results
+
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle update --bundler"])
+  end
+
   it "passes template profile and repository topology environment when executing" do
     write_template_config(
       command: [
@@ -1134,6 +1153,7 @@ RSpec.describe Kettle::Family::Workflow do
       GEM
         specs:
           kettle-dev (2.5.14)
+          nomono (1.1.2)
 
       BUNDLED WITH
          2.0.0

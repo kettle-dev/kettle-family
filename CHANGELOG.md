@@ -36,6 +36,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Replace obsolete byebug debugger dependency stacks with debug before templating legacy members.
 
+- Skip nomono-specific lockfile normalization until a legacy member declares nomono.
+
 ### Security
 
 ## [1.2.20] - 2026-07-31

@@ -2595,9 +2595,10 @@ module Kettle
         return configured unless template_prepare_lockfiles_phase?(phase)
         return %w[bundle install] if bundle_update_command?(configured) && !File.file?(File.join(member.root, "Gemfile.lock"))
 
-        command = PRE_TEMPLATE_BOOTSTRAP_GEMS.select { |gem_name| member_lockfile_contains_gem?(member, gem_name) }.reduce(configured) do |command_text, gem_name|
+        command = PRE_TEMPLATE_BOOTSTRAP_GEMS.select { |gem_name| member_declares_or_locks_gem?(member, gem_name) }.reduce(configured) do |command_text, gem_name|
           append_command_arg(command_text, gem_name)
         end
+        command = remove_command_arg(command, "nomono") unless member_declares_or_locks_gem?(member, "nomono")
         skip_checksum_option ? remove_command_arg(command, "--add-checksums") : command
       end
 
@@ -2661,6 +2662,20 @@ module Kettle
         return false unless File.file?(lockfile)
 
         File.readlines(lockfile).any? { |line| line.match?(/\A    #{Regexp.escape(gem_name)} \(/) }
+      end
+
+      def member_declares_or_locks_gem?(member, gem_name)
+        return true if member_lockfile_contains_gem?(member, gem_name)
+
+        gemfile = File.join(member.root, "Gemfile")
+        return false unless File.file?(gemfile)
+
+        parsed = Kettle::Dev::VersionBump.parse_source(File.read(gemfile), gemfile)
+        Kettle::Dev::VersionBump.each_node(parsed.value).any? do |node|
+          node.is_a?(Prism::CallNode) && node.name == :gem &&
+            node.arguments&.arguments&.first.is_a?(Prism::StringNode) &&
+            node.arguments.arguments.first.unescaped == gem_name
+        end
       end
 
       def template_prepare_lockfiles_phase?(phase)
