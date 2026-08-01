@@ -42,6 +42,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Report actionable GitHub release reconciliation checks in family summaries.
 
+- Honor KETTLE_DEV_DEV when release reconciliation invokes kettle-gh-release.
+
 ### Security
 
 ## [1.2.20] - 2026-07-31

@@ -68,8 +68,22 @@ module Kettle
       end
 
       def kettle_gh_release_path
+        local_path = local_kettle_dev_executable
+        return local_path if local_path
+
         specification = Gem.loaded_specs["kettle-dev"] || Gem::Specification.find_by_name("kettle-dev")
         File.join(specification.full_gem_path, "exe", "kettle-gh-release")
+      end
+
+      def local_kettle_dev_executable
+        root = ENV.fetch("KETTLE_DEV_DEV", "").strip
+        return if root.empty? || %w[false 0 no off].include?(root.downcase)
+
+        candidates = [
+          File.join(root, "exe", "kettle-gh-release"),
+          File.join(root, "kettle-dev", "exe", "kettle-gh-release")
+        ]
+        candidates.find { |path| File.file?(path) }
       end
 
       def informational_result(member:, message:)

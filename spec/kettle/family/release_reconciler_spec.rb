@@ -66,4 +66,13 @@ RSpec.describe Kettle::Family::ReleaseReconciler do
       command: [RbConfig.ruby, "/tools/kettle-gh-release", "--release-version", "1.2.3", "--events"]
     )
   end
+
+  it "uses the requested local kettle-dev checkout before an installed gem" do
+    reconciler = described_class.new(config: nil, members: [])
+    stub_env("KETTLE_DEV_DEV" => "/home/pboling/src/my/kettle-dev")
+    allow(File).to receive(:file?).with("/home/pboling/src/my/kettle-dev/exe/kettle-gh-release").and_return(false)
+    allow(File).to receive(:file?).with("/home/pboling/src/my/kettle-dev/kettle-dev/exe/kettle-gh-release").and_return(true)
+
+    expect(reconciler.send(:kettle_gh_release_path)).to eq("/home/pboling/src/my/kettle-dev/kettle-dev/exe/kettle-gh-release")
+  end
 end
