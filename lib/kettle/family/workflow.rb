@@ -2592,11 +2592,12 @@ module Kettle
       end
 
       def remove_command_arg(command_text, arg)
-        argv = command_text.is_a?(Array) ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
-        argv.delete(arg)
-        command_text.is_a?(Array) ? argv : Shellwords.join(argv)
-      rescue ArgumentError
-        command_text
+        return command_text.map(&:to_s).reject { |token| token == arg } if command_text.is_a?(Array)
+
+        # CommandRunner executes String commands through `sh -lc`; Shellwords
+        # cannot round-trip shell operators such as `&&` without turning them
+        # into literal arguments. Remove this known standalone option in place.
+        command_text.to_s.gsub(/(?<!\S)#{Regexp.escape(arg)}(?=\s|\z)/, "").gsub(/[ \t]{2,}/, " ").strip
       end
 
       def normalize_command_includes_arg?(command_text, arg)

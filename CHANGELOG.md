@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Legacy Bundler recovery preserves shell operators in configured compound lockfile commands while removing an unsupported `--add-checksums` flag.
+
 ### Security
 
 ## [1.2.19] - 2026-07-31

@@ -1123,6 +1123,32 @@ RSpec.describe Kettle::Family::Workflow do
     expect(calls.count { |call| call[:phase] == "prepare_lockfiles" }).to eq(2)
   end
 
+  it "preserves shell operators when retrying a checksum-aware compound command" do
+    write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = "bundle update nomono --bundler && bundle lock --add-checksums"
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), "GEM\n\nBUNDLED WITH\n   2.0.0\n")
+    calls = []
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      calls << {phase: phase, command: command, env: env}
+      unsupported = phase == "prepare_lockfiles" && calls.count { |call| call[:phase] == "prepare_lockfiles" } == 1
+      Kettle::Family::CommandResult.new(
+        member.name, phase, command, member.root, unsupported ? 1 : 0, !unsupported,
+        "", unsupported ? "Unknown switches \"--add-checksums\"" : "", 0.0, false, nil
+      )
+    end
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results).to all(be_ok)
+    expect(calls.fetch(2).fetch(:command)).to eq("bundle update nomono --bundler && bundle lock")
+  end
+
   it "allows dirty member target branch checkout preflight when explicitly requested" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
