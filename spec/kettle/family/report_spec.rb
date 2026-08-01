@@ -327,6 +327,7 @@ RSpec.describe Kettle::Family::Report do
       type: "summary",
       changed_count: 3,
       checksum_hit_count: 17,
+      checksum_protected_count: 2,
       unchanged_count: 12
     )
     template_result = Kettle::Family::CommandResult.new(
@@ -341,6 +342,7 @@ RSpec.describe Kettle::Family::Report do
     text = report.to_text
 
     expect(text).to include("17 checksum hits")
+    expect(text).to include("2 checksum-protected changes")
     expect(text).to include("12 unchanged")
     expect(text).to include("3 files changed")
   end

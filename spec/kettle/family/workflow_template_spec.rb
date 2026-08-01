@@ -715,7 +715,7 @@ RSpec.describe Kettle::Family::Workflow do
       "puts JSON.generate(event_version: 1, type: 'post_apply_step', phase: 'post_apply', name: 'git_hooks_executable', status: 'updated', mark: '*');",
       "puts JSON.generate(event_version: 1, type: 'command_step', phase: 'install', name: 'bundle_install', status: 'started', mark: '>');",
       "puts JSON.generate(event_version: 1, type: 'diagnostic', message: 'example warning');",
-      "puts JSON.generate(event_version: 1, type: 'summary', changed_count: 1, checksum_hit_count: 2, unchanged_count: 3);"
+      "puts JSON.generate(event_version: 1, type: 'summary', changed_count: 1, checksum_hit_count: 2, checksum_protected_count: 4, unchanged_count: 3);"
     ].join(" ")
     write_template_config(command: [RbConfig.ruby, "-e", event_script])
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -737,8 +737,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).not_to include("[alpha] > recipes")
     expect(progress.string).not_to include("[alpha] * Gemfile")
     expect(progress.string).not_to include("[alpha] ! example warning")
-    expect(progress.string).to match(/\[alpha\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+done\s+2 checksum hits, 3 unchanged, 1 file changed/)
-    expect(progress.string).to include("template summary: 2/2 members ok, 4 checksum hits, 6 unchanged, 2 files changed")
+    expect(progress.string).to match(/\[alpha\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+done\s+2 checksum hits, 4 checksum-protected changes, 3 unchanged, 1 file changed/)
+    expect(progress.string).to include("template summary: 2/2 members ok, 4 checksum hits, 8 checksum-protected changes, 6 unchanged, 2 files changed")
   end
 
   it "deduplicates changed files from repeated kettle-jem NDJSON summaries" do

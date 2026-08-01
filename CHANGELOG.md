@@ -23,6 +23,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Family template progress and final reports now aggregate checksum write
   bypasses, rendered-but-unchanged files, and changed files from Kettle-Jem
   NDJSON summaries.
+- Template summaries now distinguish exact checksum hits from source-matched
+  local destination changes protected by the template-only checksum policy.
 
 ### Changed
 

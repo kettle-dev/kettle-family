@@ -2424,12 +2424,13 @@ module Kettle
 
         {
           checksum_hits: summary.fetch("checksum_hit_count").to_i,
+          checksum_protected: summary.fetch("checksum_protected_count").to_i,
           unchanged: summary.fetch("unchanged_count").to_i
         }
       end
 
       def template_file_outcome_event?(event)
-        event.key?("checksum_hit_count") && event.key?("unchanged_count")
+        event.key?("checksum_hit_count") && event.key?("checksum_protected_count") && event.key?("unchanged_count")
       end
 
       def template_event_summary_label(event)
@@ -2437,6 +2438,7 @@ module Kettle
           event["changed_count"].to_i,
           template_file_outcome_event?(event) ? {
             checksum_hits: event.fetch("checksum_hit_count").to_i,
+            checksum_protected: event.fetch("checksum_protected_count").to_i,
             unchanged: event.fetch("unchanged_count").to_i
           } : nil
         )
@@ -2446,8 +2448,9 @@ module Kettle
         label = "template summary: #{template_results.count(&:ok?)}/#{template_results.length} members ok"
         return "#{label}, #{template_summary_label(changed_files)}" unless outcome_counts.all?
 
-        totals = outcome_counts.each_with_object({checksum_hits: 0, unchanged: 0}) do |outcomes, memo|
+        totals = outcome_counts.each_with_object({checksum_hits: 0, checksum_protected: 0, unchanged: 0}) do |outcomes, memo|
           memo[:checksum_hits] += outcomes.fetch(:checksum_hits)
+          memo[:checksum_protected] += outcomes.fetch(:checksum_protected)
           memo[:unchanged] += outcomes.fetch(:unchanged)
           memo
         end
@@ -2458,7 +2461,12 @@ module Kettle
         changed_label = "#{changed_files} file#{"s" unless changed_files == 1} changed"
         return changed_label unless outcomes
 
-        "#{outcomes.fetch(:checksum_hits)} checksum hits, #{outcomes.fetch(:unchanged)} unchanged, #{changed_label}"
+        protected_label = if outcomes.fetch(:checksum_protected).positive?
+          ", #{outcomes.fetch(:checksum_protected)} checksum-protected changes"
+        else
+          ""
+        end
+        "#{outcomes.fetch(:checksum_hits)} checksum hits#{protected_label}, #{outcomes.fetch(:unchanged)} unchanged, #{changed_label}"
       end
 
       def normalize_lockfiles(member:, runner:, memo:, phase:)

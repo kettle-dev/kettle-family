@@ -314,6 +314,8 @@ module Kettle
         lines << "  #{template_results.count(&:ok?)}/#{template_results.length} members ok"
         if outcome_counts.all?
           lines << "  #{outcome_counts.sum { |outcomes| outcomes.fetch(:checksum_hits) }} checksum hits"
+          protected = outcome_counts.sum { |outcomes| outcomes.fetch(:checksum_protected) }
+          lines << "  #{protected} checksum-protected changes" if protected.positive?
           lines << "  #{outcome_counts.sum { |outcomes| outcomes.fetch(:unchanged) }} unchanged"
         end
         lines << "  #{changed_files} file#{"s" unless changed_files == 1} changed"
@@ -346,12 +348,14 @@ module Kettle
 
       def template_file_outcomes(result)
         summary = template_events(result.stdout).reverse.find do |event|
-          event["type"] == "summary" && event.key?("checksum_hit_count") && event.key?("unchanged_count")
+          event["type"] == "summary" && event.key?("checksum_hit_count") &&
+            event.key?("checksum_protected_count") && event.key?("unchanged_count")
         end
         return unless summary
 
         {
           checksum_hits: summary.fetch("checksum_hit_count").to_i,
+          checksum_protected: summary.fetch("checksum_protected_count").to_i,
           unchanged: summary.fetch("unchanged_count").to_i
         }
       end
