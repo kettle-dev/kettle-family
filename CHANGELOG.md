@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Add version and mise-trust commands and run template members in dependency waves.
+
 ### Changed
 
 ### Deprecated

@@ -10,7 +10,7 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[discover plan report metadata check clean-unreleased reset test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
+      COMMANDS = %w[version mise-trust discover plan report metadata check clean-unreleased reset test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
       WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb bex release push pull sync up].freeze
 
       command_name "kettle-family"
@@ -201,6 +201,30 @@ module Kettle
         def run(*args)
           unexpected_arguments!(args)
           run_family("discover")
+        end
+      end
+
+      class Version < CommandKit::Command
+        command_name "version"
+        usage ""
+        description "Print the kettle-family version."
+
+        def run(*args)
+          raise OptionParser::InvalidArgument, "unexpected argument(s): #{args.join(" ")}" unless args.empty?
+
+          stdout.puts(Kettle::Family::Version::VERSION)
+          0
+        end
+      end
+
+      class MiseTrust < BaseCommand
+        command_name "mise-trust"
+        usage "[options]"
+        description "Trust mise.toml at the family root and selected member roots."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("mise-trust", execute: true)
         end
       end
 
@@ -524,6 +548,8 @@ module Kettle
       end
 
       command Discover
+      command Version
+      command MiseTrust
       command Plan
       command "report", ReportCommand
       command Metadata
@@ -639,6 +665,7 @@ module Kettle
       end
 
       def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))
+        return mise_trust_results(config: config, members: members) if command == "mise-trust"
         return bump_version_results(members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
@@ -681,6 +708,15 @@ module Kettle
           start_member: start_at.member,
           start_branch: start_at.branch
         ).results
+      end
+
+      def mise_trust_results(config:, members:)
+        roots = [config.root, *members.map(&:root)].uniq
+        runner = CommandRunner.new(execute: true, accept: true)
+        roots.map.with_index do |root, index|
+          member = members.find { |candidate| candidate.root == root } || Member.new("family", root, nil, nil, nil, [], [], nil, [], [])
+          runner.call(member: member, phase: "mise_trust", command: ["mise", "trust", "-C", root], env: {})
+        end
       end
 
       def progress_io(command, options)

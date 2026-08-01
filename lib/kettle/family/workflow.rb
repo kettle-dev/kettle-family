@@ -8,6 +8,7 @@ require "open3"
 require "pathname"
 require "rbconfig"
 require "shellwords"
+require "set"
 require "yaml"
 require "kettle/dev"
 
@@ -231,18 +232,28 @@ module Kettle
         bootstrap_results = template_bootstrap_dependency_results(workflow_members)
         return bootstrap_results unless bootstrap_results.all?(&:ok?)
 
+        template_progress = start_template_progress(workflow_members)
+        results = template_dependency_waves(workflow_members).each_with_object([]) do |wave, memo|
+          wave_results = template_results_for_wave(wave, progress: template_progress)
+          memo.concat(wave_results)
+          break memo unless wave_results.all?(&:ok?)
+        end
+        emit_template_progress_summary(results, progress: template_progress)
+        bootstrap_results + results
+      end
+
+      def template_results_for_wave(wave, progress:)
         queue = Queue.new
-        workflow_members.each_with_index { |member, index| queue << [index, member] }
-        ordered_results = Array.new(workflow_members.length)
+        wave.each_with_index { |member, index| queue << [index, member] }
+        ordered_results = Array.new(wave.length)
         mutex = Mutex.new
         stop = false
-        template_progress = start_template_progress(workflow_members)
-        Array.new(template_jobs(workflow_members)) do
+        Array.new([template_jobs(wave), wave.length].min) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- family templating intentionally runs independent members concurrently.
             loop do
               break if mutex.synchronize { stop }
               index, member = queue.pop(true)
-              member_results = template_results_for_member(member, progress: template_progress)
+              member_results = template_results_for_member(member, progress: progress)
               mutex.synchronize do
                 ordered_results[index] = member_results
                 stop = true unless member_results.all?(&:ok?)
@@ -252,9 +263,23 @@ module Kettle
             end
           end
         end.each(&:join)
-        flattened = ordered_results.compact.flatten
-        emit_template_progress_summary(flattened, progress: template_progress)
-        bootstrap_results + flattened
+        ordered_results.compact.flatten
+      end
+
+      def template_dependency_waves(workflow_members)
+        by_name = workflow_members.to_h { |member| [member.name, member] }
+        remaining = workflow_members.dup
+        completed = Set.new
+        [].tap do |waves|
+          until remaining.empty?
+            wave = remaining.select { |member| (member.dependencies & by_name.keys).all? { |name| completed.include?(name) } }
+            raise Error, "template dependency wave could not resolve: #{remaining.map(&:name).join(", ")}" if wave.empty?
+
+            waves << wave
+            completed.merge(wave.map(&:name))
+            remaining -= wave
+          end
+        end
       end
 
       def template_bootstrap_dependency_results(workflow_members)
