@@ -88,7 +88,7 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("pend: unrel or prep")
     expect(text).to include("bump: unrel is yes and V.rb matches V.rel")
     expect(text).to include("count columns:")
-    expect(text).to include("T(n): kettle-jem transfer changelog lag; n is the total transfer changelog entry count with no replay cursor")
+    expect(text).to include("T(n): kettle-jem transfer changelog replay lag; n is the total transferable destination-release entry count with no replay cursor")
     expect(text).to include("branch")
     expect(text).to include("V.rb")
     expect(text).to include("V.ch.md")

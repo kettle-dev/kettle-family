@@ -342,6 +342,15 @@ when it does not match `V.rel`. The `T(n)` header shows the total number of
 kettle-jem transfer changelog entries. Each row value in that column shows how
 many entries are after that member's stored replay cursor.
 
+Transfer entries are destination release notes. `kettle-jem` may replay one
+only when the template change affects a destination gem's users or developers,
+such as behavior, configuration, compatibility, packaging, documentation, or a
+developer workflow. They are deliberately placed in `Unreleased` and count as
+pending release work. The stable `kettle-jem-template-YYYYMMDD-NNN` prefix is a
+replay identifier only; it does not make an entry exempt from `unreleased`,
+`pending`, or `bump`. `T(n)` reports replay progress separately and never
+changes those release-state decisions.
+
 Use release-state tokens with `--only` to select gems by state instead of by
 name. Multiple tokens are combined with logical AND, so this selects only gems
 that are both unreleased and pending. Status tokens cannot be mixed with member

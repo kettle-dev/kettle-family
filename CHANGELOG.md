@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Template autostash is now enabled by default; use --no-autostash to fail on dirty worktrees.
 
+- Clarify that replayed template changelog entries are destination release work and affect release state.
+
 ### Deprecated
 
 ### Removed

@@ -509,12 +509,12 @@ module Kettle
       def append_release_state_results(lines)
         lines << "release state:"
         lines << "  boolean columns:"
-        lines << "    unrel: unreleased changelog entries are present"
+        lines << "    unrel: unreleased changelog entries are present (including replayed transfer entries)"
         lines << "    prep: V.ch.md matches V.rb and is ready to publish"
         lines << "    pend: unrel or prep"
         lines << "    bump: unrel is yes and V.rb matches V.rel"
         lines << "  count columns:"
-        lines << "    T(n): kettle-jem transfer changelog lag; n is the total transfer changelog entry count with no replay cursor"
+        lines << "    T(n): kettle-jem transfer changelog replay lag; n is the total transferable destination-release entry count with no replay cursor"
         rows = release_state_header
         results.each do |result|
           rows << release_state_row(result)
