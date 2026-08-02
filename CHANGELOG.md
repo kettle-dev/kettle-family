@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Mise-managed template members now retain PATH when launching nested Bundler commands.
 
+- Local kettle-jem template commands now bypass login-shell PATH resets.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

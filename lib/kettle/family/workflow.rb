@@ -2118,12 +2118,17 @@ module Kettle
           prefix = prefix[0...-2] if prefix.last(2) == %w[bundle exec]
           prefix + [RbConfig.ruby, executable] + argv[(index + 1)..]
         else
-          replacement = "#{Shellwords.escape(RbConfig.ruby)} #{Shellwords.escape(executable)}"
-          text = command_text.to_s
-          return text.sub(/\bbundle\s+exec\s+kettle-jem\b/, replacement) if text.match?(/\bbundle\s+exec\s+kettle-jem\b/)
+          argv = Shellwords.split(command_text.to_s)
+          index = argv.index("kettle-jem")
+          return command_text unless index
+          return command_text if argv.any? { |token| %w[&& || ; |].include?(token) }
 
-          text.sub(/\bkettle-jem\b/, replacement)
+          prefix = argv[0...index]
+          prefix = prefix[0...-2] if prefix.last(2) == %w[bundle exec]
+          prefix + [RbConfig.ruby, executable] + argv[(index + 1)..]
         end
+      rescue ArgumentError
+        command_text
       end
 
       def local_kettle_jem_executable
