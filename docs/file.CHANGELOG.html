@@ -90,8 +90,8 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.23">v1.2.23</a>
 </li>
-  <li>COVERAGE: 93.90% – 4647/4949 lines in 31 files</li>
-  <li>BRANCH COVERAGE: 76.26% – 1818/2384 branches in 31 files</li>
+  <li>COVERAGE: 93.91% – 4658/4960 lines in 31 files</li>
+  <li>BRANCH COVERAGE: 76.23% – 1822/2390 branches in 31 files</li>
   <li>29.31% documented</li>
 </ul>
 
@@ -113,6 +113,21 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>
     <p>kettle-jem-template-20260802-001 - Devcontainer JSON files now merge as JSONC,<br>
 preserving comments and trailing commas during template updates.</p>
+  </li>
+  <li>
+    <p>Preserve the completed generated kettle-jem lockfile when restoring an autostash conflicts only on that file.</p>
+  </li>
+  <li>
+    <p>Mise-managed template members now retain PATH when launching nested Bundler commands.</p>
+  </li>
+  <li>
+    <p>Local kettle-jem template commands now bypass login-shell PATH resets.</p>
+  </li>
+  <li>
+    <p>Nested Bundler commands now retain the active Ruby executable paths during autostashed templating.</p>
+  </li>
+  <li>
+    <p>Autostashed mise configuration remains available while templating runs.</p>
   </li>
 </ul>
 

@@ -590,7 +590,11 @@ module Kettle
         # variables, but it may also omit PATH. When `unsetenv_others` is used
         # for mise-managed members, dropping PATH makes nested commands such
         # as `bundle` unresolvable inside kettle-jem.
-        base_env["PATH"] = executable_path(base_env["PATH"])
+        base_env["PATH"] = if base_env.key?("PATH")
+          executable_path(base_env["PATH"])
+        else
+          ENV["PATH"]
+        end
         return base_env.merge(env) unless mise_configured?(member)
 
         base_env.merge(sensitive_env(env))

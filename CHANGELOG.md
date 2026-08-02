@@ -28,23 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Preserve the completed generated kettle-jem lockfile when restoring an autostash conflicts only on that file.
-
-- Mise-managed template members now retain PATH when launching nested Bundler commands.
-
-- Local kettle-jem template commands now bypass login-shell PATH resets.
-
-- Nested Bundler commands now retain the active Ruby executable paths during autostashed templating.
-
-- Autostashed mise configuration remains available while templating runs.
-
 ### Security
 
 ## [1.2.23] - 2026-08-02
 
 - TAG: [v1.2.23][1.2.23t]
-- COVERAGE: 93.90% -- 4647/4949 lines in 31 files
-- BRANCH COVERAGE: 76.26% -- 1818/2384 branches in 31 files
+- COVERAGE: 93.91% -- 4658/4960 lines in 31 files
+- BRANCH COVERAGE: 76.23% -- 1822/2390 branches in 31 files
 - 29.31% documented
 
 ### Changed
@@ -59,6 +49,16 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - kettle-jem-template-20260802-001 - Devcontainer JSON files now merge as JSONC,
   preserving comments and trailing commas during template updates.
+
+- Preserve the completed generated kettle-jem lockfile when restoring an autostash conflicts only on that file.
+
+- Mise-managed template members now retain PATH when launching nested Bundler commands.
+
+- Local kettle-jem template commands now bypass login-shell PATH resets.
+
+- Nested Bundler commands now retain the active Ruby executable paths during autostashed templating.
+
+- Autostashed mise configuration remains available while templating runs.
 
 ## [1.2.22] - 2026-08-01
 
