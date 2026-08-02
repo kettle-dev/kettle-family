@@ -69,7 +69,20 @@ module Kettle
         line_start = source.rindex("\n", node.location.start_offset - 1).to_i + 1
         line_end = source.index("\n", node.location.end_offset) || source.length
         line_end += 1 if line_end < source.length
+        if final_standalone_call?(source, node, line_start, line_end)
+          # Remove the preceding separator and normalize EOF when the retired
+          # declaration is the final standalone line in the file.
+          line_start = source[0...line_start].rstrip.length
+          return Kettle::Dev::VersionBump.file_edit(path, source, line_start, source.length, "\n")
+        end
+
         Kettle::Dev::VersionBump.file_edit(path, source, line_start, line_end, "")
+      end
+
+      def final_standalone_call?(source, node, line_start, line_end)
+        source[line_start...node.location.start_offset].to_s.strip.empty? &&
+          source[node.location.end_offset...line_end].to_s.strip.empty? &&
+          source[line_end..].to_s.strip.empty?
       end
 
       def legacy_appraisal_call?(node)

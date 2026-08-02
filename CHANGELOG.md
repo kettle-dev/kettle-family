@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Remove trailing blank lines when retiring legacy appraisal source declarations during templating.
+
 ### Security
 
 ## [1.2.22] - 2026-08-01

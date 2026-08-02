@@ -31,7 +31,7 @@ RSpec.describe Kettle::Family::AppraisalBootstrap, :prism do
     expect(result).to be_ok
     expect(File.read(File.join(member.root, "Gemfile"))).not_to include("pboling/appraisal")
     expect(File.read(File.join(member.root, "Gemfile"))).to include('gem "appraisal2", "~> 3.0"')
-    expect(File.read(File.join(member.root, "Appraisal.root.gemfile"))).not_to include("pboling/appraisal")
+    expect(File.read(File.join(member.root, "Appraisal.root.gemfile"))).to eq("gemspec\n")
   end
 
   it "does not remove a different appraisal source or an appraisal2 declaration" do
