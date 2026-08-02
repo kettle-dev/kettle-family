@@ -1254,7 +1254,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(File.join(member.root, "scratch.txt"))).to eq("dirty\n")
   end
 
-  it "keeps the template lockfile when restoring a dirty lockfile would conflict" do
+  it "keeps a generated Gemfile lockfile when restoring a dirty lockfile would conflict" do
     write_template_config(normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -1272,6 +1272,33 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(restores).to all(be_ok)
     expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("template\n")
+    expect(`git -C #{member.root} diff --name-only --diff-filter=U`).to be_empty
+  end
+
+  it "keeps the generated kettle-jem lockfile when restoring its prior state would conflict" do
+    write_template_config(normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    lockfile = File.join(member.root, ".structuredmerge", "kettle-jem.lock")
+    FileUtils.mkdir_p(File.dirname(lockfile))
+    File.write(lockfile, "base\n")
+    run_git(member.root, "add", ".structuredmerge/kettle-jem.lock")
+    run_git(member.root, "commit", "--quiet", "-m", "Track kettle-jem state")
+    File.write(lockfile, "local\n")
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
+    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
+    FileUtils.mkdir_p(File.dirname(lockfile))
+    File.write(lockfile, "template\n")
+    run_git(member.root, "add", ".structuredmerge/kettle-jem.lock")
+    run_git(member.root, "commit", "--quiet", "-m", "Template kettle-jem state")
+
+    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
+
+    expect(restores).to all(be_ok), restores.map { |result| [result.stdout, result.stderr].join("\n") }.join("\n")
+    expect(File.read(lockfile)).to eq("template\n")
     expect(`git -C #{member.root} diff --name-only --diff-filter=U`).to be_empty
   end
 

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Preserve the completed generated kettle-jem lockfile when restoring an autostash conflicts only on that file.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

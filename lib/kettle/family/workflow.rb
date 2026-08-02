@@ -237,22 +237,25 @@ module Kettle
             phase: "template_autostash_restore",
             command: ["git", "stash", "pop", stash.fetch(:ref)]
           )
-          next restore if restore.ok? || !template_lockfile_only_conflict?(stash.fetch(:member))
+          next restore if restore.ok? || !template_generated_lockfile_only_conflict?(stash.fetch(:member))
 
           runner.call(
             member: stash.fetch(:member),
-            phase: "template_autostash_lockfile_recovery",
+            phase: "template_autostash_generated_lockfile_recovery",
             command: [
               "sh", "-lc",
-              "git checkout --ours -- Gemfile.lock && git add -- Gemfile.lock && git stash drop #{Shellwords.escape(stash.fetch(:ref))}"
+              "paths=$(git diff --name-only --diff-filter=U); " \
+                "git checkout --ours -- $paths && git add -- $paths && " \
+                "git stash drop #{Shellwords.escape(stash.fetch(:ref))}"
             ]
           )
         end
       end
 
-      def template_lockfile_only_conflict?(member)
+      def template_generated_lockfile_only_conflict?(member)
         stdout, _stderr, status = Open3.capture3("git", "diff", "--name-only", "--diff-filter=U", chdir: member.root)
-        status.success? && stdout.lines.map(&:strip).reject(&:empty?) == ["Gemfile.lock"]
+        conflicts = stdout.lines.map(&:strip).reject(&:empty?).sort
+        status.success? && !conflicts.empty? && conflicts.all? { |path| ["Gemfile.lock", ".structuredmerge/kettle-jem.lock"].include?(path) }
       end
 
       def template_branch_sync_results(branch_members, runner:)
