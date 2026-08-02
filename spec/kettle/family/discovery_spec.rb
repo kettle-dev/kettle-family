@@ -77,6 +77,24 @@ RSpec.describe Kettle::Family::Discovery do
     expect(members.find { |member| member.name == "beta" }.release_dependencies).to be_empty
   end
 
+  it "does not evaluate unrelated configured gemspecs for an explicit member-only selection" do
+    write_gem("alpha")
+    beta = write_gem("beta")
+    File.write(File.join(beta, "beta.gemspec"), "Gem::Specification.new do |spec|\n<<<<<<< broken\n")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        discover: false
+        roots:
+          - alpha
+          - beta
+    YAML
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config, release_dependency_member_names: ["alpha"]).members
+
+    expect(members.map(&:name)).to eq(["alpha"])
+  end
+
   it "applies selection after ordering" do
     write_gem("alpha")
     write_gem("beta", dependencies: ["alpha"])

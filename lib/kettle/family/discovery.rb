@@ -52,11 +52,15 @@ module Kettle
       end
 
       def configured_root_members
-        config.configured_member_roots.map { |root| member_from_gemspec(primary_gemspec(root)) }
+        config.configured_member_roots
+          .select { |root| selected_configured_root?(root) }
+          .map { |root| member_from_gemspec(primary_gemspec(root)) }
       end
 
       def explicit_members
-        config.explicit_members.map do |entry|
+        config.explicit_members.filter_map do |entry|
+          next unless selected_configured_root?(entry.fetch("root"))
+
           gemspec_path = if entry["gemspec"]
             File.expand_path(entry["gemspec"], entry.fetch("root"))
           else
@@ -64,6 +68,12 @@ module Kettle
           end
           member_from_gemspec(gemspec_path)
         end
+      end
+
+      def selected_configured_root?(root)
+        return true if release_dependency_member_names.nil?
+
+        release_dependency_member_names.include?(File.basename(File.expand_path(root)))
       end
 
       def primary_gemspec(root)
