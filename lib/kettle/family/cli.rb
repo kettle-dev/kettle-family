@@ -625,7 +625,11 @@ module Kettle
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
         start_at = parse_start_at(options[:start_at])
-        discovery = Discovery.new(config: config)
+        effective_only = default_only_filter(command: command, only: options[:only])
+        discovery = Discovery.new(
+          config: config,
+          release_dependency_member_names: direct_member_only_names(effective_only)
+        )
         members = discovery.members
         ordered = if command == "install"
           install_order(members, config)
@@ -634,7 +638,6 @@ module Kettle
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
-        effective_only = default_only_filter(command: command, only: options[:only])
         release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only)
         selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
@@ -681,6 +684,13 @@ module Kettle
         return "pending" if command == "release"
 
         only
+      end
+
+      def direct_member_only_names(only)
+        names = only.to_s.split(",").map(&:strip).reject(&:empty?)
+        return nil if names.empty? || names.any? { |name| Selection.status_token?(name) }
+
+        names
       end
 
       def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))

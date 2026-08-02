@@ -65,6 +65,18 @@ RSpec.describe Kettle::Family::Discovery do
     expect(member.release_dependencies).to eq(["alpha"])
   end
 
+  it "does not parse unrelated Gemfiles for an explicit member-only selection" do
+    write_gem("alpha")
+    beta = write_gem("beta")
+    File.write(File.join(beta, "Gemfile"), "gem \")\n")
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config, release_dependency_member_names: ["alpha"]).members
+
+    expect(members.map(&:name)).to eq(%w[alpha beta])
+    expect(members.find { |member| member.name == "beta" }.release_dependencies).to be_empty
+  end
+
   it "applies selection after ordering" do
     write_gem("alpha")
     write_gem("beta", dependencies: ["alpha"])

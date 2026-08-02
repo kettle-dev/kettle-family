@@ -5,8 +5,9 @@ require "open3"
 module Kettle
   module Family
     class Discovery
-      def initialize(config:)
+      def initialize(config:, release_dependency_member_names: nil)
         @config = config
+        @release_dependency_member_names = release_dependency_member_names&.map(&:to_s)
         @warnings = []
       end
 
@@ -18,7 +19,7 @@ module Kettle
 
       private
 
-      attr_reader :config
+      attr_reader :config, :release_dependency_member_names
 
       def build_members
         @warnings = []
@@ -104,18 +105,23 @@ module Kettle
           version_file: version_file(root, spec.name),
           version: spec.version.to_s,
           dependencies: dependencies,
-          release_dependencies: release_dependencies(root: root, spec: spec, dependencies: dependencies),
+          release_dependencies: release_dependencies(
+            root: root,
+            spec: spec,
+            dependencies: dependencies,
+            include_gemfile_dependencies: release_dependency_member_names.nil? || release_dependency_member_names.include?(spec.name)
+          ),
           required_ruby_version: required_ruby_version(spec),
           licenses: licenses(spec),
           authors: authors(spec)
         )
       end
 
-      def release_dependencies(root:, spec:, dependencies:)
+      def release_dependencies(root:, spec:, dependencies:, include_gemfile_dependencies:)
         (
           dependencies +
           spec.development_dependencies.map(&:name) +
-          gemfile_dependencies(root)
+          (include_gemfile_dependencies ? gemfile_dependencies(root) : [])
         ).uniq.sort
       end
 

@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Remove trailing blank lines when retiring legacy appraisal source declarations during templating.
 
+- Allow direct --only member selections to proceed when unrelated member Gemfiles are temporarily unparsable.
+
 ### Security
 
 ## [1.2.22] - 2026-08-01
