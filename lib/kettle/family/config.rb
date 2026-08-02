@@ -265,6 +265,12 @@ module Kettle
         fetch_path("release", "jobs")
       end
 
+      def release_waves
+        Array(fetch_path("release", "waves")).map do |wave|
+          Array(wave).map(&:to_s).map(&:strip).reject(&:empty?)
+        end.reject(&:empty?)
+      end
+
       def release_auto_dependency_floors?
         fetch_path("release", "auto_dependency_floors") != false
       end

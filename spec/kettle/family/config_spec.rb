@@ -136,6 +136,19 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_target_branches).to eq(%w[r1_8-even-v0 r1_9-even-v2])
   end
 
+  it "loads configured release waves" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        waves:
+          - [alpha, beta]
+          - gamma
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_waves).to eq([%w[alpha beta], ["gamma"]])
+  end
+
   it "loads release secrets provider config" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       release:

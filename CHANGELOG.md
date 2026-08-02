@@ -55,6 +55,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Template autostash now recovers lockfile-only restore conflicts by keeping the normalized lockfile.
 
+- Allow family configuration to define ordered single-member release waves.
+
 ### Security
 
 ## [1.2.21] - 2026-08-01

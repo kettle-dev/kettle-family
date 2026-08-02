@@ -1767,6 +1767,37 @@ RSpec.describe Kettle::Family::Workflow do
     expect(waves.map { |wave| wave.map(&:name) }).to eq([["kettle-soup-cover"], ["nomono"]])
   end
 
+  it "honors configured release waves before inferred waves" do
+    config = Kettle::Family::Config.new(
+      root: @tmpdir,
+      path: nil,
+      data: {"release" => {"waves" => [["beta"], ["alpha"]]}}
+    )
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    gamma = ready_member("gamma")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta, gamma], execute: true, jobs: 3)
+
+    waves = workflow.send(:release_waves, [alpha, beta, gamma])
+
+    expect(waves.map { |wave| wave.map(&:name) }).to eq([["beta"], ["alpha"], ["gamma"]])
+  end
+
+  it "filters configured release waves to the selected members" do
+    config = Kettle::Family::Config.new(
+      root: @tmpdir,
+      path: nil,
+      data: {"release" => {"waves" => [["alpha"], ["beta"], ["gamma"]]}}
+    )
+    beta = ready_member("beta")
+    gamma = ready_member("gamma")
+    workflow = described_class.new(command: "release", config: config, members: [beta, gamma], execute: true, jobs: 2)
+
+    waves = workflow.send(:release_waves, [beta, gamma])
+
+    expect(waves.map { |wave| wave.map(&:name) }).to eq([["beta"], ["gamma"]])
+  end
+
   it "breaks release-only dependency cycles by selected member order" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member("alpha", release_dependencies: ["beta"])
