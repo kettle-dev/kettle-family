@@ -57,6 +57,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Allow family configuration to define ordered single-member release waves.
 
+- Remove retired pboling/appraisal declarations before templating legacy members.
+
 ### Security
 
 ## [1.2.21] - 2026-08-01

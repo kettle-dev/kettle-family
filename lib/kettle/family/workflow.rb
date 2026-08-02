@@ -378,8 +378,11 @@ module Kettle
         debugger_results = template_debugger_bootstrap_results(workflow_members)
         return debugger_results unless debugger_results.all?(&:ok?)
 
+        appraisal_results = template_appraisal_bootstrap_results(workflow_members)
+        return debugger_results + appraisal_results unless appraisal_results.all?(&:ok?)
+
         bootstrap_results = template_bootstrap_dependency_results(workflow_members)
-        return debugger_results + bootstrap_results unless bootstrap_results.all?(&:ok?)
+        return debugger_results + appraisal_results + bootstrap_results unless bootstrap_results.all?(&:ok?)
 
         template_progress = start_template_progress(workflow_members)
         results = template_dependency_waves(workflow_members).each_with_object([]) do |wave, memo|
@@ -388,11 +391,20 @@ module Kettle
           break memo unless wave_results.all?(&:ok?)
         end
         emit_template_progress_summary(results, progress: template_progress)
-        debugger_results + bootstrap_results + results
+        debugger_results + appraisal_results + bootstrap_results + results
       end
 
       def template_debugger_bootstrap_results(workflow_members)
         bootstrap = DebuggerBootstrap.new(mode: :execute)
+        workflow_members.filter_map do |member|
+          bootstrap.bootstrap_member(member) if bootstrap.member_needs_bootstrap?(member)
+        end
+      rescue => error
+        [template_bootstrap_failure_result(workflow_members.first, error.message)]
+      end
+
+      def template_appraisal_bootstrap_results(workflow_members)
+        bootstrap = AppraisalBootstrap.new(mode: :execute)
         workflow_members.filter_map do |member|
           bootstrap.bootstrap_member(member) if bootstrap.member_needs_bootstrap?(member)
         end

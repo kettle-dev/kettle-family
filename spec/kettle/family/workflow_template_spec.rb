@@ -1156,8 +1156,9 @@ RSpec.describe Kettle::Family::Workflow do
           nomono (1.1.2)
 
       BUNDLED WITH
-         2.0.0
+       2.0.0
     LOCK
+    stub_latest_nomono("1.1.2")
     calls = []
     runner = instance_double(Kettle::Family::CommandRunner)
     allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
