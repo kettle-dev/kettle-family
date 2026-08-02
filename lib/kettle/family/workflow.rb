@@ -183,12 +183,12 @@ module Kettle
         workflow_results = branch_checkout_dirty_preflight_results
         if workflow_results.all?(&:ok?)
           workflow_results += if !config.release_target_branches.empty?
-                                branch_target_results
-                              elsif member_local_branch_targets?
-                                member_local_branch_target_results
-                              else
-                                current_branch_results(members)
-                              end
+            branch_target_results
+          elsif member_local_branch_targets?
+            member_local_branch_target_results
+          else
+            current_branch_results(members)
+          end
         end
 
         checkout_preflight + sync_results + workflow_results + restore_template_autostashes(stashes, runner: runner)
