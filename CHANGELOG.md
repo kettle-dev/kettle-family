@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Local kettle-jem template commands now bypass login-shell PATH resets.
 
+- Nested Bundler commands now retain the active Ruby executable paths during autostashed templating.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

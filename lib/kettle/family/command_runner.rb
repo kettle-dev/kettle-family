@@ -590,7 +590,7 @@ module Kettle
         # variables, but it may also omit PATH. When `unsetenv_others` is used
         # for mise-managed members, dropping PATH makes nested commands such
         # as `bundle` unresolvable inside kettle-jem.
-        base_env["PATH"] ||= ENV["PATH"]
+        base_env["PATH"] = executable_path(base_env["PATH"])
         return base_env.merge(env) unless mise_configured?(member)
 
         base_env.merge(sensitive_env(env))
@@ -606,6 +606,11 @@ module Kettle
 
       def sensitive_env_key?(key)
         SENSITIVE_ENV_KEYS.include?(key.to_s)
+      end
+
+      def executable_path(path)
+        paths = [Gem.bindir, File.dirname(RbConfig.ruby), path, ENV["PATH"]]
+        paths.compact.map(&:to_s).flat_map { |value| value.split(File::PATH_SEPARATOR) }.reject(&:empty?).uniq.join(File::PATH_SEPARATOR)
       end
 
       def unbundled_process_env
