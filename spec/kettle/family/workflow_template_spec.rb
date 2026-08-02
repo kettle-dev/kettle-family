@@ -299,6 +299,26 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).stdout).to eq("full/standalone\n")
   end
 
+  it "budgets kettle-jem thread workers from family template concurrency" do
+    allow(Etc).to receive(:nprocessors).and_return(22)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [member_at("alpha"), member_at("beta")], jobs: 2)
+
+    expect(workflow.send(:workflow_env).fetch("KETTLE_JEM_THREAD_WORKERS")).to eq("10")
+  end
+
+  it "preserves an explicit kettle-jem thread worker override" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(
+      command: "template",
+      config: config,
+      members: [member_at("alpha")],
+      env_overrides: {"KETTLE_JEM_THREAD_WORKERS" => "3"}
+    )
+
+    expect(workflow.send(:workflow_env).fetch("KETTLE_JEM_THREAD_WORKERS")).to eq("3")
+  end
+
   it "does not inject an implicit family local path env for no-config single-member templating" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = Kettle::Family::Member.new(
@@ -584,6 +604,7 @@ RSpec.describe Kettle::Family::Workflow do
         "#{family_local_env_name}=#{@tmpdir}",
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
+        "KETTLE_JEM_THREAD_WORKERS=21",
         "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "K_JEM_TEMPLATING=true",

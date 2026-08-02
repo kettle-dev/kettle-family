@@ -2031,6 +2031,7 @@ module Kettle
           if command == "template"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
+            env["KETTLE_JEM_THREAD_WORKERS"] ||= template_thread_worker_budget.to_s
             if monorepo_template?
               template_git_lock_path = template_git_commit_lock_path
               env["KETTLE_JEM_GIT_LOCK"] = template_git_lock_path
@@ -2956,6 +2957,11 @@ module Kettle
         family_env_name = config.family_local_path_env_name
         env[family_env_name] = "false" if family_env_name && !env_overrides.key?(family_env_name)
         env
+      end
+
+      def template_thread_worker_budget
+        member_jobs = template_jobs(members)
+        [1, (Etc.nprocessors / member_jobs) - 1].max
       end
 
       def normalize_release_lockfiles(member:, runner:, memo:)

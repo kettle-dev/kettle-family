@@ -594,6 +594,7 @@ RSpec.describe Kettle::Family::CLI do
         "-u",
         "MOLINILLO_DEBUG",
         "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV=#{@tmpdir}",
+        "KETTLE_JEM_THREAD_WORKERS=21",
         "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "K_JEM_TEMPLATING=true",

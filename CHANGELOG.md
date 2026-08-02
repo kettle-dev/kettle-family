@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Budget kettle-jem template workers across concurrent family members.
+
 ### Deprecated
 
 ### Removed
