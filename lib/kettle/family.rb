@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "family/version"
 require_relative "family/member"
 require_relative "family/command_result"
 require_relative "family/release_state_result"
@@ -26,6 +25,7 @@ require_relative "family/orderer"
 require_relative "family/selection"
 require_relative "family/report"
 require_relative "family/cli"
+require_relative "family/version"
 
 module Kettle
   module Family

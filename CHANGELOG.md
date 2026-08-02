@@ -34,6 +34,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Allow direct --only member selections to proceed when unrelated member Gemfiles are temporarily unparsable.
 
+- kettle-jem-template-20260802-001 - Devcontainer JSON files now merge as JSONC,
+  preserving comments and trailing commas during template updates.
+
 ### Security
 
 ## [1.2.22] - 2026-08-01
@@ -446,10 +449,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- kettle-jem-template-20260729-005 - Gemspec metadata now publishes this
-  project's RubyForum tag as `mailing_list_uri`, and support docs link to the
-  tagged RubyForum community alongside Discord.
-
 ### Fixed
 
 - Family release changelog phases now pass `--yes` to configured
@@ -457,26 +456,16 @@ Please file a bug if you notice a violation of semantic versioning.
   behavior and keeping publish runs non-interactive unless `--no-accept` is
   used.
 
-- kettle-jem-template-20260728-003 - Generated dep-heads workflows now run
-  TruffleRuby jobs with current RubyGems and Bundler, avoiding setup failures
-  before the test suite starts.
 - kettle-jem-template-20260728-004 - Generated dep-heads workflows now use the
   setup-ruby Bundler install path for direct appraisal Gemfiles, avoiding rv
   lockfile parser failures on Git and path dependencies.
 - kettle-jem-template-20260728-005 - VersionGem bootstrap now creates the
   missing canonical version spec when a project only has shim namespace version
   specs.
-- kettle-jem-template-20260729-001 - Generated JRuby 9.4 workflows now use the
-  legacy manual bundle install path, avoiding setup-time Bundler full-index
-  failures against `gem.coop`.
 - kettle-jem-template-20260729-002 - VersionGem bootstrap now preserves
   and templates dedicated `version_gem.rb` entrypoints even when the gemspec
   dependency is intentionally omitted, and generated anonymous-loader specs
   cover both `version.rb` and `version_gem.rb`.
-- kettle-jem-template-20260729-003 - Old-Ruby gems below the VersionGem runtime
-  floor now get managed minimal `version.rb` files and anonymous-loader version
-  specs without adding `version_gem`.
-
 ## [1.2.3] - 2026-07-28
 
 - TAG: [v1.2.3][1.2.3t]
@@ -697,11 +686,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- kettle-jem-template-20260725-001 - Generated JRuby and TruffleRuby workflow
-  files now run when pull request head branches start with `feature/release`,
-  so release CI monitoring does not report intentionally skipped engine
-  workflows as failures.
-
 ## [1.1.5] - 2026-07-25
 
 - TAG: [v1.1.5][1.1.5t]
@@ -885,8 +869,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `kettle-family release-state` now reports the checked-out branch and displays
   release distance as local/remote ahead and behind counts.
-- kettle-jem-template-20260720-001 - Generated READMEs can now render
-  template-managed corporate sponsor logos from project or family config.
 - kettle-jem-template-20260720-002 - Generated development Gemfiles now use the
   released `tree_sitter_language_pack` gem 1.13.3 or newer by default.
 - kettle-jem-template-20260720-003 - Generated StructuredMerge Git diff driver
@@ -973,8 +955,6 @@ Please file a bug if you notice a violation of semantic versioning.
   the next `kettle-jem` release depends on unreleased `kettle-family` fixes.
 - Raised the runtime Ruby floor to 4.0.0.
 
-- kettle-jem-template-20260716-001 - Shim gemspec manifests now include
-  `LICENSE.md` instead of nonexistent `LICENSE.txt`.
 - kettle-jem-template-20260716-002 - Generated gemspec manifests now ship fewer
   repository-only files by default to reduce downstream distro packaging churn.
 
