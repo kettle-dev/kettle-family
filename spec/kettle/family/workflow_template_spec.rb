@@ -606,7 +606,7 @@ RSpec.describe Kettle::Family::Workflow do
         "#{family_local_env_name}=#{@tmpdir}",
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
-        "KETTLE_JEM_THREAD_WORKERS=21",
+        "KETTLE_JEM_THREAD_WORKERS=#{[1, Etc.nprocessors - 1].max}",
         "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "K_JEM_TEMPLATING=true",

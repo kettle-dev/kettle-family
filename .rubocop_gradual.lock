@@ -6,7 +6,7 @@
     [2124, 11, 58, "Style/IdenticalConditionalBranches: Move `prefix + [RbConfig.ruby, executable] + argv[(index + 1)..]` out of the conditional.", 1809105798],
     [2133, 11, 58, "Style/IdenticalConditionalBranches: Move `prefix + [RbConfig.ruby, executable] + argv[(index + 1)..]` out of the conditional.", 1809105798]
   ],
-  "spec/kettle/family/workflow_template_spec.rb:272479828": [
+  "spec/kettle/family/workflow_template_spec.rb:474532408": [
     [117, 5, 52, "RSpec/AnyInstance: Avoid stubbing using `allow_any_instance_of`.", 1804184466]
   ]
 }
