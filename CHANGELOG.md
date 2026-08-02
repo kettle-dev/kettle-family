@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Preserve explicit local dependency paths during template dependency bootstrap.
+
+- Roll back failed member template output before restoring an autostash.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

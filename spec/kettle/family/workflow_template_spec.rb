@@ -541,6 +541,36 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(File.join(alpha.root, "Gemfile"))).to include('gem "nomono", "~> 1.1", ">= 1.1.1", require: false')
   end
 
+  it "disables local dependency switches during nomono bootstrap" do
+    write_template_config(
+      command: ["bundle", "exec", "kettle-jem", "install"],
+      normalize_lockfiles: false,
+      family_mode: "sibling_repos"
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    write_nomono_bundle(alpha, floor: "1.1.0", locked: "1.1.0")
+    captured_calls = []
+    stub_latest_nomono("1.1.1")
+    stub_successful_runner(captured_calls)
+
+    described_class.new(
+      command: "template",
+      config: config,
+      members: [alpha],
+      execute: true,
+      jobs: 1,
+      env_overrides: {family_local_env_name => "/workspace/family"}
+    ).results
+
+    bundle_update = captured_calls.find do |call|
+      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == %w[bundle update nomono --bundler]
+    end
+    expect(bundle_update.fetch(:env)).to include(family_local_env_name => "false")
+    expect(bundle_update.fetch(:env)).to include("K_JEM_TEMPLATING" => "false")
+    expect(bundle_update.fetch(:env)).to include("BUNDLE_DISABLE_CHECKSUM_VALIDATION" => "true")
+  end
+
   it "fails before member bundles run when an already activated nomono is stale" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -1254,6 +1284,22 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(restores).to all(be_ok)
     expect(File.read(File.join(member.root, "scratch.txt"))).to eq("dirty\n")
+  end
+
+  it "rolls back failed template output before restoring an autostash" do
+    write_template_config(command: [RbConfig.ruby, "-e", "File.write('templated.txt', 'partial'); exit 1"], normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results.map(&:phase)).to include("template_autostash_rollback")
+    expect(results.find { |result| result.phase == "template_autostash_rollback" }).to be_ok
+    expect(File.read(File.join(member.root, "scratch.txt"))).to eq("dirty\n")
+    expect(File).not_to exist(File.join(member.root, "templated.txt"))
+    expect(`git -C #{member.root} stash list`).to be_empty
   end
 
   it "keeps a generated Gemfile lockfile when restoring a dirty lockfile would conflict" do

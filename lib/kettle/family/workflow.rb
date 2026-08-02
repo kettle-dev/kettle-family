@@ -191,7 +191,8 @@ module Kettle
           end
         end
 
-        checkout_preflight + sync_results + workflow_results + restore_template_autostashes(stashes, runner: runner)
+        rollback_results = rollback_failed_template_worktrees(stashes, workflow_results, runner: runner)
+        checkout_preflight + sync_results + workflow_results + rollback_results + restore_template_autostashes(stashes, runner: runner)
       end
 
       def template_worktree_sync_results(runner:)
@@ -247,6 +248,26 @@ module Kettle
               "paths=$(git diff --name-only --diff-filter=U); " \
                 "git checkout --ours -- $paths && git add -- $paths && " \
                 "git stash drop #{Shellwords.escape(stash.fetch(:ref))}"
+            ]
+          )
+        end
+      end
+
+      def rollback_failed_template_worktrees(stashes, workflow_results, runner:)
+        failed_members = workflow_results.reject(&:ok?).map(&:member_name).compact.uniq
+        stashes.filter_map do |stash|
+          member = stash.fetch(:member)
+          next unless failed_members.include?(member.name)
+
+          runner.call(
+            member: member,
+            phase: "template_autostash_rollback",
+            command: [
+              "sh", "-lc",
+              "paths=$(git diff --name-only; git diff --cached --name-only); " \
+                "paths=$(printf '%s\\n' \"$paths\" | sed '/^\\.structuredmerge\\/kettle-jem\\.yml$/d; /^\\.kettle-jem\\.yml$/d' | sort -u); " \
+                "if [ -n \"$paths\" ]; then git restore --source=HEAD --staged --worktree -- $paths; fi; " \
+                "git clean -fd -e .structuredmerge/kettle-jem.yml -e .kettle-jem.yml"
             ]
           )
         end
@@ -533,6 +554,11 @@ module Kettle
 
       def template_bootstrap_dependency_env(member)
         env = workflow_env.merge(release_lockfile_local_path_env_overrides(member))
+        env.each_key do |key|
+          env[key] = "false" if key.end_with?("_DEV")
+        end
+        env["K_JEM_TEMPLATING"] = "false"
+        env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
         family_env_name = config.family_local_path_env_name
         env[family_env_name] = "false" if family_env_name && !env_overrides.key?(family_env_name)
         env
