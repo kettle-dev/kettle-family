@@ -22,11 +22,24 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Budget kettle-jem template workers across concurrent family members.
-
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.23] - 2026-08-02
+
+- TAG: [v1.2.23][1.2.23t]
+- COVERAGE: 93.90% -- 4647/4949 lines in 31 files
+- BRANCH COVERAGE: 76.26% -- 1818/2384 branches in 31 files
+- 29.31% documented
+
+### Changed
+
+- Budget kettle-jem template workers across concurrent family members.
 
 ### Fixed
 
@@ -36,8 +49,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - kettle-jem-template-20260802-001 - Devcontainer JSON files now merge as JSONC,
   preserving comments and trailing commas during template updates.
-
-### Security
 
 ## [1.2.22] - 2026-08-01
 
@@ -466,6 +477,7 @@ Please file a bug if you notice a violation of semantic versioning.
   and templates dedicated `version_gem.rb` entrypoints even when the gemspec
   dependency is intentionally omitted, and generated anonymous-loader specs
   cover both `version.rb` and `version_gem.rb`.
+
 ## [1.2.3] - 2026-07-28
 
 - TAG: [v1.2.3][1.2.3t]
@@ -1638,7 +1650,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.22...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.23...HEAD
+[1.2.23]: https://github.com/kettle-dev/kettle-family/compare/v1.2.22...v1.2.23
+[1.2.23t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.23
 [1.2.22]: https://github.com/kettle-dev/kettle-family/compare/v1.2.21...v1.2.22
 [1.2.22t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.22
 [1.2.21]: https://github.com/kettle-dev/kettle-family/compare/v1.2.20...v1.2.21
