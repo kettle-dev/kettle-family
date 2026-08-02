@@ -503,20 +503,20 @@ files:
     recipe: template_source_application_Appraisal_root_gemfile
     action: write
     dest_sha256: 8724e3f6faea995be655ac49369bec64a70710112b1f65707fa38f1fd2fd3254
-    input_fingerprint: a181813c79b1e3553d2dbf5c15445dbf0458ee79569a2f31a1890b42c1fccf47
+    input_fingerprint: 5090125da36f2addf32d64c2b374eccf0e8fe760eae3d16d993ffdea5f79a475
     template_sources:
     - Appraisal.root.gemfile.example
   Appraisals:
     recipe: template_source_application_Appraisals
     action: write
-    dest_sha256: de90c5a503d3533cfce2eb4e0a9191eabb3a16a64db00121d185e7d42d773c2c
-    input_fingerprint: d3d1534524bd4d368e14d0204973737a2ee997a39adb0889cd1ba78ea8c8750a
+    dest_sha256: 5e878ba2682368e6bfac29c2a358117643605aa56801b7603303c3f587ffeb80
+    input_fingerprint: b2c61c1622a08f27689755bc7d613b379687b1c09f5ca260a3ade48722bca702
     template_sources:
     - Appraisals.example
   CHANGELOG.md:
     recipe: template_source_application_CHANGELOG_md
     action: write
-    dest_sha256: 1637dcff03cbf6446022515b986720c645ffd7e12f7922111cec7f5bd595d124
+    dest_sha256: 66887f5830da35dc73791e2d25f1964024746b34078c440f0acef9084990203c
     input_fingerprint: 54d8ebfb395296f10db9b56e617361c0e64105ded7fd9bac474eca6b97def8ca
     template_sources:
     - CHANGELOG.md.example
@@ -572,7 +572,7 @@ files:
   README.md:
     recipe: template_source_application_README_md
     action: write
-    dest_sha256: 1fd27d29e18ddf2bcb6e60e4d454d5d172542925b0463aa26205dd87e44c9d95
+    dest_sha256: e266e28aefd15bb75f17fa752d470d491fa6c06629fd1bafb7b4280a134c8750
     input_fingerprint: b4bddd2468ff8a8a5045979f031fece48a2f8361c2d5b2bd4ec23e396d172e98
     template_sources:
     - README.md.example
@@ -937,6 +937,6 @@ files:
     recipe: template_source_application_spec_spec_helper_rb
     action: write
     dest_sha256: cc1379cb6674affff106be1c7f88174b7c71a39c3fd69f976ad85c065279f66e
-    input_fingerprint: fcf74a09a039e146c4ceedbe974d63faabc039955d93fc10553ab13a32d6d48c
+    input_fingerprint: 65f912edb626a7e21e5fdcdaafc57bb4ad310ee13feef1eddcfc267763264a8c
     template_sources:
     - spec/spec_helper.rb.example
