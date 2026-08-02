@@ -1,8 +1,8 @@
 {
-  "kettle-family.gemspec:83959677": [
+  "kettle-family.gemspec:56872338": [
     [19, 32, 10, "Gemspec/RequiredRubyVersion: `required_ruby_version` and `TargetRubyVersion` (3.2, which may be specified in .rubocop.yml) should be equal.", 3888670706]
   ],
-  "spec/kettle/family/workflow_template_spec.rb:1501275959": [
+  "spec/kettle/family/workflow_template_spec.rb:1444581431": [
     [115, 5, 52, "RSpec/AnyInstance: Avoid stubbing using `allow_any_instance_of`.", 1804184466]
   ]
 }
