@@ -152,6 +152,16 @@ RSpec.describe Kettle::Family::CommandRunner do
       .to include("KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "secret")
   end
 
+  it "retains PATH for nested commands in mise-managed members" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, ".tool-versions"), "ruby 4.0.5\n")
+    runner = described_class.new
+
+    allow(runner).to receive(:unbundled_process_env).and_return({})
+
+    expect(runner.send(:process_env, member: member, env: {})).to include("PATH" => ENV.fetch("PATH"))
+  end
+
   it "wraps commands with mise when a member has .tool-versions" do
     member = member_at("alpha")
     File.write(File.join(member.root, ".tool-versions"), "ruby 4.0.5\n")

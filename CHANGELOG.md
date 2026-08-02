@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Preserve the completed generated kettle-jem lockfile when restoring an autostash conflicts only on that file.
 
+- Mise-managed template members now retain PATH when launching nested Bundler commands.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

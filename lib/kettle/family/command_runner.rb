@@ -586,6 +586,11 @@ module Kettle
 
       def process_env(member:, env:)
         base_env = unbundled_process_env
+        # Bundler's unbundled environment intentionally omits activation
+        # variables, but it may also omit PATH. When `unsetenv_others` is used
+        # for mise-managed members, dropping PATH makes nested commands such
+        # as `bundle` unresolvable inside kettle-jem.
+        base_env["PATH"] ||= ENV["PATH"]
         return base_env.merge(env) unless mise_configured?(member)
 
         base_env.merge(sensitive_env(env))
