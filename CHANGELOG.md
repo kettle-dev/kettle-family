@@ -53,6 +53,8 @@ Please file a bug if you notice a violation of semantic versioning.
   use GitHub's stable organization avatar endpoint instead of assuming a
   matching Galtzo-hosted asset exists.
 
+- Template autostash now recovers lockfile-only restore conflicts by keeping the normalized lockfile.
+
 ### Security
 
 ## [1.2.21] - 2026-08-01

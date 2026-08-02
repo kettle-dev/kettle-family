@@ -232,12 +232,27 @@ module Kettle
 
       def restore_template_autostashes(stashes, runner:)
         stashes.reverse_each.map do |stash|
-          runner.call(
+          restore = runner.call(
             member: stash.fetch(:member),
             phase: "template_autostash_restore",
             command: ["git", "stash", "pop", stash.fetch(:ref)]
           )
+          next restore if restore.ok? || !template_lockfile_only_conflict?(stash.fetch(:member))
+
+          runner.call(
+            member: stash.fetch(:member),
+            phase: "template_autostash_lockfile_recovery",
+            command: [
+              "sh", "-lc",
+              "git checkout --ours -- Gemfile.lock && git add -- Gemfile.lock && git stash drop #{Shellwords.escape(stash.fetch(:ref))}"
+            ]
+          )
         end
+      end
+
+      def template_lockfile_only_conflict?(member)
+        stdout, _stderr, status = Open3.capture3("git", "diff", "--name-only", "--diff-filter=U", chdir: member.root)
+        status.success? && stdout.lines.map(&:strip).reject(&:empty?) == ["Gemfile.lock"]
       end
 
       def template_branch_sync_results(branch_members, runner:)

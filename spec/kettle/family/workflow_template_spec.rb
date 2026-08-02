@@ -1232,6 +1232,27 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(File.join(member.root, "scratch.txt"))).to eq("dirty\n")
   end
 
+  it "keeps the template lockfile when restoring a dirty lockfile would conflict" do
+    write_template_config(normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    File.write(File.join(member.root, "Gemfile.lock"), "local\n")
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
+    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
+    File.write(File.join(member.root, "Gemfile.lock"), "template\n")
+    run_git(member.root, "add", "Gemfile.lock")
+    run_git(member.root, "commit", "--quiet", "-m", "Template lockfile")
+
+    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
+
+    expect(restores).to all(be_ok)
+    expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("template\n")
+    expect(`git -C #{member.root} diff --name-only --diff-filter=U`).to be_empty
+  end
+
   it "pulls an upstream branch before a clean template run" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
