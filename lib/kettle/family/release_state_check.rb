@@ -23,6 +23,7 @@ module Kettle
         @members = members
         @config = config
         @github_latest_release_by_repo = {}
+        @transfer_changelog_status_by_root = {}
         @transfer_changelog_lag_by_key = {}
         @transfer_changelog_total_count = TRANSFER_CHANGELOG_TOTAL_UNSET
       end
@@ -343,6 +344,19 @@ module Kettle
         kettle_jem_state = kettle_jem_config_state(root)
         return state unless kettle_jem_state
 
+        status = transfer_changelog_status(root)
+        if status
+          total = status.key?("total_count") ? status.fetch("total_count") : transfer_changelog_total_count
+          return state.merge(
+            "transfer_changelog_lag" => status.fetch("missing_count", 0).to_i,
+            "transfer_changelog_applicable" => status.fetch("applicable_count", 0).to_i,
+            "transfer_changelog_excluded_present" => status.fetch("excluded_present_count", 0).to_i,
+            "transfer_changelog_total" => total.to_i
+          )
+        end
+
+        # Compatibility with already released kettle-jem versions while a
+        # workspace is upgraded. New versions use the context-aware status API.
         replay = kettle_jem_state["changelog_replay"]
         replay = replay.is_a?(Hash) ? replay : {}
         last_entry_key = replay["last_entry_key"] || replay[:last_entry_key]
@@ -381,6 +395,15 @@ module Kettle
         nil
       end
 
+      def transfer_changelog_status(root)
+        cache_key = File.expand_path(root.to_s)
+        @transfer_changelog_status_by_root.fetch(cache_key) do
+          @transfer_changelog_status_by_root[cache_key] = in_process_transfer_changelog_status(cache_key) || external_transfer_changelog_status(cache_key)
+        end
+      rescue
+        nil
+      end
+
       def transfer_changelog_total_count
         return @transfer_changelog_total_count unless @transfer_changelog_total_count.equal?(TRANSFER_CHANGELOG_TOTAL_UNSET)
 
@@ -396,11 +419,20 @@ module Kettle
         nil
       end
 
+      def in_process_transfer_changelog_status(root)
+        return nil unless load_kettle_jem_transfer_api
+        return nil unless ::Kettle::Jem.respond_to?(:transfer_changelog_status)
+
+        normalize_transfer_changelog_lag(::Kettle::Jem.transfer_changelog_status(root))
+      rescue
+        nil
+      end
+
       def load_kettle_jem_transfer_api
-        return true if defined?(::Kettle::Jem) && ::Kettle::Jem.respond_to?(:transfer_changelog_lag)
+        return true if defined?(::Kettle::Jem) && (::Kettle::Jem.respond_to?(:transfer_changelog_lag) || ::Kettle::Jem.respond_to?(:transfer_changelog_status))
 
         require "kettle/jem"
-        defined?(::Kettle::Jem) && ::Kettle::Jem.respond_to?(:transfer_changelog_lag)
+        defined?(::Kettle::Jem) && (::Kettle::Jem.respond_to?(:transfer_changelog_lag) || ::Kettle::Jem.respond_to?(:transfer_changelog_status))
       rescue LoadError
         false
       end
@@ -412,6 +444,21 @@ module Kettle
           puts JSON.generate(Kettle::Jem.transfer_changelog_lag(last_entry_key))
         RUBY
         command = [RbConfig.ruby, "-rjson", "-rkettle/jem", "-e", code, cache_key]
+        stdout, _stderr, status = if defined?(::Bundler)
+          ::Bundler.with_unbundled_env { Open3.capture3(*command) }
+        else
+          Open3.capture3(*command)
+        end
+        status.success? ? normalize_transfer_changelog_lag(JSON.parse(stdout)) : nil
+      rescue JSON::ParserError, SystemCallError
+        nil
+      end
+
+      def external_transfer_changelog_status(root)
+        code = <<~RUBY
+          puts JSON.generate(Kettle::Jem.transfer_changelog_status(ARGV.fetch(0)))
+        RUBY
+        command = [RbConfig.ruby, "-rjson", "-rkettle/jem", "-e", code, root]
         stdout, _stderr, status = if defined?(::Bundler)
           ::Bundler.with_unbundled_env { Open3.capture3(*command) }
         else

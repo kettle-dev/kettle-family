@@ -514,7 +514,7 @@ module Kettle
         lines << "    pend: unrel or prep"
         lines << "    bump: unrel is yes and V.rb matches V.rel"
         lines << "  count columns:"
-        lines << "    T(n): kettle-jem transfer changelog replay lag; n is the total transferable destination-release entry count with no replay cursor"
+        lines << "    T(n): filter-aware kettle-jem transfer changelog lag; n is the total source entry count and row values are missing / applicable (x excluded-present)"
         rows = release_state_header
         results.each do |result|
           rows << release_state_row(result)
@@ -539,7 +539,7 @@ module Kettle
           state.fetch("latest_changelog_version", nil).to_s.empty? ? "none" : state.fetch("latest_changelog_version").to_s,
           state.fetch("latest_released", nil).to_s.empty? ? "unknown" : state.fetch("latest_released").to_s,
           release_state_github_release(state),
-          state.fetch("transfer_changelog_lag", 0).to_i.to_s,
+          release_state_transfer_changelog_value(state),
           release_state_ahead_behind(state),
           yes_no(state.fetch("unreleased_entries", nil)),
           yes_no(state.fetch("prepared_release_pending", nil)),
@@ -564,6 +564,16 @@ module Kettle
           value unless value.to_s.empty?
         end.first
         "T(#{total || "?"})"
+      end
+
+      def release_state_transfer_changelog_value(state)
+        missing = state.fetch("transfer_changelog_lag", 0).to_i
+        applicable = state.fetch("transfer_changelog_applicable", nil)
+        return missing.to_s if applicable.nil?
+
+        excluded_present = state.fetch("transfer_changelog_excluded_present", 0).to_i
+        value = "#{missing} / #{applicable.to_i}"
+        excluded_present.positive? ? "#{value} (x#{excluded_present})" : value
       end
 
       def release_state_github_release(state)

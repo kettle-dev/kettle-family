@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Clarify that replayed template changelog entries are destination release work and affect release state.
 
+- Release state now reports filter-aware transfer changelog lag as missing versus applicable entries.
+
 ### Deprecated
 
 ### Removed

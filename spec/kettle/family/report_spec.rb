@@ -61,6 +61,8 @@ RSpec.describe Kettle::Family::Report do
         "github_latest_release" => "v24.2.0",
         "transfer_changelog_lag" => 2,
         "transfer_changelog_total" => 9,
+        "transfer_changelog_applicable" => 6,
+        "transfer_changelog_excluded_present" => 1,
         "latest_changelog_version" => "24.2.0",
         "unreleased_entries" => false,
         "prepared_release_pending" => true,
@@ -88,13 +90,14 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("pend: unrel or prep")
     expect(text).to include("bump: unrel is yes and V.rb matches V.rel")
     expect(text).to include("count columns:")
-    expect(text).to include("T(n): kettle-jem transfer changelog replay lag; n is the total transferable destination-release entry count with no replay cursor")
+    expect(text).to include("T(n): filter-aware kettle-jem transfer changelog lag; n is the total source entry count and row values are missing / applicable (x excluded-present)")
     expect(text).to include("branch")
     expect(text).to include("V.rb")
     expect(text).to include("V.ch.md")
     expect(text).to include("V.rel")
     expect(text).to include("GH.rel")
     expect(text).to include("T(9)")
+    expect(text).to include("2 / 6 (x1)")
     expect(text).to include("^ / v")
     expect(text).to include("unrel")
     expect(text).to include("prep")

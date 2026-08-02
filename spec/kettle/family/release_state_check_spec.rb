@@ -299,6 +299,30 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(state).to include("transfer_changelog_lag" => 3, "transfer_changelog_total" => 8)
   end
 
+  it "uses filter-aware kettle-jem transfer changelog status when available" do
+    root = File.join(@tmpdir, "alpha")
+    FileUtils.mkdir_p(File.join(root, ".structuredmerge"))
+    File.write(File.join(root, ".structuredmerge", "kettle-jem.lock"), "---\ntemplate_state: {}\n")
+    kettle_jem = Module.new do
+      def self.transfer_changelog_status(root)
+        raise "unexpected root" unless File.directory?(root)
+
+        {"total_count" => 28, "applicable_count" => 9, "missing_count" => 2, "excluded_present_count" => 1}
+      end
+    end
+    stub_const("Kettle::Jem", kettle_jem)
+    check = described_class.new(members: [])
+
+    state = check.send(:enrich_transfer_changelog_lag, root, {})
+
+    expect(state).to include(
+      "transfer_changelog_lag" => 2,
+      "transfer_changelog_applicable" => 9,
+      "transfer_changelog_excluded_present" => 1,
+      "transfer_changelog_total" => 28
+    )
+  end
+
   it "reads transfer changelog replay state from the kettle-jem lockfile before config" do
     root = File.join(@tmpdir, "alpha")
     FileUtils.mkdir_p(File.join(root, ".structuredmerge"))
