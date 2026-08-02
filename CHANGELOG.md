@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.22] - 2026-08-01
+
+- TAG: [v1.2.22][1.2.22t]
+- COVERAGE: 93.87% -- 4626/4928 lines in 31 files
+- BRANCH COVERAGE: 76.18% -- 1807/2372 branches in 31 files
+- 29.31% documented
+
+### Added
+
 - Template runs can now use --autostash to preserve dirty worktrees while synchronizing and templating.
 
 ### Changed
@@ -34,10 +53,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - kettle-jem-template-20260801-001 - Generated README gem dashboard links now
   use ClickGems instead of BestGems.
-
-### Deprecated
-
-### Removed
 
 ### Fixed
 
@@ -58,8 +73,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Allow family configuration to define ordered single-member release waves.
 
 - Remove retired pboling/appraisal declarations before templating legacy members.
-
-### Security
 
 ## [1.2.21] - 2026-08-01
 
@@ -1639,7 +1652,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.21...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.22...HEAD
+[1.2.22]: https://github.com/kettle-dev/kettle-family/compare/v1.2.21...v1.2.22
+[1.2.22t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.22
 [1.2.21]: https://github.com/kettle-dev/kettle-family/compare/v1.2.20...v1.2.21
 [1.2.21t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.21
 [1.2.20]: https://github.com/kettle-dev/kettle-family/compare/v1.2.19...v1.2.20

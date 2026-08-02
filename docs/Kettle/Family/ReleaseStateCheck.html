@@ -229,7 +229,8 @@
 25
 26
 27
-28</pre>
+28
+29</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 22</span>
@@ -238,6 +239,7 @@
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
   <span class='ivar'>@github_latest_release_by_repo</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='ivar'>@transfer_changelog_status_by_root</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_lag_by_key</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_total_count</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#TRANSFER_CHANGELOG_TOTAL_UNSET-constant" title="Kettle::Family::ReleaseStateCheck::TRANSFER_CHANGELOG_TOTAL_UNSET (constant)">TRANSFER_CHANGELOG_TOTAL_UNSET</a></span></span>
 <span class='kw'>end</span></pre>
@@ -268,7 +270,6 @@
       <pre class="lines">
 
 
-30
 31
 32
 33
@@ -280,10 +281,11 @@
 39
 40
 41
-42</pre>
+42
+43</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 30</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 31</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
