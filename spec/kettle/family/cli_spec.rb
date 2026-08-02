@@ -1348,7 +1348,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("pend: unrel or prep")
     expect(out.string).to include("bump: unrel is yes and V.rb matches V.rel")
     expect(out.string).to include("count columns:")
-    expect(out.string).to include("T(n): kettle-jem transfer changelog replay lag; n is the total transferable destination-release entry count with no replay cursor")
+    expect(out.string).to include("T(n): filter-aware kettle-jem transfer changelog lag; n is the total source entry count and row values are missing / applicable (x excluded-present)")
     expect(out.string).to include("V.rel")
     expect(out.string).to include("GH.rel")
     expect(out.string).to include("T(11)")

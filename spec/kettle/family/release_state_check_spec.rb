@@ -293,6 +293,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     end
     stub_const("Kettle::Jem", kettle_jem)
     check = described_class.new(members: [])
+    allow(check).to receive(:transfer_changelog_status).with(root).and_return(nil)
 
     state = check.send(:enrich_transfer_changelog_lag, root, {})
 
@@ -346,6 +347,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     end
     stub_const("Kettle::Jem", kettle_jem)
     check = described_class.new(members: [])
+    allow(check).to receive(:transfer_changelog_status).with(root).and_return(nil)
 
     state = check.send(:enrich_transfer_changelog_lag, root, {})
 
@@ -373,6 +375,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     end
     stub_const("Kettle::Jem", kettle_jem)
     check = described_class.new(members: [])
+    allow(check).to receive(:transfer_changelog_status).and_return(nil)
 
     roots.each { |root| check.send(:enrich_transfer_changelog_lag, root, {}) }
 
