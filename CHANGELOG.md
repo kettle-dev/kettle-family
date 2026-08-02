@@ -36,6 +36,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Nested Bundler commands now retain the active Ruby executable paths during autostashed templating.
 
+- Autostashed mise configuration remains available while templating runs.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

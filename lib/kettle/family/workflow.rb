@@ -284,7 +284,12 @@ module Kettle
 
       def template_autostash_command(member)
         label = "kettle-family-template-#{member.name}-#{Process.pid}-#{Time.now.to_i}"
-        "git stash push --include-untracked --message #{Shellwords.escape(label)} && git stash list -1 --format=%gd"
+        "git stash push --include-untracked --message #{Shellwords.escape(label)} && " \
+          "ref=$(git stash list -1 --format=%gd) && " \
+          "git checkout \"$ref\" -- .tool-versions 2>/dev/null || true; " \
+          "for path in mise.toml .mise.toml; do " \
+          "if git cat-file -e \"$ref^3:$path\" 2>/dev/null; then git show \"$ref^3:$path\" > \"$path\"; fi; " \
+          "done; printf '%s\\n' \"$ref\""
       end
 
       def template_dirty_worktree_result(member, dirty_paths)
