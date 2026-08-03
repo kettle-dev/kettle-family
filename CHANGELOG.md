@@ -42,6 +42,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep transient progress notifications on a dedicated line above the event tape with independent row accounting.
 
+- Preserve inherited local-path dependency environments during template bootstrap and lockfile recovery.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03

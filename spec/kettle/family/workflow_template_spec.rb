@@ -525,6 +525,26 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(0).command).not_to include("#{family_local_env_name}=false")
   end
 
+  it "preserves an inherited family local path env during template prepare and recovery" do
+    previous = ENV[family_local_env_name]
+    ENV[family_local_env_name] = "/workspace/family"
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [member])
+
+    expect(workflow.send(:template_prepare_env)).to include(family_local_env_name => "/workspace/family")
+    expect(workflow.send(:template_lockfile_recovery_env, member)).to include(
+      "BUNDLE_GEMFILE" => nil,
+      family_local_env_name => "/workspace/family",
+      "K_JEM_TEMPLATING" => "false"
+    )
+    expect(workflow.send(:template_lockfile_recovery_env, member)).not_to include(
+      family_local_env_name => "false"
+    )
+  ensure
+    previous ? ENV[family_local_env_name] = previous : ENV.delete(family_local_env_name)
+  end
+
   it "aligns stale nomono bootstrap dependencies before member template preparation runs" do
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],

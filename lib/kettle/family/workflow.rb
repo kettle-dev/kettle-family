@@ -604,12 +604,12 @@ module Kettle
       def template_bootstrap_dependency_env(member)
         env = release_lockfile_local_path_env_overrides(member).merge(workflow_env)
         env.each_key do |key|
-          env[key] = "false" if key.end_with?("_DEV") && !env_overrides.key?(key)
+          env[key] = "false" if key.end_with?("_DEV") && !local_path_env_requested?(key)
         end
         env["K_JEM_TEMPLATING"] = "false"
         env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
         family_env_name = config.family_local_path_env_name
-        env[family_env_name] = "false" if family_env_name && !env_overrides.key?(family_env_name)
+        env[family_env_name] = "false" if family_env_name && !local_path_env_requested?(family_env_name)
         env
       end
 
@@ -2151,7 +2151,9 @@ module Kettle
       def workflow_family_local_path_env
         return {} if implicit_single_member_template_root?
 
-        config.family_local_path_env
+        config.family_local_path_env.each_with_object({}) do |(name, default), env|
+          env[name] = ENV.key?(name) ? ENV.fetch(name) : default
+        end
       end
 
       def implicit_single_member_template_root?
@@ -2879,7 +2881,16 @@ module Kettle
       end
 
       def template_lockfile_recovery_env(member)
-        release_lockfile_env(member).merge("K_JEM_TEMPLATING" => "false")
+        env = release_lockfile_env(member).merge(workflow_env)
+        ENV.each do |key, value|
+          env[key] = value if key.end_with?("_DEV", "_LOCAL") && local_path_env_requested?(key)
+        end
+        env.merge!(env_overrides)
+        env.merge!(
+          "K_JEM_TEMPLATING" => "false",
+          "BUNDLE_DISABLE_CHECKSUM_VALIDATION" => "true"
+        )
+        env
       end
 
       def normalize_lockfiles_command(member:, phase:, skip_checksum_option: false)
@@ -3084,8 +3095,12 @@ module Kettle
       def template_prepare_env
         env = workflow_env
         family_env_name = config.family_local_path_env_name
-        env[family_env_name] = "false" if family_env_name && !env_overrides.key?(family_env_name)
+        env[family_env_name] = "false" if family_env_name && !local_path_env_requested?(family_env_name)
         env
+      end
+
+      def local_path_env_requested?(name)
+        env_overrides.key?(name) || ENV.key?(name)
       end
 
       def template_thread_worker_budget
