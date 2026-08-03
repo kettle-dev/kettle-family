@@ -471,7 +471,13 @@ module Kettle
         completed = Set.new
         [].tap do |waves|
           until remaining.empty?
-            wave = remaining.select { |member| (member.dependencies & by_name.keys).all? { |name| completed.include?(name) } }
+            ready = remaining.select do |member|
+              (member.dependencies & by_name.keys).all? { |name| completed.include?(name) }
+            end
+            # A Git checkout is a shared mutable transaction boundary. Nested
+            # gems in one checkout must not run kettle-jem concurrently, even
+            # when their dependency graph would otherwise place them together.
+            wave = ready.group_by { |member| git_root_for(member) }.values.map(&:first)
             raise Error, "template dependency wave could not resolve: #{remaining.map(&:name).join(", ")}" if wave.empty?
 
             waves << wave

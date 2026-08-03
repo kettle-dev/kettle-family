@@ -38,6 +38,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Preserve explicit family-local dependency paths while bootstrapping template dependencies.
 
+- Serialize template waves for members that share a Git checkout.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

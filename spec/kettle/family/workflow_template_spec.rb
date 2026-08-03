@@ -150,6 +150,23 @@ RSpec.describe Kettle::Family::Workflow do
     expect(log).to include("🎨 Template beta by kettle-family")
   end
 
+  it "serializes template waves for members sharing a git checkout" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    independent = member_at("independent")
+    workflow = described_class.new(command: "template", config: config, members: [alpha, beta, independent])
+
+    allow(workflow).to receive(:git_root_for).with(alpha).and_return("/repo/shared")
+    allow(workflow).to receive(:git_root_for).with(beta).and_return("/repo/shared")
+    allow(workflow).to receive(:git_root_for).with(independent).and_return("/repo/independent")
+
+    waves = workflow.send(:template_dependency_waves, [alpha, beta, independent])
+
+    expect(waves.map { |wave| wave.map(&:name) }).to eq([["alpha", "independent"], ["beta"]])
+  end
+
   it "initializes the template commit mutex before worker threads can race" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)
