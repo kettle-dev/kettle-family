@@ -138,6 +138,7 @@ module Kettle
             exclude: options[:exclude],
             start_at: options[:start_at],
             json: truthy_option?(:json),
+            events: truthy_option?(:events),
             report: options[:report],
             execute: truthy_option?(:execute),
             debug: truthy_option?(:debug),

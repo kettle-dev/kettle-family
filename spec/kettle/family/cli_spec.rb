@@ -1419,6 +1419,33 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("command: release-state")
   end
 
+  it "streams state analysis and its final report as NDJSON when events are requested" do
+    write_gem("alpha")
+    result = Kettle::Family::ReleaseStateResult.new(
+      member_name: "alpha",
+      command: %w[bundle exec kettle-changelog --release-state --json],
+      workdir: File.join(@tmpdir, "alpha"),
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.1,
+      state: {"gem_name" => "alpha", "version" => "1.0.0", "latest_released" => "1.0.0"}
+    )
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: [result])
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+    err = StringIO.new
+
+    status = described_class.call(["state", "--root", @tmpdir, "--events"], out: out, err: err)
+
+    expect(status).to eq(0)
+    events = out.string.lines(chomp: true).map { |line| JSON.parse(line) }
+    expect(events).to include(include("type" => "release_state", "member" => "alpha"))
+    expect(events.last).to include("type" => "summary", "report" => include("command" => "release-state"))
+    expect(err.string).to eq("")
+  end
+
   it "does not require dependency ordering for release-state reports" do
     write_gem("alpha", dependencies: ["beta"])
     write_gem("beta", dependencies: ["alpha"])
