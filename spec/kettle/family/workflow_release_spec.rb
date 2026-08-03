@@ -665,6 +665,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[
       release_normalize_lockfiles
+      release_bundle_install
       check
       release_changelog
       release_build
@@ -725,6 +726,7 @@ RSpec.describe Kettle::Family::Workflow do
       release_changelog
       release_build
       release_normalize_lockfiles
+      release_bundle_install
       release_push
     ])
     expect(File.read(File.join(member.root, "Gemfile.lock"))).not_to include("PATH")
@@ -1711,7 +1713,8 @@ RSpec.describe Kettle::Family::Workflow do
       template: {
         "normalize_lockfiles" => true,
         "normalize_lockfiles_command" => [RbConfig.ruby, "-e", "puts 'normalized'"]
-      }
+      },
+      release_normalize_lockfiles: false
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
@@ -1725,8 +1728,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      release_normalize_lockfiles check release_changelog release_publish
-      dependency_floor dependency_floor_lockfiles
+      check release_changelog release_publish dependency_floor dependency_floor_lockfiles
     ])
     refresh = results.last
     expect(refresh.phase).to eq("dependency_floor_lockfiles")
@@ -1886,7 +1888,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -1898,6 +1900,7 @@ RSpec.describe Kettle::Family::Workflow do
     release["env"] = release_env if release_env
     release["secrets"] = secrets if secrets
     release["required_remotes"] = required_remotes if required_remotes
+    release["normalize_lockfiles"] = release_normalize_lockfiles unless release_normalize_lockfiles.nil?
     config = {"release" => release}
     config["template"] = template if template
     config["check"] = check if check

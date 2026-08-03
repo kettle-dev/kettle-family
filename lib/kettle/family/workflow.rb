@@ -988,7 +988,7 @@ module Kettle
 
       def release_results_for_member(member, runner:)
         progress = @release_progress
-        progress&.start_member(member, total: release_phase_total, status: "check")
+        progress&.start_member(member, total: release_phase_total(member), status: "check")
         [].tap do |memo|
           if skip_already_released?(member)
             memo << already_released_result(member)
@@ -2261,9 +2261,10 @@ module Kettle
         total
       end
 
-      def release_phase_total
+      def release_phase_total(member = nil)
         total = 3
         total += 2 if config.release_normalize_lockfiles?
+        total += 1 if execute && member && normalize_release_lockfiles?(member)
         total += 1 if tag
         total += 1 if push
         total
@@ -3028,6 +3029,14 @@ module Kettle
           env: release_lockfile_env(member)
         )
         memo << result
+        return unless execute && result.ok?
+
+        memo << runner.call(
+          member: member,
+          phase: "release_bundle_install",
+          command: %w[bundle install],
+          env: release_lockfile_env(member)
+        )
       end
 
       def normalize_release_lockfiles?(member)

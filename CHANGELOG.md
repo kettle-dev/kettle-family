@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Install normalized release bundles before invoking kettle-release
+
 ### Security
 
 ## [1.2.25] - 2026-08-03
