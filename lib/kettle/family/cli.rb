@@ -641,7 +641,9 @@ module Kettle
         release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only)
         selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
-        print_execution_intent(command: command, config: config, members: result_members, options: options, start_at: start_at)
+        display_members = display_members_for(command: command, config: config, members: ordered, selected_members: selected)
+        display_selected_members = display_members_for(command: command, config: config, members: selected, selected_members: selected)
+        print_execution_intent(command: command, config: config, members: display_selected_members, options: options, start_at: start_at)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
         elapsed_seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
@@ -649,7 +651,7 @@ module Kettle
           family_name: config.family_name,
           family_mode: config.family_mode,
           order_mode: config.order_mode,
-          members: ordered,
+          members: display_members,
           selected_members: selected,
           config_path: config.path,
           branch_lanes: config.branch_lanes,
@@ -691,6 +693,23 @@ module Kettle
         return nil if names.empty? || names.any? { |name| Selection.status_token?(name) }
 
         names
+      end
+
+      def display_members_for(command:, config:, members:, selected_members:)
+        return members unless command == "release"
+
+        require_relative "release_waves"
+        planned = ReleaseWaves.new(
+          members: selected_members,
+          configured_waves: config.release_waves,
+          strict_cycles: true
+        ).waves.flatten
+        planned_names = planned.map(&:name)
+        planned + members.reject { |member| planned_names.include?(member.name) }
+      rescue Error
+        # Let the workflow report invalid cycles or wave configuration. The
+        # display should not prevent that diagnostic from being produced.
+        members
       end
 
       def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))

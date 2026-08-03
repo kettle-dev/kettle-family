@@ -1007,6 +1007,25 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("skipped beta release_build")
   end
 
+  it "lists release members in planned wave order" do
+    write_ready_gem("alpha", dependencies: ["beta"])
+    write_ready_gem("beta")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        order:
+          mode: fixed
+          hints:
+            - alpha
+            - beta
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "alpha,beta"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string.index("* beta")).to be < out.string.index("* alpha")
+  end
+
   it "prints publish mode when release publishing is requested" do
     write_ready_gem("alpha")
     out = StringIO.new
@@ -1224,6 +1243,28 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("  selected: 1 member")
     expect(out.string).to include("  members: alpha")
     expect(out.string.index("release intent:")).to be < out.string.index("release preflight")
+  end
+
+  it "prints release execution intent in planned wave order" do
+    write_ready_gem("alpha", dependencies: ["beta"])
+    write_ready_gem("beta")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        order:
+          mode: fixed
+          hints:
+            - alpha
+            - beta
+    YAML
+    workflow = instance_double(Kettle::Family::Workflow, results: [])
+    allow(Kettle::Family::Workflow).to receive(:new).and_return(workflow)
+    out = StringIO.new
+    stub_env("KETTLE_FAMILY_RELEASE_COUNTDOWN" => "0")
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "alpha,beta", "--execute"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("  members: beta, alpha")
   end
 
   it "keeps release execution intent and progress out of JSON output" do
@@ -1461,8 +1502,8 @@ RSpec.describe Kettle::Family::CLI do
     RUBY
   end
 
-  def write_ready_gem(name)
-    write_gem(name)
+  def write_ready_gem(name, dependencies: [])
+    write_gem(name, dependencies: dependencies)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))
     %w[Gemfile Rakefile README.md LICENSE.md].each do |path|

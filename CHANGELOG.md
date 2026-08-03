@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Redraw concurrent TTY progress rows from a stable block anchor.
 
+- List release members in deterministic release-wave order.
+
 ### Security
 
 ## [1.2.26] - 2026-08-03
