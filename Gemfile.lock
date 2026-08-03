@@ -1,10 +1,10 @@
 PATH
   remote: .
   specs:
-    kettle-family (1.2.24)
+    kettle-family (1.2.25)
       command_kit (~> 0.6)
       command_kit-completion (~> 0.1)
-      kettle-dev (~> 2.3, >= 2.5.16)
+      kettle-dev (~> 2.3, >= 2.5.18)
       kettle-test (~> 2.0, >= 2.0.18)
       tsort (~> 0.2)
       tty-progressbar (~> 0.18)
@@ -101,7 +101,7 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     json (2.21.2)
-    kettle-dev (2.5.17)
+    kettle-dev (2.5.18)
       emoji_regex (>= 15.0)
       kettle-gha-pins (~> 0.3, >= 0.3.5)
       kettle-ndjson (~> 0.1, >= 0.1.10)
@@ -504,8 +504,8 @@ CHECKSUMS
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
   irb (1.18.0) sha256=de9454a0703a54704b9811a5ef31a60c86949fbf4013fcf244fabc7c775248e3
   json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
-  kettle-dev (2.5.17) sha256=9dc2355f5c3eb73345ec412a394faa72744e8f8384fe8f4955ddb0f04d0a0efe
-  kettle-family (1.2.24)
+  kettle-dev (2.5.18) sha256=10fa8987035bda7472fc1797a39c3d3bb182465708262ac4909a105161e782c5
+  kettle-family (1.2.25)
   kettle-gha-pins (0.3.5) sha256=ae57654eb79e50d3a3b44784ad5fdfdbae901623a050b88962cb28c4d45403e0
   kettle-ndjson (0.1.10) sha256=906c83606bb3a4dd24f49cfbcf10a26e1a245cd1daaf9c8a95ee0caec83eba37
   kettle-rb (0.1.8) sha256=a15023eaa5470de7b7c2a6a8017c430f20395b67a43cf35d555e35f02a5391d8

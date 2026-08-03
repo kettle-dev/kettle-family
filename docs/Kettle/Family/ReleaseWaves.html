@@ -120,7 +120,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(members:, configured_waves: [])  &#x21d2; ReleaseWaves </a>
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(members:, configured_waves: [], strict_cycles: false)  &#x21d2; ReleaseWaves </a>
     
 
     
@@ -175,7 +175,7 @@
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(members:, configured_waves: [])  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::ReleaseWaves (class)">ReleaseWaves</a></span></tt> 
+    #<strong>initialize</strong>(members:, configured_waves: [], strict_cycles: false)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::ReleaseWaves (class)">ReleaseWaves</a></span></tt> 
   
 
   
@@ -200,14 +200,16 @@
 6
 7
 8
-9</pre>
+9
+10</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/release_waves.rb', line 6</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>configured_waves:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>configured_waves:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>strict_cycles:</span> <span class='kw'>false</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@configured_waves</span> <span class='op'>=</span> <span class='id identifier rubyid_configured_waves'>configured_waves</span>
+  <span class='ivar'>@strict_cycles</span> <span class='op'>=</span> <span class='id identifier rubyid_strict_cycles'>strict_cycles</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -236,16 +238,16 @@
       <pre class="lines">
 
 
-11
 12
 13
 14
 15
 16
-17</pre>
+17
+18</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_waves.rb', line 11</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_waves.rb', line 12</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_waves'>waves</span>
   <span class='id identifier rubyid_configured'>configured</span> <span class='op'>=</span> <span class='id identifier rubyid_configured_waves_for_selected_members'>configured_waves_for_selected_members</span>
