@@ -1182,6 +1182,7 @@ module Kettle
       def wait_for_dependency_floor_lockfiles_result(member:, released_members:, runner:)
         result = nil
         REGISTRY_WAIT_ATTEMPTS.times do |index|
+          attempts = index + 1
           emit_dependency_floor_lockfile_progress(member: member, attempt: index + 1)
           result = runner.call(
             member: member,
@@ -1189,8 +1190,17 @@ module Kettle
             command: dependency_floor_lockfile_command(released_members),
             env: release_lockfile_env(member)
           )
+          if repair_checksum_mismatches(member, result)
+            attempts += 1
+            result = runner.call(
+              member: member,
+              phase: "dependency_floor_lockfiles",
+              command: dependency_floor_lockfile_command(released_members),
+              env: release_lockfile_env(member)
+            )
+          end
           validate_dependency_floor_lockfile_result(result: result, member: member, released_members: released_members) if result.ok?
-          annotate_dependency_floor_lockfile_result(result, index + 1)
+          annotate_dependency_floor_lockfile_result(result, attempts)
           break if result.ok?
 
           sleep(REGISTRY_WAIT_INTERVAL_SECONDS) if index + 1 < REGISTRY_WAIT_ATTEMPTS
@@ -2899,7 +2909,7 @@ module Kettle
         return false unless execute
         return false if result.ok?
 
-        line_numbers = checksum_mismatch_lockfile_lines(result.stderr)
+        line_numbers = checksum_mismatch_lockfile_lines([result.stdout, result.stderr].join("\n"))
         return false if line_numbers.empty?
 
         lockfile = File.join(member.root, "Gemfile.lock")

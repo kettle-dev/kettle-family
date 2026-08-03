@@ -1600,6 +1600,57 @@ RSpec.describe Kettle::Family::Workflow do
     expect(lockfile_refresh.stderr).to include("Gemfile.lock has local path remote at line 2")
   end
 
+  it "repairs stale checksums before retrying dependent lockfile refreshes" do
+    write_release_config(
+      release_env: fake_bundle_env(<<~BASH)
+        attempts_file="$BUNDLE_ATTEMPTS_FILE"
+        attempts=0
+        if [ -f "$attempts_file" ]; then
+          attempts="$(cat "$attempts_file")"
+        fi
+        attempts="$((attempts + 1))"
+        printf '%s' "$attempts" > "$attempts_file"
+        if [ "$attempts" -eq 1 ]; then
+          cat > Gemfile.lock <<'LOCK'
+        GEM
+          specs:
+            alpha (1.2.3)
+
+        CHECKSUMS
+          alpha (1.2.3) sha256=stale
+        LOCK
+          printf '%s\n' 'Bundler found mismatched checksums. This is a potential security risk.' >&2
+          printf '%s\n' 'sha256=stale from the lockfile CHECKSUMS at Gemfile.lock:6:23' >&2
+          exit 1
+        fi
+        cat > Gemfile.lock <<'LOCK'
+        GEM
+          specs:
+            alpha (1.2.3)
+
+        CHECKSUMS
+          alpha (1.2.3) sha256=abc123
+        LOCK
+      BASH
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+
+    allow(workflow).to receive(:prompt_for_gem_signing_password)
+    allow(workflow).to receive(:released_version?).and_return(false)
+    allow(workflow).to receive(:sleep)
+
+    results = workflow.results
+
+    lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
+    expect(lockfile_refresh).to be_ok
+    expect(lockfile_refresh.stdout).to include("refreshed dependency floor lockfiles after 2 attempt(s)")
+    expect(File.read(File.join(beta.root, "Gemfile.lock"))).to include("alpha (1.2.3) sha256=abc123")
+    expect(workflow).not_to have_received(:sleep)
+  end
+
   it "retries dependent bundle refreshes when Bundler writes empty checksums for just-published floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)

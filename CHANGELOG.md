@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Fail release planning when dependency cycles lack an explicit release wave.
 
+- Repair stale dependency checksums before retrying family release lockfiles
+
 ### Security
 
 ## [1.2.24] - 2026-08-03
