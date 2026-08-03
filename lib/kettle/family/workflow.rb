@@ -238,7 +238,24 @@ module Kettle
             phase: "template_autostash_restore",
             command: ["git", "stash", "pop", stash.fetch(:ref)]
           )
-          next restore if restore.ok? || !template_generated_lockfile_only_conflict?(stash.fetch(:member))
+          next restore if restore.ok?
+
+          if template_generated_lockfile_restore_refusal?(stash.fetch(:member), restore)
+            next runner.call(
+              member: stash.fetch(:member),
+              phase: "template_autostash_generated_lockfile_recovery",
+              command: [
+                "sh", "-lc",
+                "for path in Gemfile.lock .structuredmerge/kettle-jem.lock; do " \
+                  "if git ls-files --error-unmatch \"$path\" >/dev/null 2>&1; then " \
+                  "git restore --source=HEAD --staged --worktree -- \"$path\"; " \
+                  "else rm -f -- \"$path\"; fi; done; " \
+                  "git stash pop #{Shellwords.escape(stash.fetch(:ref))}"
+              ]
+            )
+          end
+
+          next restore if !template_generated_lockfile_only_conflict?(stash.fetch(:member))
 
           runner.call(
             member: stash.fetch(:member),
@@ -251,6 +268,19 @@ module Kettle
             ]
           )
         end
+      end
+
+      def template_generated_lockfile_restore_refusal?(member, restore)
+        output = [restore.stdout, restore.stderr].compact.join("\n")
+        return false unless output.include?("would be overwritten by merge")
+
+        dirty_paths = GitStatus.dirty_paths(member.root)
+        dirty_paths.any? && dirty_paths.all? { |path| template_generated_lockfile_path?(path) }
+      end
+
+      def template_generated_lockfile_path?(status_line)
+        path = status_line.to_s.sub(/\A.../, "").strip
+        ["Gemfile.lock", ".structuredmerge/kettle-jem.lock"].include?(path)
       end
 
       def rollback_failed_template_worktrees(stashes, workflow_results, runner:)

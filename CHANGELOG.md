@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Anchor TTY progress redraws and reserve a terminal column to prevent stale or wrapped rows.
 
+- Recover template autostashes when generated lockfiles are uncommitted.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03
