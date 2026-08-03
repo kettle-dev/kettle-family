@@ -225,15 +225,15 @@
       <pre class="lines">
 
 
-208
-209
 210
 211
 212
-213</pre>
+213
+214
+215</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 208</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 210</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>accept:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>gem_signing_password:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>otp_coordinator:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@execute</span> <span class='op'>=</span> <span class='id identifier rubyid_execute'>execute</span>
@@ -268,8 +268,6 @@
       <pre class="lines">
 
 
-215
-216
 217
 218
 219
@@ -314,10 +312,12 @@
 258
 259
 260
-261</pre>
+261
+262
+263</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 215</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/command_runner.rb', line 217</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>member:</span><span class='comma'>,</span> <span class='label'>phase:</span><span class='comma'>,</span> <span class='label'>command:</span><span class='comma'>,</span> <span class='label'>env:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>interactive:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>stdout_line_handler:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>log_path:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>passthrough_output:</span> <span class='kw'>true</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_argv'>argv</span> <span class='op'>=</span> <span class='id identifier rubyid_command_argv'>command_argv</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>command:</span> <span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='label'>env:</span> <span class='id identifier rubyid_env'>env</span><span class='rparen'>)</span>

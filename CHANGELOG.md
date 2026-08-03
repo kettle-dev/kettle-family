@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Keep provider-backed OTP events inside the TTY progress renderer.
-
 ### Security
+
+## [1.2.28] - 2026-08-03
+
+- TAG: [v1.2.28][1.2.28t]
+- COVERAGE: 93.95% -- 4722/5026 lines in 31 files
+- BRANCH COVERAGE: 76.61% -- 1854/2420 branches in 31 files
+- 29.31% documented
+
+### Fixed
+
+- Keep provider-backed OTP events inside the TTY progress renderer.
 
 ## [1.2.27] - 2026-08-03
 
@@ -1722,7 +1731,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.27...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.28...HEAD
+[1.2.28]: https://github.com/kettle-dev/kettle-family/compare/v1.2.27...v1.2.28
+[1.2.28t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.28
 [1.2.27]: https://github.com/kettle-dev/kettle-family/compare/v1.2.26...v1.2.27
 [1.2.27t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.27
 [1.2.26]: https://github.com/kettle-dev/kettle-family/compare/v1.2.25...v1.2.26
