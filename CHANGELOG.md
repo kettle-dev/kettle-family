@@ -36,6 +36,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Repair stale nomono floors in existing local modular Gemfiles before templating bootstrap Bundler evaluation.
 
+- Preserve explicit family-local dependency paths while bootstrapping template dependencies.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

@@ -553,9 +553,9 @@ module Kettle
       end
 
       def template_bootstrap_dependency_env(member)
-        env = workflow_env.merge(release_lockfile_local_path_env_overrides(member))
+        env = release_lockfile_local_path_env_overrides(member).merge(workflow_env)
         env.each_key do |key|
-          env[key] = "false" if key.end_with?("_DEV")
+          env[key] = "false" if key.end_with?("_DEV") && !env_overrides.key?(key)
         end
         env["K_JEM_TEMPLATING"] = "false"
         env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
