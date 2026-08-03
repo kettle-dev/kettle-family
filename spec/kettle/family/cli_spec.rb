@@ -1450,6 +1450,38 @@ RSpec.describe Kettle::Family::CLI do
     expect(err.string).to eq("")
   end
 
+  it "renders state progress rows before the final state table on a TTY" do
+    write_gem("alpha")
+    result = Kettle::Family::ReleaseStateResult.new(
+      member_name: "alpha",
+      command: %w[bundle exec kettle-changelog --release-state --json],
+      workdir: File.join(@tmpdir, "alpha"),
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.1,
+      state: {"gem_name" => "alpha", "version" => "1.0.0", "latest_released" => "1.0.0"}
+    )
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: [result])
+    allow(checker).to receive(:results) do |event_handler: nil|
+      event_handler&.call("member" => "alpha", "action" => "member_start", "status" => "running")
+      event_handler&.call("member" => "alpha", "action" => "changelog_command", "status" => "ok")
+      event_handler&.call("member" => "alpha", "action" => "member_complete", "status" => "ok")
+      [result]
+    end
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+    allow(out).to receive(:tty?).and_return(true)
+
+    status = described_class.call(["state", "--root", @tmpdir], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("release state 1 member:")
+    expect(out.string).to include("alpha")
+    expect(out.string.index("release state 1 member:")).to be < out.string.index("release state:\n")
+  end
+
   it "does not require dependency ordering for release-state reports" do
     write_gem("alpha", dependencies: ["beta"])
     write_gem("beta", dependencies: ["alpha"])

@@ -653,7 +653,22 @@ module Kettle
         display_selected_members = display_members_for(command: command, config: config, members: selected, selected_members: selected)
         print_execution_intent(command: command, config: config, members: display_selected_members, options: options, start_at: start_at)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at, state_event_tape: state_event_tape)
+        state_progress = release_state_progress(command: command, members: result_members, options: options)
+        state_progress&.start
+        state_event_handler = release_state_event_handler(
+          event_tape: state_event_tape,
+          progress: state_progress,
+          members: result_members
+        )
+        results = command_results(
+          command: command,
+          config: config,
+          members: result_members,
+          options: options,
+          start_at: start_at,
+          state_event_handler: state_event_handler
+        )
+        state_progress&.stop
         elapsed_seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
         Report.new(
           family_name: config.family_name,
@@ -676,11 +691,11 @@ module Kettle
 
       StartAt = Struct.new(:member, :branch)
 
-      def command_results(command:, config:, members:, options:, start_at:, state_event_tape: nil)
+      def command_results(command:, config:, members:, options:, start_at:, state_event_handler: nil)
         return branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if branch_target_command?(command, config)
         return member_local_branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if member_local_branch_target_command?(command, config, members)
 
-        command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at, state_event_tape: state_event_tape)
+        command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at, state_event_handler: state_event_handler)
       end
 
       def release_state_results_for_selection(config:, members:, only:)
@@ -721,14 +736,14 @@ module Kettle
         members
       end
 
-      def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil), state_event_tape: nil)
+      def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil), state_event_handler: nil)
         return mise_trust_results(config: config, members: members) if command == "mise-trust"
         return bump_version_results(members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
         return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
-        return release_state_results(config: config, members: members, event_handler: state_event_tape&.method(:call)) if command == "release-state"
+        return release_state_results(config: config, members: members, event_handler: state_event_handler) if command == "release-state"
         return install_results(config: config, members: members, options: options) if command == "install"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
@@ -784,6 +799,49 @@ module Kettle
         return nil if options[:json]
 
         stdout
+      end
+
+      def release_state_progress(command:, members:, options:)
+        return nil unless command == "release-state"
+        return nil if options[:events] || options[:json]
+        return nil unless stdout.respond_to?(:tty?) && stdout.tty?
+
+        WorkflowProgress.new(
+          io: stdout,
+          label: "release state",
+          total: members.length,
+          jobs: [options[:jobs].to_i, 1].max,
+          members: members,
+          heading: "release state #{members.length} member#{members.length == 1 ? "" : "s"}:"
+        )
+      end
+
+      def release_state_event_handler(event_tape:, progress:, members:)
+        return nil unless event_tape || progress
+
+        members_by_name = members.to_h { |member| [member.name, member] }
+        lambda do |event|
+          event_tape&.call(event)
+          next unless progress
+
+          member = members_by_name[event["member"]]
+          next unless member
+
+          action = event["action"].to_s
+          status = event["status"].to_s
+          case action
+          when "member_start"
+            progress.start_member(member, total: 5, status: "release_state")
+          when "member_complete"
+            progress.finish_member(member, success: status == "ok", status: status)
+          when "changelog_command", "computed_booleans", "git_state", "github_release", "transfer_changelog"
+            if status == "running"
+              progress.update(member, status: action)
+            elsif status == "ok" || status == "failed"
+              progress.advance(member, status: action, success: status == "ok")
+            end
+          end
+        end
       end
 
       def print_execution_intent(command:, config:, members:, options:, start_at:)

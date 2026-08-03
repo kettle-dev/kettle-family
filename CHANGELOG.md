@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Emit per-member NDJSON event tapes while deriving release state.
 
+- Render plain state analysis as stable per-member TTY progress rows before the final release-state table.
+
 ### Changed
 
 ### Deprecated
