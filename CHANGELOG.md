@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Clear shortened release progress statuses on TTY redraws
+
 ### Security
 
 ## [1.2.26] - 2026-08-03

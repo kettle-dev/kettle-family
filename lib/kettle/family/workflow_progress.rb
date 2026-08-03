@@ -214,7 +214,7 @@ module Kettle
       def truncate_status(status)
         normalized = status.to_s.gsub(/\s+/, " ").strip
         width = status_width
-        return normalized if normalized.length <= width
+        return normalized.ljust(width) if normalized.length <= width
         return normalized[0, width] if width <= ELLIPSIS.length
 
         "#{normalized[0, width - ELLIPSIS.length]}#{ELLIPSIS}"

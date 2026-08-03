@@ -91,6 +91,22 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     expect(output.string).not_to include(long_status)
   end
 
+  it "pads shorter TTY statuses so stale text cannot remain after a redraw" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    progress = described_class.new(io: output, label: "releasing", total: 1, jobs: 1, members: [member])
+
+    progress.start
+    progress.start_member(member, total: 1, status: "secret:prompt_response:RubyGems MFA code")
+    progress.update(member, status: "release_publish")
+    progress.stop
+
+    status_width = progress.send(:status_width)
+    expect(progress.send(:truncate_status, "release_publish").length).to eq(status_width)
+    expect(progress.send(:truncate_status, "release_publish")).to end_with(" " * (status_width - "release_publish".length))
+  end
+
   it "renders readable non-TTY progress lines without requiring flush" do
     output = progress_output_class.new
     member = instance_double(Kettle::Family::Member, name: "alpha")
