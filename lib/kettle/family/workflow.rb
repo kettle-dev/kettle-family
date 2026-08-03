@@ -1090,6 +1090,10 @@ module Kettle
             when "prompt_response"
               progress.notification("")
             end
+            # Prompt notices are transient operator notifications, not tape
+            # events. Keeping them out of the member row prevents the prompt
+            # text from competing with the fixed-width event tape.
+            return if progress.tty? && !verbose && !debug
           end
           if verbose || debug
             emit_release_event_progress(member, event)

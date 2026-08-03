@@ -1202,12 +1202,13 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
     notifications = []
+    updates = []
     progress = Class.new do
-      define_method(:initialize) { |target| @target = target }
+      define_method(:initialize) { |target, update_target| @target = target; @update_target = update_target }
       define_method(:tty?) { true }
       define_method(:notification) { |message| @target << message }
-      define_method(:update) { |_member, status:, mark:| }
-    end.new(notifications)
+      define_method(:update) { |_member, status:, mark:| @update_target << [status, mark] }
+    end.new(notifications, updates)
     workflow = described_class.new(command: "release", config: config, members: [member], progress_io: StringIO.new)
     workflow.instance_variable_set(:@release_progress, progress)
 
@@ -1223,6 +1224,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
 
     expect(notifications).to eq(["👀 🔒 watch for authorization prompt", ""])
+    expect(updates).to be_empty
   end
 
   it "emits release wave markers for parallel release groups" do
