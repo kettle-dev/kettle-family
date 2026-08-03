@@ -37,7 +37,7 @@ module Kettle
           @stream.flush if @stream&.respond_to?(:flush)
         end
         payload
-      rescue StandardError
+      rescue
         nil
       end
 

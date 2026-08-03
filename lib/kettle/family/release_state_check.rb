@@ -672,7 +672,7 @@ module Kettle
           "action" => action,
           "status" => status
         }.merge(details.each_with_object({}) { |(key, value), memo| memo[key.to_s] = value }))
-      rescue StandardError
+      rescue
         nil
       end
 

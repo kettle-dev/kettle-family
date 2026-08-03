@@ -812,7 +812,7 @@ module Kettle
           total: members.length,
           jobs: [options[:jobs].to_i, 1].max,
           members: members,
-          heading: "release state #{members.length} member#{members.length == 1 ? "" : "s"}:"
+          heading: "release state #{members.length} member#{"s" unless members.length == 1}:"
         )
       end
 
