@@ -174,11 +174,17 @@ module Kettle
         return if rows.empty?
 
         output = +""
-        output << "\e[#{@tty_rows}A" if @tty_rendered && @tty_rows.positive?
-        output << "\e[1G\e[2K#{truncate_display(@notification, terminal_width)}\n"
+        if @tty_rendered && @tty_rows.positive?
+          # Restore the bottom-of-block cursor before moving to the first row.
+          # This keeps unrelated prompt output from changing the redraw anchor.
+          output << "\e[u\e[#{@tty_rows}A"
+        end
+        output << "\e[1G\e[2K#{truncate_display(@notification, render_width)}\n"
         rows.each do |line|
           output << "\e[1G\e[2K#{line}\n"
         end
+        # Keep a stable cursor anchor at the bottom of the rendered block.
+        output << "\e[s"
         @io.write(output)
         @io.flush if @io.respond_to?(:flush)
         @tty_rendered = true
@@ -278,7 +284,15 @@ module Kettle
       end
 
       def status_width
-        [terminal_width - MEMBER_WIDTH - 1 - PROGRESS_WIDTH - 1 - ELAPSED_WIDTH - 1 - EVENT_WIDTH - 1, MIN_STATUS_WIDTH].max
+        available = [render_width - MEMBER_WIDTH - 1 - PROGRESS_WIDTH - 1 - ELAPSED_WIDTH - 1 - EVENT_WIDTH - 1, 1].max
+        [available, MIN_STATUS_WIDTH].max.clamp(1, available)
+      end
+
+      def render_width
+        # Leave the last terminal column unused. Writing into it can trigger
+        # an automatic wrap before the explicit newline, which invalidates the
+        # fixed physical-row cursor accounting used by the redrawer.
+        [terminal_width - 1, 1].max
       end
 
       def terminal_width

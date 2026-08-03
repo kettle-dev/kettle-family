@@ -72,6 +72,7 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     beta_row = output.string.index("\e[1G\e[2Kbeta")
     expect(alpha_row).to be < beta_row
     expect(output.string).to include("\e[3A")
+    expect(output.string).to include("\e[s", "\e[u\e[3A")
     expect(output.string).not_to include("\e7", "\e8")
   end
 
@@ -87,7 +88,22 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     progress.update(alpha, status: "secret:prompt_response", mark: ">")
 
     expect(output.string.scan("\e[3A").length).to eq(2)
+    expect(output.string).to include("\e[u\e[3A")
     expect(output.string).not_to include("\e7", "\e8")
+  end
+
+  it "leaves a terminal column unused so rows cannot auto-wrap at the boundary" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    allow(TTY::Screen).to receive(:width).and_return(72)
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    progress = described_class.new(io: output, label: "releasing", total: 1, jobs: 1, members: [member])
+
+    progress.start
+    progress.update(member, status: "release_publish", mark: ".")
+
+    row = output.string.scan(/\e\[1G\e\[2K([^\n]*)\n/).last.first
+    expect(Unicode::DisplayWidth.of(row)).to be < 72
   end
 
   it "clamps TTY statuses so member rows cannot wrap" do
@@ -102,7 +118,7 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     progress.update(member, status: long_status, mark: "!")
     progress.stop
 
-    expect(output.string).to include("plugin_li...")
+    expect(output.string).to include("plugin...")
     expect(output.string).not_to include(long_status)
   end
 

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Anchor TTY progress redraws and reserve a terminal column to prevent stale or wrapped rows.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03
