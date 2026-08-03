@@ -432,6 +432,7 @@ RSpec.describe Kettle::Family::CommandRunner do
     runner.send(:handle_interactive_prompt, child_input, "Code: ", member_name: "alpha")
 
     expect(child_input.string).to eq("123456\n")
+    expect(otp_output.string).to eq("\a")
     expect(otp_output.string).not_to include("RubyGems MFA code loaded from configured secrets provider.")
     expect(events.map { |member_name, event| [member_name, event.fetch("action"), event.fetch("label")] }).to include(
       ["alpha", "mfa_requested", "RubyGems MFA"],

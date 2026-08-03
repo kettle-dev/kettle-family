@@ -117,6 +117,7 @@ module Kettle
         end
 
         def read_response(chunk:, member_name:)
+          manual_prompt = false
           provided = read_provider_response(member_name: member_name)
           unless provided.empty?
             emit_event(
@@ -130,6 +131,7 @@ module Kettle
             return provided
           end
 
+          manual_prompt = true
           @output.print("#{otp_prompt_label(chunk)} ")
           @output.flush if @output.respond_to?(:flush)
           if @input.respond_to?(:noecho) && @input.tty?
@@ -138,7 +140,7 @@ module Kettle
             @input.gets&.chomp.to_s
           end
         ensure
-          @output.puts if @output.respond_to?(:puts)
+          @output.puts if manual_prompt && @output.respond_to?(:puts)
         end
 
         def otp_prompt_label(chunk)

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Keep provider-backed OTP events inside the TTY progress renderer.
+
 ### Security
 
 ## [1.2.27] - 2026-08-03
