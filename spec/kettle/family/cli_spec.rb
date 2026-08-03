@@ -1433,6 +1433,10 @@ RSpec.describe Kettle::Family::CLI do
       state: {"gem_name" => "alpha", "version" => "1.0.0", "latest_released" => "1.0.0"}
     )
     checker = instance_double(Kettle::Family::ReleaseStateCheck, results: [result])
+    allow(checker).to receive(:results) do |event_handler: nil|
+      event_handler&.call("member" => "alpha", "action" => "member_start", "status" => "running")
+      [result]
+    end
     allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
     out = StringIO.new
     err = StringIO.new
