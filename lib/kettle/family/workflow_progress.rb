@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "tty-progressbar"
 require "tty-screen"
 
 module Kettle
@@ -9,7 +8,7 @@ module Kettle
       MEMBER_WIDTH = 24
       PROGRESS_WIDTH = 7
       ELAPSED_WIDTH = 7
-      FORMAT = "%<member>-#{MEMBER_WIDTH}.#{MEMBER_WIDTH}s :progress :duration :events :status"
+      FORMAT = "%<member>-#{MEMBER_WIDTH}.#{MEMBER_WIDTH}s %<progress>s %<duration>s %<events>s %<status>s"
       EVENT_WIDTH = 20
       MIN_STATUS_WIDTH = 12
       DEFAULT_TERMINAL_WIDTH = 80
@@ -23,7 +22,6 @@ module Kettle
         @heading = heading
         @clock = clock || lambda { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
         @enabled = enabled && !!io
-        @bars = {}
         @line_order = members.map(&:name)
         @started = false
         @stopped = false
@@ -35,7 +33,8 @@ module Kettle
         @member_statuses = Hash.new("")
         @mutex = Mutex.new
         @tty = @enabled && io.respond_to?(:tty?) && io.tty?
-        @multibar = @tty ? TTY::ProgressBar::Multi.new(output: io, frequency: 0) : nil
+        @tty_rendered = false
+        @tty_rows = 0
       end
 
       def start
@@ -46,7 +45,10 @@ module Kettle
 
           write_line(@heading || "#{@label} #{@total} member#{plural(@total)} with #{@jobs} job#{plural(@jobs)}:")
           @started = true
-          @line_order.each { |member_name| render_name(member_name, status: "") } if @tty
+          if @tty
+            @line_order.each { |member_name| render_name(member_name, status: "") }
+            render_tty_block unless @line_order.empty?
+          end
         end
       end
 
@@ -114,7 +116,6 @@ module Kettle
         synchronize do
           next if @stopped
 
-          @multibar&.stop
           @stopped = true
         end
       end
@@ -136,6 +137,7 @@ module Kettle
 
       def render(member, status:)
         render_name(member.name, status: status)
+        render_tty_block if @tty
       end
 
       def append_event(member, mark)
@@ -147,17 +149,35 @@ module Kettle
       def render_name(member_name, status:)
         @member_statuses[member_name] = truncate_status(status)
         @line_order << member_name unless @line_order.include?(member_name)
-        bar_for(member_name).advance(
-          0,
+      end
+
+      # Redraw the complete block from a stable cursor position. TTY::ProgressBar::Multi
+      # saves and restores the cursor independently for each bar, which is unreliable
+      # across terminals that do not implement its legacy ESC 7/ESC 8 sequences.
+      def render_tty_block
+        rows = @line_order.map { |member_name| tty_line(member_name) }
+        return if rows.empty?
+
+        output = +""
+        output << "\e[#{@tty_rows}A" if @tty_rendered && @tty_rows.positive?
+        rows.each do |line|
+          output << "\e[1G\e[2K#{line}\n"
+        end
+        @io.write(output)
+        @io.flush if @io.respond_to?(:flush)
+        @tty_rendered = true
+        @tty_rows = rows.length
+      end
+
+      def tty_line(member_name)
+        Kernel.format(
+          FORMAT,
+          member: member_name,
           progress: progress_text(member_name),
           duration: elapsed_text(member_name),
           events: @member_events[member_name].rjust(EVENT_WIDTH),
           status: @member_statuses[member_name]
         )
-      end
-
-      def bar_for(member_name)
-        @bars[member_name] ||= @multibar.register(Kernel.format(FORMAT, member: member_name), total: nil)
       end
 
       def plural(count)

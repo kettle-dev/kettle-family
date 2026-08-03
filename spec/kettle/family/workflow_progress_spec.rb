@@ -68,11 +68,26 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     progress.start_member(alpha, total: 1, status: "template")
     progress.stop
 
-    alpha_row = output.string.index("\e[1Galpha")
-    beta_row = output.string.index("\e[1Gbeta")
+    alpha_row = output.string.index("\e[1G\e[2Kalpha")
+    beta_row = output.string.index("\e[1G\e[2Kbeta")
     expect(alpha_row).to be < beta_row
-    expect(output.string).to include("\e[1A\e[1Gbeta")
-    expect(output.string).to include("\e[2A\e[1Galpha")
+    expect(output.string).to include("\e[2A")
+    expect(output.string).not_to include("\e7", "\e8")
+  end
+
+  it "redraws every member from the block anchor when updates arrive out of row order" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    alpha = instance_double(Kettle::Family::Member, name: "alpha")
+    beta = instance_double(Kettle::Family::Member, name: "beta")
+    progress = described_class.new(io: output, label: "releasing", total: 2, jobs: 2, members: [alpha, beta])
+
+    progress.start
+    progress.update(beta, status: "ci:github_tick", mark: ">")
+    progress.update(alpha, status: "secret:prompt_response", mark: ">")
+
+    expect(output.string.scan("\e[2A").length).to eq(2)
+    expect(output.string).not_to include("\e7", "\e8")
   end
 
   it "clamps TTY statuses so member rows cannot wrap" do
