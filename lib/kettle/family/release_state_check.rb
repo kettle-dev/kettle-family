@@ -28,16 +28,16 @@ module Kettle
         @transfer_changelog_total_count = TRANSFER_CHANGELOG_TOTAL_UNSET
       end
 
-      def results
-        return branch_results unless release_target_branches.empty?
-        return members.map { |member| check_shared_changelog_member_or_local(member) } if shared_changelog?
+      def results(event_handler: nil)
+        return branch_results(event_handler: event_handler) unless release_target_branches.empty?
+        return members.map { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) } if shared_changelog?
 
         members.each_with_object([]) do |member, memo|
-          member_branch_results = member_local_branch_results(member)
+          member_branch_results = member_local_branch_results(member, event_handler: event_handler)
           if member_branch_results
             memo.concat(member_branch_results)
           else
-            memo << check_member(member)
+            memo << check_member(member, event_handler: event_handler)
           end
         end
       end
@@ -46,63 +46,87 @@ module Kettle
 
       attr_reader :members, :config
 
-      def branch_results
+      def branch_results(event_handler: nil)
         root = git_root
         selected_names = members.map(&:name)
         release_target_branches.each_with_object([]) do |branch, memo|
           with_branch_worktree(root: root, branch: branch) do |worktree_root|
             branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
             if shared_changelog?
-              memo.concat(branch_members.map { |member| check_shared_changelog_member_or_local(member, branch: branch) })
+              memo.concat(branch_members.map { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) })
               next
             end
 
-            memo.concat(branch_members.map { |member| check_member(member, branch: branch) })
+            memo.concat(branch_members.map { |member| check_member(member, branch: branch, event_handler: event_handler) })
           end
         rescue Error => error
           memo << error_result(branch: branch, error: error)
         end
       end
 
-      def check_member(member, branch: nil)
+      def check_member(member, branch: nil, event_handler: nil)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         command = release_state_command
+        emit_event(event_handler, member: member, branch: branch, action: "member_start", status: "running", command: command)
+        emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: "running", command: command)
         stdout, stderr, status = Open3.capture3(release_state_env(member), *command, chdir: release_state_workdir(member))
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         success = status.success?
+        emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
         state = success ? JSON.parse(stdout) : {}
+        emit_event(event_handler, member: member, branch: branch, action: "computed_booleans", status: "running") if success
         state = branch_filtered_state(member, state, branch) if success && branch
         state = state_with_computed_booleans(state) if success
+        emit_event(event_handler, member: member, branch: branch, action: "computed_booleans", status: "ok") if success
+        emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "running") if success
         state = enrich_git_state(member.root, state, branch: branch) if success
+        emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "ok") if success
+        emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "running") if success
         state = enrich_github_release(member.root, state, branch: branch) if success
+        emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "ok") if success
+        emit_event(event_handler, member: member, branch: branch, action: "transfer_changelog", status: "running") if success
         state = enrich_transfer_changelog_lag(member.root, state) if success
-        result(member: member, command: command, stdout: stdout, stderr: stderr, status: status.exitstatus, elapsed: elapsed, success: success, state: state, branch: branch)
+        emit_event(event_handler, member: member, branch: branch, action: "transfer_changelog", status: "ok") if success
+        result = result(member: member, command: command, stdout: stdout, stderr: stderr, status: status.exitstatus, elapsed: elapsed, success: success, state: state, branch: branch)
+        emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
+        result
       rescue JSON::ParserError => error
-        result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
+        result = result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
+        emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: "failed", elapsed_seconds: elapsed || 0.0, status_code: 1, reason: result.reason)
+        result
       end
 
       def release_state_command
         [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
       end
 
-      def check_shared_changelog_member_or_local(member, branch: nil)
-        return check_member(member, branch: branch) if member_local_changelog?(member)
+      def check_shared_changelog_member_or_local(member, branch: nil, event_handler: nil)
+        return check_member(member, branch: branch, event_handler: event_handler) if member_local_changelog?(member)
 
-        check_shared_changelog_member(member, branch: branch)
+        check_shared_changelog_member(member, branch: branch, event_handler: event_handler)
       end
 
-      def check_shared_changelog_member(member, branch: nil)
+      def check_shared_changelog_member(member, branch: nil, event_handler: nil)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         command = release_state_command
+        emit_event(event_handler, member: member, branch: branch, action: "member_start", status: "running", command: command)
+        emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: "running", command: command)
         stdout, stderr, status = Open3.capture3(shared_changelog_env(member), *command, chdir: config.root)
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         success = status.success?
+        emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
         state = success ? JSON.parse(stdout) : {}
         state = branch_filtered_state(member, state, branch) if success && branch
+        emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "running") if success
         state = enrich_git_state(member.root, state, branch: branch) if success
+        emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "ok") if success
+        emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "running") if success
         state = enrich_github_release(member.root, state, branch: branch) if success
+        emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "ok") if success
+        emit_event(event_handler, member: member, branch: branch, action: "transfer_changelog", status: "running") if success
         state = enrich_transfer_changelog_lag(member.root, state) if success
-        result(
+        emit_event(event_handler, member: member, branch: branch, action: "transfer_changelog", status: "ok") if success
+        result = result(
           member: member,
           command: command,
           stdout: stdout,
@@ -113,10 +137,14 @@ module Kettle
           state: state,
           branch: branch
         )
+        emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
+        result
       rescue JSON::ParserError => error
-        result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
+        result = result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
+        emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: "failed", elapsed_seconds: elapsed || 0.0, status_code: 1, reason: result.reason)
+        result
       rescue Error => error
-        result(
+        result = result(
           member: member,
           command: command || release_state_command,
           stdout: "",
@@ -128,6 +156,8 @@ module Kettle
           reason: "release state check failed",
           branch: branch
         )
+        emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: "failed", elapsed_seconds: elapsed || 0.0, status_code: 1, reason: result.reason)
+        result
       end
 
       def release_state_workdir(member)
@@ -626,11 +656,24 @@ module Kettle
         config.release_target_branches
       end
 
-      def member_local_branch_results(member)
+      def member_local_branch_results(member, event_handler: nil)
         member_config = member_local_release_config(member)
         return unless member_config
 
-        self.class.new(config: member_config, members: [member]).results
+        self.class.new(config: member_config, members: [member]).results(event_handler: event_handler)
+      end
+
+      def emit_event(event_handler, member:, branch:, action:, status:, **details)
+        return unless event_handler
+
+        event_handler.call({
+          "member" => member.name.to_s,
+          "branch" => branch,
+          "action" => action,
+          "status" => status
+        }.merge(details))
+      rescue StandardError
+        nil
       end
 
       def member_local_release_config(member)

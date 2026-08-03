@@ -21,6 +21,7 @@ module Kettle
       option :config, value: {type: String, usage: "PATH"}, desc: "Family config path"
       option :json, desc: "Print JSON report to stdout"
       option :report, value: {type: String, usage: "PATH"}, desc: "Write JSON report to PATH"
+      option :events, desc: "Stream release-state analysis as NDJSON"
 
       def self.call(argv, out: $stdout, err: $stderr)
         main(argv, stdout: out, stderr: err)
@@ -32,6 +33,7 @@ module Kettle
           base.option :config, value: {type: String, usage: "PATH"}, desc: "Family config path"
           base.option :json, desc: "Print JSON report to stdout"
           base.option :report, value: {type: String, usage: "PATH"}, desc: "Write JSON report to PATH"
+          base.option :events, desc: "Stream release-state analysis as NDJSON"
         end
       end
 
@@ -613,7 +615,11 @@ module Kettle
       def run_command(command, options)
         report = build_report(command, options)
         write_report(report, options)
-        stdout.puts(options[:json] ? report.to_json : report.to_text)
+        if options[:events] && command == "release-state"
+          stdout.puts(JSON.generate("event_version" => 1, "type" => "summary", "report" => report.to_h))
+        else
+          stdout.puts(options[:json] ? report.to_json : report.to_text)
+        end
         report.success? ? 0 : 1
       rescue Error, OptionParser::ParseError => error
         stderr.puts("kettle-family: #{error.message}")
@@ -638,6 +644,7 @@ module Kettle
         else
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
+        state_event_tape = release_state_event_tape(command: command, config: config, options: options)
         release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only)
         selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
@@ -645,7 +652,7 @@ module Kettle
         display_selected_members = display_members_for(command: command, config: config, members: selected, selected_members: selected)
         print_execution_intent(command: command, config: config, members: display_selected_members, options: options, start_at: start_at)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at)
+        results = command_results(command: command, config: config, members: result_members, options: options, start_at: start_at, state_event_tape: state_event_tape)
         elapsed_seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
         Report.new(
           family_name: config.family_name,
@@ -661,17 +668,18 @@ module Kettle
           command: command,
           results: results,
           warnings: discovery.warnings,
+          event_log_dirs: state_event_tape ? [state_event_tape.directory] : [],
           elapsed_seconds: elapsed_seconds
         )
       end
 
       StartAt = Struct.new(:member, :branch)
 
-      def command_results(command:, config:, members:, options:, start_at:)
+      def command_results(command:, config:, members:, options:, start_at:, state_event_tape: nil)
         return branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if branch_target_command?(command, config)
         return member_local_branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if member_local_branch_target_command?(command, config, members)
 
-        command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at)
+        command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at, state_event_tape: state_event_tape)
       end
 
       def release_state_results_for_selection(config:, members:, only:)
@@ -712,14 +720,14 @@ module Kettle
         members
       end
 
-      def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil))
+      def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil), state_event_tape: nil)
         return mise_trust_results(config: config, members: members) if command == "mise-trust"
         return bump_version_results(members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
         return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
-        return release_state_results(config: config, members: members) if command == "release-state"
+        return release_state_results(config: config, members: members, event_handler: state_event_tape&.method(:call)) if command == "release-state"
         return install_results(config: config, members: members, options: options) if command == "install"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
@@ -1022,8 +1030,16 @@ module Kettle
         LocalInstall.new(config: config, members: members, execute: options[:execute], jobs: options[:jobs]).results
       end
 
-      def release_state_results(config:, members:)
-        ReleaseStateCheck.new(config: config, members: members).results
+      def release_state_results(config:, members:, event_handler: nil)
+        ReleaseStateCheck.new(config: config, members: members).results(event_handler: event_handler)
+      end
+
+      def release_state_event_tape(command:, config:, options:)
+        return unless command == "release-state"
+
+        tape = ReleaseStateEventTape.new(root: config.root, stream: options[:events] ? stdout : nil)
+        stderr.puts("release state event tapes: #{tape.directory}") unless options[:events]
+        tape
       end
 
       def release_mode(command:, options:)

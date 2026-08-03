@@ -30,9 +30,9 @@ module Kettle
         up
       ].freeze
 
-      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode, :warnings
+      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode, :warnings, :event_log_dirs
 
-      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [], warnings: [], elapsed_seconds: nil)
+      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [], warnings: [], event_log_dirs: [], elapsed_seconds: nil)
         @family_name = family_name
         @family_mode = family_mode
         @order_mode = order_mode
@@ -46,6 +46,7 @@ module Kettle
         @member_release_target_branches = member_release_target_branches
         @release_mode = release_mode
         @warnings = warnings
+        @event_log_dirs = event_log_dirs
         @elapsed_seconds = elapsed_seconds
       end
 
@@ -62,6 +63,7 @@ module Kettle
           "member_release_target_branches" => member_release_target_branches,
           "release_mode" => release_mode,
           "warnings" => warnings,
+          "event_log_dirs" => event_log_dirs,
           "command" => command,
           "results" => results.map(&:to_h),
           "summary" => summary,
@@ -135,6 +137,7 @@ module Kettle
         lines << "summary:"
         lines << "  outcome: #{data.fetch("outcome")}"
         lines << "  elapsed: #{format_elapsed(data.fetch("elapsed_seconds"))}"
+        lines << "  events: #{event_log_dirs.join(", ")}" unless event_log_dirs.empty?
         lines << "  logs: #{data.fetch("release_log_dirs").join(", ")}" unless data.fetch("release_log_dirs").empty?
         lines << "  selected: #{data.fetch("selected_count")}"
         lines << "  results: #{data.fetch("result_count")}"

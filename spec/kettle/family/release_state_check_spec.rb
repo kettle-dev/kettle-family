@@ -92,6 +92,42 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.stdout).to eq("not-json")
   end
 
+  it "emits phase events while deriving a member state" do
+    member = member("alpha")
+    state = {
+      "gem_name" => "alpha",
+      "version" => "1.2.4",
+      "latest_released" => "1.2.3",
+      "unreleased_entries" => false
+    }
+    events = []
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(state), "", status(0, true)])
+    check = described_class.new(members: [member])
+    allow(check).to receive(:enrich_git_state) { |_root, value, branch:| value }
+    allow(check).to receive(:enrich_github_release) { |_root, value, branch:| value }
+    allow(check).to receive(:enrich_transfer_changelog_lag) { |_root, value| value }
+
+    result = check.results(event_handler: ->(event) { events << event }).fetch(0)
+
+    expect(result).to be_ok
+    expect(events.map { |event| event.fetch("action") }).to eq([
+      "member_start",
+      "changelog_command",
+      "changelog_command",
+      "computed_booleans",
+      "computed_booleans",
+      "git_state",
+      "git_state",
+      "github_release",
+      "github_release",
+      "transfer_changelog",
+      "transfer_changelog",
+      "member_complete"
+    ])
+    expect(events).to all(include("member" => "alpha"))
+    expect(events.last).to include("status" => "ok")
+  end
+
   it "checks each configured release target branch independently" do
     member = member("alpha")
     config = release_state_config(release_target_branches: %w[r1 r2])
