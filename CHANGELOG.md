@@ -48,6 +48,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep secret-provider notifications off the TTY event tape in verbose and debug modes.
 
+- Normalize release-state event detail keys before writing NDJSON tapes.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03

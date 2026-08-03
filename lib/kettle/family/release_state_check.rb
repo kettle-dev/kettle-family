@@ -671,7 +671,7 @@ module Kettle
           "branch" => branch,
           "action" => action,
           "status" => status
-        }.merge(details))
+        }.merge(details.each_with_object({}) { |(key, value), memo| memo[key.to_s] = value }))
       rescue StandardError
         nil
       end

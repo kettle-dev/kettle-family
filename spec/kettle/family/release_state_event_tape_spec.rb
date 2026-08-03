@@ -22,6 +22,7 @@ RSpec.describe Kettle::Family::ReleaseStateEventTape do
 
       expect(alpha_events.map { |event| event.fetch("sequence") }).to eq([1, 2])
       expect(alpha_events).to all(include("event_version" => 1, "type" => "release_state", "timestamp" => "2026-08-03T20:00:00Z"))
+      expect(File.readlines(alpha_path).map { |line| line.scan('"elapsed_seconds"').length }).to eq([1, 1])
       expect(stream.string.lines.map { |line| JSON.parse(line) }).to eq(alpha_events + beta_events)
     end
   end
