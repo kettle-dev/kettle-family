@@ -77,13 +77,52 @@ module Kettle
 
       def gemfile_edits(member)
         gemfile = File.join(member.root, "Gemfile")
-        return [] unless File.file?(gemfile)
-
-        source = File.read(gemfile)
-        parse_result = Kettle::Dev::VersionBump.parse_source(source, gemfile)
-        Kettle::Dev::VersionBump.each_node(parse_result.value).filter_map do |node|
-          nomono_floor_edit(gemfile, source, node)
+        edits = if File.file?(gemfile)
+          source = File.read(gemfile)
+          parse_result = Kettle::Dev::VersionBump.parse_source(source, gemfile)
+          Kettle::Dev::VersionBump.each_node(parse_result.value).filter_map do |node|
+            nomono_floor_edit(gemfile, source, node)
+          end
+        else
+          []
         end
+
+        edits + local_gemfile_edits(member)
+      end
+
+      def local_gemfile_edits(member)
+        Dir.glob(File.join(member.root, "gemfiles/modular/**/*_local.gemfile")).sort.flat_map do |path|
+          source = File.read(path)
+          parse_result = Kettle::Dev::VersionBump.parse_source(source, path)
+          Kettle::Dev::VersionBump.each_node(parse_result.value).filter_map do |node|
+            local_nomono_floor_edit(path, source, node)
+          end
+        rescue Prism::ParseError
+          []
+        end
+      end
+
+      def local_nomono_floor_edit(path, source, node)
+        return unless node.is_a?(Prism::LocalVariableWriteNode)
+        return unless node.name == :nomono_activation_requirements
+        return unless node.value.is_a?(Prism::ArrayNode)
+
+        floor_node = node.value.elements.find do |element|
+          element.is_a?(Prism::StringNode) && element.unescaped.start_with?(">= ")
+        end
+        return unless floor_node
+
+        current_floor = Gem::Version.new(floor_node.unescaped.sub(/\A>=\s*/, ""))
+        return unless current_floor < latest_version
+
+        replacement = Kettle::Dev::VersionBump.quote_like(floor_node.location.slice, ">= #{latest_version}")
+        Kettle::Dev::VersionBump.file_edit(
+          path,
+          source,
+          floor_node.location.start_offset,
+          floor_node.location.end_offset,
+          replacement
+        )
       end
 
       def nomono_floor_edit(path, source, node)

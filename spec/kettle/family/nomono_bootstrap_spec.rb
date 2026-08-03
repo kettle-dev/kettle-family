@@ -58,6 +58,27 @@ RSpec.describe Kettle::Family::NomonoBootstrap, :prism do
     expect(File.read(gemfile)).to include('gem "nomono", "~> 1.1", ">= 1.1.1", require: false')
   end
 
+  it "repairs stale nomono floors in existing local modular Gemfiles" do
+    member = member_at("kettle-gha-pins")
+    local_gemfile = File.join(member.root, "gemfiles/modular/coverage_local.gemfile")
+    FileUtils.mkdir_p(File.dirname(local_gemfile))
+    File.write(local_gemfile, <<~RUBY)
+      nomono_activation_requirements = ["~> 1.1", ">= 1.1.0"]
+      Kernel.send(:gem, "nomono", *nomono_activation_requirements)
+    RUBY
+
+    bootstrap = described_class.new(latest_version: "1.1.1", mode: :execute)
+
+    expect(bootstrap.member_needs_bootstrap?(member)).to be(true)
+    result = bootstrap.bootstrap_member(member)
+
+    expect(result).to be_ok
+    expect(File.read(local_gemfile)).to include(
+      'nomono_activation_requirements = ["~> 1.1", ">= 1.1.1"]'
+    )
+    expect(result.stdout).to include("gemfiles/modular/coverage_local.gemfile")
+  end
+
   def member_at(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)

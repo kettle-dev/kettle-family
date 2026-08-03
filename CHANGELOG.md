@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Pass checksum-validation overrides through template command execution.
 
+- Repair stale nomono floors in existing local modular Gemfiles before templating bootstrap Bundler evaluation.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02
