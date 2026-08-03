@@ -1798,15 +1798,29 @@ RSpec.describe Kettle::Family::Workflow do
     expect(waves.map { |wave| wave.map(&:name) }).to eq([["beta"], ["gamma"]])
   end
 
-  it "breaks release-only dependency cycles by selected member order" do
+  it "rejects unresolved release-only dependency cycles" do
     config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha", release_dependencies: ["beta"])
+    beta = ready_member("beta", release_dependencies: ["alpha"])
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, jobs: 2)
+
+    expect { workflow.send(:release_waves, [alpha, beta]) }
+      .to raise_error(Kettle::Family::Error, /configure release\.waves to break the cycle/)
+  end
+
+  it "uses a configured release wave to break a release-only dependency cycle" do
+    config = Kettle::Family::Config.new(
+      root: @tmpdir,
+      path: nil,
+      data: {"release" => {"waves" => [["beta"]]}}
+    )
     alpha = ready_member("alpha", release_dependencies: ["beta"])
     beta = ready_member("beta", release_dependencies: ["alpha"])
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, jobs: 2)
 
     waves = workflow.send(:release_waves, [alpha, beta])
 
-    expect(waves.map { |wave| wave.map(&:name) }).to eq([["alpha"], ["beta"]])
+    expect(waves.map { |wave| wave.map(&:name) }).to eq([["beta"], ["alpha"]])
   end
 
   it "stops before release commands when readiness fails" do

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Fail release planning when dependency cycles lack an explicit release wave.
+
 ### Security
 
 ## [1.2.24] - 2026-08-03

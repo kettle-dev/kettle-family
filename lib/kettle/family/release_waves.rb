@@ -3,9 +3,10 @@
 module Kettle
   module Family
     class ReleaseWaves
-      def initialize(members:, configured_waves: [])
+      def initialize(members:, configured_waves: [], strict_cycles: false)
         @members = members
         @configured_waves = configured_waves
+        @strict_cycles = strict_cycles
       end
 
       def waves
@@ -18,7 +19,7 @@ module Kettle
 
       private
 
-      attr_reader :members, :configured_waves
+      attr_reader :members, :configured_waves, :strict_cycles
 
       def configured_waves_for_selected_members
         duplicates = configured_waves.flatten.group_by(&:itself).select { |_name, names| names.length > 1 }.keys
@@ -51,6 +52,10 @@ module Kettle
 
             wave_names = hard_ready.select do |name|
               selected_dependencies_for(by_name.fetch(name), by_name).all? { |dependency| completed.include?(dependency) }
+            end
+            if wave_names.empty? && strict_cycles
+              raise Error,
+                "cyclic release dependency order: #{pending.join(", ")}; configure release.waves to break the cycle"
             end
             wave_names = [hard_ready.first] if wave_names.empty?
 

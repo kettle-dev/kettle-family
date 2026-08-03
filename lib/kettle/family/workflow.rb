@@ -1117,7 +1117,7 @@ module Kettle
       end
 
       def release_waves(release_members)
-        ReleaseWaves.new(members: release_members, configured_waves: config.release_waves).waves
+        ReleaseWaves.new(members: release_members, configured_waves: config.release_waves, strict_cycles: true).waves
       end
 
       def append_dependency_floor_results(released_members:, dependent_members:, runner:, memo:)
