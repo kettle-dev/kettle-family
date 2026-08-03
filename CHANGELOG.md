@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Keep release notifications above the live progress tape without allowing wide Unicode labels to wrap rows.
+
 ### Security
 
 ## [1.2.28] - 2026-08-03

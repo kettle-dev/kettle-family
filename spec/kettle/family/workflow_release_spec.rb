@@ -1197,6 +1197,34 @@ RSpec.describe Kettle::Family::Workflow do
     expect(updates).to include(["ok", "."])
   end
 
+  it "places OTP prompt notifications on the dedicated progress notification line" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    notifications = []
+    progress = Class.new do
+      define_method(:initialize) { |target| @target = target }
+      define_method(:tty?) { true }
+      define_method(:notification) { |message| @target << message }
+      define_method(:update) { |_member, status:, mark:| }
+    end.new(notifications)
+    workflow = described_class.new(command: "release", config: config, members: [member], progress_io: StringIO.new)
+    workflow.instance_variable_set(:@release_progress, progress)
+
+    workflow.send(
+      :handle_release_otp_event,
+      "alpha",
+      {"type" => "secret_provider", "action" => "prompt_request", "label" => "authorization", "status" => "started"}
+    )
+    workflow.send(
+      :handle_release_otp_event,
+      "alpha",
+      {"type" => "secret_provider", "action" => "prompt_response", "label" => "RubyGems MFA code", "status" => "ok"}
+    )
+
+    expect(notifications).to eq(["👀 🔒 watch for authorization prompt", ""])
+  end
+
   it "emits release wave markers for parallel release groups" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

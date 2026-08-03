@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "tty-screen"
+require "unicode/display_width"
 
 module Kettle
   module Family
@@ -31,6 +32,7 @@ module Kettle
         @member_finished_elapsed = {}
         @member_events = Hash.new("")
         @member_statuses = Hash.new("")
+        @notification = ""
         @mutex = Mutex.new
         @tty = @enabled && io.respond_to?(:tty?) && io.tty?
         @tty_rendered = false
@@ -133,6 +135,19 @@ module Kettle
         end
       end
 
+      def notification(message)
+        return unless @enabled
+
+        synchronize do
+          @notification = message.to_s
+          if @tty
+            render_tty_block if @started && !@line_order.empty?
+          elsif !@notification.empty?
+            write_line("[notification] #{@notification}")
+          end
+        end
+      end
+
       private
 
       def render(member, status:)
@@ -160,13 +175,14 @@ module Kettle
 
         output = +""
         output << "\e[#{@tty_rows}A" if @tty_rendered && @tty_rows.positive?
+        output << "\e[1G\e[2K#{truncate_display(@notification, terminal_width)}\n"
         rows.each do |line|
           output << "\e[1G\e[2K#{line}\n"
         end
         @io.write(output)
         @io.flush if @io.respond_to?(:flush)
         @tty_rendered = true
-        @tty_rows = rows.length
+        @tty_rows = rows.length + 1
       end
 
       def tty_line(member_name)
@@ -234,10 +250,31 @@ module Kettle
       def truncate_status(status)
         normalized = status.to_s.gsub(/\s+/, " ").strip
         width = status_width
-        return normalized.ljust(width) if normalized.length <= width
-        return normalized[0, width] if width <= ELLIPSIS.length
+        truncated = truncate_display(normalized, width)
+        truncated + (" " * [width - display_width(truncated), 0].max)
+      end
 
-        "#{normalized[0, width - ELLIPSIS.length]}#{ELLIPSIS}"
+      def truncate_display(value, width)
+        return "" if width <= 0
+
+        normalized = value.to_s
+        return normalized if display_width(normalized) <= width
+        return take_display_width(ELLIPSIS, width) if width <= display_width(ELLIPSIS)
+
+        "#{take_display_width(normalized, width - display_width(ELLIPSIS))}#{ELLIPSIS}"
+      end
+
+      def take_display_width(value, width)
+        value.to_s.each_char.each_with_object(+"") do |character, result|
+          candidate = result + character
+          break result if display_width(candidate) > width
+
+          result << character
+        end
+      end
+
+      def display_width(value)
+        Unicode::DisplayWidth.of(value.to_s)
       end
 
       def status_width

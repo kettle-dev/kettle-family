@@ -8,6 +8,7 @@ PATH
       kettle-test (~> 2.0, >= 2.0.18)
       tsort (~> 0.2)
       tty-screen (~> 0.8)
+      unicode-display_width (~> 2.6)
 
 GEM
   remote: https://gem.coop/

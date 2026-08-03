@@ -1083,6 +1083,14 @@ module Kettle
 
         member = release_progress_member_for(member_name)
         if progress_io
+          if event["type"] == "secret_provider"
+            case event["action"].to_s
+            when "prompt_request", "manual_prompt"
+              progress.notification(secret_provider_notification_label(event))
+            when "prompt_response"
+              progress.notification("")
+            end
+          end
           if verbose || debug
             emit_release_event_progress(member, event)
           elsif progress.tty?
@@ -2527,6 +2535,13 @@ module Kettle
         parts << source if purpose.empty? && label.empty? && !source.empty?
         parts << "#{event["queued"]}/#{event["total"]}" if event["queued"] && event["total"]
         parts.join(":")
+      end
+
+      def secret_provider_notification_label(event)
+        action = event["action"].to_s
+        return "👀 🔒 watch for authorization prompt" if action == "prompt_request"
+
+        event["label"].to_s
       end
 
       def command_step_event_label(event)

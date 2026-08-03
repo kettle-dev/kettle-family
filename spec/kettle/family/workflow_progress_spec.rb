@@ -71,7 +71,7 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     alpha_row = output.string.index("\e[1G\e[2Kalpha")
     beta_row = output.string.index("\e[1G\e[2Kbeta")
     expect(alpha_row).to be < beta_row
-    expect(output.string).to include("\e[2A")
+    expect(output.string).to include("\e[3A")
     expect(output.string).not_to include("\e7", "\e8")
   end
 
@@ -86,7 +86,7 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     progress.update(beta, status: "ci:github_tick", mark: ">")
     progress.update(alpha, status: "secret:prompt_response", mark: ">")
 
-    expect(output.string.scan("\e[2A").length).to eq(2)
+    expect(output.string.scan("\e[3A").length).to eq(2)
     expect(output.string).not_to include("\e7", "\e8")
   end
 
@@ -120,6 +120,35 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     status_width = progress.send(:status_width)
     expect(progress.send(:truncate_status, "release_publish").length).to eq(status_width)
     expect(progress.send(:truncate_status, "release_publish")).to end_with(" " * (status_width - "release_publish".length))
+  end
+
+  it "keeps wide-character statuses within the terminal row width" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    allow(TTY::Screen).to receive(:width).and_return(72)
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    progress = described_class.new(io: output, label: "releasing", total: 1, jobs: 1, members: [member])
+
+    progress.start
+    progress.update(member, status: "secret:prompt_request:👀 🔒 watch for authorization prompt", mark: ">")
+
+    status = progress.send(:truncate_status, "secret:prompt_request:👀 🔒 watch for authorization prompt")
+    expect(Unicode::DisplayWidth.of(status)).to eq(progress.send(:status_width))
+  end
+
+  it "reserves a notification line above the event tape" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    progress = described_class.new(io: output, label: "releasing", total: 1, jobs: 1, members: [member])
+
+    progress.start
+    progress.notification("👀 🔒 watch for authorization prompt")
+    progress.update(member, status: "release_publish", mark: ".")
+    progress.notification("")
+
+    expect(output.string).to include("👀 🔒 watch for authorization prompt")
+    expect(output.string.scan("\e[2A").length).to eq(3)
   end
 
   it "renders readable non-TTY progress lines without requiring flush" do

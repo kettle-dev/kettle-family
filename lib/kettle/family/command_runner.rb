@@ -132,15 +132,31 @@ module Kettle
           end
 
           manual_prompt = true
-          @output.print("#{otp_prompt_label(chunk)} ")
+          prompt_label = otp_prompt_label(chunk)
+          prompted_by_event_handler = emit_event(
+            member_name: member_name,
+            action: "manual_prompt",
+            label: prompt_label,
+            status: "requested",
+            mark: ">"
+          )
+          @output.print("#{prompt_label} ") unless prompted_by_event_handler
           @output.flush if @output.respond_to?(:flush)
-          if @input.respond_to?(:noecho) && @input.tty?
+          response = if @input.respond_to?(:noecho) && @input.tty?
             @input.noecho(&:gets)&.chomp.to_s
           else
             @input.gets&.chomp.to_s
           end
+          emit_event(
+            member_name: member_name,
+            action: "prompt_response",
+            label: "RubyGems MFA code",
+            status: response.empty? ? "failed" : "ok",
+            mark: response.empty? ? "F" : "."
+          )
+          response
         ensure
-          @output.puts if manual_prompt && @output.respond_to?(:puts)
+          @output.puts if manual_prompt && !event_handler && @output.respond_to?(:puts)
         end
 
         def otp_prompt_label(chunk)
