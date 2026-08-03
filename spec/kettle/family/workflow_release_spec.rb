@@ -1220,6 +1220,7 @@ RSpec.describe Kettle::Family::Workflow do
     end.new(notifications, updates)
     workflow = described_class.new(command: "release", config: config, members: [member], progress_io: StringIO.new)
     workflow.instance_variable_set(:@release_progress, progress)
+    workflow.instance_variable_set(:@verbose, true)
 
     workflow.send(
       :handle_release_otp_event,

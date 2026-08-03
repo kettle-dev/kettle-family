@@ -2438,7 +2438,10 @@ module Kettle
         # Prompt and provider status are transient operator notifications, not
         # tape events. Keeping them out of the member row prevents external
         # prompt output from competing with the fixed-width event tape.
-        progress.tty? && !verbose && !debug
+        # A TTY always has a dedicated notification line. Prompt/provider
+        # events must never fall through to the member-row event tape, even
+        # when verbose or debug output is enabled.
+        progress.tty?
       end
 
       def parse_template_event(line)

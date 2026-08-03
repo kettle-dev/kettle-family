@@ -44,6 +44,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Preserve inherited local-path dependency environments during template bootstrap and lockfile recovery.
 
+- Keep secret-provider notifications off the TTY event tape in verbose and debug modes.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03
