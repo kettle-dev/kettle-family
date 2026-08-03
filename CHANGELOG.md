@@ -28,6 +28,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.24] - 2026-08-03
+
+- TAG: [v1.2.24][1.2.24t]
+- COVERAGE: 93.93% -- 4691/4994 lines in 31 files
+- BRANCH COVERAGE: 76.50% -- 1839/2404 branches in 31 files
+- 29.31% documented
+
+### Fixed
+
 - Preserve explicit local dependency paths during template dependency bootstrap.
 
 - Roll back failed member template output before restoring an autostash.
@@ -39,8 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Preserve explicit family-local dependency paths while bootstrapping template dependencies.
 
 - Serialize template waves for members that share a Git checkout.
-
-### Security
 
 ## [1.2.23] - 2026-08-02
 
@@ -1672,7 +1681,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.23...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.24...HEAD
+[1.2.24]: https://github.com/kettle-dev/kettle-family/compare/v1.2.23...v1.2.24
+[1.2.24t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.24
 [1.2.23]: https://github.com/kettle-dev/kettle-family/compare/v1.2.22...v1.2.23
 [1.2.23t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.23
 [1.2.22]: https://github.com/kettle-dev/kettle-family/compare/v1.2.21...v1.2.22
