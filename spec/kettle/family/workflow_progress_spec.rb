@@ -165,6 +165,8 @@ RSpec.describe Kettle::Family::WorkflowProgress do
 
     expect(output.string).to include("👀 🔒 watch for authorization prompt")
     expect(output.string.scan("\e[2A").length).to eq(3)
+    expect(progress.instance_variable_get(:@tty_tape_rows)).to eq(1)
+    expect(progress.instance_variable_get(:@tty_block_rows)).to eq(2)
   end
 
   it "saves the redraw anchor at column one below the notification and tape" do

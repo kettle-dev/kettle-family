@@ -36,7 +36,8 @@ module Kettle
         @mutex = Mutex.new
         @tty = @enabled && io.respond_to?(:tty?) && io.tty?
         @tty_rendered = false
-        @tty_rows = 0
+        @tty_block_rows = 0
+        @tty_tape_rows = 0
       end
 
       def start
@@ -174,22 +175,31 @@ module Kettle
         return if rows.empty?
 
         output = +""
-        if @tty_rendered && @tty_rows.positive?
+        if @tty_rendered && @tty_block_rows.positive?
           # Restore the bottom-of-block cursor before moving to the first row.
           # This keeps unrelated prompt output from changing the redraw anchor.
-          output << "\e[u\e[#{@tty_rows}A"
+          output << "\e[u\e[#{@tty_block_rows}A"
         end
-        output << "\e[1G\e[2K#{truncate_display(@notification, render_width)}\n"
-        rows.each do |line|
-          output << "\e[1G\e[2K#{line}\n"
-        end
+        # The notification line is deliberately separate from the event tape.
+        # It is transient operator guidance, not a member row or an event.
+        output << render_tty_notification_line
+        output << render_tty_tape_rows(rows)
         # LF moves down without necessarily returning to column 1. Reset the
         # anchor explicitly so external prompt output starts on a fresh line.
         output << "\e[1G\e[s"
         @io.write(output)
         @io.flush if @io.respond_to?(:flush)
         @tty_rendered = true
-        @tty_rows = rows.length + 1
+        @tty_tape_rows = rows.length
+        @tty_block_rows = @tty_tape_rows + 1
+      end
+
+      def render_tty_notification_line
+        "\e[1G\e[2K#{truncate_display(@notification, render_width)}\n"
+      end
+
+      def render_tty_tape_rows(rows)
+        rows.map { |line| "\e[1G\e[2K#{line}\n" }.join
       end
 
       def tty_line(member_name)

@@ -40,6 +40,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - TTY release progress now anchors redraws at column one so out-of-band notifications cannot concatenate with event tape rows.
 
+- Keep transient progress notifications on a dedicated line above the event tape with independent row accounting.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03
