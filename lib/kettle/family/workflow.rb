@@ -262,8 +262,16 @@ module Kettle
             phase: "template_autostash_generated_lockfile_recovery",
             command: [
               "sh", "-lc",
-              "paths=$(git diff --name-only --diff-filter=U); " \
-                "git checkout --ours -- $paths && git add -- $paths && " \
+              "set -eu; " \
+                "paths=$(git diff --name-only --diff-filter=U); " \
+                "for path in $paths; do " \
+                "case \"$path\" in " \
+                "Gemfile.lock|Appraisal.root.gemfile.lock|.structuredmerge/kettle-jem.lock) " \
+                "git restore --ours -- \"$path\"; git add -- \"$path\" ;; " \
+                "*) printf 'unresolved non-generated conflict: %s\\n' \"$path\" >&2; exit 1 ;; " \
+                "esac; " \
+                "done; " \
+                "test -z \"$(git diff --name-only --diff-filter=U)\"; " \
                 "git stash drop #{Shellwords.escape(stash.fetch(:ref))}"
             ]
           )

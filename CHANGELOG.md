@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep release secret-provider notifications on the dedicated TTY line.
 
+- Recover autostashes when generated lockfiles cause staged merge conflicts
+
 ### Security
 
 ## [1.2.29] - 2026-08-03
