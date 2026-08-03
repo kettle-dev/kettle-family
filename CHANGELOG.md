@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Recover template autostashes when generated lockfiles are uncommitted.
 
+- Keep release secret-provider notifications on the dedicated TTY line.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03

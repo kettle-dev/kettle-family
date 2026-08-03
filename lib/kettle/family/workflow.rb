@@ -1112,19 +1112,10 @@ module Kettle
         return unless progress
 
         member = release_progress_member_for(member_name)
+        if progress_io && suppress_release_secret_provider_event?(event, progress: progress)
+          return
+        end
         if progress_io
-          if event["type"] == "secret_provider"
-            case event["action"].to_s
-            when "prompt_request", "manual_prompt"
-              progress.notification(secret_provider_notification_label(event))
-            when "prompt_response"
-              progress.notification("")
-            end
-            # Prompt notices are transient operator notifications, not tape
-            # events. Keeping them out of the member row prevents the prompt
-            # text from competing with the fixed-width event tape.
-            return if progress.tty? && !verbose && !debug
-          end
           if verbose || debug
             emit_release_event_progress(member, event)
           elsif progress.tty?
@@ -2406,7 +2397,9 @@ module Kettle
           next false unless event
 
           if progress_io
-            if verbose || debug
+            if suppress_release_secret_provider_event?(event, progress: progress)
+              next true
+            elsif verbose || debug
               emit_release_event_progress(member, event)
             elsif progress&.tty?
               emit_release_event_status(member, event, progress: progress)
@@ -2414,6 +2407,23 @@ module Kettle
           end
           true
         end
+      end
+
+      def suppress_release_secret_provider_event?(event, progress:)
+        return false unless event["type"] == "secret_provider"
+        return false unless progress
+
+        case event["action"].to_s
+        when "prompt_request", "manual_prompt"
+          progress.notification(secret_provider_notification_label(event))
+        when "prompt_response"
+          progress.notification("")
+        end
+
+        # Prompt and provider status are transient operator notifications, not
+        # tape events. Keeping them out of the member row prevents external
+        # prompt output from competing with the fixed-width event tape.
+        progress.tty? && !verbose && !debug
       end
 
       def parse_template_event(line)

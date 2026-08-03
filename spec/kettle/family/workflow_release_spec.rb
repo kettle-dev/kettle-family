@@ -1144,13 +1144,18 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
     updates = []
+    notifications = []
     progress = Class.new do
-      define_method(:initialize) { |target| @target = target }
+      define_method(:initialize) { |target, notification_target|
+        @target = target
+        @notification_target = notification_target
+      }
       define_method(:tty?) { true }
+      define_method(:notification) { |message| @notification_target << message }
       define_method(:update) do |_member, status:, mark:|
         @target << [status, mark]
       end
-    end.new(updates)
+    end.new(updates, notifications)
     workflow = described_class.new(command: "release", config: config, members: [member], progress_io: StringIO.new)
 
     handler = workflow.send(:release_event_line_handler, member, progress: progress)
@@ -1183,9 +1188,10 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(updates).to include(["release", ">"])
     expect(updates).to include(["release:yard:documentation", "."])
-    expect(updates).to include(["secret:prompt_request:👀 🔒 watch for authorization prompt", ">"])
-    expect(updates).to include(["secret:otp_queue:RubyGems MFA prompts:1/4", ">"])
-    expect(updates).to include(["secret:prompt_response:RubyGems MFA code", "."])
+    expect(notifications).to eq(["👀 🔒 watch for authorization prompt", ""])
+    expect(updates).not_to include(["secret:prompt_request:👀 🔒 watch for authorization prompt", ">"])
+    expect(updates).not_to include(["secret:otp_queue:RubyGems MFA prompts:1/4", ">"])
+    expect(updates).not_to include(["secret:prompt_response:RubyGems MFA code", "."])
     expect(updates).to include(["remote:skip:cb", "."])
     expect(updates).to include(["ci:github_started:github:0/2", "."])
     expect(updates).to include(["ci:gitlab_pipeline:gitlab:pipeline", "."])
@@ -1204,7 +1210,10 @@ RSpec.describe Kettle::Family::Workflow do
     notifications = []
     updates = []
     progress = Class.new do
-      define_method(:initialize) { |target, update_target| @target = target; @update_target = update_target }
+      define_method(:initialize) { |target, update_target|
+        @target = target
+        @update_target = update_target
+      }
       define_method(:tty?) { true }
       define_method(:notification) { |message| @target << message }
       define_method(:update) { |_member, status:, mark:| @update_target << [status, mark] }
