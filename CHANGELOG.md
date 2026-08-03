@@ -38,6 +38,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Recognize nested monorepo lockfiles during template autostash recovery
 
+- TTY release progress now anchors redraws at column one so out-of-band notifications cannot concatenate with event tape rows.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03

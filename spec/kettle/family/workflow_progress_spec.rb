@@ -167,6 +167,18 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     expect(output.string.scan("\e[2A").length).to eq(3)
   end
 
+  it "saves the redraw anchor at column one below the notification and tape" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    progress = described_class.new(io: output, label: "releasing", total: 1, jobs: 1, members: [member])
+
+    progress.start
+    progress.update(member, status: "release_publish", mark: ".")
+
+    expect(output.string).to match(/release_publish\s+\e\[1G\e\[s/)
+  end
+
   it "renders readable non-TTY progress lines without requiring flush" do
     output = progress_output_class.new
     member = instance_double(Kettle::Family::Member, name: "alpha")

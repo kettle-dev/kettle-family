@@ -183,8 +183,9 @@ module Kettle
         rows.each do |line|
           output << "\e[1G\e[2K#{line}\n"
         end
-        # Keep a stable cursor anchor at the bottom of the rendered block.
-        output << "\e[s"
+        # LF moves down without necessarily returning to column 1. Reset the
+        # anchor explicitly so external prompt output starts on a fresh line.
+        output << "\e[1G\e[s"
         @io.write(output)
         @io.flush if @io.respond_to?(:flush)
         @tty_rendered = true
