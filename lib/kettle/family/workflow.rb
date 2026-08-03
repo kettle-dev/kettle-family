@@ -266,7 +266,7 @@ module Kettle
                 "paths=$(git diff --name-only --diff-filter=U); " \
                 "for path in $paths; do " \
                 "case \"$path\" in " \
-                "Gemfile.lock|Appraisal.root.gemfile.lock|.structuredmerge/kettle-jem.lock) " \
+                "Gemfile.lock|*/Gemfile.lock|Appraisal.root.gemfile.lock|*/Appraisal.root.gemfile.lock|.structuredmerge/kettle-jem.lock|*/.structuredmerge/kettle-jem.lock) " \
                 "git restore --ours -- \"$path\"; git add -- \"$path\" ;; " \
                 "*) printf 'unresolved non-generated conflict: %s\\n' \"$path\" >&2; exit 1 ;; " \
                 "esac; " \
@@ -288,7 +288,12 @@ module Kettle
 
       def template_generated_lockfile_path?(status_line)
         path = status_line.to_s.sub(/\A.../, "").strip
-        ["Gemfile.lock", ".structuredmerge/kettle-jem.lock"].include?(path)
+        [
+          "Gemfile.lock",
+          "Appraisal.root.gemfile.lock",
+          ".structuredmerge/kettle-jem.lock"
+        ].include?(path) ||
+          path.end_with?("/Gemfile.lock", "/Appraisal.root.gemfile.lock", "/.structuredmerge/kettle-jem.lock")
       end
 
       def rollback_failed_template_worktrees(stashes, workflow_results, runner:)

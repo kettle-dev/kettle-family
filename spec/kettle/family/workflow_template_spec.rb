@@ -1382,6 +1382,17 @@ RSpec.describe Kettle::Family::Workflow do
     expect(`git -C #{member.root} stash list`).to be_empty
   end
 
+  it "recognizes generated lockfiles below a monorepo root" do
+    write_template_config(normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [member])
+
+    expect(workflow.send(:template_generated_lockfile_path?, " M gems/alpha/Gemfile.lock")).to be(true)
+    expect(workflow.send(:template_generated_lockfile_path?, " M gems/alpha/.structuredmerge/kettle-jem.lock")).to be(true)
+    expect(workflow.send(:template_generated_lockfile_path?, " M gems/alpha/README.md")).to be(false)
+  end
+
   it "keeps the generated kettle-jem lockfile when restoring its prior state would conflict" do
     write_template_config(normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)

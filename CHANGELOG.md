@@ -36,6 +36,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Recover autostashes when generated lockfiles cause staged merge conflicts
 
+- Recognize nested monorepo lockfiles during template autostash recovery
+
 ### Security
 
 ## [1.2.29] - 2026-08-03
