@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Roll back failed member template output before restoring an autostash.
 
+- Pass checksum-validation overrides through template command execution.
+
 ### Security
 
 ## [1.2.23] - 2026-08-02

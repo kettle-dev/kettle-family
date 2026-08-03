@@ -2063,6 +2063,7 @@ module Kettle
         {}.tap do |env|
           env.merge!(workflow_family_local_path_env)
           if command == "template"
+            env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
             env["KETTLE_JEM_THREAD_WORKERS"] ||= template_thread_worker_budget.to_s

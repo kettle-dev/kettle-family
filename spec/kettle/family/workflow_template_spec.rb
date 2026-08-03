@@ -307,6 +307,7 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "template", config: config, members: [member_at("alpha"), member_at("beta")], jobs: 2)
 
     expect(workflow.send(:workflow_env).fetch("KETTLE_JEM_THREAD_WORKERS")).to eq("10")
+    expect(workflow.send(:workflow_env).fetch("BUNDLE_DISABLE_CHECKSUM_VALIDATION")).to eq("true")
   end
 
   it "preserves an explicit kettle-jem thread worker override" do
@@ -634,6 +635,7 @@ RSpec.describe Kettle::Family::Workflow do
         "-u",
         "MOLINILLO_DEBUG",
         "#{family_local_env_name}=#{@tmpdir}",
+        "BUNDLE_DISABLE_CHECKSUM_VALIDATION=true",
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
         "KETTLE_JEM_THREAD_WORKERS=#{[1, Etc.nprocessors - 1].max}",
