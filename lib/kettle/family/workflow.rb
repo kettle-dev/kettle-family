@@ -244,14 +244,7 @@ module Kettle
             next runner.call(
               member: stash.fetch(:member),
               phase: "template_autostash_generated_lockfile_recovery",
-              command: [
-                "sh", "-lc",
-                "for path in Gemfile.lock .structuredmerge/kettle-jem.lock; do " \
-                  "if git ls-files --error-unmatch \"$path\" >/dev/null 2>&1; then " \
-                  "git restore --source=HEAD --staged --worktree -- \"$path\"; " \
-                  "else rm -f -- \"$path\"; fi; done; " \
-                  "git stash pop #{Shellwords.escape(stash.fetch(:ref))}"
-              ]
+              command: template_generated_lockfile_restore_command(stash)
             )
           end
 
@@ -284,6 +277,26 @@ module Kettle
 
         dirty_paths = GitStatus.dirty_paths(member.root)
         dirty_paths.any? && dirty_paths.all? { |path| template_generated_lockfile_path?(path) }
+      end
+
+      def template_generated_lockfile_restore_command(stash)
+        member = stash.fetch(:member)
+        generated_paths = GitStatus.dirty_paths(member.root).filter_map do |status_line|
+          path = status_line.to_s.sub(/\A.../, "").strip
+          path if template_generated_lockfile_path?(status_line)
+        end.uniq
+        reset_commands = generated_paths.map do |path|
+          escaped_path = Shellwords.escape(path)
+          "if git ls-files --error-unmatch #{escaped_path} >/dev/null 2>&1; then " \
+            "git restore --source=HEAD --staged --worktree -- #{escaped_path}; " \
+            "else rm -f -- #{escaped_path}; fi"
+        end
+
+        [
+          "sh",
+          "-lc",
+          "set -eu; #{reset_commands.join('; ')}; git stash pop #{Shellwords.escape(stash.fetch(:ref))}"
+        ]
       end
 
       def template_generated_lockfile_path?(status_line)
@@ -319,7 +332,7 @@ module Kettle
       def template_generated_lockfile_only_conflict?(member)
         stdout, _stderr, status = Open3.capture3("git", "diff", "--name-only", "--diff-filter=U", chdir: member.root)
         conflicts = stdout.lines.map(&:strip).reject(&:empty?).sort
-        status.success? && !conflicts.empty? && conflicts.all? { |path| ["Gemfile.lock", ".structuredmerge/kettle-jem.lock"].include?(path) }
+        status.success? && !conflicts.empty? && conflicts.all? { |path| template_generated_lockfile_path?(" M #{path}") }
       end
 
       def template_branch_sync_results(branch_members, runner:)

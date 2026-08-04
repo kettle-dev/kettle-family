@@ -1381,6 +1381,40 @@ RSpec.describe Kettle::Family::Workflow do
     expect(`git -C #{member.root} diff --name-only --diff-filter=U`).to be_empty
   end
 
+  it "restores all generated lockfiles before popping a monorepo autostash" do
+    write_template_config(normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = Kettle::Family::Member.new(
+      name: "monorepo",
+      root: @tmpdir,
+      gemspec_path: File.join(@tmpdir, "monorepo.gemspec"),
+      version: "1.0.0",
+      dependencies: []
+    )
+    initialize_git_repo(@tmpdir, branches: [])
+    lockfiles = ["gems/alpha/Gemfile.lock", "gems/beta/Gemfile.lock"]
+    lockfiles.each do |path|
+      FileUtils.mkdir_p(File.dirname(File.join(@tmpdir, path)))
+      File.write(File.join(@tmpdir, path), "base\n")
+    end
+    run_git(@tmpdir, "add", ".")
+    run_git(@tmpdir, "commit", "--quiet", "-m", "Track member lockfiles")
+    lockfiles.each { |path| File.write(File.join(@tmpdir, path), "local\n") }
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
+    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
+    lockfiles.each { |path| File.write(File.join(@tmpdir, path), "generated\n") }
+    run_git(@tmpdir, "add", ".")
+    run_git(@tmpdir, "commit", "--quiet", "-m", "Template member lockfiles")
+
+    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
+
+    expect(restores).to all(be_ok), restores.map { |result| [result.stdout, result.stderr].join("\n") }.join("\n")
+    lockfiles.each { |path| expect(File.read(File.join(@tmpdir, path))).to eq("generated\n") }
+    expect(`git -C #{Shellwords.escape(@tmpdir)} stash list`).to be_empty
+  end
+
   it "resolves a partially applied autostash conflict for a generated lockfile" do
     write_template_config(normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
