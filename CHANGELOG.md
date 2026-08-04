@@ -58,6 +58,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Restore all generated lockfiles during monorepo template autostash recovery.
 
+- Recover nested monorepo autostashes from the repository root.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03

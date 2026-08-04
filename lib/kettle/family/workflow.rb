@@ -255,7 +255,7 @@ module Kettle
             phase: "template_autostash_generated_lockfile_recovery",
             command: [
               "sh", "-lc",
-              "set -eu; " \
+              "set -eu; cd \"$(git rev-parse --show-toplevel)\"; " \
                 "paths=$(git diff --name-only --diff-filter=U); " \
                 "for path in $paths; do " \
                 "case \"$path\" in " \
@@ -295,7 +295,8 @@ module Kettle
         [
           "sh",
           "-lc",
-          "set -eu; #{reset_commands.join('; ')}; git stash pop #{Shellwords.escape(stash.fetch(:ref))}"
+          "set -eu; cd \"$(git rev-parse --show-toplevel)\"; " \
+            "#{reset_commands.join('; ')}; git stash pop #{Shellwords.escape(stash.fetch(:ref))}"
         ]
       end
 

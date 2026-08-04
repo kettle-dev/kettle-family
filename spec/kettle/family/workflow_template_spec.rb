@@ -1415,6 +1415,41 @@ RSpec.describe Kettle::Family::Workflow do
     expect(`git -C #{Shellwords.escape(@tmpdir)} stash list`).to be_empty
   end
 
+  it "restores nested monorepo lockfiles from the repository root" do
+    write_template_config(normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member_root = File.join(@tmpdir, "gems", "alpha")
+    FileUtils.mkdir_p(member_root)
+    member = Kettle::Family::Member.new(
+      name: "alpha",
+      root: member_root,
+      gemspec_path: File.join(member_root, "alpha.gemspec"),
+      version: "1.0.0",
+      dependencies: []
+    )
+    File.write(File.join(@tmpdir, "README.md"), "root\n")
+    File.write(File.join(member_root, "Gemfile.lock"), "base\n")
+    run_git(@tmpdir, "init", "--quiet")
+    run_git(@tmpdir, "config", "user.email", "kettle-family@example.test")
+    run_git(@tmpdir, "config", "user.name", "Kettle Family")
+    run_git(@tmpdir, "add", ".")
+    run_git(@tmpdir, "commit", "--quiet", "-m", "Initial")
+    File.write(File.join(member_root, "Gemfile.lock"), "local\n")
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
+    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
+    File.write(File.join(member_root, "Gemfile.lock"), "generated\n")
+    run_git(@tmpdir, "add", "gems/alpha/Gemfile.lock")
+    run_git(@tmpdir, "commit", "--quiet", "-m", "Template lockfile")
+
+    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
+
+    expect(restores).to all(be_ok), restores.map { |result| [result.stdout, result.stderr].join("\n") }.join("\n")
+    expect(File.read(File.join(member_root, "Gemfile.lock"))).to eq("generated\n")
+    expect(`git -C #{Shellwords.escape(@tmpdir)} stash list`).to be_empty
+  end
+
   it "resolves a partially applied autostash conflict for a generated lockfile" do
     write_template_config(normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
