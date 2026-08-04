@@ -296,7 +296,7 @@ module Kettle
           "sh",
           "-lc",
           "set -eu; cd \"$(git rev-parse --show-toplevel)\"; " \
-            "#{reset_commands.join('; ')}; git stash pop #{Shellwords.escape(stash.fetch(:ref))}"
+            "#{reset_commands.join("; ")}; git stash pop #{Shellwords.escape(stash.fetch(:ref))}"
         ]
       end
 
