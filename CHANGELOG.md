@@ -54,6 +54,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Forward --events so state analysis is streamed as NDJSON instead of falling back to the text report.
 
+- Separate state analysis progress from the final release-state report on TTY output.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03

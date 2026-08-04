@@ -1480,6 +1480,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("release state 1 member:")
     expect(out.string).to include("alpha")
     expect(out.string.index("release state 1 member:")).to be < out.string.index("release state:\n")
+    expect(out.string).to include("\e[1G\e[s\nkettle-family:")
   end
 
   it "does not require dependency ordering for release-state reports" do

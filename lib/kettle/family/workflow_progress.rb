@@ -123,6 +123,21 @@ module Kettle
         end
       end
 
+      # Finish a TTY progress block before the caller prints a second report.
+      # The blank line keeps the final report physically separate from the
+      # redraw block instead of making the terminal cursor its first row.
+      def finish
+        return unless @enabled
+
+        synchronize do
+          next if @stopped
+
+          render_tty_block if @tty && @started && !@line_order.empty?
+          write_line("") if @tty && @started
+          @stopped = true
+        end
+      end
+
       def tty?
         @tty
       end

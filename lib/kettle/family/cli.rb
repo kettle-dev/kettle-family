@@ -668,7 +668,7 @@ module Kettle
           start_at: start_at,
           state_event_handler: state_event_handler
         )
-        state_progress&.stop
+        state_progress&.finish
         elapsed_seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
         Report.new(
           family_name: config.family_name,
