@@ -375,7 +375,7 @@ module Kettle
       class GhaShaPins < WorkflowCommand
         command_name "gha-sha-pins"
         usage "[options]"
-        description "Plan or execute kettle-gha-sha-pins per member."
+        description "Plan or execute kettle-gha-pins per member."
 
         option :check, desc: "Check whether SHA pins would need edits"
         option :upgrade, value: {type: String, usage: "LEVEL"}, desc: "SHA pin upgrade strategy: major, minor, patch" do |value|

@@ -23,7 +23,7 @@ module Kettle
         "test" => "bundle exec kettle-test",
         "lint" => "bundle exec rake rubocop_gradual",
         "docs" => "bundle exec rake yard",
-        "gha-sha-pins" => "bundle exec kettle-gha-sha-pins",
+        "gha-sha-pins" => "bundle exec kettle-gha-pins",
         "sync" => [
           "sh",
           "-lc",

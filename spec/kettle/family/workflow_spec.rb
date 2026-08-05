@@ -281,7 +281,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "gha-sha-pins", config: config, members: [member]).results
 
     expect(results.first.phase).to eq("gha-sha-pins")
-    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-sha-pins --write --upgrade patch"])
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-pins --write --upgrade patch"])
   end
 
   it "plans full bundle updates by default" do
@@ -437,7 +437,7 @@ RSpec.describe Kettle::Family::Workflow do
       gha_sha_pins_upgrade: "minor"
     ).results
 
-    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-sha-pins --check --upgrade minor"])
+    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-pins --check --upgrade minor"])
   end
 
   it "plans member workflow commands across member-local target branches" do

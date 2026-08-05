@@ -431,7 +431,7 @@ RSpec.describe Kettle::Family::Report do
       == kettle-release v2.3.8 ==
       Running pre-release checks via kettle-pre-release...
       GitHub Actions SHA pin validation failed
-      Recommended fix: kettle-gha-sha-pins --write --upgrade major
+      Recommended fix: kettle-gha-pins --write --upgrade major
       kettle-release: exited (status=1, msg=GitHub Actions SHA pin validation failed)
     TEXT
     result = Kettle::Family::CommandResult.new(
@@ -464,7 +464,7 @@ RSpec.describe Kettle::Family::Report do
     text = report.to_text
 
     expect(text).to include("summary: kettle-release: exited (status=1, msg=GitHub Actions SHA pin validation failed)")
-    expect(text).to include("recommended fix: kettle-gha-sha-pins --write --upgrade major")
+    expect(text).to include("recommended fix: kettle-gha-pins --write --upgrade major")
     expect(text).to include("log: /repo/alpha/tmp/kettle-family/release/alpha-release_publish.log")
     expect(text).to include("output: omitted because it was already streamed")
     expect(text).not_to include("Running pre-release checks via kettle-pre-release")

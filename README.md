@@ -387,6 +387,10 @@ kettle-family gha-sha-pins --execute
 kettle-family gha-sha-pins --execute --upgrade minor
 ```
 
+The family command name is retained for compatibility, but it delegates to
+the current `kettle-gha-pins` executable for each selected member. The older
+`kettle-gha-sha-pins` executable is a legacy direct entrypoint.
+
 Run release prep/build phases without publishing:
 
 ```console
