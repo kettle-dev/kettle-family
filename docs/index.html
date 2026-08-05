@@ -130,7 +130,7 @@ provider supplies them.</p>
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.254-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.288-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -521,6 +521,7 @@ kettle-family release
 
 <pre class="code language-console"><code class="language-console">kettle-family release-state
 kettle-family state
+kettle-family state --jobs 8
 </code></pre>
 
 <p><code>state</code> is an alias for <code>release-state</code>. The release-state report lists each<br>
@@ -585,6 +586,10 @@ kettle-family release --execute --only unreleased,pending
 <p>When <code>--only</code> is omitted, <code>kettle-family bump</code> defaults to <code>--only bump</code> and<br>
 <code>kettle-family release</code> defaults to <code>--only pending</code>.</p>
 
+<p>State checks run concurrently by default, using up to four jobs or the number<br>
+of available CPU cores, whichever is lower. Use <code>--jobs N</code> to set an explicit<br>
+limit; results remain in family order.</p>
+
 <p>Most commands accept <code>--json</code> to print a machine-readable report instead of the<br>
 text report, and <code>--report PATH</code> to write that JSON report while still printing<br>
 the normal text report.</p>
@@ -596,6 +601,10 @@ members:</p>
 kettle-family gha-sha-pins --execute
 kettle-family gha-sha-pins --execute --upgrade minor
 </code></pre>
+
+<p>The family command name is retained for compatibility, but it delegates to<br>
+the current <code>kettle-gha-pins</code> executable for each selected member. The older<br>
+<code>kettle-gha-sha-pins</code> executable is a legacy direct entrypoint.</p>
 
 <p>Run release prep/build phases without publishing:</p>
 

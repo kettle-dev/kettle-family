@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.31] - 2026-08-05
+
+- TAG: [v1.2.31][1.2.31t]
+- COVERAGE: 94.10% -- 4976/5288 lines in 32 files
+- BRANCH COVERAGE: 76.53% -- 1969/2573 branches in 32 files
+- 29.61% documented
+
+### Fixed
+
 - Route kettle-family GHA pin maintenance through kettle-gha-pins instead of the legacy kettle-gha-sha-pins executable.
 
 - Run kettle-family release-state checks concurrently with --jobs while preserving ordered results.
-
-### Security
 
 ## [1.2.30] - 2026-08-04
 
@@ -1791,7 +1800,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.30...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.31...HEAD
+[1.2.31]: https://github.com/kettle-dev/kettle-family/compare/v1.2.30...v1.2.31
+[1.2.31t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.31
 [1.2.30]: https://github.com/kettle-dev/kettle-family/compare/v1.2.29...v1.2.30
 [1.2.30t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.30
 [1.2.29]: https://github.com/kettle-dev/kettle-family/compare/v1.2.28...v1.2.29

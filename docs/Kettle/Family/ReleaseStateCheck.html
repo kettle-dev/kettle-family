@@ -126,6 +126,11 @@
         </dt>
         <dd><pre class="code"><span class='const'>Object</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
+        <dt id="CACHE_MISS-constant" class="">CACHE_MISS =
+          
+        </dt>
+        <dd><pre class="code"><span class='const'>Object</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
     </dl>
   
 
@@ -146,7 +151,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(members:, config: nil)  &#x21d2; ReleaseStateCheck </a>
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(members:, config: nil, jobs: nil)  &#x21d2; ReleaseStateCheck </a>
     
 
     
@@ -201,7 +206,7 @@
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(members:, config: nil)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::ReleaseStateCheck (class)">ReleaseStateCheck</a></span></tt> 
+    #<strong>initialize</strong>(members:, config: nil, jobs: nil)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::ReleaseStateCheck (class)">ReleaseStateCheck</a></span></tt> 
   
 
   
@@ -223,25 +228,31 @@
       <pre class="lines">
 
 
-22
-23
 24
 25
 26
 27
 28
-29</pre>
+29
+30
+31
+32
+33
+34</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 22</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 24</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>jobs:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
+  <span class='ivar'>@jobs</span> <span class='op'>=</span> <span class='id identifier rubyid_jobs'>jobs</span>
   <span class='ivar'>@github_latest_release_by_repo</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_status_by_root</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_lag_by_key</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_total_count</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#TRANSFER_CHANGELOG_TOTAL_UNSET-constant" title="Kettle::Family::ReleaseStateCheck::TRANSFER_CHANGELOG_TOTAL_UNSET (constant)">TRANSFER_CHANGELOG_TOTAL_UNSET</a></span></span>
+  <span class='ivar'>@cache_mutex</span> <span class='op'>=</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
+  <span class='ivar'>@transfer_changelog_total_mutex</span> <span class='op'>=</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -270,11 +281,6 @@
       <pre class="lines">
 
 
-31
-32
-33
-34
-35
 36
 37
 38
@@ -282,23 +288,22 @@
 40
 41
 42
-43</pre>
+43
+44
+45</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 31</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 36</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_members'>members</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span> <span class='id identifier rubyid_check_shared_changelog_member_or_local'>check_shared_changelog_member_or_local</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='rbrace'>}</span> <span class='kw'>if</span> <span class='id identifier rubyid_shared_changelog?'>shared_changelog?</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_parallel_map'>parallel_map</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span> <span class='id identifier rubyid_check_shared_changelog_member_or_local'>check_shared_changelog_member_or_local</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='rbrace'>}</span> <span class='kw'>if</span> <span class='id identifier rubyid_shared_changelog?'>shared_changelog?</span>
 
-  <span class='id identifier rubyid_members'>members</span><span class='period'>.</span><span class='id identifier rubyid_each_with_object'>each_with_object</span><span class='lparen'>(</span><span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='id identifier rubyid_memo'>memo</span><span class='op'>|</span>
+  <span class='id identifier rubyid_member_results'>member_results</span> <span class='op'>=</span> <span class='id identifier rubyid_parallel_map'>parallel_map</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span>
     <span class='id identifier rubyid_member_branch_results'>member_branch_results</span> <span class='op'>=</span> <span class='id identifier rubyid_member_local_branch_results'>member_local_branch_results</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span>
-    <span class='kw'>if</span> <span class='id identifier rubyid_member_branch_results'>member_branch_results</span>
-      <span class='id identifier rubyid_memo'>memo</span><span class='period'>.</span><span class='id identifier rubyid_concat'>concat</span><span class='lparen'>(</span><span class='id identifier rubyid_member_branch_results'>member_branch_results</span><span class='rparen'>)</span>
-    <span class='kw'>else</span>
-      <span class='id identifier rubyid_memo'>memo</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_check_member'>check_member</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span>
-    <span class='kw'>end</span>
+    <span class='id identifier rubyid_member_branch_results'>member_branch_results</span> <span class='op'>||</span> <span class='id identifier rubyid_check_member'>check_member</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span>
   <span class='kw'>end</span>
+  <span class='id identifier rubyid_member_results'>member_results</span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_result'>result</span><span class='op'>|</span> <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_result'>result</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
