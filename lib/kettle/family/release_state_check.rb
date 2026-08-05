@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "etc"
 require "fileutils"
 require "open3"
 require "rbconfig"
@@ -18,33 +19,38 @@ module Kettle
         ".kettle-jem.yml"
       ].freeze
       TRANSFER_CHANGELOG_TOTAL_UNSET = Object.new.freeze
+      CACHE_MISS = Object.new.freeze
 
-      def initialize(members:, config: nil)
+      def initialize(members:, config: nil, jobs: nil)
         @members = members
         @config = config
+        @jobs = jobs
         @github_latest_release_by_repo = {}
         @transfer_changelog_status_by_root = {}
         @transfer_changelog_lag_by_key = {}
         @transfer_changelog_total_count = TRANSFER_CHANGELOG_TOTAL_UNSET
+        @cache_mutex = Mutex.new
+        @transfer_changelog_total_mutex = Mutex.new
       end
 
       def results(event_handler: nil)
         return branch_results(event_handler: event_handler) unless release_target_branches.empty?
-        return members.map { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) } if shared_changelog?
+        return parallel_map(members) { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) } if shared_changelog?
 
-        members.each_with_object([]) do |member, memo|
+        member_results = parallel_map(members) do |member|
           member_branch_results = member_local_branch_results(member, event_handler: event_handler)
           if member_branch_results
-            memo.concat(member_branch_results)
+            member_branch_results
           else
-            memo << check_member(member, event_handler: event_handler)
+            check_member(member, event_handler: event_handler)
           end
         end
+        member_results.flat_map { |result| Array(result) }
       end
 
       private
 
-      attr_reader :members, :config
+      attr_reader :members, :config, :jobs
 
       def branch_results(event_handler: nil)
         root = git_root
@@ -53,11 +59,11 @@ module Kettle
           with_branch_worktree(root: root, branch: branch) do |worktree_root|
             branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
             if shared_changelog?
-              memo.concat(branch_members.map { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) })
+              memo.concat(parallel_map(branch_members) { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) })
               next
             end
 
-            memo.concat(branch_members.map { |member| check_member(member, branch: branch, event_handler: event_handler) })
+            memo.concat(parallel_map(branch_members) { |member| check_member(member, branch: branch, event_handler: event_handler) })
           end
         rescue Error => error
           memo << error_result(branch: branch, error: error)
@@ -418,8 +424,8 @@ module Kettle
 
       def transfer_changelog_lag(last_entry_key)
         cache_key = last_entry_key.to_s
-        @transfer_changelog_lag_by_key.fetch(cache_key) do
-          @transfer_changelog_lag_by_key[cache_key] = in_process_transfer_changelog_lag(last_entry_key) || external_transfer_changelog_lag(cache_key)
+        cached_value(@transfer_changelog_lag_by_key, cache_key) do
+          in_process_transfer_changelog_lag(last_entry_key) || external_transfer_changelog_lag(cache_key)
         end
       rescue
         nil
@@ -427,18 +433,20 @@ module Kettle
 
       def transfer_changelog_status(root)
         cache_key = File.expand_path(root.to_s)
-        @transfer_changelog_status_by_root.fetch(cache_key) do
-          @transfer_changelog_status_by_root[cache_key] = in_process_transfer_changelog_status(cache_key) || external_transfer_changelog_status(cache_key)
+        cached_value(@transfer_changelog_status_by_root, cache_key) do
+          in_process_transfer_changelog_status(cache_key) || external_transfer_changelog_status(cache_key)
         end
       rescue
         nil
       end
 
       def transfer_changelog_total_count
-        return @transfer_changelog_total_count unless @transfer_changelog_total_count.equal?(TRANSFER_CHANGELOG_TOTAL_UNSET)
+        @transfer_changelog_total_mutex.synchronize do
+          return @transfer_changelog_total_count unless @transfer_changelog_total_count.equal?(TRANSFER_CHANGELOG_TOTAL_UNSET)
 
-        total_lag = transfer_changelog_lag(nil)
-        @transfer_changelog_total_count = total_lag ? total_lag.fetch("missing_count", 0).to_i : nil
+          total_lag = transfer_changelog_lag(nil)
+          @transfer_changelog_total_count = total_lag ? total_lag.fetch("missing_count", 0).to_i : nil
+        end
       end
 
       def in_process_transfer_changelog_lag(last_entry_key)
@@ -509,13 +517,60 @@ module Kettle
         repo = github_repo_slug(root)
         return nil unless repo
 
-        @github_latest_release_by_repo.fetch(repo) do
+        cached_value(@github_latest_release_by_repo, repo) do
           stdout, _stderr, status = Open3.capture3("gh", "release", "view", "--repo", repo, "--json", "tagName", "--jq", ".tagName")
-          tag = status.success? ? normalize_github_release_tag(stdout) : nil
-          @github_latest_release_by_repo[repo] = tag
+          status.success? ? normalize_github_release_tag(stdout) : nil
         end
       rescue SystemCallError
         nil
+      end
+
+      def cached_value(cache, key)
+        cached = @cache_mutex.synchronize { cache.fetch(key, CACHE_MISS) }
+        return cached unless cached.equal?(CACHE_MISS)
+
+        value = yield
+        @cache_mutex.synchronize do
+          cache[key] = value unless cache.key?(key)
+          cache.fetch(key)
+        end
+      end
+
+      def state_jobs(items)
+        return 1 if items.length < 2
+
+        requested = jobs || [Etc.nprocessors, 4].min
+        requested.to_i.clamp(1, items.length)
+      end
+
+      def parallel_map(items, &block)
+        return [] if items.empty?
+
+        worker_count = state_jobs(items)
+        return items.map { |item| block.call(item) } if worker_count == 1
+
+        queue = Queue.new
+        items.each_with_index { |item, index| queue << [index, item] }
+        results = Array.new(items.length)
+        errors = []
+        errors_mutex = Mutex.new
+        workers = Array.new(worker_count) do
+          Thread.new do
+            loop do
+              index, item = queue.pop(true)
+              results[index] = block.call(item)
+            rescue ThreadError
+              break
+            rescue StandardError => error
+              errors_mutex.synchronize { errors << error }
+              break
+            end
+          end
+        end
+        workers.each(&:join)
+        raise errors.first unless errors.empty?
+
+        results
       end
 
       def normalize_github_release_tag(value)

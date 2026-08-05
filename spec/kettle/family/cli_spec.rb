@@ -1419,6 +1419,17 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("command: release-state")
   end
 
+  it "passes --jobs through to release-state checks" do
+    write_ready_gem("alpha")
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: [])
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+
+    status = described_class.call(["state", "--root", @tmpdir, "--jobs", "2", "--json"], out: StringIO.new, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(Kettle::Family::ReleaseStateCheck).to have_received(:new).with(hash_including(jobs: 2))
+  end
+
   it "streams state analysis and its final report as NDJSON when events are requested" do
     write_gem("alpha")
     result = Kettle::Family::ReleaseStateResult.new(

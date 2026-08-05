@@ -68,11 +68,17 @@ module Kettle
         end
       end
 
+      module ParallelOptions
+        def self.included(base)
+          base.option :jobs, value: {type: Integer, usage: "N"}, desc: "Parallel jobs for supported workflows"
+        end
+      end
+
       module WorkflowOptions
         def self.included(base)
           base.option :debug, desc: "Preserve debug environment for workflow commands"
           base.option :verbose, desc: "Pass verbose mode through to supported workflow commands"
-          base.option :jobs, value: {type: Integer, usage: "N"}, desc: "Parallel jobs for supported executed workflows"
+          ParallelOptions.included(base)
           base.option :env, value: {type: String, usage: "KEY=VALUE"}, desc: "Override an environment variable for each member workflow command" do |value|
             parse_env_override(value, workflow_env)
           end
@@ -279,6 +285,8 @@ module Kettle
       end
 
       class ReleaseState < BaseCommand
+        include ParallelOptions
+
         command_name "release-state"
         usage "[options]"
         description "Report changelog release state for family members."
@@ -646,7 +654,7 @@ module Kettle
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
         state_event_tape = release_state_event_tape(command: command, config: config, options: options)
-        release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only)
+        release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only, jobs: options[:jobs])
         selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
         display_members = display_members_for(command: command, config: config, members: ordered, selected_members: selected)
@@ -698,10 +706,10 @@ module Kettle
         command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at, state_event_handler: state_event_handler)
       end
 
-      def release_state_results_for_selection(config:, members:, only:)
+      def release_state_results_for_selection(config:, members:, only:, jobs: nil)
         return nil unless only.to_s.split(",").map(&:strip).any? { |token| Selection.status_token?(token) }
 
-        ReleaseStateCheck.new(config: config, members: members).results
+        ReleaseStateCheck.new(config: config, members: members, jobs: jobs).results
       end
 
       def default_only_filter(command:, only:)
@@ -743,7 +751,7 @@ module Kettle
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
         return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
-        return release_state_results(config: config, members: members, event_handler: state_event_handler) if command == "release-state"
+        return release_state_results(config: config, members: members, jobs: options[:jobs], event_handler: state_event_handler) if command == "release-state"
         return install_results(config: config, members: members, options: options) if command == "install"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
@@ -1089,8 +1097,8 @@ module Kettle
         LocalInstall.new(config: config, members: members, execute: options[:execute], jobs: options[:jobs]).results
       end
 
-      def release_state_results(config:, members:, event_handler: nil)
-        ReleaseStateCheck.new(config: config, members: members).results(event_handler: event_handler)
+      def release_state_results(config:, members:, jobs: nil, event_handler: nil)
+        ReleaseStateCheck.new(config: config, members: members, jobs: jobs).results(event_handler: event_handler)
       end
 
       def release_state_event_tape(command:, config:, options:)

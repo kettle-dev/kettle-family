@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Route kettle-family GHA pin maintenance through kettle-gha-pins instead of the legacy kettle-gha-sha-pins executable.
 
+- Run kettle-family release-state checks concurrently with --jobs while preserving ordered results.
+
 ### Security
 
 ## [1.2.30] - 2026-08-04

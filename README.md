@@ -329,6 +329,7 @@ Audit changelog release state across the selected family members:
 ```console
 kettle-family release-state
 kettle-family state
+kettle-family state --jobs 8
 ```
 
 `state` is an alias for `release-state`. The release-state report lists each
@@ -373,6 +374,10 @@ The supported release-state tokens are:
 
 When `--only` is omitted, `kettle-family bump` defaults to `--only bump` and
 `kettle-family release` defaults to `--only pending`.
+
+State checks run concurrently by default, using up to four jobs or the number
+of available CPU cores, whichever is lower. Use `--jobs N` to set an explicit
+limit; results remain in family order.
 
 Most commands accept `--json` to print a machine-readable report instead of the
 text report, and `--report PATH` to write that JSON report while still printing

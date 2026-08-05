@@ -35,6 +35,32 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true, "bump_release_pending" => false)
   end
 
+  it "runs state checks in parallel with explicit jobs while preserving order" do
+    check = described_class.new(members: [member("alpha"), member("beta")], jobs: 2)
+    started = Queue.new
+    release = Queue.new
+
+    worker = Thread.new do
+      check.send(:parallel_map, %w[alpha beta]) do |name|
+        started << name
+        release.pop
+        name
+      end
+    end
+
+    expect([started.pop, started.pop]).to contain_exactly("alpha", "beta")
+    release << true
+    release << true
+    expect(worker.value).to eq(%w[alpha beta])
+  end
+
+  it "defaults state checks to at most four jobs" do
+    allow(Etc).to receive(:nprocessors).and_return(22)
+    check = described_class.new(members: Array.new(6) { |index| member("member-#{index}") })
+
+    expect(check.send(:state_jobs, check.send(:members))).to eq(4)
+  end
+
   it "marks bump release pending when unreleased entries exist without a version bump" do
     member = member("alpha")
     state = {
@@ -559,10 +585,16 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       "K_CHANGELOG_GEM_NAME" => "family",
       "K_CHANGELOG_VERSION_FILE" => File.join(@tmpdir, "VERSION.rb")
     })
-    allow(Open3).to receive(:capture3).and_return(
-      [JSON.generate("gem_name" => "alpha", "version" => "1.0.0", "latest_released" => "1.0.0", "pending_release" => false), "", status(0, true)],
-      [JSON.generate("gem_name" => "beta", "version" => "2.0.0", "latest_released" => "1.9.0", "pending_release" => true), "", status(0, true)]
-    )
+    allow(Open3).to receive(:capture3) do |env, *_command, chdir:|
+      next ["", "", status(0, true)] unless env.is_a?(Hash)
+
+      state = if env.fetch("K_CHANGELOG_GEM_NAME") == "alpha"
+        {"gem_name" => "alpha", "version" => "1.0.0", "latest_released" => "1.0.0", "pending_release" => false}
+      else
+        {"gem_name" => "beta", "version" => "2.0.0", "latest_released" => "1.9.0", "pending_release" => true}
+      end
+      [JSON.generate(state), "", status(0, true)]
+    end
 
     results = described_class.new(config: config, members: [alpha, beta]).results
 
