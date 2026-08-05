@@ -154,21 +154,23 @@
       <pre class="lines">
 
 
-30
 31
 32
 33
 34
-35</pre>
+35
+36
+37</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 30</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 31</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_included'>included</span><span class='lparen'>(</span><span class='id identifier rubyid_base'>base</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:root</span><span class='comma'>,</span> <span class='label'>value:</span> <span class='lbrace'>{</span><span class='label'>type:</span> <span class='const'>String</span><span class='comma'>,</span> <span class='label'>usage:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>PATH</span><span class='tstring_end'>&quot;</span></span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Workspace or family root</span><span class='tstring_end'>&quot;</span></span>
   <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:config</span><span class='comma'>,</span> <span class='label'>value:</span> <span class='lbrace'>{</span><span class='label'>type:</span> <span class='const'>String</span><span class='comma'>,</span> <span class='label'>usage:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>PATH</span><span class='tstring_end'>&quot;</span></span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Family config path</span><span class='tstring_end'>&quot;</span></span>
   <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:json</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Print JSON report to stdout</span><span class='tstring_end'>&quot;</span></span>
   <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:report</span><span class='comma'>,</span> <span class='label'>value:</span> <span class='lbrace'>{</span><span class='label'>type:</span> <span class='const'>String</span><span class='comma'>,</span> <span class='label'>usage:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>PATH</span><span class='tstring_end'>&quot;</span></span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Write JSON report to PATH</span><span class='tstring_end'>&quot;</span></span>
+  <span class='id identifier rubyid_base'>base</span><span class='period'>.</span><span class='id identifier rubyid_option'>option</span> <span class='symbol'>:events</span><span class='comma'>,</span> <span class='label'>desc:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Stream release-state analysis as NDJSON</span><span class='tstring_end'>&quot;</span></span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>

@@ -20,15 +20,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Emit per-member NDJSON event tapes while deriving release state.
-
-- Render plain state analysis as stable per-member TTY progress rows before the final release-state table.
-
 ### Changed
 
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.30] - 2026-08-04
+
+- TAG: [v1.2.30][1.2.30t]
+- COVERAGE: 94.10% -- 4944/5254 lines in 32 files
+- BRANCH COVERAGE: 76.51% -- 1964/2567 branches in 32 files
+- 29.86% documented
+
+### Added
+
+- Emit per-member NDJSON event tapes while deriving release state.
+
+- Render plain state analysis as stable per-member TTY progress rows before the final release-state table.
 
 ### Fixed
 
@@ -61,8 +74,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Recover nested monorepo autostashes from the repository root.
 
 - Restore generated Gemfile.lock files between branch-matrix test and lint targets.
-
-### Security
 
 ## [1.2.29] - 2026-08-03
 
@@ -1776,7 +1787,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.29...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.30...HEAD
+[1.2.30]: https://github.com/kettle-dev/kettle-family/compare/v1.2.29...v1.2.30
+[1.2.30t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.30
 [1.2.29]: https://github.com/kettle-dev/kettle-family/compare/v1.2.28...v1.2.29
 [1.2.29t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.29
 [1.2.28]: https://github.com/kettle-dev/kettle-family/compare/v1.2.27...v1.2.28
