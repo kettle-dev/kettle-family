@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- bupb now updates Appraisal.root.gemfile.lock and resets generated appraisal lockfiles through appraisal:reset
-
 ### Security
+
+## [1.2.32] - 2026-08-05
+
+- TAG: [v1.2.32][1.2.32t]
+- COVERAGE: 94.11% -- 4983/5295 lines in 32 files
+- BRANCH COVERAGE: 76.52% -- 1975/2581 branches in 32 files
+- 29.61% documented
+
+### Fixed
+
+- bupb now updates Appraisal.root.gemfile.lock and resets generated appraisal lockfiles through appraisal:reset
 
 ## [1.2.31] - 2026-08-05
 
@@ -1802,7 +1811,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.31...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.32...HEAD
+[1.2.32]: https://github.com/kettle-dev/kettle-family/compare/v1.2.31...v1.2.32
+[1.2.32t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.32
 [1.2.31]: https://github.com/kettle-dev/kettle-family/compare/v1.2.30...v1.2.31
 [1.2.31t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.31
 [1.2.30]: https://github.com/kettle-dev/kettle-family/compare/v1.2.29...v1.2.30
