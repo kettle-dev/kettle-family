@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- bupb now updates Appraisal.root.gemfile.lock and resets generated appraisal lockfiles through appraisal:reset
+
 ### Security
 
 ## [1.2.31] - 2026-08-05

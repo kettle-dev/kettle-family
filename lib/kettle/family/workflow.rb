@@ -453,7 +453,10 @@ module Kettle
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
           commit_gha_sha_pins(member: member, runner: runner, memo: memo) if command == "gha-sha-pins"
-          if %w[bup bupb].include?(command) && validate_bundle_update_lockfile(member: member, memo: memo)
+          if command == "bupb"
+            bupb_appraisal_results(member: member, runner: runner, memo: memo)
+          end
+          if %w[bup bupb].include?(command) && memo.last&.ok? && validate_bundle_update_lockfile(member: member, memo: memo)
             commit_bundle_update(member: member, runner: runner, memo: memo)
           end
           commit_bex_changes(member: member, runner: runner, memo: memo) if command == "bex"
@@ -2104,6 +2107,28 @@ module Kettle
         return ["bundle", "update", "--all"] if args.empty?
 
         ["bundle", "update", *args]
+      end
+
+      def bupb_appraisal_results(member:, runner:, memo:)
+        return unless File.file?(File.join(member.root, "Appraisal.root.gemfile"))
+
+        memo << runner.call(
+          member: member,
+          phase: "bupb_appraisal_root",
+          command: DEFAULT_COMMANDS.fetch("bupb"),
+          env: bundle_update_env.merge(
+            "BUNDLE_GEMFILE" => "Appraisal.root.gemfile",
+            "BUNDLE_LOCKFILE" => "Appraisal.root.gemfile.lock"
+          )
+        )
+        return unless memo.last.ok?
+
+        memo << runner.call(
+          member: member,
+          phase: "bupb_appraisal_reset",
+          command: %w[bundle exec rake appraisal:reset],
+          env: bundle_update_env
+        )
       end
 
       def bex_command

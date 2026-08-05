@@ -405,6 +405,48 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).phase).to eq("commit_bundle_update")
   end
 
+  it "updates the appraisal root lockfile and resets appraisal lockfiles with bupb" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Appraisal.root.gemfile"), "gemspec\n")
+
+    results = described_class.new(command: "bupb", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[bupb bupb_appraisal_root bupb_appraisal_reset commit_bundle_update])
+    expect(results.fetch(1).command).to eq(%w[bundle update --bundler])
+    expect(results.fetch(2).command).to eq(%w[bundle exec rake appraisal:reset])
+  end
+
+  it "targets Appraisal.root.gemfile.lock only for the appraisal root bupb phase" do
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
+      #!/usr/bin/env ruby
+      File.open("bupb-env.txt", "a") do |file|
+        file.puts([ARGV.join(" "), ENV["BUNDLE_GEMFILE"], ENV["BUNDLE_LOCKFILE"]].inspect)
+      end
+    RUBY
+    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Appraisal.root.gemfile"), "gemspec\n")
+
+    results = described_class.new(
+      command: "bupb",
+      config: config,
+      members: [member],
+      execute: true,
+      commit: false,
+      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+    ).results
+
+    expect(results).to all(be_ok)
+    calls = File.readlines(File.join(member.root, "bupb-env.txt"), chomp: true)
+    expect(calls).to include(include("Appraisal.root.gemfile", "Appraisal.root.gemfile.lock"))
+    expect(calls.count { |call| call.include?("appraisal:reset") }).to eq(1)
+  end
+
   it "plans bundle exec commands with provided args" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
