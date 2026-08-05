@@ -60,6 +60,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Recover nested monorepo autostashes from the repository root.
 
+- Restore generated Gemfile.lock files between branch-matrix test and lint targets.
+
 ### Security
 
 ## [1.2.29] - 2026-08-03

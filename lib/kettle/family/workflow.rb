@@ -689,6 +689,7 @@ module Kettle
 
           branch_members = rediscovered_selected_members(selected_names)
           branch_members = members if branch_members.empty?
+          dirty_paths_before = branch_generated_lockfile_dirt(branch_members)
           if command == "template" && execute
             memo.concat(template_branch_sync_results(branch_members, runner: runner))
             break memo unless memo.last&.ok?
@@ -696,6 +697,16 @@ module Kettle
           branch_results = current_branch_results(branch_members)
           tag_branch_results(branch_results, branch)
           memo.concat(branch_results)
+
+          if branch_generated_lockfile_cleanup_required?
+            cleanup_branch_generated_lockfiles(
+              branch_members: branch_members,
+              dirty_paths_before: dirty_paths_before,
+              runner: runner,
+              memo: memo,
+              branch: branch
+            )
+          end
           break memo unless memo.last&.ok?
 
           commit_normalized_lockfiles(branch_members: branch_members, runner: runner, memo: memo)
@@ -716,6 +727,57 @@ module Kettle
           end
           break memo unless memo.last&.ok?
         end
+      end
+
+      def branch_generated_lockfile_cleanup_required?
+        execute && %w[test lint].include?(command)
+      end
+
+      def branch_generated_lockfile_dirt(branch_members)
+        branch_members.each_with_object({}) do |member, memo|
+          root = git_root_for(member)
+          memo[root] ||= GitStatus.dirty_paths(root)
+        end
+      end
+
+      def cleanup_branch_generated_lockfiles(branch_members:, dirty_paths_before:, runner:, memo:, branch:)
+        processed_roots = []
+        branch_members.each do |member|
+          root = git_root_for(member)
+          next if processed_roots.include?(root)
+
+          processed_roots << root
+          before = dirty_paths_before.fetch(root, []).map { |path| normalized_dirty_path(path) }
+          generated_paths = GitStatus.dirty_paths(root).filter_map do |status_line|
+            path = normalized_dirty_path(status_line)
+            path unless before.include?(path) || !template_generated_lockfile_path?(status_line)
+          end.uniq
+          next if generated_paths.empty?
+
+          result = runner.call(
+            member: member,
+            phase: "branch_generated_lockfile_recovery",
+            command: branch_generated_lockfile_restore_command(generated_paths)
+          )
+          result.branch = branch if result.respond_to?(:branch=)
+          memo << result
+          break unless result.ok?
+        end
+      end
+
+      def normalized_dirty_path(status_line)
+        status_line.to_s.sub(/\A.../, "").strip
+      end
+
+      def branch_generated_lockfile_restore_command(paths)
+        reset_commands = paths.map do |path|
+          escaped_path = Shellwords.escape(path)
+          "if git ls-files --error-unmatch #{escaped_path} >/dev/null 2>&1; then " \
+            "git restore --source=HEAD --staged --worktree -- #{escaped_path}; " \
+            "else rm -f -- #{escaped_path}; fi"
+        end
+
+        ["sh", "-lc", "set -eu; #{reset_commands.join("; ")}"]
       end
 
       def release_preflight_results
