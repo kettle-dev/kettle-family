@@ -33,7 +33,7 @@ module Kettle
           payload["sequence"] = @sequence_by_member.fetch(member)
           line = JSON.generate(payload)
           File.open(path_for(member), "a") { |file| file.puts(line) }
-          @stream.puts(line) if @stream
+          @stream&.puts(line)
           @stream.flush if @stream&.respond_to?(:flush)
         end
         payload

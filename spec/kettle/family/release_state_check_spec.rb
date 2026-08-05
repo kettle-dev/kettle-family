@@ -40,7 +40,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     started = Queue.new
     release = Queue.new
 
-    worker = Thread.new do
+    worker = Thread.new do # rubocop:disable ThreadSafety/NewThread -- this spec verifies concurrent state checks.
       check.send(:parallel_map, %w[alpha beta]) do |name|
         started << name
         release.pop

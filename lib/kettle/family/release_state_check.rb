@@ -39,11 +39,7 @@ module Kettle
 
         member_results = parallel_map(members) do |member|
           member_branch_results = member_local_branch_results(member, event_handler: event_handler)
-          if member_branch_results
-            member_branch_results
-          else
-            check_member(member, event_handler: event_handler)
-          end
+          member_branch_results || check_member(member, event_handler: event_handler)
         end
         member_results.flat_map { |result| Array(result) }
       end
@@ -555,13 +551,13 @@ module Kettle
         errors = []
         errors_mutex = Mutex.new
         workers = Array.new(worker_count) do
-          Thread.new do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- release-state checks intentionally run independently within the jobs limit.
             loop do
               index, item = queue.pop(true)
               results[index] = block.call(item)
             rescue ThreadError
               break
-            rescue StandardError => error
+            rescue => error
               errors_mutex.synchronize { errors << error }
               break
             end

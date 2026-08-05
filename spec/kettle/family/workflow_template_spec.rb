@@ -114,7 +114,9 @@ RSpec.describe Kettle::Family::Workflow do
         {success: status.success?, exitstatus: status.exitstatus, stdout: stdout, stderr: stderr}
       end
     end
-    allow_any_instance_of(Kettle::Family::CommandRunner).to receive(:call) do |_instance, member:, phase:, command:, env: {}, **_args|
+    command_runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(command_runner)
+    allow(command_runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       result = runner.call(command, chdir: member.root, env: env, quiet: true)
       Kettle::Family::CommandResult.new(
@@ -526,8 +528,10 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "preserves an inherited family local path env during template prepare and recovery" do
-    previous = ENV[family_local_env_name]
-    ENV[family_local_env_name] = "/workspace/family"
+    allow(ENV).to receive(:key?).and_call_original
+    allow(ENV).to receive(:fetch).and_call_original
+    allow(ENV).to receive(:key?).with(family_local_env_name).and_return(true)
+    allow(ENV).to receive(:fetch).with(family_local_env_name).and_return("/workspace/family")
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     workflow = described_class.new(command: "template", config: config, members: [member])
@@ -541,8 +545,6 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:template_lockfile_recovery_env, member)).not_to include(
       family_local_env_name => "false"
     )
-  ensure
-    previous ? ENV[family_local_env_name] = previous : ENV.delete(family_local_env_name)
   end
 
   it "aligns stale nomono bootstrap dependencies before member template preparation runs" do

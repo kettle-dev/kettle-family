@@ -5,7 +5,7 @@ require "fileutils"
 require "json"
 require "etc"
 require "open3"
-require "pathname"
+require "pathname" # rubocop:disable Lint/RedundantRequireStatement -- Workflow uses Pathname directly and must load it when required standalone.
 require "rbconfig"
 require "shellwords"
 require "yaml"
@@ -2281,24 +2281,15 @@ module Kettle
         executable = local_kettle_jem_executable
         return command_text unless executable
 
-        if command_text.is_a?(Array)
-          argv = command_text.map(&:to_s)
-          index = argv.index("kettle-jem")
-          return command_text unless index
+        array_command = command_text.is_a?(Array)
+        argv = array_command ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
+        index = argv.index("kettle-jem")
+        return command_text unless index
+        return command_text if !array_command && argv.any? { |token| %w[&& || ; |].include?(token) }
 
-          prefix = argv[0...index]
-          prefix = prefix[0...-2] if prefix.last(2) == %w[bundle exec]
-          prefix + [RbConfig.ruby, executable] + argv[(index + 1)..]
-        else
-          argv = Shellwords.split(command_text.to_s)
-          index = argv.index("kettle-jem")
-          return command_text unless index
-          return command_text if argv.any? { |token| %w[&& || ; |].include?(token) }
-
-          prefix = argv[0...index]
-          prefix = prefix[0...-2] if prefix.last(2) == %w[bundle exec]
-          prefix + [RbConfig.ruby, executable] + argv[(index + 1)..]
-        end
+        prefix = argv[0...index]
+        prefix = prefix[0...-2] if prefix.last(2) == %w[bundle exec]
+        prefix + [RbConfig.ruby, executable] + argv[(index + 1)..]
       rescue ArgumentError
         command_text
       end
@@ -2965,10 +2956,8 @@ module Kettle
           env[key] = value if key.end_with?("_DEV", "_LOCAL") && local_path_env_requested?(key)
         end
         env.merge!(env_overrides)
-        env.merge!(
-          "K_JEM_TEMPLATING" => "false",
-          "BUNDLE_DISABLE_CHECKSUM_VALIDATION" => "true"
-        )
+        env["K_JEM_TEMPLATING"] = "false"
+        env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
         env
       end
 

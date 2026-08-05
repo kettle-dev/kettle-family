@@ -11,7 +11,7 @@ if tslp_dev.to_s.empty?
   end
 else
   # Explicit local override for unreleased TSLP debugging.
-  gem "tree_sitter_language_pack", path: tslp_dev
+  gem "tree_sitter_language_pack", path: tslp_dev # rubocop:disable Bundler/DuplicatedGem -- local and released TSLP declarations are mutually exclusive.
 end
 
 if structuredmerge_remote
