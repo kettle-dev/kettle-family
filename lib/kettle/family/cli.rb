@@ -802,7 +802,7 @@ module Kettle
       end
 
       def progress_io(command, options)
-        return nil unless %w[release template].include?(command)
+        return nil unless %w[release template gha-sha-pins].include?(command)
         return nil unless options[:execute]
         return nil if options[:json]
 

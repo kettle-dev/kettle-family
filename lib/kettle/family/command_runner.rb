@@ -273,7 +273,7 @@ module Kettle
           elapsed_seconds: elapsed.round(3),
           skipped: false,
           reason: status.success? ? nil : "command failed",
-          output_streamed: interactive,
+          output_streamed: interactive || !!stdout_line_handler,
           log_path: log_path
         )
       end

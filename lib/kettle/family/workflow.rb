@@ -435,7 +435,8 @@ module Kettle
         return template_member_workflow_results(workflow_members) if command == "template" && execute
 
         runner = CommandRunner.new(execute: execute, accept: accept)
-        workflow_members.each_with_object([]) do |member, memo|
+        gha_progress = (command == "gha-sha-pins") ? start_gha_sha_pins_progress(workflow_members) : nil
+        results = workflow_members.each_with_object([]) do |member, memo|
           if command == "template" && config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
             break memo unless memo.last.ok?
@@ -447,8 +448,16 @@ module Kettle
           end
 
           command_text = workflow_command(member)
-          result = runner.call(member: member, phase: command, command: command_text, env: command_env)
+          gha_progress&.start_member(member, total: 1, status: "starting")
+          result = runner.call(
+            member: member,
+            phase: command,
+            command: command_text,
+            env: command_env,
+            stdout_line_handler: (command == "gha-sha-pins") ? gha_sha_pins_event_line_handler(member) : nil
+          )
           memo << result
+          gha_progress&.finish_member(member, success: result.ok?, status: result.ok? ? "complete" : "failed")
           break memo unless result.ok?
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
@@ -461,6 +470,8 @@ module Kettle
           end
           commit_bex_changes(member: member, runner: runner, memo: memo) if command == "bex"
         end
+        gha_progress&.finish
+        results
       end
 
       def template_member_workflow_results(workflow_members)
@@ -2140,6 +2151,7 @@ module Kettle
         args = []
         args << (gha_sha_pins_check ? "--check" : "--write") unless command_includes_any?(command_text, %w[--check --write])
         args.concat(["--upgrade", gha_sha_pins_upgrade]) unless command_includes_arg?(command_text, "--upgrade")
+        args << "--events" unless command_includes_arg?(command_text, "--events")
         append_command_args(command_text, args)
       end
 
@@ -2375,6 +2387,18 @@ module Kettle
         progress
       end
 
+      def start_gha_sha_pins_progress(workflow_members)
+        @gha_sha_pins_progress = WorkflowProgress.new(
+          io: progress_io,
+          label: "pinning GitHub Actions",
+          total: workflow_members.length,
+          jobs: jobs || 1,
+          members: workflow_members
+        )
+        @gha_sha_pins_progress.start
+        @gha_sha_pins_progress
+      end
+
       def start_release_preflight_progress(phases)
         return nil unless progress_io
 
@@ -2514,6 +2538,49 @@ module Kettle
           end
           true
         end
+      end
+
+      def gha_sha_pins_event_line_handler(member)
+        return nil unless progress_io
+
+        lambda do |line|
+          event = parse_template_event(line)
+          next false unless event && event["type"].to_s.start_with?("gha_sha_pins")
+
+          if progress_io
+            if verbose || debug
+              emit_gha_sha_pins_event_progress(member, event)
+            elsif @gha_sha_pins_progress
+              emit_gha_sha_pins_event_status(member, event, progress: @gha_sha_pins_progress)
+            end
+          end
+          true
+        end
+      end
+
+      def emit_gha_sha_pins_event_progress(member, event)
+        action = event["action"].to_s
+        mark = (event["status"].to_s == "failed") ? "F" : "."
+        label = [action, event["path"], event["action_ref"]].map(&:to_s).reject(&:empty?).join(":")
+        emit_template_event_line(member, mark, label)
+      end
+
+      def emit_gha_sha_pins_event_status(member, event, progress:)
+        action = event["action"].to_s
+        status = case event["type"].to_s
+        when "gha_sha_pins_start"
+          "discovering workflows"
+        when "gha_sha_pins_action"
+          completed = event["completed"].to_i
+          total = event["total"].to_i
+          "actions: #{completed}/#{total} #{(event["cache"] == "hit") ? "cached" : "live"}"
+        when "gha_sha_pins_summary"
+          "#{event["changed_files"].to_i} files, #{event["updates"].to_i} updates"
+        else
+          action.empty? ? "processing" : action
+        end
+        mark = (event["status"].to_s == "failed") ? "F" : nil
+        progress.update(member, status: status, mark: mark)
       end
 
       def suppress_release_secret_provider_event?(event, progress:)

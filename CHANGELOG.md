@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Stream GitHub Actions pinning progress per member through the family event tape.
+
 ### Security
 
 ## [1.2.32] - 2026-08-05
