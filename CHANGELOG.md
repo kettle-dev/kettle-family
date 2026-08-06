@@ -34,7 +34,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - TAG: [v1.2.34][1.2.34t]
 - COVERAGE: 93.70% -- 4999/5335 lines in 32 files
-- BRANCH COVERAGE: 76.02% -- 1991/2619 branches in 32 files
+- BRANCH COVERAGE: 76.06% -- 1992/2619 branches in 32 files
 - 29.61% documented
 
 ### Fixed
