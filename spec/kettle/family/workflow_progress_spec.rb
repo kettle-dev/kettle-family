@@ -217,6 +217,17 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     expect(output.string).to include("[alpha]   (1/1)")
   end
 
+  it "keeps an unbounded member counter unbounded when finishing" do
+    output = progress_output_class.new
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    progress = described_class.new(io: output, label: "pinning", total: 1, jobs: 1)
+
+    progress.start_member(member, total: 0, status: "starting")
+    progress.finish_member(member, success: true, status: "complete")
+
+    expect(output.string).to include("[alpha]   (0/*)")
+  end
+
   it "renders TTY command result marks and ignores empty TTY event marks" do
     output = StringIO.new
     allow(output).to receive(:tty?).and_return(true)
