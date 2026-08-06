@@ -598,8 +598,6 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-129
-130
 131
 132
 133
@@ -608,10 +606,12 @@ redraw block instead of making the terminal cursor its first row.</p>
 136
 137
 138
-139</pre>
+139
+140
+141</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 129</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 131</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_finish'>finish</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -655,7 +655,9 @@ redraw block instead of making the terminal cursor its first row.</p>
 111
 112
 113
-114</pre>
+114
+115
+116</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 103</span>
@@ -664,6 +666,8 @@ redraw block instead of making the terminal cursor its first row.</p>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
 
   <span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_total'>total</span> <span class='op'>=</span> <span class='ivar'>@member_totals</span><span class='lbracket'>[</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span>
+    <span class='ivar'>@member_counts</span><span class='lbracket'>[</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_total'>total</span> <span class='kw'>if</span> <span class='id identifier rubyid_total'>total</span><span class='period'>.</span><span class='id identifier rubyid_positive?'>positive?</span>
     <span class='ivar'>@member_finished_elapsed</span><span class='lbracket'>[</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_elapsed_seconds'>elapsed_seconds</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='rparen'>)</span>
     <span class='kw'>if</span> <span class='ivar'>@tty</span>
       <span class='id identifier rubyid_render'>render</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>status:</span> <span class='id identifier rubyid_status'>status</span><span class='rparen'>)</span>
@@ -692,8 +696,6 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-154
-155
 156
 157
 158
@@ -703,10 +705,12 @@ redraw block instead of making the terminal cursor its first row.</p>
 162
 163
 164
-165</pre>
+165
+166
+167</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 154</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 156</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_notification'>notification</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -846,18 +850,18 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-116
-117
 118
 119
 120
 121
 122
 123
-124</pre>
+124
+125
+126</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 116</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 118</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_stop'>stop</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -888,17 +892,17 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-145
-146
 147
 148
 149
 150
 151
-152</pre>
+152
+153
+154</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 145</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 147</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_summary'>summary</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -951,12 +955,12 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-141
-142
-143</pre>
+143
+144
+145</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 141</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 143</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_tty?'>tty?</span>
   <span class='ivar'>@tty</span>
