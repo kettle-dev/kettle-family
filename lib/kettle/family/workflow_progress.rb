@@ -104,6 +104,8 @@ module Kettle
         return unless @enabled
 
         synchronize do
+          total = @member_totals[member.name].to_i
+          @member_counts[member.name] = total if total.positive?
           @member_finished_elapsed[member.name] = elapsed_seconds(member)
           if @tty
             render(member, status: status)

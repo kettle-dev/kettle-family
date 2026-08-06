@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Show completed member counters at 1/1 when GitHub Actions pinning finishes.
+
 ### Security
 
 ## [1.2.33] - 2026-08-05
