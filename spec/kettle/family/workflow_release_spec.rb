@@ -89,7 +89,9 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_env_for_member, member)).to include(
       "K_CHANGELOG_GEM_NAME" => "alpha",
       "K_CHANGELOG_PATH" => File.join(@tmpdir, "CHANGELOG.md"),
-      "K_CHANGELOG_VERSION_FILE" => File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
+      "K_CHANGELOG_VERSION_FILE" => File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"),
+      "K_RELEASE_CI_ROOT" => @tmpdir,
+      "K_RELEASE_CI_WORKFLOWS" => "current.yml"
     )
     expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'build'"])
   end

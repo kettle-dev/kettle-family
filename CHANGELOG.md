@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Monorepo member releases now monitor the shared root GitHub Actions workflow.
+
 ### Security
 
 ## [1.2.36] - 2026-08-07

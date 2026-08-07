@@ -1911,6 +1911,12 @@ module Kettle
       # member release phase as well as to the separate family phase.
       def release_env_for_member(member)
         env = release_env
+        if config.family_mode == "monorepo"
+          # Monorepo members release from subdirectories, while CI workflows
+          # live at the shared repository root.
+          env["K_RELEASE_CI_ROOT"] = config.root
+          env["K_RELEASE_CI_WORKFLOWS"] ||= "current.yml"
+        end
         return env unless config.shared_changelog?
         if config.member_local_changelog?(member)
           return env.merge(
