@@ -1153,7 +1153,7 @@ module Kettle
             member: member,
             phase: release_phase,
             command: release_command,
-            env: release_env,
+            env: release_env_for_member(member),
             interactive: release_command_interactive?,
             stdout_line_handler: release_event_line_handler(member, progress: progress),
             log_path: release_command_log_path(member, release_phase),
@@ -1904,6 +1904,20 @@ module Kettle
         env = base_release_env
         env.merge!(env_overrides)
         env
+      end
+
+      # A monorepo member runs kettle-release from its own checkout, while its
+      # changelog may live at the family root. Pass the shared paths to the
+      # member release phase as well as to the separate family phase.
+      def release_env_for_member(member)
+        env = release_env
+        return env unless config.shared_changelog?
+
+        env.merge(
+          "K_CHANGELOG_GEM_NAME" => member.name.to_s,
+          "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
+          "K_CHANGELOG_VERSION_FILE" => File.expand_path(config.changelog_version_file, config.root)
+        )
       end
 
       def base_release_env
