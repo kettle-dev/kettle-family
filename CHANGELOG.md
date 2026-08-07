@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Restrict aggregate monorepo GitHub releases to explicitly configured monorepo families.
 
+- Exclude monorepo-only release orchestration from sibling-repository coverage accounting.
+
 ### Security
 
 ## [1.2.37] - 2026-08-07

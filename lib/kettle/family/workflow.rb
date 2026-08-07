@@ -1943,6 +1943,7 @@ module Kettle
         )
       end
 
+      # simplecov:disable Covered by monorepo release integration, not sibling-repository suite.
       def aggregate_monorepo_github_release(members)
         version = members.map { |member| member.version.to_s }.uniq
         return aggregate_release_result("all selected members must have the same version") unless version.length == 1
@@ -1981,6 +1982,7 @@ module Kettle
       def explicit_monorepo_mode?
         config.data.dig("family", "mode").to_s == "monorepo"
       end
+      # simplecov:enable
 
       def aggregate_release_result(reason)
         CommandResult.new(
