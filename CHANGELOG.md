@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Shared-root monorepo member releases no longer fail changelog coverage against aggregate root thresholds.
+
 ### Security
 
 ## [1.2.35] - 2026-08-07
