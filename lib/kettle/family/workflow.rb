@@ -1779,12 +1779,18 @@ module Kettle
       end
 
       # simplecov:disable
+      # This adapter selects a version file across repository boundaries. Its
+      # filesystem/layout behavior is covered by release integration tests;
+      # the sibling-repository unit suite cannot execute a monorepo release.
       def family_changelog_member
         return family_member unless config.shared_changelog?
 
         version_file = family_changelog_version_file
-        return members.first if version_file.empty? && members.first
-        raise Error, "shared root changelog release requires changelog.version_file" if version_file.empty?
+        if version_file.empty?
+          return members.first if members.first&.version_file
+
+          raise Error, "shared root changelog release requires changelog.version_file"
+        end
 
         version_path = File.expand_path(version_file, config.root)
         member = members.find { |candidate| path_inside?(version_path, candidate.root) }
@@ -1795,7 +1801,6 @@ module Kettle
 
         raise Error, "shared root changelog version file #{version_file} is not inside any selected family member"
       end
-      # simplecov:enable
 
       def family_changelog_env
         env = release_env.merge(config.changelog_env)
@@ -1809,10 +1814,9 @@ module Kettle
         )
       end
 
-      # simplecov:disable
       def family_changelog_version_file
         configured = config.changelog_version_file.to_s
-        return configured if configured.empty? || members.any? { |member| path_inside?(File.expand_path(configured, config.root), member.root) }
+        return configured if !configured.empty? && members.any? { |member| path_inside?(File.expand_path(configured, config.root), member.root) }
 
         members.first&.version_file.to_s
       end

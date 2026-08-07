@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep shared changelog release coverage stable while resuming partial family releases.
 
+- Cover partial shared-changelog version selection and document its monorepo integration boundary.
+
 ### Security
 
 ## [1.2.38] - 2026-08-07

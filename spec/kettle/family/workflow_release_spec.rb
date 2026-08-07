@@ -161,11 +161,52 @@ RSpec.describe Kettle::Family::Workflow do
     )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
-    member = ready_member("alpha", changelog: false)
+    member = ready_member(
+      "alpha",
+      changelog: false,
+      version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
+    )
 
     results = described_class.new(command: "release", config: config, members: [member], publish: true).results
 
     expect(results.first).to be_ok
+  end
+
+  it "uses the selected member version file when a shared root version file is unset" do
+    write_release_config(
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      changelog: {"mode" => "root", "path" => "CHANGELOG.md"}
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member(
+      "alpha",
+      changelog: false,
+      version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
+    )
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+
+    expect(workflow.send(:family_changelog_member)).to eq(member)
+    expect(workflow.send(:family_changelog_env).fetch("K_CHANGELOG_VERSION_FILE"))
+      .to end_with("alpha/lib/alpha/version.rb")
+  end
+
+  it "rejects an out-of-selection shared version file when no selected member has one" do
+    write_release_config(
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "gems/tree_haver/lib/tree_haver/version.rb"
+      }
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", changelog: false)
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+
+    expect { workflow.send(:family_changelog_member) }
+      .to raise_error(Kettle::Family::Error, /shared root changelog release requires changelog.version_file/)
   end
 
   it "plans releases across configured target branches" do
