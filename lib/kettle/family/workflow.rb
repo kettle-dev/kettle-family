@@ -1923,7 +1923,10 @@ module Kettle
         env.merge(
           "K_CHANGELOG_GEM_NAME" => member.name.to_s,
           "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
-          "K_CHANGELOG_VERSION_FILE" => File.expand_path(config.changelog_version_file, config.root)
+          "K_CHANGELOG_VERSION_FILE" => File.expand_path(config.changelog_version_file, config.root),
+          # Each subgem runs a narrow suite; the aggregate root release owns
+          # the family-wide coverage threshold.
+          "K_CHANGELOG_COVERAGE_HARD" => "false"
         )
       end
 
