@@ -400,7 +400,13 @@ module Kettle
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
         return reset_member_results(workflow_members) if command == "reset"
-        return release_member_results(workflow_members, include_family_changelog: true) if command == "release"
+        if command == "release"
+          results = release_member_results(workflow_members, include_family_changelog: true)
+          return results unless config.family_mode == "monorepo" && results.all?(&:ok?)
+
+          results << aggregate_monorepo_github_release(workflow_members)
+          return results
+        end
         return git_sync_results(workflow_members) if GIT_SYNC_COMMANDS.key?(command)
 
         member_workflow_results(workflow_members)
@@ -1916,6 +1922,7 @@ module Kettle
           # live at the shared repository root.
           env["K_RELEASE_CI_ROOT"] = config.root
           env["K_RELEASE_CI_WORKFLOWS"] ||= "current.yml"
+          env["KETTLE_RELEASE_SKIP_GITHUB_RELEASE"] = "true"
         end
         return env unless config.shared_changelog?
         if config.member_local_changelog?(member)
@@ -1933,6 +1940,57 @@ module Kettle
           # Each subgem runs a narrow suite; the aggregate root release owns
           # the family-wide coverage threshold.
           "K_CHANGELOG_COVERAGE_HARD" => "false"
+        )
+      end
+
+      def aggregate_monorepo_github_release(members)
+        version = members.map { |member| member.version.to_s }.uniq
+        return aggregate_release_result("all selected members must have the same version") unless version.length == 1
+
+        assets = members.flat_map do |member|
+          gem_path = Dir[File.join(member.root, "pkg", "*.gem")].select { |path| File.basename(path).end_with?("-#{version.first}.gem") }
+          checksum_path = File.join(member.root, "checksums", "#{member.name}-#{version.first}.gem.sha256")
+          gem_path + (File.file?(checksum_path) ? [checksum_path] : [])
+        end
+        command = ["bundle", "exec", "kettle-gh-release", "--allow-unpublished", "--release-version", version.first]
+        assets.each { |asset| command.concat(["--asset", asset]) }
+        env = release_env.merge(
+          "K_CHANGELOG_GEM_NAME" => config.family_name.to_s,
+          "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
+          "K_CHANGELOG_VERSION_FILE" => File.expand_path(config.changelog_version_file, config.root)
+        )
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        stdout, stderr, status = Open3.capture3(env, *command, chdir: config.root)
+        CommandResult.new(
+          member_name: config.family_name,
+          phase: "aggregate_github_release",
+          command: command,
+          workdir: config.root,
+          status: status.exitstatus,
+          success: status.success?,
+          stdout: stdout,
+          stderr: stderr,
+          elapsed_seconds: Process.clock_gettime(Process::CLOCK_MONOTONIC) - started,
+          skipped: false,
+          reason: status.success? ? nil : "aggregate GitHub release failed"
+        )
+      rescue => error
+        aggregate_release_result("#{error.class}: #{error.message}")
+      end
+
+      def aggregate_release_result(reason)
+        CommandResult.new(
+          member_name: config.family_name,
+          phase: "aggregate_github_release",
+          command: ["bundle", "exec", "kettle-gh-release"],
+          workdir: config.root,
+          status: 1,
+          success: false,
+          stdout: "",
+          stderr: reason,
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: reason
         )
       end
 

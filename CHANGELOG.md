@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Monorepo releases defer GitHub release creation to the family aggregate.
+
 ### Security
 
 ## [1.2.37] - 2026-08-07
