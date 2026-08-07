@@ -1781,12 +1781,16 @@ module Kettle
       def family_changelog_member
         return family_member unless config.shared_changelog?
 
-        version_file = config.changelog_version_file.to_s
+        version_file = family_changelog_version_file
+        return members.first if version_file.empty? && members.first
         raise Error, "shared root changelog release requires changelog.version_file" if version_file.empty?
 
         version_path = File.expand_path(version_file, config.root)
         member = members.find { |candidate| path_inside?(version_path, candidate.root) }
         return member if member
+
+        fallback = members.first
+        return fallback if fallback&.version_file
 
         raise Error, "shared root changelog version file #{version_file} is not inside any selected family member"
       end
@@ -1799,8 +1803,15 @@ module Kettle
           "K_CHANGELOG_GEM_NAME" => config.family_name.to_s,
           "K_CHANGELOG_COVERAGE_ROOT" => File.expand_path(config.root),
           "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
-          "K_CHANGELOG_VERSION_FILE" => File.expand_path(config.changelog_version_file, config.root)
+          "K_CHANGELOG_VERSION_FILE" => File.expand_path(family_changelog_version_file, config.root)
         )
+      end
+
+      def family_changelog_version_file
+        configured = config.changelog_version_file.to_s
+        return configured if configured.empty? || members.any? { |member| path_inside?(File.expand_path(configured, config.root), member.root) }
+
+        members.first&.version_file.to_s
       end
 
       def path_inside?(path, root)

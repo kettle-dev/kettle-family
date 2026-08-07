@@ -150,7 +150,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog"])
   end
 
-  it "rejects shared root changelog releases when the configured version file is outside selected members" do
+  it "falls back to a selected member version file for partial shared root releases" do
     write_release_config(
       family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
       changelog: {
@@ -163,9 +163,9 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha", changelog: false)
 
-    expect do
-      described_class.new(command: "release", config: config, members: [member], publish: true).results
-    end.to raise_error(Kettle::Family::Error, /version file .* is not inside any selected family member/)
+    results = described_class.new(command: "release", config: config, members: [member], publish: true).results
+
+    expect(results.first).to be_ok
   end
 
   it "plans releases across configured target branches" do

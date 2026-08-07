@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Allow partial releases to select a remaining member version file for shared root changelogs.
+
 ### Security
 
 ## [1.2.38] - 2026-08-07
