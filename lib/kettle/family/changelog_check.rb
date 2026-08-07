@@ -31,7 +31,7 @@ module Kettle
       def relative_changelog_path
         return "CHANGELOG.md" unless config
 
-        base = config.shared_changelog? ? config.root : member.root
+        base = config.changelog_workdir(member) || member.root
         changelog_path.delete_prefix("#{base}/")
       end
 

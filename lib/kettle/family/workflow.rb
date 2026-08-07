@@ -1912,6 +1912,13 @@ module Kettle
       def release_env_for_member(member)
         env = release_env
         return env unless config.shared_changelog?
+        if config.member_local_changelog?(member)
+          return env.merge(
+            "K_CHANGELOG_GEM_NAME" => member.name.to_s,
+            "K_CHANGELOG_PATH" => File.join(member.root, "CHANGELOG.md"),
+            "K_CHANGELOG_VERSION_FILE" => member.version_file.to_s
+          )
+        end
 
         env.merge(
           "K_CHANGELOG_GEM_NAME" => member.name.to_s,

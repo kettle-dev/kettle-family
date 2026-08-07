@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Shared-changelog monorepos now release members with their own CHANGELOG.md independently.
+
 ### Security
 
 ## [1.2.34] - 2026-08-05

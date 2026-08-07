@@ -185,6 +185,28 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
+  it "uses a member-local changelog inside a shared-changelog monorepo" do
+    write_release_config(
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      }
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("kettle-jem", version_file: File.join(@tmpdir, "kettle-jem", "lib", "kettle", "jem", "version.rb"))
+
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:release_env_for_member, member)).to include(
+      "K_CHANGELOG_GEM_NAME" => "kettle-jem",
+      "K_CHANGELOG_PATH" => File.join(member.root, "CHANGELOG.md"),
+      "K_CHANGELOG_VERSION_FILE" => member.version_file
+    )
+    expect(Kettle::Family::ChangelogCheck.call(member: member, config: config)).to be_ok
+  end
+
   it "starts configured target branch releases at the requested branch" do
     write_release_config(target_branches: %w[r1_8-even-v0 r1_9-even-v2 r2_0-even-v4])
     config = Kettle::Family::Config.load(root: @tmpdir)

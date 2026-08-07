@@ -171,12 +171,21 @@ module Kettle
         fetch_path("changelog", "version_file")
       end
 
-      def changelog_workdir(_member = nil)
-        shared_changelog? ? root : nil
+      def changelog_workdir(member = nil)
+        return nil unless shared_changelog?
+        return member.root if member_local_changelog?(member)
+
+        root
       end
 
       def changelog_full_path(member)
+        return File.join(member.root, "CHANGELOG.md") if member_local_changelog?(member)
+
         File.expand_path(changelog_path, shared_changelog? ? root : member.root)
+      end
+
+      def member_local_changelog?(member)
+        shared_changelog? && member && File.file?(File.join(member.root, "CHANGELOG.md"))
       end
 
       def changelog_env
