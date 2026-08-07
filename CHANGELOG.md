@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Shared-changelog monorepos now release members with their own CHANGELOG.md independently.
-
 ### Security
+
+## [1.2.35] - 2026-08-07
+
+- TAG: [v1.2.35][1.2.35t]
+- COVERAGE: 93.68% -- 5008/5346 lines in 32 files
+- BRANCH COVERAGE: 76.11% -- 1998/2625 branches in 32 files
+- 29.81% documented
+
+### Fixed
+
+- Shared-changelog monorepos now release members with their own CHANGELOG.md independently.
 
 ## [1.2.34] - 2026-08-05
 
@@ -1835,7 +1844,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.34...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.35...HEAD
+[1.2.35]: https://github.com/kettle-dev/kettle-family/compare/v1.2.34...v1.2.35
+[1.2.35t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.35
 [1.2.34]: https://github.com/kettle-dev/kettle-family/compare/v1.2.33...v1.2.34
 [1.2.34t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.34
 [1.2.33]: https://github.com/kettle-dev/kettle-family/compare/v1.2.32...v1.2.33
