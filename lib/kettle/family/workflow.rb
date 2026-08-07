@@ -402,7 +402,7 @@ module Kettle
         return reset_member_results(workflow_members) if command == "reset"
         if command == "release"
           results = release_member_results(workflow_members, include_family_changelog: true)
-          return results unless config.family_mode == "monorepo" && results.all?(&:ok?)
+          return results unless explicit_monorepo_mode? && results.all?(&:ok?)
 
           results << aggregate_monorepo_github_release(workflow_members)
           return results
@@ -1976,6 +1976,10 @@ module Kettle
         )
       rescue => error
         aggregate_release_result("#{error.class}: #{error.message}")
+      end
+
+      def explicit_monorepo_mode?
+        config.data.dig("family", "mode").to_s == "monorepo"
       end
 
       def aggregate_release_result(reason)

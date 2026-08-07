@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Monorepo releases defer GitHub release creation to the family aggregate.
 
+- Restrict aggregate monorepo GitHub releases to explicitly configured monorepo families.
+
 ### Security
 
 ## [1.2.37] - 2026-08-07
