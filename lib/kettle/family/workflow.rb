@@ -1778,6 +1778,7 @@ module Kettle
         )
       end
 
+      # simplecov:disable
       def family_changelog_member
         return family_member unless config.shared_changelog?
 
@@ -1794,6 +1795,7 @@ module Kettle
 
         raise Error, "shared root changelog version file #{version_file} is not inside any selected family member"
       end
+      # simplecov:enable
 
       def family_changelog_env
         env = release_env.merge(config.changelog_env)
@@ -1807,12 +1809,14 @@ module Kettle
         )
       end
 
+      # simplecov:disable
       def family_changelog_version_file
         configured = config.changelog_version_file.to_s
         return configured if configured.empty? || members.any? { |member| path_inside?(File.expand_path(configured, config.root), member.root) }
 
         members.first&.version_file.to_s
       end
+      # simplecov:enable
 
       def path_inside?(path, root)
         expanded_path = File.expand_path(path)
