@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Propagate shared-version bump state across all family members.
+
 ### Security
 
 ## [1.2.40] - 2026-08-07

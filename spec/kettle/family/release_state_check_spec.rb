@@ -119,6 +119,18 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("bump_release_pending" => true)
   end
 
+  it "propagates a shared-version bump to every successful member" do
+    check = described_class.new(members: [member("alpha"), member("beta")])
+    results = [
+      release_state_result("alpha", "bump_release_pending" => true),
+      release_state_result("beta", "bump_release_pending" => false)
+    ]
+
+    normalized = check.send(:normalize_shared_version_bump, results)
+
+    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, true])
+  end
+
   it "reports command failures without treating pending release work as an error" do
     member = member("alpha")
     allow(Open3).to receive(:capture3).and_return(["", "boom", status(1, false)])
@@ -757,6 +769,20 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: version_file, version: "1.0.0", dependencies: [])
+  end
+
+  def release_state_result(member_name, state)
+    Kettle::Family::ReleaseStateResult.new(
+      member_name: member_name,
+      command: [],
+      workdir: member_name,
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.0,
+      state: state
+    )
   end
 
   def status(exitstatus, success)

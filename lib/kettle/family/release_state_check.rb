@@ -35,7 +35,10 @@ module Kettle
 
       def results(event_handler: nil)
         return branch_results(event_handler: event_handler) unless release_target_branches.empty?
-        return parallel_map(members) { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) } if shared_changelog?
+        if shared_changelog?
+          results = parallel_map(members) { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) }
+          return normalize_shared_version_bump(results)
+        end
 
         member_results = parallel_map(members) do |member|
           member_branch_results = member_local_branch_results(member, event_handler: event_handler)
@@ -55,7 +58,8 @@ module Kettle
           with_branch_worktree(root: root, branch: branch) do |worktree_root|
             branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
             if shared_changelog?
-              memo.concat(parallel_map(branch_members) { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) })
+              results = parallel_map(branch_members) { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) }
+              memo.concat(normalize_shared_version_bump(results))
               next
             end
 
@@ -734,6 +738,28 @@ module Kettle
 
       def shared_changelog?
         config&.shared_changelog?
+      end
+
+      def normalize_shared_version_bump(results)
+        return results unless results.any? { |result| result.ok? && result.state["bump_release_pending"] == true }
+
+        results.map do |result|
+          next result unless result.ok?
+
+          result.class.new(
+            member_name: result.member_name,
+            command: result.command,
+            workdir: result.workdir,
+            status: result.status,
+            success: result.success,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            elapsed_seconds: result.elapsed_seconds,
+            state: result.state.merge("bump_release_pending" => true),
+            reason: result.reason,
+            branch: result.branch
+          )
+        end
       end
 
       def git_root
