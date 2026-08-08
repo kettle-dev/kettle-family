@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Preserve the local kettle-dev release tooling for monorepo aggregate GitHub releases.
+
 ### Security
 
 ## [1.2.42] - 2026-08-07

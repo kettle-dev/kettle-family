@@ -2009,6 +2009,13 @@ module Kettle
           "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
           "K_CHANGELOG_VERSION_FILE" => File.expand_path(config.changelog_version_file, config.root)
         )
+        # Keep aggregate release tooling on the same local kettle-dev checkout
+        # when the family release itself is running in local development mode.
+        # The release config disables sibling paths for member dependency
+        # resolution, but that must not hide the unreleased kettle-gh-release
+        # implementation needed by this aggregate step.
+        local_kettle_dev = ENV.fetch("KETTLE_DEV_DEV", "").to_s.strip
+        env["KETTLE_DEV_DEV"] = local_kettle_dev if local_path_env_value?(local_kettle_dev)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         stdout, stderr, status = Open3.capture3(env, *command, chdir: config.root)
         CommandResult.new(
