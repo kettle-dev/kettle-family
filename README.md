@@ -232,6 +232,7 @@ changelog:
 release:
   env:
     KETTLE_DEV_DEV: false
+  local_path_strategy: waves
   disable_local_path_env:
     - TSLP_DEV
   family_changelog:
@@ -248,6 +249,13 @@ env name is not the default derived from `family.name`.
 `release.disable_local_path_env` is different: it is an extra release-lockfile
 normalization shutoff list for path-injecting env vars that are not themselves
 discoverable as family roots, such as vendored parser/tooling paths.
+
+`release.local_path_strategy: waves` allows a release task to provide the
+family local-path environment as its default. Member release commands keep
+that path only while they have a selected sibling dependency that has not
+completed an earlier release wave; once the dependency is available, the
+member resolves it from the registry. Release lockfile normalization always
+disables local paths regardless of this strategy.
 
 For `changelog.mode: root`, release commands pass `K_CHANGELOG_GEM_NAME` as the
 configured family name and `K_CHANGELOG_VERSION_FILE` when `version_file` is
