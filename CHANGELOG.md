@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Run member release tooling from the local kettle-dev bundle when configured.
 
+- Prefer the local kettle-dev gem bundle when release orchestration runs member kettle-release commands.
+
 ### Security
 
 ## [1.2.42] - 2026-08-07

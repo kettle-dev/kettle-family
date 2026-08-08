@@ -1980,10 +1980,10 @@ module Kettle
       def local_kettle_dev_gemfile_path(local_kettle_dev)
         return nil unless local_path_env_value?(local_kettle_dev)
 
-        candidates = [
-          File.join(local_kettle_dev, "Gemfile"),
-          File.join(local_kettle_dev, "kettle-dev", "Gemfile")
-        ]
+      candidates = [
+        File.join(local_kettle_dev, "kettle-dev", "Gemfile"),
+        File.join(local_kettle_dev, "Gemfile")
+      ]
         candidates.find { |path| File.file?(path) }
       end
 
