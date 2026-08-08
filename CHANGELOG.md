@@ -28,6 +28,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.43] - 2026-08-08
+
+- TAG: [v1.2.43][1.2.43t]
+- COVERAGE: 93.59% -- 5056/5402 lines in 32 files
+- BRANCH COVERAGE: 76.04% -- 2025/2663 branches in 32 files
+- 29.72% documented
+
+### Fixed
+
 - Preserve the local kettle-dev release tooling for monorepo aggregate GitHub releases.
 
 - Keep local kettle-dev tooling available while member release commands run.
@@ -39,8 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Keep local monorepo sibling dependencies available while running shared-root release coverage.
 
 - Updated the release workflow spec to track the publish phase emitted by configured family release workflows.
-
-### Security
 
 ## [1.2.42] - 2026-08-07
 
@@ -1953,7 +1962,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.42...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.43...HEAD
+[1.2.43]: https://github.com/kettle-dev/kettle-family/compare/v1.2.42...v1.2.43
+[1.2.43t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.43
 [1.2.42]: https://github.com/kettle-dev/kettle-family/compare/v1.2.41...v1.2.42
 [1.2.42t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.42
 [1.2.41]: https://github.com/kettle-dev/kettle-family/compare/v1.2.40...v1.2.41

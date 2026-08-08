@@ -70,7 +70,7 @@ and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semant
 and <a href="https://tom.preston-werner.com/2022/05/23/major-version-numbers-are-not-sacred.html">yes</a>, platform and engine support are part of the <a href="https://github.com/semver/semver/issues/716#issuecomment-869336139">public API</a>.<br>
 Please file a bug if you notice a violation of semantic versioning.</p>
 
-<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v1.2.42...HEAD">Unreleased</a></h2>
+<h2 id="unreleased"><a href="https://github.com/kettle-dev/kettle-family/compare/v1.2.43...HEAD">Unreleased</a></h2>
 
 <h3 id="added">Added</h3>
 
@@ -83,6 +83,40 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="fixed">Fixed</h3>
 
 <h3 id="security">Security</h3>
+
+<h2 id="1243---2026-08-08">
+<a href="https://github.com/kettle-dev/kettle-family/compare/v1.2.42...v1.2.43">1.2.43</a> - 2026-08-08</h2>
+
+<ul>
+  <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.43">v1.2.43</a>
+</li>
+  <li>COVERAGE: 93.59% – 5056/5402 lines in 32 files</li>
+  <li>BRANCH COVERAGE: 76.04% – 2025/2663 branches in 32 files</li>
+  <li>29.72% documented</li>
+</ul>
+
+<h3 id="fixed-1">Fixed</h3>
+
+<ul>
+  <li>
+    <p>Preserve the local kettle-dev release tooling for monorepo aggregate GitHub releases.</p>
+  </li>
+  <li>
+    <p>Keep local kettle-dev tooling available while member release commands run.</p>
+  </li>
+  <li>
+    <p>Run member release tooling from the local kettle-dev bundle when configured.</p>
+  </li>
+  <li>
+    <p>Prefer the local kettle-dev gem bundle when release orchestration runs member kettle-release commands.</p>
+  </li>
+  <li>
+    <p>Keep local monorepo sibling dependencies available while running shared-root release coverage.</p>
+  </li>
+  <li>
+    <p>Updated the release workflow spec to track the publish phase emitted by configured family release workflows.</p>
+  </li>
+</ul>
 
 <h2 id="1242---2026-08-07">
 <a href="https://github.com/kettle-dev/kettle-family/compare/v1.2.41...v1.2.42">1.2.42</a> - 2026-08-07</h2>
@@ -101,7 +135,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>Support wave-aware release environments that shrink local sibling paths as selected dependencies become available from the registry.</li>
 </ul>
 
-<h3 id="fixed-1">Fixed</h3>
+<h3 id="fixed-2">Fixed</h3>
 
 <ul>
   <li>
@@ -123,7 +157,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.81% documented</li>
 </ul>
 
-<h3 id="fixed-2">Fixed</h3>
+<h3 id="fixed-3">Fixed</h3>
 
 <ul>
   <li>
@@ -148,7 +182,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.81% documented</li>
 </ul>
 
-<h3 id="fixed-3">Fixed</h3>
+<h3 id="fixed-4">Fixed</h3>
 
 <ul>
   <li>
@@ -170,7 +204,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.81% documented</li>
 </ul>
 
-<h3 id="fixed-4">Fixed</h3>
+<h3 id="fixed-5">Fixed</h3>
 
 <ul>
   <li>
@@ -195,7 +229,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.81% documented</li>
 </ul>
 
-<h3 id="fixed-5">Fixed</h3>
+<h3 id="fixed-6">Fixed</h3>
 
 <ul>
   <li>
@@ -220,7 +254,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.81% documented</li>
 </ul>
 
-<h3 id="fixed-6">Fixed</h3>
+<h3 id="fixed-7">Fixed</h3>
 
 <ul>
   <li>Monorepo member releases now monitor the shared root GitHub Actions workflow.</li>
@@ -237,7 +271,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.81% documented</li>
 </ul>
 
-<h3 id="fixed-7">Fixed</h3>
+<h3 id="fixed-8">Fixed</h3>
 
 <ul>
   <li>Shared-root monorepo member releases no longer fail changelog coverage against aggregate root thresholds.</li>
@@ -254,7 +288,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.81% documented</li>
 </ul>
 
-<h3 id="fixed-8">Fixed</h3>
+<h3 id="fixed-9">Fixed</h3>
 
 <ul>
   <li>Shared-changelog monorepos now release members with their own CHANGELOG.md independently.</li>
@@ -271,7 +305,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.61% documented</li>
 </ul>
 
-<h3 id="fixed-9">Fixed</h3>
+<h3 id="fixed-10">Fixed</h3>
 
 <ul>
   <li>Show completed member counters at 1/1 when GitHub Actions pinning finishes.</li>
@@ -288,7 +322,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.61% documented</li>
 </ul>
 
-<h3 id="fixed-10">Fixed</h3>
+<h3 id="fixed-11">Fixed</h3>
 
 <ul>
   <li>Stream GitHub Actions pinning progress per member through the family event tape.</li>
@@ -305,7 +339,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.61% documented</li>
 </ul>
 
-<h3 id="fixed-11">Fixed</h3>
+<h3 id="fixed-12">Fixed</h3>
 
 <ul>
   <li>bupb now updates Appraisal.root.gemfile.lock and resets generated appraisal lockfiles through appraisal:reset</li>
@@ -322,7 +356,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.61% documented</li>
 </ul>
 
-<h3 id="fixed-12">Fixed</h3>
+<h3 id="fixed-13">Fixed</h3>
 
 <ul>
   <li>
@@ -355,7 +389,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   </li>
 </ul>
 
-<h3 id="fixed-13">Fixed</h3>
+<h3 id="fixed-14">Fixed</h3>
 
 <ul>
   <li>
@@ -416,7 +450,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.23% documented</li>
 </ul>
 
-<h3 id="fixed-14">Fixed</h3>
+<h3 id="fixed-15">Fixed</h3>
 
 <ul>
   <li>Keep release notifications above the live progress tape without allowing wide Unicode labels to wrap rows.</li>
@@ -433,7 +467,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.31% documented</li>
 </ul>
 
-<h3 id="fixed-15">Fixed</h3>
+<h3 id="fixed-16">Fixed</h3>
 
 <ul>
   <li>Keep provider-backed OTP events inside the TTY progress renderer.</li>
@@ -450,7 +484,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.31% documented</li>
 </ul>
 
-<h3 id="fixed-16">Fixed</h3>
+<h3 id="fixed-17">Fixed</h3>
 
 <ul>
   <li>
@@ -475,7 +509,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.31% documented</li>
 </ul>
 
-<h3 id="fixed-17">Fixed</h3>
+<h3 id="fixed-18">Fixed</h3>
 
 <ul>
   <li>Install normalized release bundles before invoking kettle-release</li>
@@ -492,7 +526,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.31% documented</li>
 </ul>
 
-<h3 id="fixed-18">Fixed</h3>
+<h3 id="fixed-19">Fixed</h3>
 
 <ul>
   <li>
@@ -514,7 +548,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>29.31% documented</li>
 </ul>
 
-<h3 id="fixed-19">Fixed</h3>
+<h3 id="fixed-20">Fixed</h3>
 
 <ul>
   <li>
@@ -554,7 +588,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>Budget kettle-jem template workers across concurrent family members.</li>
 </ul>
 
-<h3 id="fixed-20">Fixed</h3>
+<h3 id="fixed-21">Fixed</h3>
 
 <ul>
   <li>
@@ -622,7 +656,7 @@ use ClickGems instead of BestGems.</p>
   </li>
 </ul>
 
-<h3 id="fixed-21">Fixed</h3>
+<h3 id="fixed-22">Fixed</h3>
 
 <ul>
   <li>
@@ -670,7 +704,7 @@ matching Galtzo-hosted asset exists.</p>
   </li>
 </ul>
 
-<h3 id="fixed-22">Fixed</h3>
+<h3 id="fixed-23">Fixed</h3>
 
 <ul>
   <li>
@@ -707,7 +741,7 @@ matching Galtzo-hosted asset exists.</p>
   <li>28.88% documented</li>
 </ul>
 
-<h3 id="fixed-23">Fixed</h3>
+<h3 id="fixed-24">Fixed</h3>
 
 <ul>
   <li>Legacy Bundler recovery preserves shell operators in configured compound lockfile commands while removing an unsupported <code>--add-checksums</code> flag.</li>
@@ -724,7 +758,7 @@ matching Galtzo-hosted asset exists.</p>
   <li>28.88% documented</li>
 </ul>
 
-<h3 id="fixed-24">Fixed</h3>
+<h3 id="fixed-25">Fixed</h3>
 
 <ul>
   <li>Legacy Bundler recovery now retries template lock normalization without<br>
@@ -764,7 +798,7 @@ local destination changes protected by the template-only checksum policy.</li>
   <li>28.88% documented</li>
 </ul>
 
-<h3 id="fixed-25">Fixed</h3>
+<h3 id="fixed-26">Fixed</h3>
 
 <ul>
   <li>Template branch-target workflows now recover a sole locally sourced<br>
@@ -785,7 +819,7 @@ once when the active Bundler rejects <code>--add-checksums</code>.</li>
   <li>28.88% documented</li>
 </ul>
 
-<h3 id="fixed-26">Fixed</h3>
+<h3 id="fixed-27">Fixed</h3>
 
 <ul>
   <li>Configured per-member branch-target workflows now preserve the parent<br>
@@ -804,7 +838,7 @@ beneath the target member checkout.</li>
   <li>28.88% documented</li>
 </ul>
 
-<h3 id="fixed-27">Fixed</h3>
+<h3 id="fixed-28">Fixed</h3>
 
 <ul>
   <li>Family-owned release OTP lookups now render as structured secret-provider<br>
@@ -872,7 +906,7 @@ counts, so CI monitoring no longer appears stuck while waiting for workflows.</l
 of printing separate start and finish lines for each successful phase.</li>
 </ul>
 
-<h3 id="fixed-28">Fixed</h3>
+<h3 id="fixed-29">Fixed</h3>
 
 <ul>
   <li>
@@ -898,7 +932,7 @@ still block release parity failures.</p>
   <li>28.84% documented</li>
 </ul>
 
-<h3 id="fixed-29">Fixed</h3>
+<h3 id="fixed-30">Fixed</h3>
 
 <ul>
   <li>
@@ -987,7 +1021,7 @@ workflows that install through setup-ruby-flash.</p>
   <li>27.83% documented</li>
 </ul>
 
-<h3 id="fixed-30">Fixed</h3>
+<h3 id="fixed-31">Fixed</h3>
 
 <ul>
   <li>
@@ -1041,7 +1075,7 @@ before slower checks can consume operator attention.</li>
   <li>28.01% documented</li>
 </ul>
 
-<h3 id="fixed-31">Fixed</h3>
+<h3 id="fixed-32">Fixed</h3>
 
 <ul>
   <li>Shared-root changelog release phases now collect coverage from the family root<br>
@@ -1060,7 +1094,7 @@ bundle, preserving aggregate monorepo coverage stats while keeping<br>
   <li>28.01% documented</li>
 </ul>
 
-<h3 id="fixed-32">Fixed</h3>
+<h3 id="fixed-33">Fixed</h3>
 
 <ul>
   <li>Shared-root changelog release phases now run <code>kettle-changelog</code> inside the<br>
@@ -1079,7 +1113,7 @@ root changelog path explicitly.</li>
   <li>28.01% documented</li>
 </ul>
 
-<h3 id="fixed-33">Fixed</h3>
+<h3 id="fixed-34">Fixed</h3>
 
 <ul>
   <li>Monorepo <code>kettle-family template</code> now runs local <code>kettle-jem</code> through its<br>
@@ -1109,7 +1143,7 @@ whose sibling gems live under a subdirectory such as <code>gems/</code>.</li>
   <li>28.01% documented</li>
 </ul>
 
-<h3 id="fixed-34">Fixed</h3>
+<h3 id="fixed-35">Fixed</h3>
 
 <ul>
   <li>
@@ -1141,7 +1175,7 @@ release-style bundle refreshes.</li>
   <li>28.01% documented</li>
 </ul>
 
-<h3 id="fixed-35">Fixed</h3>
+<h3 id="fixed-36">Fixed</h3>
 
 <ul>
   <li>
@@ -1170,7 +1204,7 @@ even when the gemspec is loaded from another working directory.</p>
 
 <h3 id="added-8">Added</h3>
 
-<h3 id="fixed-36">Fixed</h3>
+<h3 id="fixed-37">Fixed</h3>
 
 <ul>
   <li>
@@ -1202,7 +1236,7 @@ cover both <code>version.rb</code> and <code>version_gem.rb</code>.</li>
   <li>28.01% documented</li>
 </ul>
 
-<h3 id="fixed-37">Fixed</h3>
+<h3 id="fixed-38">Fixed</h3>
 
 <ul>
   <li>
@@ -1231,7 +1265,7 @@ preparation when a member has no <code>Gemfile.lock</code>, instead of running a
   <li>28.10% documented</li>
 </ul>
 
-<h3 id="fixed-38">Fixed</h3>
+<h3 id="fixed-39">Fixed</h3>
 
 <ul>
   <li>
@@ -1253,7 +1287,7 @@ dumped raw into the final text report.</li>
   <li>28.10% documented</li>
 </ul>
 
-<h3 id="fixed-39">Fixed</h3>
+<h3 id="fixed-40">Fixed</h3>
 
 <ul>
   <li>
@@ -1342,7 +1376,7 @@ setup-ruby-flash planning and can prepare appraisal-only jobs without<br>
 installing the main Gemfile bundle.</li>
 </ul>
 
-<h3 id="fixed-40">Fixed</h3>
+<h3 id="fixed-41">Fixed</h3>
 
 <ul>
   <li>
@@ -1414,7 +1448,7 @@ or incompatible with the project’s runtime Ruby floor.</p>
   </li>
 </ul>
 
-<h3 id="fixed-41">Fixed</h3>
+<h3 id="fixed-42">Fixed</h3>
 
 <ul>
   <li>Monorepo templating now passes a shared Git operation lock to <code>kettle-jem</code>,<br>
@@ -1452,7 +1486,7 @@ column next to the local, changelog, and RubyGems version columns.</li>
   <li>28.26% documented</li>
 </ul>
 
-<h3 id="fixed-42">Fixed</h3>
+<h3 id="fixed-43">Fixed</h3>
 
 <ul>
   <li>Release and template orchestration now consume NDJSON event lines even when<br>
@@ -1476,7 +1510,7 @@ gitmoji grapheme accepted by generated commit hooks.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="fixed-43">Fixed</h3>
+<h3 id="fixed-44">Fixed</h3>
 
 <ul>
   <li>Release summaries now count only members that reached a release terminal<br>
@@ -1517,7 +1551,7 @@ maps release NDJSON events into the family progress display.</li>
   <li>kettle-jem-template-initial - Initial templating by kettle-jem.</li>
 </ul>
 
-<h3 id="fixed-44">Fixed</h3>
+<h3 id="fixed-45">Fixed</h3>
 
 <ul>
   <li>Failed release command reports now summarize release NDJSON diagnostics and<br>
@@ -1535,7 +1569,7 @@ final status instead of dumping the raw event stream into the human report.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="fixed-45">Fixed</h3>
+<h3 id="fixed-46">Fixed</h3>
 
 <ul>
   <li>Dependency floor propagation after a sibling release now retries<br>
@@ -1555,7 +1589,7 @@ checksums.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="fixed-46">Fixed</h3>
+<h3 id="fixed-47">Fixed</h3>
 
 <ul>
   <li>No-config single-member templating no longer injects a synthetic family-local<br>
@@ -1575,7 +1609,7 @@ while parallel workers report events out of order.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="fixed-47">Fixed</h3>
+<h3 id="fixed-48">Fixed</h3>
 
 <ul>
   <li>Release workflows now automatically normalize <code>Gemfile.lock</code> before readiness<br>
@@ -1596,7 +1630,7 @@ when a selected member lockfile contains local path remotes.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="fixed-48">Fixed</h3>
+<h3 id="fixed-49">Fixed</h3>
 
 <ul>
   <li>
@@ -1644,7 +1678,7 @@ as a fixed-width sliding event tape instead of dots or raw event dumps.</li>
   <li>29.23% documented</li>
 </ul>
 
-<h3 id="fixed-49">Fixed</h3>
+<h3 id="fixed-50">Fixed</h3>
 
 <ul>
   <li>Monorepo templating now passes a shared <code>kettle-jem</code> git commit lock so<br>
@@ -1662,7 +1696,7 @@ parallel member templating no longer races while updating <code>HEAD</code>.</li
   <li>29.23% documented</li>
 </ul>
 
-<h3 id="fixed-50">Fixed</h3>
+<h3 id="fixed-51">Fixed</h3>
 
 <ul>
   <li>Family releases now retry <code>bundle update</code> for dependent members after<br>
@@ -1688,7 +1722,7 @@ changelogs when present and retaining branch-stack release-state output.</li>
   <li>28.68% documented</li>
 </ul>
 
-<h3 id="fixed-51">Fixed</h3>
+<h3 id="fixed-52">Fixed</h3>
 
 <ul>
   <li>
@@ -1716,7 +1750,7 @@ release tag, allowing later pending members to continue.</li>
 truncate checkout branch names to 10 characters.</li>
 </ul>
 
-<h3 id="fixed-52">Fixed</h3>
+<h3 id="fixed-53">Fixed</h3>
 
 <ul>
   <li>
@@ -1773,7 +1807,7 @@ omit JRuby and TruffleRuby jobs when project config declares MRI-only engines.</
 now include a RubyForum help badge.</li>
 </ul>
 
-<h3 id="fixed-53">Fixed</h3>
+<h3 id="fixed-54">Fixed</h3>
 
 <ul>
   <li>Default member discovery now excludes benchmark fixture gemspecs so benchmark<br>
@@ -1831,7 +1865,7 @@ diagnostic, and summary events as member-prefixed progress lines.</li>
 <code>kettle-family bump-version</code> is now deprecated in favor of <code>kettle-family bump</code>.</li>
 </ul>
 
-<h3 id="fixed-54">Fixed</h3>
+<h3 id="fixed-55">Fixed</h3>
 
 <ul>
   <li>The templating prepare phase now disables only the implicit family local path<br>
@@ -1886,7 +1920,7 @@ the next <code>kettle-jem</code> release depends on unreleased <code>kettle-fami
 repository-only files by default to reduce downstream distro packaging churn.</li>
 </ul>
 
-<h3 id="fixed-55">Fixed</h3>
+<h3 id="fixed-56">Fixed</h3>
 
 <ul>
   <li>Root-mode family changelog release commands now pass the configured family<br>
@@ -1912,7 +1946,7 @@ forwarding them to shell-backed <code>kettle-release</code> commands.</li>
   <li>29.29% documented</li>
 </ul>
 
-<h3 id="fixed-56">Fixed</h3>
+<h3 id="fixed-57">Fixed</h3>
 
 <ul>
   <li>Family release now waits for just-published prerequisite family gems to appear<br>
@@ -1931,7 +1965,7 @@ and release steps.</li>
   <li>29.54% documented</li>
 </ul>
 
-<h3 id="fixed-57">Fixed</h3>
+<h3 id="fixed-58">Fixed</h3>
 
 <ul>
   <li>Command runner child processes now use a per-child unbundled environment<br>
@@ -2009,7 +2043,7 @@ member release by default, with <code>--no-auto-floors</code> and<br>
   <li>29.82% documented</li>
 </ul>
 
-<h3 id="fixed-58">Fixed</h3>
+<h3 id="fixed-59">Fixed</h3>
 
 <ul>
   <li>Root-configured member branch target commands now rediscover the checked-out<br>
@@ -2028,7 +2062,7 @@ being bumped to the current branch’s version.</li>
   <li>29.82% documented</li>
 </ul>
 
-<h3 id="fixed-59">Fixed</h3>
+<h3 id="fixed-60">Fixed</h3>
 
 <ul>
   <li>Branch-target workflows now fail before doing member work when a dirty<br>
@@ -2071,7 +2105,7 @@ version bump engine directly.</li>
   <li>Runtime dependency <code>kettle-dev</code> now requires 2.3.0 or newer.</li>
 </ul>
 
-<h3 id="fixed-60">Fixed</h3>
+<h3 id="fixed-61">Fixed</h3>
 
 <ul>
   <li>
@@ -2106,7 +2140,7 @@ available, selecting all members except the comma-separated exclusions.</li>
 <code>command_kit</code>, keeping naked help focused on global options.</li>
 </ul>
 
-<h3 id="fixed-61">Fixed</h3>
+<h3 id="fixed-62">Fixed</h3>
 
 <ul>
   <li>
@@ -2141,7 +2175,7 @@ TruffleRuby to avoid a TruffleRuby 24.2 internal <code>ENV.replace</code> crash 
 preserving command arguments after <code>--</code> and committing member changes by default.</li>
 </ul>
 
-<h3 id="fixed-62">Fixed</h3>
+<h3 id="fixed-63">Fixed</h3>
 
 <ul>
   <li>Package configured license files in gem release file lists.</li>
@@ -2192,7 +2226,7 @@ workflows.</li>
 dependency-safe release groups are visible.</li>
 </ul>
 
-<h3 id="fixed-63">Fixed</h3>
+<h3 id="fixed-64">Fixed</h3>
 
 <ul>
   <li>Parallel <code>kettle-family release</code> waves now stop assigning queued releases as<br>
@@ -2237,7 +2271,7 @@ targeted <code>bundle update GEM</code>, and <code>kettle-family bupb</code> for
 <code>bundle update --bundler</code>.</li>
 </ul>
 
-<h3 id="fixed-64">Fixed</h3>
+<h3 id="fixed-65">Fixed</h3>
 
 <ul>
   <li>
@@ -2275,7 +2309,7 @@ through to <code>kettle-release</code> commands for recovery releases.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="fixed-65">Fixed</h3>
+<h3 id="fixed-66">Fixed</h3>
 
 <ul>
   <li>
@@ -2294,7 +2328,7 @@ assignments so quiet release commands run correctly through <code>mise exec</cod
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="fixed-66">Fixed</h3>
+<h3 id="fixed-67">Fixed</h3>
 
 <ul>
   <li>
@@ -2315,7 +2349,7 @@ environment variables whose presence enables resolver/debug output.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="fixed-67">Fixed</h3>
+<h3 id="fixed-68">Fixed</h3>
 
 <ul>
   <li>
@@ -2334,7 +2368,7 @@ overrides to release commands and release lockfile normalization.</li>
   <li>38.60% documented</li>
 </ul>
 
-<h3 id="fixed-68">Fixed</h3>
+<h3 id="fixed-69">Fixed</h3>
 
 <ul>
   <li>
@@ -2364,7 +2398,7 @@ member release commands unless <code>--debug</code> is enabled.</li>
 <code>TREE_SITTER_LANGUAGE_PACK_DEV</code>.</li>
 </ul>
 
-<h3 id="fixed-69">Fixed</h3>
+<h3 id="fixed-70">Fixed</h3>
 
 <ul>
   <li>Release failure reports now suggest rerunning the full executed release command,<br>
@@ -2407,7 +2441,7 @@ noisy Bundler/debug environment by default, overriding inherited debug<br>
 variables unless <code>--debug</code> is passed.</li>
 </ul>
 
-<h3 id="fixed-70">Fixed</h3>
+<h3 id="fixed-71">Fixed</h3>
 
 <ul>
   <li>Parallel release MFA coordination now shares an entered OTP only with prompts<br>
@@ -2427,7 +2461,7 @@ RubyGems OTP prompts.</li>
   <li>39.63% documented</li>
 </ul>
 
-<h3 id="fixed-71">Fixed</h3>
+<h3 id="fixed-72">Fixed</h3>
 
 <ul>
   <li>Interactive release commands now leave RubyGems MFA/OTP prompts for the user<br>
@@ -2455,7 +2489,7 @@ avoiding encoding crashes when a release command fails after PTY output.</li>
 whether interactive confirmation prompts are answered automatically.</li>
 </ul>
 
-<h3 id="fixed-72">Fixed</h3>
+<h3 id="fixed-73">Fixed</h3>
 
 <ul>
   <li>Interactive release commands now answer <code>[y/N]</code> confirmation prompts before<br>
@@ -2492,7 +2526,7 @@ member from each member’s current version.</li>
 version so local runs show which executable is active.</li>
 </ul>
 
-<h3 id="fixed-73">Fixed</h3>
+<h3 id="fixed-74">Fixed</h3>
 
 <ul>
   <li>Branch-stack commands now allow <code>main</code> as a configured branch target for<br>
@@ -2533,7 +2567,7 @@ branch.</li>
   <li>40.40% documented</li>
 </ul>
 
-<h3 id="fixed-74">Fixed</h3>
+<h3 id="fixed-75">Fixed</h3>
 
 <ul>
   <li>Release reports now label plain <code>release</code> as build-only mode and<br>
@@ -2560,7 +2594,7 @@ resulting lockfile changes.</li>
   <li>40.14% documented</li>
 </ul>
 
-<h3 id="fixed-75">Fixed</h3>
+<h3 id="fixed-76">Fixed</h3>
 
 <ul>
   <li>Workflow commands now honor member-local <code>.kettle-family.yml</code> release target<br>
@@ -2579,7 +2613,7 @@ those member-local branch targets.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="fixed-76">Fixed</h3>
+<h3 id="fixed-77">Fixed</h3>
 
 <ul>
   <li>Member workflow commands now run with the parent Bundler environment removed,<br>
@@ -2601,7 +2635,7 @@ overrides.</li>
   <li>39.73% documented</li>
 </ul>
 
-<h3 id="fixed-77">Fixed</h3>
+<h3 id="fixed-78">Fixed</h3>
 
 <ul>
   <li>
@@ -2642,7 +2676,7 @@ branch.</p>
   <li>Retemplated project metadata and CI/development automation with <code>kettle-jem</code> v7.0.0.</li>
 </ul>
 
-<h3 id="fixed-78">Fixed</h3>
+<h3 id="fixed-79">Fixed</h3>
 
 <ul>
   <li>Corrected OpenCollective funding metadata to use the <code>kettle-dev</code> collective.</li>
@@ -2731,7 +2765,7 @@ environment overrides, and an optional family changelog release phase for<br>
 monorepo gem families whose members share root release metadata.</li>
 </ul>
 
-<h3 id="fixed-79">Fixed</h3>
+<h3 id="fixed-80">Fixed</h3>
 
 <ul>
   <li>Fixed the Ruby 3.2 CI appraisal so root changelog release-state checks have<br>
@@ -2765,7 +2799,7 @@ toolchain instead of depending on <code>kettle-dev</code> as a published runtime
 dependency.</li>
 </ul>
 
-<h3 id="fixed-80">Fixed</h3>
+<h3 id="fixed-81">Fixed</h3>
 
 <ul>
   <li>Fixed release-state checks to use the active <code>kettle-dev</code> API instead of each<br>
@@ -2818,7 +2852,7 @@ family members using <code>kettle-changelog --release-state --json</code>.</li>
   <li>Retemplated generated project files with <code>kettle-dev</code> &gt;= 2.2.7.</li>
 </ul>
 
-<h3 id="fixed-81">Fixed</h3>
+<h3 id="fixed-82">Fixed</h3>
 
 <ul>
   <li>Member discovery now filters configured excludes and git-ignored paths before<br>
@@ -2853,7 +2887,7 @@ loading gemspecs, avoiding fixture load failures in family roots.</li>
   <li>Added explicit runtime dependency wiring for extracted stdlib gems used by the CLI.</li>
 </ul>
 
-<h3 id="fixed-82">Fixed</h3>
+<h3 id="fixed-83">Fixed</h3>
 
 <ul>
   <li>Updated generated project metadata links to use the migrated <code>kettle-dev</code><br>

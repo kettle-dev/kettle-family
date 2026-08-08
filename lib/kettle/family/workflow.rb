@@ -1814,7 +1814,7 @@ module Kettle
         # before building and publishing the gem.
         family_env_name = config.family_local_path_env_name
         if config.family_mode == "monorepo" && family_env_name &&
-           local_path_env_value?(release_env[family_env_name])
+            local_path_env_value?(release_env[family_env_name])
           env[family_env_name] = release_env.fetch(family_env_name)
         end
         return env unless config.shared_changelog?
@@ -1989,10 +1989,10 @@ module Kettle
       def local_kettle_dev_gemfile_path(local_kettle_dev)
         return nil unless local_path_env_value?(local_kettle_dev)
 
-      candidates = [
-        File.join(local_kettle_dev, "kettle-dev", "Gemfile"),
-        File.join(local_kettle_dev, "Gemfile")
-      ]
+        candidates = [
+          File.join(local_kettle_dev, "kettle-dev", "Gemfile"),
+          File.join(local_kettle_dev, "Gemfile")
+        ]
         candidates.find { |path| File.file?(path) }
       end
 
