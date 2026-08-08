@@ -1048,7 +1048,10 @@ module Kettle
         return unless config.shared_changelog?
         return unless Kettle::Dev::VersionBump::BUMP_TYPES.include?(options[:target_version].to_s)
 
-        current = members.map { |member| Gem::Version.new(member.version.to_s) }.max
+        versions = members.map { |member| Gem::Version.new(member.version.to_s) }.uniq
+        current = versions.max
+        return current.to_s if versions.length > 1
+
         Kettle::Dev::VersionBump.resolve_target_version(options[:target_version].to_s, current.to_s)
       end
 

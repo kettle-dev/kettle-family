@@ -107,6 +107,20 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(results.last.stdout).to include("no version changes needed")
   end
 
+  it "uses the already bumped version as the shared target for a divergent family" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "1.1.0")
+
+    results = described_class.new(
+      members: [alpha, beta],
+      target_version: "patch",
+      shared_target_version: "1.1.0",
+      mode: :check
+    ).results
+
+    expect(results.map(&:reason)).to eq(["version changes required", nil])
+  end
+
   it "supports minor, major, and prerelease bump targets" do
     minor = write_gem("minor", version: "1.2.3")
     major = write_gem("major", version: "1.2.3")

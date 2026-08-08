@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Align incomplete shared-version bumps to one family target version.
 
+- Distinguish partial shared-version bumps from aligned family bumps.
+
 ### Security
 
 ## [1.2.40] - 2026-08-07
