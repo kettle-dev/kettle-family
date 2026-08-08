@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Compute bump release state for shared-changelog members.
 
+- Select the complete shared-version family when any member requires a version bump.
+
 ### Security
 
 ## [1.2.39] - 2026-08-07

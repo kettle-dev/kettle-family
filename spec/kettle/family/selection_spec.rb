@@ -59,9 +59,9 @@ RSpec.describe Kettle::Family::Selection do
   it "selects the complete shared-version family when any member needs a bump" do
     members = [member("alpha"), member("beta"), member("gamma")]
     results = [
-      release_state_result("alpha", "bump_release_pending" => true),
-      release_state_result("beta", "bump_release_pending" => false),
-      release_state_result("gamma", "bump_release_pending" => false)
+      release_state("alpha", "bump_release_pending" => true),
+      release_state("beta", "bump_release_pending" => false),
+      release_state("gamma", "bump_release_pending" => false)
     ]
 
     selected = described_class.new(
