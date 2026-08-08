@@ -223,7 +223,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(members:, release_state_results: nil)  &#x21d2; Selection </a>
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(members:, release_state_results: nil, shared_version: false)  &#x21d2; Selection </a>
     
 
     
@@ -255,7 +255,7 @@
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(members:, release_state_results: nil)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::Selection (class)">Selection</a></span></tt> 
+    #<strong>initialize</strong>(members:, release_state_results: nil, shared_version: false)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::Selection (class)">Selection</a></span></tt> 
   
 
   
@@ -280,14 +280,16 @@
 24
 25
 26
-27</pre>
+27
+28</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 24</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>release_state_results:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>release_state_results:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>shared_version:</span> <span class='kw'>false</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@release_state_results</span> <span class='op'>=</span> <span class='id identifier rubyid_release_state_results'>release_state_results</span>
+  <span class='ivar'>@shared_version</span> <span class='op'>=</span> <span class='id identifier rubyid_shared_version'>shared_version</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -428,7 +430,6 @@
       <pre class="lines">
 
 
-29
 30
 31
 32
@@ -436,10 +437,11 @@
 34
 35
 36
-37</pre>
+37
+38</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 29</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 30</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_apply'>apply</span><span class='lparen'>(</span><span class='label'>only:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>exclude:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>start_at:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_selected'>selected</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
