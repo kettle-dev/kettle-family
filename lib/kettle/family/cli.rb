@@ -750,7 +750,7 @@ module Kettle
 
       def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil), state_event_handler: nil)
         return mise_trust_results(config: config, members: members) if command == "mise-trust"
-        return bump_version_results(members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
+        return bump_version_results(config: config, members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
         return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
@@ -1003,12 +1003,13 @@ module Kettle
         StartAt.new(member, branch)
       end
 
-      def bump_version_results(members:, options:, phase:)
+      def bump_version_results(config:, members:, options:, phase:)
         require_relative "version_bump"
         require_relative "release_waves"
 
         results = []
         completed_target_versions = {}
+        shared_target_version = shared_bump_target_version(config: config, members: members, options: options)
         ReleaseWaves.new(members: members).waves.each do |wave|
           bump = VersionBump.new(
             members: wave,
@@ -1016,6 +1017,7 @@ module Kettle
             from_version: options[:from_version],
             mode: bump_version_mode(options),
             phase: phase,
+            shared_target_version: shared_target_version,
             dependency_target_versions: completed_target_versions
           )
           wave_results = bump.results
@@ -1040,6 +1042,14 @@ module Kettle
           )
           break memo unless memo.last.ok?
         end
+      end
+
+      def shared_bump_target_version(config:, members:, options:)
+        return unless config.shared_changelog?
+        return unless Kettle::Dev::VersionBump::BUMP_TYPES.include?(options[:target_version].to_s)
+
+        current = members.map { |member| Gem::Version.new(member.version.to_s) }.max
+        Kettle::Dev::VersionBump.resolve_target_version(options[:target_version].to_s, current.to_s)
       end
 
       def add_changelog_results(members:, options:)

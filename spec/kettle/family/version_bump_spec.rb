@@ -89,6 +89,24 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.0.1"')
   end
 
+  it "aligns an incomplete shared-version bump without incrementing the member already at the target" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "1.1.0")
+
+    results = described_class.new(
+      members: [alpha, beta],
+      target_version: "patch",
+      shared_target_version: "1.1.0",
+      mode: :execute
+    ).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(alpha.version_file)).to include('VERSION = "1.1.0"')
+    expect(File.read(beta.version_file)).to include('VERSION = "1.1.0"')
+    expect(results.last.stdout).to include("1.1.0 -> 1.1.0")
+    expect(results.last.stdout).to include("no version changes needed")
+  end
+
   it "supports minor, major, and prerelease bump targets" do
     minor = write_gem("minor", version: "1.2.3")
     major = write_gem("major", version: "1.2.3")

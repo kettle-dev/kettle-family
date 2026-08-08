@@ -7,13 +7,14 @@ module Kettle
     class VersionBump
       DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency add_development_dependency].freeze
 
-      def initialize(members:, target_version:, from_version: nil, mode: :dry_run, phase: "bump-version", dependency_target_versions: nil)
+      def initialize(members:, target_version:, from_version: nil, mode: :dry_run, phase: "bump-version", dependency_target_versions: nil, shared_target_version: nil)
         @members = members
         @target_version = target_version.to_s
         @explicit_target_version = validate_version(target_version) unless Kettle::Dev::VersionBump::BUMP_TYPES.include?(@target_version)
         @from_version = validate_version(from_version) if from_version
         @mode = mode
         @phase = phase
+        @shared_target_version = shared_target_version && validate_version(shared_target_version)
         @member_names = members.map(&:name)
         @member_target_versions = members.each_with_object({}) do |member, memo|
           memo[member.name] = resolve_target_version(member)
@@ -32,7 +33,7 @@ module Kettle
 
       private
 
-      attr_reader :members, :target_version, :explicit_target_version, :from_version, :mode, :phase, :member_target_versions, :dependency_target_versions, :dependency_member_names
+      attr_reader :members, :target_version, :explicit_target_version, :from_version, :mode, :phase, :member_target_versions, :dependency_target_versions, :dependency_member_names, :shared_target_version
 
       def validate_version(version)
         with_dev_errors { Kettle::Dev::VersionBump.validate_version(version) }
@@ -147,6 +148,7 @@ module Kettle
 
       def resolve_target_version(member)
         return explicit_target_version unless Kettle::Dev::VersionBump::BUMP_TYPES.include?(target_version)
+        return shared_target_version if shared_target_version
 
         with_dev_errors { Kettle::Dev::VersionBump.resolve_target_version(target_version, member.version) }
       end

@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Propagate shared-version bump state across all family members.
 
+- Align incomplete shared-version bumps to one family target version.
+
 ### Security
 
 ## [1.2.40] - 2026-08-07
