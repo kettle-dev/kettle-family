@@ -655,7 +655,11 @@ module Kettle
         end
         state_event_tape = release_state_event_tape(command: command, config: config, options: options)
         release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only, jobs: options[:jobs])
-        selected = Selection.new(members: ordered, release_state_results: release_state_results).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
+        selected = Selection.new(
+          members: ordered,
+          release_state_results: release_state_results,
+          shared_version: config.shared_changelog?
+        ).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
         display_members = display_members_for(command: command, config: config, members: ordered, selected_members: selected)
         display_selected_members = display_members_for(command: command, config: config, members: selected, selected_members: selected)

@@ -56,6 +56,23 @@ RSpec.describe Kettle::Family::Selection do
     expect(selected.map(&:name)).to eq(["alpha"])
   end
 
+  it "selects the complete shared-version family when any member needs a bump" do
+    members = [member("alpha"), member("beta"), member("gamma")]
+    results = [
+      release_state_result("alpha", "bump_release_pending" => true),
+      release_state_result("beta", "bump_release_pending" => false),
+      release_state_result("gamma", "bump_release_pending" => false)
+    ]
+
+    selected = described_class.new(
+      members: members,
+      release_state_results: results,
+      shared_version: true
+    ).apply(only: "bump")
+
+    expect(selected).to eq(members)
+  end
+
   it "ANDs multiple release-state tokens" do
     members = [member("alpha"), member("beta"), member("gamma")]
     results = [

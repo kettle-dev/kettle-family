@@ -21,9 +21,10 @@ module Kettle
         STATUS_TOKEN_KEYS.key?(value.to_s)
       end
 
-      def initialize(members:, release_state_results: nil)
+      def initialize(members:, release_state_results: nil, shared_version: false)
         @members = members
         @release_state_results = release_state_results
+        @shared_version = shared_version
       end
 
       def apply(only: nil, exclude: nil, start_at: nil)
@@ -38,7 +39,7 @@ module Kettle
 
       private
 
-      attr_reader :members, :release_state_results
+      attr_reader :members, :release_state_results, :shared_version
 
       def select_only(selected, only)
         names = only.split(",").map(&:strip).reject(&:empty?)
@@ -79,6 +80,10 @@ module Kettle
         results_by_member = release_state_results_by_member
         failed = results_by_member.values.select { |result| !result.ok? }
         raise Error, "release-state check failed for: #{failed.map(&:member_name).join(", ")}" unless failed.empty?
+
+        if shared_version && status_tokens.include?("bump")
+          return selected if selected.any? { |candidate| truthy_state?(results_by_member[candidate.name]&.state&.fetch("bump_release_pending", nil)) }
+        end
 
         selected.select do |candidate|
           result = results_by_member[candidate.name]
