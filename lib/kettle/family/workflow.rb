@@ -2401,7 +2401,18 @@ module Kettle
       end
 
       def bundle_update_env
-        workflow_env.merge(release_lockfile_local_path_env_overrides)
+        env = workflow_env.merge(release_lockfile_local_path_env_overrides)
+        explicit_local_path_env_overrides.each { |key, value| env[key] = value }
+        env
+      end
+
+      def explicit_local_path_env_overrides
+        ENV.to_h.merge(env_overrides).each_with_object({}) do |(key, value), overrides|
+          next unless key.end_with?("_DEV", "_LOCAL") || config.release_disable_local_path_env.include?(key)
+          next unless local_path_env_requested?(key)
+
+          overrides[key] = value
+        end
       end
 
       def monorepo_template?

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Preserve explicitly requested local dependency paths during family bundle updates while keeping default updates release-safe.
+
 ### Security
 
 ## [1.2.41] - 2026-08-07

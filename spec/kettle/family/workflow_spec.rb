@@ -103,6 +103,9 @@ RSpec.describe Kettle::Family::Workflow do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:
         local_path_env: KETTLE_DEV_DEV
+      release:
+        disable_local_path_env:
+          - K_JEM_TEMPLATING
     YAML
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
@@ -295,7 +298,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).phase).to eq("commit_bundle_update")
   end
 
-  it "plans bundle updates with local path environments disabled" do
+  it "preserves explicitly requested local path environments for bundle updates" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:
         local_path_env: KETTLE_DEV_DEV
@@ -308,10 +311,11 @@ RSpec.describe Kettle::Family::Workflow do
       command: "bup",
       config: config,
       members: [member],
-      env_overrides: {"KETTLE_DEV_DEV" => "true"}
+      env_overrides: {"KETTLE_DEV_DEV" => "true", "K_JEM_TEMPLATING" => "true"}
     )
 
-    expect(workflow.send(:bundle_update_env).fetch("KETTLE_DEV_DEV")).to eq("false")
+    expect(workflow.send(:bundle_update_env).fetch("KETTLE_DEV_DEV")).to eq("true")
+    expect(workflow.send(:bundle_update_env).fetch("K_JEM_TEMPLATING")).to eq("true")
   end
 
   it "disables family local path environments for bundle updates even when release env already disables them" do
@@ -332,7 +336,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:bundle_update_env).fetch("STRUCTUREDMERGE_DEV")).to eq("false")
   end
 
-  it "plans bundler updates with local path environments disabled" do
+  it "preserves explicitly requested local path environments for bundler updates" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:
         local_path_env: KETTLE_DEV_DEV
@@ -347,7 +351,7 @@ RSpec.describe Kettle::Family::Workflow do
       env_overrides: {"KETTLE_DEV_DEV" => "yes"}
     )
 
-    expect(workflow.send(:bundle_update_env).fetch("KETTLE_DEV_DEV")).to eq("false")
+    expect(workflow.send(:bundle_update_env).fetch("KETTLE_DEV_DEV")).to eq("yes")
   end
 
   it "does not commit bundle updates that produce local path lockfile remotes" do
