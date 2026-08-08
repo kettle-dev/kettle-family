@@ -290,14 +290,20 @@
 42
 43
 44
-45</pre>
+45
+46
+47
+48</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 36</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_parallel_map'>parallel_map</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span> <span class='id identifier rubyid_check_shared_changelog_member_or_local'>check_shared_changelog_member_or_local</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='rbrace'>}</span> <span class='kw'>if</span> <span class='id identifier rubyid_shared_changelog?'>shared_changelog?</span>
+  <span class='kw'>if</span> <span class='id identifier rubyid_shared_changelog?'>shared_changelog?</span>
+    <span class='id identifier rubyid_results'>results</span> <span class='op'>=</span> <span class='id identifier rubyid_parallel_map'>parallel_map</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span> <span class='id identifier rubyid_check_shared_changelog_member_or_local'>check_shared_changelog_member_or_local</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+    <span class='kw'>return</span> <span class='id identifier rubyid_normalize_shared_version_bump'>normalize_shared_version_bump</span><span class='lparen'>(</span><span class='id identifier rubyid_results'>results</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
 
   <span class='id identifier rubyid_member_results'>member_results</span> <span class='op'>=</span> <span class='id identifier rubyid_parallel_map'>parallel_map</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span>
     <span class='id identifier rubyid_member_branch_results'>member_branch_results</span> <span class='op'>=</span> <span class='id identifier rubyid_member_local_branch_results'>member_local_branch_results</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span>

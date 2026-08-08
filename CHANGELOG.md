@@ -28,13 +28,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.41] - 2026-08-07
+
+- TAG: [v1.2.41][1.2.41t]
+- COVERAGE: 93.55% -- 5020/5366 lines in 32 files
+- BRANCH COVERAGE: 76.05% -- 2010/2643 branches in 32 files
+- 29.81% documented
+
+### Fixed
+
 - Propagate shared-version bump state across all family members.
 
 - Align incomplete shared-version bumps to one family target version.
 
 - Distinguish partial shared-version bumps from aligned family bumps.
-
-### Security
 
 ## [1.2.40] - 2026-08-07
 
@@ -1915,7 +1924,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.40...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.41...HEAD
+[1.2.41]: https://github.com/kettle-dev/kettle-family/compare/v1.2.40...v1.2.41
+[1.2.41t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.41
 [1.2.40]: https://github.com/kettle-dev/kettle-family/compare/v1.2.39...v1.2.40
 [1.2.40t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.40
 [1.2.39]: https://github.com/kettle-dev/kettle-family/compare/v1.2.38...v1.2.39
