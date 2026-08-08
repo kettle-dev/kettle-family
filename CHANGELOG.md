@@ -38,6 +38,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep local monorepo sibling dependencies available while running shared-root release coverage.
 
+- Updated the release workflow spec to track the publish phase emitted by configured family release workflows.
+
 ### Security
 
 ## [1.2.42] - 2026-08-07

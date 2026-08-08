@@ -95,7 +95,7 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
     results = workflow.results
 
-    expect(results.map(&:phase)).to eq(%w[family_changelog check release_changelog release_build])
+    expect(results.map(&:phase)).to eq(%w[family_changelog check release_changelog release_publish])
     expect(results.first.command).to end_with(RbConfig.ruby, "-e", "puts 'changelog'")
     expect(results.first.workdir).to eq(member.root)
     expect(results.first.skipped).to be(true)
@@ -112,7 +112,7 @@ RSpec.describe Kettle::Family::Workflow do
       "K_RELEASE_CI_ROOT" => @tmpdir,
       "K_RELEASE_CI_WORKFLOWS" => "current.yml"
     )
-    expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'build'"])
+    expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'publish'"])
   end
 
   it "keeps local monorepo siblings available to the shared changelog suite" do
