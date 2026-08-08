@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep local kettle-dev tooling available while member release commands run.
 
+- Run member release tooling from the local kettle-dev bundle when configured.
+
 ### Security
 
 ## [1.2.42] - 2026-08-07

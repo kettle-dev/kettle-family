@@ -532,7 +532,10 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "keeps local kettle-dev tooling available to member release commands" do
-    stub_env("KETTLE_DEV_DEV" => "/workspace/kettle-dev")
+    local_kettle_dev = File.join(@tmpdir, "kettle-dev-workspace")
+    FileUtils.mkdir_p(File.join(local_kettle_dev, "kettle-dev"))
+    File.write(File.join(local_kettle_dev, "kettle-dev", "Gemfile"), "source 'https://gem.coop'\n")
+    stub_env("KETTLE_DEV_DEV" => local_kettle_dev)
     write_release_config(
       publish_command: "bundle exec kettle-release",
       release_env: {"KETTLE_DEV_DEV" => false}
@@ -541,7 +544,10 @@ RSpec.describe Kettle::Family::Workflow do
     member = ready_member("alpha")
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
 
-    expect(workflow.send(:release_env_for_member, member)).to include("KETTLE_DEV_DEV" => "/workspace/kettle-dev")
+    expect(workflow.send(:release_env_for_member, member)).to include(
+      "KETTLE_DEV_DEV" => local_kettle_dev,
+      "BUNDLE_GEMFILE" => File.join(local_kettle_dev, "kettle-dev", "Gemfile")
+    )
   end
 
   it "shrinks the family-local release environment after selected dependencies complete" do

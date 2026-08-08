@@ -1947,6 +1947,10 @@ module Kettle
         # hiding kettle-dev here would execute an older released tool instead.
         local_kettle_dev = ENV.fetch("KETTLE_DEV_DEV", "").to_s.strip
         env["KETTLE_DEV_DEV"] = local_kettle_dev if kettle_release_command?(raw_release_command) && local_path_env_value?(local_kettle_dev)
+        if kettle_release_command?(raw_release_command)
+          local_kettle_dev_gemfile = local_kettle_dev_gemfile_path(local_kettle_dev)
+          env["BUNDLE_GEMFILE"] = local_kettle_dev_gemfile if local_kettle_dev_gemfile
+        end
         if config.family_mode == "monorepo"
           # Monorepo members release from subdirectories, while CI workflows
           # live at the shared repository root.
@@ -1971,6 +1975,16 @@ module Kettle
           # the family-wide coverage threshold.
           "K_CHANGELOG_COVERAGE_HARD" => "false"
         )
+      end
+
+      def local_kettle_dev_gemfile_path(local_kettle_dev)
+        return nil unless local_path_env_value?(local_kettle_dev)
+
+        candidates = [
+          File.join(local_kettle_dev, "Gemfile"),
+          File.join(local_kettle_dev, "kettle-dev", "Gemfile")
+        ]
+        candidates.find { |path| File.file?(path) }
       end
 
       # A release task may start with local sibling paths so a member can
