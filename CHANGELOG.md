@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Support wave-aware release environments that shrink local sibling paths as selected dependencies become available from the registry.
-
 ### Changed
 
 ### Deprecated
@@ -30,11 +28,24 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.42] - 2026-08-07
+
+- TAG: [v1.2.42][1.2.42t]
+- COVERAGE: 93.58% -- 5047/5393 lines in 32 files
+- BRANCH COVERAGE: 76.05% -- 2019/2655 branches in 32 files
+- 29.72% documented
+
+### Added
+
+- Support wave-aware release environments that shrink local sibling paths as selected dependencies become available from the registry.
+
+### Fixed
+
 - Preserve explicitly requested local dependency paths during family bundle updates while keeping default updates release-safe.
 
 - Keep aggregate monorepo GitHub-release execution out of release dry-runs.
-
-### Security
 
 ## [1.2.41] - 2026-08-07
 
@@ -1930,7 +1941,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.41...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.42...HEAD
+[1.2.42]: https://github.com/kettle-dev/kettle-family/compare/v1.2.41...v1.2.42
+[1.2.42t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.42
 [1.2.41]: https://github.com/kettle-dev/kettle-family/compare/v1.2.40...v1.2.41
 [1.2.41t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.41
 [1.2.40]: https://github.com/kettle-dev/kettle-family/compare/v1.2.39...v1.2.40
