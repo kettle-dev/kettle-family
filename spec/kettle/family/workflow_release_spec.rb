@@ -115,6 +115,34 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'build'"])
   end
 
+  it "keeps local monorepo siblings available to the shared changelog suite" do
+    write_release_config(
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      },
+      release_env: {"STRUCTUREDMERGE_DEV" => false}
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member(
+      "alpha",
+      changelog: false,
+      version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
+    )
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      env_overrides: {"STRUCTUREDMERGE_DEV" => File.join(@tmpdir, "gems")}
+    )
+
+    expect(workflow.send(:family_changelog_env)).to include(
+      "STRUCTUREDMERGE_DEV" => File.join(@tmpdir, "gems")
+    )
+  end
+
   it "passes accept mode through configured kettle-changelog family changelog commands" do
     write_release_config(
       family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},

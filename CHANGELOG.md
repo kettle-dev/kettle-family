@@ -36,6 +36,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Prefer the local kettle-dev gem bundle when release orchestration runs member kettle-release commands.
 
+- Keep local monorepo sibling dependencies available while running shared-root release coverage.
+
 ### Security
 
 ## [1.2.42] - 2026-08-07

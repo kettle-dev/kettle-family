@@ -1808,6 +1808,15 @@ module Kettle
 
       def family_changelog_env
         env = release_env.merge(config.changelog_env)
+        # A shared monorepo changelog runs the aggregate suite before each
+        # member release. Keep unpublished selected siblings on local paths for
+        # that suite; the member release's lockfile reset still disables them
+        # before building and publishing the gem.
+        family_env_name = config.family_local_path_env_name
+        if config.family_mode == "monorepo" && family_env_name &&
+           local_path_env_value?(release_env[family_env_name])
+          env[family_env_name] = release_env.fetch(family_env_name)
+        end
         return env unless config.shared_changelog?
 
         env.merge(
