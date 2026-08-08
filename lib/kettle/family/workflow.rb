@@ -1941,6 +1941,12 @@ module Kettle
       def release_env_for_member(member)
         env = release_env
         env.merge!(release_wave_local_path_env_for(member))
+        # Run the member's kettle-release from the local kettle-dev checkout
+        # when the family workflow itself is using local release tooling. The
+        # child release commands disable local dependency paths explicitly;
+        # hiding kettle-dev here would execute an older released tool instead.
+        local_kettle_dev = ENV.fetch("KETTLE_DEV_DEV", "").to_s.strip
+        env["KETTLE_DEV_DEV"] = local_kettle_dev if kettle_release_command?(raw_release_command) && local_path_env_value?(local_kettle_dev)
         if config.family_mode == "monorepo"
           # Monorepo members release from subdirectories, while CI workflows
           # live at the shared repository root.

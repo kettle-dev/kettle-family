@@ -92,7 +92,7 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
 
-    workflow = described_class.new(command: "release", config: config, members: [member])
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[family_changelog check release_changelog release_build])
@@ -529,6 +529,19 @@ RSpec.describe Kettle::Family::Workflow do
 
     release_command = results.find { |result| result.phase == "release_build" }.command
     expect(release_command).to include("#{family_local_env_name}=#{@tmpdir}")
+  end
+
+  it "keeps local kettle-dev tooling available to member release commands" do
+    stub_env("KETTLE_DEV_DEV" => "/workspace/kettle-dev")
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      release_env: {"KETTLE_DEV_DEV" => false}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+
+    expect(workflow.send(:release_env_for_member, member)).to include("KETTLE_DEV_DEV" => "/workspace/kettle-dev")
   end
 
   it "shrinks the family-local release environment after selected dependencies complete" do
