@@ -99,6 +99,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     member = member("alpha")
     config = instance_double(Kettle::Family::Config,
       shared_changelog?: true,
+      release_target_branches: [],
       root: @tmpdir,
       changelog_env: {},
       changelog_path: "CHANGELOG.md")
