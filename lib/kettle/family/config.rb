@@ -266,6 +266,10 @@ module Kettle
         stringify_env(fetch_path("release", "env") || {})
       end
 
+      def release_local_path_strategy
+        fetch_path("release", "local_path_strategy").to_s
+      end
+
       def release_secrets
         stringify_keys(fetch_path("release", "secrets") || {})
       end

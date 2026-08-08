@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Support wave-aware release environments that shrink local sibling paths as selected dependencies become available from the registry.
+
 ### Changed
 
 ### Deprecated
@@ -29,6 +31,8 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 - Preserve explicitly requested local dependency paths during family bundle updates while keeping default updates release-safe.
+
+- Keep aggregate monorepo GitHub-release execution out of release dry-runs.
 
 ### Security
 

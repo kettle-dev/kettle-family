@@ -36,6 +36,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
+  it "does not execute the aggregate monorepo release during a dry-run" do
+    write_release_config(
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+
+    result = workflow.send(:aggregate_monorepo_github_release, [member])
+
+    expect(result).to be_ok
+    expect(result.skipped).to be(true)
+    expect(result.reason).to eq("dry-run; pass --execute to run")
+  end
+
   it "keeps raw kettle-release output in the transcript by default" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -510,6 +529,61 @@ RSpec.describe Kettle::Family::Workflow do
 
     release_command = results.find { |result| result.phase == "release_build" }.command
     expect(release_command).to include("#{family_local_env_name}=#{@tmpdir}")
+  end
+
+  it "shrinks the family-local release environment after selected dependencies complete" do
+    write_release_config(
+      release_env: {family_local_env_name => @tmpdir}
+    )
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.load_file(File.join(@tmpdir, ".kettle-family.yml")).merge(
+        "release" => {
+          "env" => {family_local_env_name => @tmpdir},
+          "local_path_strategy" => "waves"
+        }
+      ).to_yaml
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha", dependencies: ["beta"])
+    beta = ready_member("beta")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [beta, alpha],
+      env_overrides: {family_local_env_name => @tmpdir}
+    )
+
+    expect(workflow.send(:release_env_for_member, alpha)).to include(family_local_env_name => @tmpdir)
+
+    workflow.instance_variable_set(:@release_completed_member_names, ["beta"])
+
+    expect(workflow.send(:release_env_for_member, alpha)).to include(family_local_env_name => "false")
+  end
+
+  it "uses released paths for dependencies outside the selected release set" do
+    write_release_config(
+      release_env: {family_local_env_name => @tmpdir}
+    )
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.load_file(File.join(@tmpdir, ".kettle-family.yml")).merge(
+        "release" => {
+          "env" => {family_local_env_name => @tmpdir},
+          "local_path_strategy" => "waves"
+        }
+      ).to_yaml
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", dependencies: ["released-dependency"])
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      env_overrides: {family_local_env_name => @tmpdir}
+    )
+
+    expect(workflow.send(:release_env_for_member, member)).to include(family_local_env_name => "false")
   end
 
   it "preserves release debug environment when debug is enabled" do

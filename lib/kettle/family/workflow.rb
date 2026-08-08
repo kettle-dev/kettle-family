@@ -1013,6 +1013,7 @@ module Kettle
       def release_member_results(release_members, include_family_changelog: false)
         runner = release_command_runner
         results = []
+        @release_completed_member_names = []
         append_family_changelog_result(runner: runner, memo: results) if include_family_changelog
         return results unless results.all?(&:ok?)
         return parallel_release_member_results(release_members, results) if parallel_release_members?(release_members)
@@ -1025,6 +1026,7 @@ module Kettle
             break memo unless memo.last.ok?
 
             remaining_members = release_members.drop(release_members.index(member) + 1)
+            @release_completed_member_names << member.name
             append_dependency_floor_results(released_members: [member], dependent_members: remaining_members, runner: runner, memo: memo)
             break memo unless memo.last&.ok?
           end
@@ -1038,6 +1040,7 @@ module Kettle
         results = initial_results.dup
         waves = release_waves(release_members)
         completed_members = []
+        @release_completed_member_names = []
         release_progress = start_release_progress(release_members)
         @release_progress = release_progress
         begin
@@ -1048,6 +1051,7 @@ module Kettle
             break unless wave_results.all? { |member_results| member_results.all?(&:ok?) }
 
             completed_members.concat(wave)
+            @release_completed_member_names.concat(wave.map(&:name))
             remaining_members = release_members - completed_members
             append_dependency_floor_results(released_members: wave, dependent_members: remaining_members, runner: release_command_runner, memo: results)
             break unless results.last&.ok?
@@ -1936,6 +1940,7 @@ module Kettle
       # member release phase as well as to the separate family phase.
       def release_env_for_member(member)
         env = release_env
+        env.merge!(release_wave_local_path_env_for(member))
         if config.family_mode == "monorepo"
           # Monorepo members release from subdirectories, while CI workflows
           # live at the shared repository root.
@@ -1962,6 +1967,29 @@ module Kettle
         )
       end
 
+      # A release task may start with local sibling paths so a member can
+      # consume a selected dependency that has not been published yet. Once
+      # that dependency is complete in an earlier wave, use its registry
+      # release for the next member. Dependencies outside the selected set are
+      # already treated as registry dependencies; this is what makes resume
+      # runs work after an earlier wave has been published.
+      def release_wave_local_path_env_for(member)
+        return {} unless config.release_local_path_strategy == "waves"
+
+        env_name = config.family_local_path_env_name
+        return {} if env_name.to_s.empty?
+
+        local_value = release_env[env_name]
+        return {} unless local_path_env_value?(local_value)
+
+        selected_names = members.map(&:name)
+        completed_names = Array(@release_completed_member_names)
+        unresolved_selected_dependency = release_dependency_names(member).any? do |dependency|
+          selected_names.include?(dependency) && !completed_names.include?(dependency)
+        end
+        {env_name => unresolved_selected_dependency ? local_value : "false"}
+      end
+
       # simplecov:disable Covered by monorepo release integration, not sibling-repository suite.
       def aggregate_monorepo_github_release(members)
         version = members.map { |member| member.version.to_s }.uniq
@@ -1974,6 +2002,8 @@ module Kettle
         end
         command = ["bundle", "exec", "kettle-gh-release", "--allow-unpublished", "--release-version", version.first]
         assets.each { |asset| command.concat(["--asset", asset]) }
+        return aggregate_release_dry_run_result(command) unless execute
+
         env = release_env.merge(
           "K_CHANGELOG_GEM_NAME" => config.family_name.to_s,
           "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
@@ -2016,6 +2046,22 @@ module Kettle
           elapsed_seconds: 0.0,
           skipped: false,
           reason: reason
+        )
+      end
+
+      def aggregate_release_dry_run_result(command)
+        CommandResult.new(
+          member_name: config.family_name,
+          phase: "aggregate_github_release",
+          command: command,
+          workdir: config.root,
+          status: 0,
+          success: true,
+          stdout: "aggregate GitHub release dry-run; pass --execute to run\n",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: true,
+          reason: "dry-run; pass --execute to run"
         )
       end
 
