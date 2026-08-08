@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Compute bump release state for shared-changelog members.
+
 ### Security
 
 ## [1.2.39] - 2026-08-07

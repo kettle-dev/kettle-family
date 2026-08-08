@@ -118,6 +118,7 @@ module Kettle
         success = status.success?
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
         state = success ? JSON.parse(stdout) : {}
+        state = state_with_computed_booleans(state) if success
         state = branch_filtered_state(member, state, branch) if success && branch
         emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "running") if success
         state = enrich_git_state(member.root, state, branch: branch) if success

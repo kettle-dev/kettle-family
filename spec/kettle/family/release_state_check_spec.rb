@@ -95,6 +95,29 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("bump_release_pending" => false)
   end
 
+  it "computes bump release state for shared changelog members" do
+    member = member("alpha")
+    config = instance_double(Kettle::Family::Config,
+      shared_changelog?: true,
+      root: @tmpdir,
+      changelog_env: {},
+      changelog_path: "CHANGELOG.md")
+    state = {
+      "gem_name" => "alpha",
+      "version" => "1.2.3",
+      "latest_released" => "1.2.3",
+      "unreleased_entries" => true,
+      "prepared_release_pending" => false,
+      "pending_release" => true
+    }
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(state), "", status(0, true)])
+    allow(config).to receive(:changelog_env).and_return({})
+
+    result = described_class.new(members: [member], config: config).results.fetch(0)
+
+    expect(result.state).to include("bump_release_pending" => true)
+  end
+
   it "reports command failures without treating pending release work as an error" do
     member = member("alpha")
     allow(Open3).to receive(:capture3).and_return(["", "boom", status(1, false)])
