@@ -96,7 +96,7 @@ Gem::Specification.new do |spec|
   # Utilities
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
-  spec.add_dependency("kettle-dev", "~> 2.3", ">= 2.5.24")                 # ruby >= 3.2.0
+  spec.add_dependency("kettle-dev", "~> 2.3", ">= 2.5.25")                 # ruby >= 3.2.0
   spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.18")              # ruby >= 2.4
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("tty-screen", "~> 0.8")                                  # ruby >= 2.0.0
