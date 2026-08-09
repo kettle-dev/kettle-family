@@ -398,11 +398,16 @@ members:
 kettle-family gha-sha-pins
 kettle-family gha-sha-pins --execute
 kettle-family gha-sha-pins --execute --upgrade minor
+kettle-family gha-sha-pins --execute --upgrade major --ttl 0
 ```
 
-The family command name is retained for compatibility, but it delegates to
-the current `kettle-gha-pins` executable for each selected member. The older
-`kettle-gha-sha-pins` executable is a legacy direct entrypoint.
+The family command inventories action repositories across the selected members,
+reviews the deduplicated set once using the shared cache, and then runs each
+member's pin update in strict offline mode. `--ttl DAYS` controls when the
+family review refreshes cached action metadata; `--ttl 0` forces a refresh. The
+member-level `--upgrade` and `--check --cooldown-days DAYS` options remain
+responsible for deciding whether individual pins need changes or should block a
+release. The older `kettle-gha-sha-pins` executable is a legacy direct entrypoint.
 
 Run release prep/build phases without publishing:
 

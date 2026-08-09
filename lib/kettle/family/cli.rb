@@ -156,6 +156,7 @@ module Kettle
             check: truthy_option?(:check),
             from_version: nil,
             gha_sha_pins_upgrade: "patch",
+            gha_sha_pins_ttl_days: options[:ttl],
             publish: false,
             release_start_step: nil,
             release_skip_steps: nil,
@@ -389,10 +390,15 @@ module Kettle
         option :upgrade, value: {type: String, usage: "LEVEL"}, desc: "SHA pin upgrade strategy: major, minor, patch" do |value|
           options[:upgrade] = parse_gha_sha_pins_upgrade(value)
         end
+        option :ttl, value: {type: Float, usage: "DAYS"}, desc: "Cache TTL for action metadata review (default: 1 day)" do |value|
+          raise OptionParser::InvalidArgument, "--ttl must be non-negative" if value.negative?
+
+          options[:ttl] = value
+        end
 
         def run(*args)
           unexpected_arguments!(args)
-          run_family("gha-sha-pins", gha_sha_pins_upgrade: options[:upgrade] || "patch")
+          run_family("gha-sha-pins", gha_sha_pins_upgrade: options[:upgrade] || "patch", gha_sha_pins_ttl_days: options[:ttl])
         end
       end
 
@@ -783,6 +789,7 @@ module Kettle
           auto_dependency_floors: options[:release_auto_dependency_floors],
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],
           gha_sha_pins_check: options[:check],
+          gha_sha_pins_ttl_days: options[:gha_sha_pins_ttl_days],
           env_overrides: options[:workflow_env],
           debug: options[:debug],
           verbose: options[:verbose],

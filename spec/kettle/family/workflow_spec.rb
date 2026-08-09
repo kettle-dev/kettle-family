@@ -287,6 +287,41 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-pins --write --upgrade patch --events"])
   end
 
+  it "reviews family action metadata once before running member pin updates offline" do
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
+      #!/usr/bin/env ruby
+      require "json"
+      File.open("gha-calls.log", "a") { |file| file.puts(ARGV.join(" ")) }
+      if ARGV.include?("--list")
+        puts JSON.generate("schema_version" => 1, "repositories" => ["actions/checkout"])
+      elsif ARGV.include?("--review")
+        puts JSON.generate("mode" => "review", "repositories" => [{"repository" => "actions/checkout"}])
+      end
+    RUBY
+    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+
+    results = described_class.new(
+      command: "gha-sha-pins",
+      config: config,
+      members: [alpha, beta],
+      execute: true,
+      commit: false,
+      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[gha_sha_pins_list gha_sha_pins_list gha_sha_pins_review gha-sha-pins gha-sha-pins])
+    member_commands = results.select { |result| result.phase == "gha-sha-pins" }.map(&:command)
+    expect(member_commands).to all(satisfy { |command| command.join(" ").include?("--offline") })
+    expect(File.read(File.join(alpha.root, "gha-calls.log")).lines.grep(/--list/).length).to eq(1)
+    expect(File.read(File.join(beta.root, "gha-calls.log")).lines.grep(/--list/).length).to eq(1)
+    expect(File.read(File.join(alpha.root, "gha-calls.log")).lines.grep(/--review/).length).to eq(1)
+  end
+
   it "plans full bundle updates by default" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")

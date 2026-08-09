@@ -102,7 +102,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -125,6 +125,7 @@ module Kettle
         @auto_dependency_floors = auto_dependency_floors.nil? ? config.release_auto_dependency_floors? : auto_dependency_floors
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
         @gha_sha_pins_check = gha_sha_pins_check
+        @gha_sha_pins_ttl_days = gha_sha_pins_ttl_days.nil? ? 1.0 : gha_sha_pins_ttl_days.to_f
         @env_overrides = env_overrides
         @debug = debug
         @verbose = verbose
@@ -165,7 +166,7 @@ module Kettle
 
       private
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -441,8 +442,12 @@ module Kettle
         return template_member_workflow_results(workflow_members) if command == "template" && execute
 
         runner = CommandRunner.new(execute: execute, accept: accept)
+        results = []
+        if command == "gha-sha-pins" && execute
+          return results unless review_gha_sha_pins(workflow_members, runner: runner, memo: results)
+        end
         gha_progress = (command == "gha-sha-pins") ? start_gha_sha_pins_progress(workflow_members) : nil
-        results = workflow_members.each_with_object([]) do |member, memo|
+        workflow_members.each_with_object(results) do |member, memo|
           if command == "template" && config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
             break memo unless memo.last.ok?
@@ -478,6 +483,58 @@ module Kettle
         end
         gha_progress&.finish
         results
+      end
+
+      def review_gha_sha_pins(workflow_members, runner:, memo:)
+        return true if workflow_members.empty?
+
+        repositories = []
+        workflow_members.each do |member|
+          result = runner.call(
+            member: member,
+            phase: "gha_sha_pins_list",
+            command: gha_sha_pins_command(mode: :list),
+            env: command_env
+          )
+          memo << result
+          return false unless result.ok?
+
+          payload = JSON.parse(result.stdout.to_s)
+          repositories.concat(Array(payload["repositories"]))
+        rescue JSON::ParserError => error
+          memo << CommandResult.new(
+            member_name: member.name,
+            phase: "gha_sha_pins_list",
+            command: gha_sha_pins_command(mode: :list),
+            workdir: member.root,
+            status: 1,
+            success: false,
+            stdout: result&.stdout.to_s,
+            stderr: "invalid kettle-gha-pins list JSON: #{error.message}",
+            elapsed_seconds: 0.0,
+            skipped: false,
+            reason: "invalid list output"
+          )
+          return false
+        end
+
+        review_dir = File.join(config.root, "tmp", "kettle-family")
+        FileUtils.mkdir_p(review_dir)
+        review_path = File.join(
+          review_dir,
+          "gha-sha-pins-review-#{Process.pid}-#{object_id}.json"
+        )
+        File.write(review_path, JSON.pretty_generate("schema_version" => 1, "repositories" => repositories.uniq.sort))
+        review_result = runner.call(
+          member: workflow_members.first,
+          phase: "gha_sha_pins_review",
+          command: gha_sha_pins_command(mode: :review, input: review_path),
+          env: command_env
+        )
+        memo << review_result
+        review_result.ok?
+      ensure
+        File.delete(review_path) if review_path && File.file?(review_path)
       end
 
       def template_member_workflow_results(workflow_members)
@@ -2341,11 +2398,18 @@ module Kettle
         ["bundle", "exec", *Array(bex_args).map(&:to_s)]
       end
 
-      def gha_sha_pins_command
+      def gha_sha_pins_command(mode: nil, input: nil)
         command_text = command_for(command)
         args = []
+        if mode == :list
+          return append_command_args(command_text, ["--list", "--json"])
+        end
+        if mode == :review
+          return append_command_args(command_text, ["--review", "--input", input.to_s, "--ttl", gha_sha_pins_ttl_days.to_s, "--json"])
+        end
         args << (gha_sha_pins_check ? "--check" : "--write") unless command_includes_any?(command_text, %w[--check --write])
         args.concat(["--upgrade", gha_sha_pins_upgrade]) unless command_includes_arg?(command_text, "--upgrade")
+        args << "--offline" if execute && !command_includes_arg?(command_text, "--offline")
         args << "--events" unless command_includes_arg?(command_text, "--events")
         append_command_args(command_text, args)
       end

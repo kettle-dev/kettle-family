@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Review deduplicated GitHub Actions metadata once per family, then run member pin updates in strict offline mode with configurable cache TTL.
+
 ### Deprecated
 
 ### Removed
