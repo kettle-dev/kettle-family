@@ -75,7 +75,11 @@ module Kettle
         command = release_state_command
         emit_event(event_handler, member: member, branch: branch, action: "member_start", status: "running", command: command)
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: "running", command: command)
-        stdout, stderr, status = Open3.capture3(release_state_env(member), *command, chdir: release_state_workdir(member))
+        stdout, stderr, status = capture_release_state(
+          env: release_state_env(member),
+          command: command,
+          workdir: release_state_workdir(member)
+        )
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         success = status.success?
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
@@ -106,6 +110,15 @@ module Kettle
         [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
       end
 
+      def capture_release_state(env:, command:, workdir:)
+        capture = -> { Open3.capture3(env, *command, chdir: workdir) }
+        # kettle-family can run as a standalone executable, but an active
+        # Bundler context must not leak into the standalone changelog probe.
+        return capture.call unless defined?(::Bundler)
+
+        ::Bundler.with_unbundled_env(&capture)
+      end
+
       def check_shared_changelog_member_or_local(member, branch: nil, event_handler: nil)
         return check_member(member, branch: branch, event_handler: event_handler) if member_local_changelog?(member)
 
@@ -117,7 +130,11 @@ module Kettle
         command = release_state_command
         emit_event(event_handler, member: member, branch: branch, action: "member_start", status: "running", command: command)
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: "running", command: command)
-        stdout, stderr, status = Open3.capture3(shared_changelog_env(member), *command, chdir: config.root)
+        stdout, stderr, status = capture_release_state(
+          env: shared_changelog_env(member),
+          command: command,
+          workdir: config.root
+        )
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         success = status.success?
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)

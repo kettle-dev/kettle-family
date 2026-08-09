@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Run family release-state changelog probes outside the parent Bundler environment so --only pend can inspect all members.
+
 ### Security
 
 ## [1.2.44] - 2026-08-09

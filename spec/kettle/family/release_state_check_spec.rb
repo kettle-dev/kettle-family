@@ -35,6 +35,18 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true, "bump_release_pending" => false)
   end
 
+  it "runs the standalone changelog probe outside the parent Bundler environment" do
+    member = member("alpha")
+    state = {"gem_name" => "alpha", "pending_release" => false}
+    allow(Bundler).to receive(:with_unbundled_env).and_yield
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(state), "", status(0, true)])
+
+    result = described_class.new(members: [member]).results.fetch(0)
+
+    expect(result).to be_ok
+    expect(Bundler).to have_received(:with_unbundled_env)
+  end
+
   it "runs state checks in parallel with explicit jobs while preserving order" do
     check = described_class.new(members: [member("alpha"), member("beta")], jobs: 2)
     started = Queue.new
