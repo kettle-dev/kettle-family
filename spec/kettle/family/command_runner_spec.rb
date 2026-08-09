@@ -442,6 +442,59 @@ RSpec.describe Kettle::Family::CommandRunner do
     )
   end
 
+  it "matches MFA prompts split across PTY output chunks" do
+    member = member_at("alpha")
+    provider = instance_double(Kettle::Family::Secrets::Provider, rubygems_otp: "123456")
+    events = []
+    coordinator = described_class::OtpCoordinator.new(
+      input: StringIO.new,
+      output: StringIO.new,
+      secrets_provider: provider,
+      event_handler: lambda { |member_name, event| events << [member_name, event] }
+    )
+    runner = described_class.new(execute: true, otp_coordinator: coordinator)
+    code = <<~RUBY
+      STDOUT.write("You have enabled multi-factor authentication. Please enter a code.\\n")
+      STDOUT.flush
+      STDOUT.write("Co")
+      STDOUT.flush
+      sleep 0.05
+      STDOUT.write("de:   ")
+      STDOUT.flush
+      exit(STDIN.gets.to_s.chomp == "123456" ? 0 : 1)
+    RUBY
+
+    result = Timeout.timeout(5) do
+      runner.call(
+        member: member,
+        phase: "release_publish",
+        command: [RbConfig.ruby, "-e", code],
+        interactive: true
+      )
+    end
+
+    expect(result).to be_ok
+    expect(events.map { |member_name, event| [member_name, event.fetch("action")] }).to include(
+      ["alpha", "prompt_request"],
+      ["alpha", "prompt_response"]
+    )
+  end
+
+  it "does not write an empty response when the OTP provider returns none" do
+    provider = instance_double(Kettle::Family::Secrets::Provider, rubygems_otp: "")
+    coordinator = described_class::OtpCoordinator.new(
+      input: StringIO.new,
+      output: StringIO.new,
+      secrets_provider: provider
+    )
+    runner = described_class.new(otp_coordinator: coordinator)
+    child_input = StringIO.new
+
+    runner.send(:handle_interactive_prompt, child_input, "Code: ", member_name: "alpha")
+
+    expect(child_input.string).to eq("")
+  end
+
   it "falls back to manual OTP entry when an interactive secrets provider lookup fails" do
     provider = instance_double(Kettle::Family::Secrets::Provider)
     allow(provider).to receive(:rubygems_otp).and_raise(Kettle::Family::Error, "1Password RubyGems OTP lookup failed: dismissed")

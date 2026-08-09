@@ -349,6 +349,7 @@ module Kettle
         stdout = +""
         stderr = +""
         stdout_line_buffer = +""
+        prompt_buffer = +""
         status = nil
         PTY.spawn(env, *argv, chdir: chdir, **process_options) do |output, input, pid|
           begin
@@ -362,7 +363,7 @@ module Kettle
                   stdout << chunk
                   transcript_write(log_io, chunk)
                   stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler, passthrough_output: passthrough_output)
-                  handle_interactive_prompt(input, chunk, member_name: member_name)
+                  prompt_buffer = handle_interactive_prompt(input, chunk, member_name: member_name, prompt_buffer: prompt_buffer)
                 else
                   chunk = $stdin.readpartial(1024)
                   input.write(chunk)
@@ -387,6 +388,7 @@ module Kettle
         captured_stdout = +""
         captured_stderr = +""
         stdout_line_buffer = +""
+        prompt_buffer = +""
         status = nil
         Open3.popen3(env, *argv, chdir: chdir, **process_options) do |input, output, error, wait_thread|
           readers = [output, error]
@@ -398,7 +400,7 @@ module Kettle
                 if reader.equal?($stdin)
                   input.write($stdin.readpartial(1024))
                 else
-                  stdout_line_buffer = read_interactive_stream(
+                  stdout_line_buffer, prompt_buffer = read_interactive_stream(
                     reader,
                     output,
                     input,
@@ -409,7 +411,8 @@ module Kettle
                     stdout_line_buffer: stdout_line_buffer,
                     stdout_line_handler: stdout_line_handler,
                     log_io: log_io,
-                    passthrough_output: passthrough_output
+                    passthrough_output: passthrough_output,
+                    prompt_buffer: prompt_buffer
                   )
                 end
               end
@@ -437,6 +440,7 @@ module Kettle
         member_name:,
         stdout_line_buffer:,
         stdout_line_handler:,
+        prompt_buffer:,
         log_io: nil,
         passthrough_output: true
       )
@@ -450,11 +454,11 @@ module Kettle
           transcript_write(log_io, chunk)
           $stderr.print(chunk) if passthrough_output
         end
-        handle_interactive_prompt(input, chunk, member_name: member_name)
-        stdout_line_buffer
+        prompt_buffer = handle_interactive_prompt(input, chunk, member_name: member_name, prompt_buffer: prompt_buffer)
+        [stdout_line_buffer, prompt_buffer]
       rescue EOFError
         readers.delete(reader)
-        stdout_line_buffer
+        [stdout_line_buffer, prompt_buffer]
       end
 
       def with_transcript(log_path, argv:, chdir:)
@@ -528,18 +532,26 @@ module Kettle
         input.flush
       end
 
-      def handle_interactive_prompt(input, chunk, member_name: nil)
-        if otp_prompt?(chunk)
-          write_otp_response(input, chunk, member_name: member_name) if otp_coordinator && otp_response_prompt?(chunk)
-          return
+      def handle_interactive_prompt(input, chunk, member_name: nil, prompt_buffer: nil)
+        prompt_buffer = prompt_buffer.to_s.dup
+        prompt_buffer << chunk.to_s
+        prompt_buffer = prompt_buffer.byteslice([prompt_buffer.bytesize - 4096, 0].max, 4096).to_s
+
+        if otp_prompt?(prompt_buffer)
+          if otp_coordinator && otp_response_prompt?(prompt_buffer)
+            write_otp_response(input, prompt_buffer, member_name: member_name)
+            return +""
+          end
+          return prompt_buffer
         end
 
-        if accept_confirmation_prompt?(chunk)
+        if accept_confirmation_prompt?(prompt_buffer)
           write_accept_response(input) if accept
-          return
+          return +""
         end
 
-        write_signing_password(input, chunk)
+        write_signing_password(input, prompt_buffer)
+        prompt_buffer
       end
 
       def write_accept_response(input)

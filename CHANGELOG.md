@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Buffer interactive release prompts across PTY reads so split RubyGems MFA prompts are answered and surfaced through the dedicated notification line.
+
 ### Security
 
 ## [1.2.43] - 2026-08-08
