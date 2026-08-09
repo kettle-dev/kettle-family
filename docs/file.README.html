@@ -130,7 +130,7 @@ provider supplies them.</p>
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.402-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.441-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -608,11 +608,16 @@ members:</p>
 <pre class="code language-console"><code class="language-console">kettle-family gha-sha-pins
 kettle-family gha-sha-pins --execute
 kettle-family gha-sha-pins --execute --upgrade minor
+kettle-family gha-sha-pins --execute --upgrade major --ttl 0
 </code></pre>
 
-<p>The family command name is retained for compatibility, but it delegates to<br>
-the current <code>kettle-gha-pins</code> executable for each selected member. The older<br>
-<code>kettle-gha-sha-pins</code> executable is a legacy direct entrypoint.</p>
+<p>The family command inventories action repositories across the selected members,<br>
+reviews the deduplicated set once using the shared cache, and then runs each<br>
+member’s pin update in strict offline mode. <code>--ttl DAYS</code> controls when the<br>
+family review refreshes cached action metadata; <code>--ttl 0</code> forces a refresh. The<br>
+member-level <code>--upgrade</code> and <code>--check --cooldown-days DAYS</code> options remain<br>
+responsible for deciding whether individual pins need changes or should block a<br>
+release. The older <code>kettle-gha-sha-pins</code> executable is a legacy direct entrypoint.</p>
 
 <p>Run release prep/build phases without publishing:</p>
 

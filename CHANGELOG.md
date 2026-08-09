@@ -22,17 +22,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Review deduplicated GitHub Actions metadata once per family, then run member pin updates in strict offline mode with configurable cache TTL.
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
-- Buffer interactive release prompts across PTY reads so split RubyGems MFA prompts are answered and surfaced through the dedicated notification line.
-
 ### Security
+
+## [1.2.44] - 2026-08-09
+
+- TAG: [v1.2.44][1.2.44t]
+- COVERAGE: 93.57% -- 5091/5441 lines in 32 files
+- BRANCH COVERAGE: 76.05% -- 2042/2685 branches in 32 files
+- 29.72% documented
+
+### Changed
+
+- Review deduplicated GitHub Actions metadata once per family, then run member pin updates in strict offline mode with configurable cache TTL.
+
+### Fixed
+
+- Buffer interactive release prompts across PTY reads so split RubyGems MFA prompts are answered and surfaced through the dedicated notification line.
 
 ## [1.2.43] - 2026-08-08
 
@@ -1966,7 +1977,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.43...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.44...HEAD
+[1.2.44]: https://github.com/kettle-dev/kettle-family/compare/v1.2.43...v1.2.44
+[1.2.44t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.44
 [1.2.43]: https://github.com/kettle-dev/kettle-family/compare/v1.2.42...v1.2.43
 [1.2.43t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.43
 [1.2.42]: https://github.com/kettle-dev/kettle-family/compare/v1.2.41...v1.2.42
