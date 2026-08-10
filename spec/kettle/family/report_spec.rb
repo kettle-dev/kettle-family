@@ -472,6 +472,62 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("results").first.fetch("log_path")).to eq("/repo/alpha/tmp/kettle-family/release/alpha-release_publish.log")
   end
 
+  it "keeps centralized action-pin JSON in its log instead of the text report" do
+    selected_member = member("alpha")
+    payload = JSON.generate(
+      "repositories" => Array.new(40) { |index| {"repository" => "actions/cache", "ref" => index.to_s} }
+    )
+    list_result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "gha_sha_pins_list",
+      ["bundle", "exec", "kettle-gha-pins", "--list"],
+      "/repo/alpha",
+      0,
+      true,
+      payload,
+      "",
+      1.0,
+      false,
+      nil,
+      nil,
+      false,
+      "/repo/tmp/kettle-family/gha-sha-pins-list.log"
+    )
+    review_result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "gha_sha_pins_review",
+      ["bundle", "exec", "kettle-gha-pins", "--review"],
+      "/repo/alpha",
+      1,
+      false,
+      payload,
+      "kettle-gha-pins: GitHub refresh timed out for codecov/codecov-action",
+      1.0,
+      false,
+      "command failed",
+      nil,
+      false,
+      "/repo/tmp/kettle-family/gha-sha-pins-review.log"
+    )
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [selected_member],
+      selected_members: [selected_member],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [list_result, review_result]
+    )
+
+    text = report.to_text
+
+    expect(text).not_to include('"repositories"')
+    expect(text).not_to include('"ref"')
+    expect(text).to include("log: /repo/tmp/kettle-family/gha-sha-pins-review.log")
+    expect(text).to include("kettle-gha-pins: GitHub refresh timed out for codecov/codecov-action")
+  end
+
   it "uses the last useful streamed line when no explicit failure line is present" do
     selected_member = member("alpha")
     result = Kettle::Family::CommandResult.new(

@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Review GitHub Actions pins once during family releases and run member pre-release pin checks from the reviewed cache.
 
+- Keep centralized GitHub Actions pin review payloads in release logs instead of replaying verbose JSON in terminal reports.
+
 ### Security
 
 ## [1.2.46] - 2026-08-10

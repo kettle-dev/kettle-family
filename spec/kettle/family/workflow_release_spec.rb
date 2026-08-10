@@ -828,6 +828,8 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[gha_sha_pins_list gha_sha_pins_review])
     expect(results).to all(be_ok)
+    expect(results.map(&:log_path)).to all(start_with(File.join(@tmpdir, "tmp", "kettle-family")))
+    expect(results.map(&:log_path)).to all(satisfy { |path| File.file?(path) })
     expect(workflow.send(:release_env_for_member, member)).to include(
       "KETTLE_PRE_RELEASE_GHA_SHA_PINS_OFFLINE" => "true"
     )

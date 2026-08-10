@@ -220,6 +220,11 @@ module Kettle
       end
 
       def append_result_stdout(lines, result)
+        if machine_readable_result?(result)
+          append_result_log_path(lines, result) unless result.ok?
+          return
+        end
+
         if suppress_success_output?(result)
           append_result_log_path(lines, result) unless result.ok?
           return
@@ -243,6 +248,10 @@ module Kettle
 
       def suppress_success_output?(result)
         result.stdout.to_s.empty? || (command == "template" && result.ok?)
+      end
+
+      def machine_readable_result?(result)
+        command == "release" && %w[gha_sha_pins_list gha_sha_pins_review].include?(result.phase.to_s)
       end
 
       def template_event_stdout?(result)

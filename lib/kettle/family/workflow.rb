@@ -512,7 +512,8 @@ module Kettle
             member: member,
             phase: "gha_sha_pins_list",
             command: gha_sha_pins_command(mode: :list, command_text: command_for("gha-sha-pins")),
-            env: env
+            env: env,
+            log_path: gha_sha_pins_log_path(member, phase: "list")
           )
           memo << result
           return false unless result.ok?
@@ -531,7 +532,8 @@ module Kettle
             stderr: "invalid kettle-gha-pins list JSON: #{error.message}",
             elapsed_seconds: 0.0,
             skipped: false,
-            reason: "invalid list output"
+            reason: "invalid list output",
+            log_path: result&.log_path
           )
           return false
         end
@@ -547,12 +549,23 @@ module Kettle
           member: workflow_members.first,
           phase: "gha_sha_pins_review",
           command: gha_sha_pins_command(mode: :review, input: review_path, command_text: command_for("gha-sha-pins")),
-          env: env
+          env: env,
+          log_path: gha_sha_pins_log_path(workflow_members.first, phase: "review")
         )
         memo << review_result
         review_result.ok?
       ensure
         File.delete(review_path) if review_path && File.file?(review_path)
+      end
+
+      def gha_sha_pins_log_path(member, phase:)
+        safe_name = member.name.to_s.gsub(/[^A-Za-z0-9_.-]+/, "_")
+        File.join(
+          config.root,
+          "tmp",
+          "kettle-family",
+          "gha-sha-pins-#{Process.pid}-#{object_id}-#{safe_name}-#{phase}.log"
+        )
       end
 
       def template_member_workflow_results(workflow_members)
