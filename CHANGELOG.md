@@ -28,6 +28,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.47] - 2026-08-10
+
+- TAG: [v1.2.47][1.2.47t]
+- COVERAGE: 93.58% -- 5161/5515 lines in 33 files
+- BRANCH COVERAGE: 76.15% -- 2066/2713 branches in 33 files
+- 29.86% documented
+
+### Fixed
+
 - Share one authenticated release secret session with member kettle-release processes without repeating 1Password authorization prompts.
 
 - Review GitHub Actions pins once during family releases and run member pre-release pin checks from the reviewed cache.
@@ -35,8 +46,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Keep centralized GitHub Actions pin review payloads in release logs instead of replaying verbose JSON in terminal reports.
 
 - Continue release preflight after successful GitHub Actions pin review.
-
-### Security
 
 ## [1.2.46] - 2026-08-10
 
@@ -2011,7 +2020,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.46...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.47...HEAD
+[1.2.47]: https://github.com/kettle-dev/kettle-family/compare/v1.2.46...v1.2.47
+[1.2.47t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.47
 [1.2.46]: https://github.com/kettle-dev/kettle-family/compare/v1.2.45...v1.2.46
 [1.2.46t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.46
 [1.2.45]: https://github.com/kettle-dev/kettle-family/compare/v1.2.44...v1.2.45
