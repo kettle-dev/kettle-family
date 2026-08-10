@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Let kettle-release own release lockfile normalization to prevent competing Bundler platform rewrites during family releases.
+
 ### Security
 
 ## [1.2.47] - 2026-08-10

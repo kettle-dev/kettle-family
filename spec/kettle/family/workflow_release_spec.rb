@@ -336,6 +336,19 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --required-remotes=origin --yes --events"])
   end
 
+  it "lets kettle-release own release lockfile normalization" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      release_normalize_lockfiles: true
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true, execute: true)
+
+    expect(workflow.send(:normalize_release_lockfiles?, member)).to be(false)
+    expect(workflow.send(:release_phase_total, member)).to eq(3)
+  end
+
   it "passes configured required release remotes through kettle-release commands" do
     write_release_config(
       publish_command: "bundle exec kettle-release",

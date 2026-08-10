@@ -2736,8 +2736,13 @@ module Kettle
 
       def release_phase_total(member = nil)
         total = 3
-        total += 2 if config.release_normalize_lockfiles?
-        total += 1 if execute && member && normalize_release_lockfiles?(member)
+        if member
+          normalize = normalize_release_lockfiles?(member)
+          total += 2 if normalize
+          total += 1 if execute && normalize
+        elsif config.release_normalize_lockfiles?
+          total += 2
+        end
         total += 1 if tag
         total += 1 if push
         total
@@ -3596,6 +3601,11 @@ module Kettle
       end
 
       def normalize_release_lockfiles?(member)
+        # kettle-release owns its release lockfile reset and runs it before
+        # setup, checks, and publishing. Running the family-level reset too
+        # makes two Bundler processes rewrite the same platform set.
+        return false if kettle_release_command?(raw_release_command)
+
         config.release_normalize_lockfiles? || release_lockfile_has_local_path_remote?(member)
       end
 
