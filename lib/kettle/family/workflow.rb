@@ -143,13 +143,7 @@ module Kettle
 
       def results
         if command == "release" && execute
-          release_preflight = release_preflight_results
-          return release_preflight unless release_preflight.empty?
-
-          return branch_target_results unless config.release_target_branches.empty?
-          return member_local_branch_target_results if member_local_branch_targets?
-
-          return current_branch_results(members)
+          return with_release_secrets_broker { release_results }
         end
 
         return template_with_worktree_sync_results if command == "template" && execute
@@ -165,6 +159,30 @@ module Kettle
       end
 
       private
+
+      def release_results
+        release_preflight = release_preflight_results
+        return release_preflight unless release_preflight.empty?
+
+        return branch_target_results unless config.release_target_branches.empty?
+        return member_local_branch_target_results if member_local_branch_targets?
+
+        current_branch_results(members)
+      end
+
+      def with_release_secrets_broker
+        return yield unless release_secrets_broker_required?
+
+        @release_secrets_broker = Secrets::Broker.new(provider: @secrets_provider, root: config.root).start
+        yield
+      ensure
+        @release_secrets_broker&.close
+        @release_secrets_broker = nil
+      end
+
+      def release_secrets_broker_required?
+        execute && release_command_delegates_secrets_to_kettle_release?
+      end
 
       attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
@@ -1919,6 +1937,7 @@ module Kettle
       end
 
       def append_kettle_release_args(command)
+        command = replace_kettle_release_provider(command) if @release_secrets_broker
         args = []
         args << "start_step=#{start_step}" if start_step
         args << "skip_steps=#{skip_steps}" if skip_steps && !skip_steps.to_s.empty?
@@ -1928,13 +1947,23 @@ module Kettle
         args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
         args << "--required-remotes=#{required_remotes}" if required_remotes && !required_remotes.to_s.empty?
         if release_command_delegates_secrets_to_kettle_release? && !command_includes_arg?(command, "--secrets-provider")
-          args << "--secrets-provider=1password"
+          args << "--secrets-provider=family" if @release_secrets_broker
+          args << "--secrets-provider=1password" unless @release_secrets_broker
         end
         args << "--yes" if release_command_uses_kettle_release_yes? && !command_includes_arg?(command, "--yes")
         args << "--events" unless command_includes_arg?(command, "--events")
         return command if args.empty?
 
         command.is_a?(Array) ? [*command, *args] : "#{command} #{args.join(" ")}"
+      end
+
+      def replace_kettle_release_provider(command)
+        case command
+        when Array
+          command.map { |part| part.to_s.gsub(/--secrets-provider(?:=|\s+)\S+/, "--secrets-provider=family") }
+        else
+          command.to_s.gsub(/--secrets-provider(?:=|\s+)\S+/, "--secrets-provider=family")
+        end
       end
 
       def release_command_uses_kettle_release_yes?
@@ -2151,10 +2180,11 @@ module Kettle
 
         secrets_config = config.release_secrets
         env = {
-          "KETTLE_RELEASE_SECRETS_PROVIDER" => "1password",
+          "KETTLE_RELEASE_SECRETS_PROVIDER" => @release_secrets_broker ? "family" : "1password",
           "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE" => "cached",
           "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => @gem_signing_password.to_s
         }
+        env["KETTLE_RELEASE_SECRETS_BROKER"] = @release_secrets_broker.path if @release_secrets_broker
         {
           "account" => "KETTLE_RELEASE_1PASSWORD_ACCOUNT",
           "cli" => "KETTLE_RELEASE_1PASSWORD_CLI",

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Share one authenticated release secret session with member kettle-release processes without repeating 1Password authorization prompts.
+
 ### Security
 
 ## [1.2.46] - 2026-08-10

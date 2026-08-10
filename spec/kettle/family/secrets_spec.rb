@@ -171,6 +171,23 @@ RSpec.describe Kettle::Family::Secrets do
       .to raise_error(Kettle::Family::Error, /1Password RubyGems OTP lookup failed: not signed in/)
   end
 
+  it "serializes member secret requests through the family broker" do
+    provider = instance_double(Kettle::Family::Secrets::Provider, rubygems_otp: "123456")
+    broker = described_class::Broker.new(provider: provider, root: Dir.mktmpdir("kettle-family-broker-spec"))
+    broker.start
+
+    socket = UNIXSocket.new(broker.path)
+    socket.write(JSON.generate("operation" => "rubygems_otp"))
+    socket.write("\n")
+    response = JSON.parse(socket.gets)
+
+    expect(response).to eq("ok" => true, "value" => "123456")
+    expect(provider).to have_received(:rubygems_otp).once
+  ensure
+    socket&.close
+    broker&.close
+  end
+
   def status(success:, exitstatus: success ? 0 : 1)
     instance_double(Process::Status, success?: success, exitstatus: exitstatus)
   end

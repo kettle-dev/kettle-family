@@ -404,6 +404,28 @@ RSpec.describe Kettle::Family::Workflow do
     expect(runner.instance_variable_get(:@otp_coordinator)).to be_nil
   end
 
+  it "uses one family-owned secrets broker for delegated kettle-release commands" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      secrets: {"provider" => "1password"}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], publish: true)
+    broker = instance_double(Kettle::Family::Secrets::Broker, path: File.join(@tmpdir, "secrets.sock"))
+    workflow.instance_variable_set(:@release_secrets_broker, broker)
+    workflow.instance_variable_set(:@gem_signing_password, "cached-secret")
+    workflow.instance_variable_set(:@secrets_provider, Kettle::Family::Secrets::OnePassword.new(config.release_secrets))
+
+    command = workflow.send(:append_kettle_release_args, ["bundle", "exec", "kettle-release"])
+
+    expect(command).to include("--secrets-provider=family")
+    expect(workflow.send(:release_env)).to include(
+      "KETTLE_RELEASE_SECRETS_PROVIDER" => "family",
+      "KETTLE_RELEASE_SECRETS_BROKER" => broker.path,
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "cached-secret"
+    )
+  end
+
   it "delegates secrets to kettle-release when the publish command explicitly includes a secrets provider" do
     write_release_config(
       publish_command: "bundle exec kettle-release --secrets-provider=1password",
