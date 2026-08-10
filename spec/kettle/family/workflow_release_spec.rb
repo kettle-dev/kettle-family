@@ -36,72 +36,6 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
-  it "retries only the built gem after RubyGems rejects the first OTP" do
-    write_release_config
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = ready_member("alpha")
-    gem_path = File.join(member.root, "pkg", "alpha-1.0.0.gem")
-    FileUtils.mkdir_p(File.dirname(gem_path))
-    File.write(gem_path, "gem")
-    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
-    failed = Kettle::Family::CommandResult.new(
-      member.name,
-      "release_publish",
-      ["bundle", "exec", "kettle-release"],
-      member.root,
-      1,
-      false,
-      "Your OTP code is incorrect. Please check it and retry.",
-      "",
-      1.0,
-      false,
-      "command failed"
-    )
-    retried = Kettle::Family::CommandResult.new(
-      member.name,
-      "release_publish",
-      ["gem", "push", gem_path],
-      member.root,
-      0,
-      true,
-      "",
-      "",
-      1.0,
-      false,
-      nil
-    )
-    runner = instance_double(Kettle::Family::CommandRunner)
-    allow(workflow).to receive_messages(
-      release_env_for_member: {},
-      release_event_line_handler: nil,
-      release_command_log_path: nil
-    )
-    allow(runner).to receive(:call).with(
-      member: member,
-      phase: "release_publish",
-      command: ["gem", "push", gem_path],
-      env: {},
-      interactive: true,
-      stdout_line_handler: nil,
-      log_path: nil,
-      passthrough_output: false
-    ).and_return(retried)
-
-    result = workflow.send(:retry_release_gem_push_after_invalid_otp, member: member, failed_result: failed, runner: runner)
-
-    expect(runner).to have_received(:call).with(
-      member: member,
-      phase: "release_publish",
-      command: ["gem", "push", gem_path],
-      env: {},
-      interactive: true,
-      stdout_line_handler: nil,
-      log_path: nil,
-      passthrough_output: false
-    )
-    expect(result).to equal(retried)
-  end
-
   it "does not execute the aggregate monorepo release during a dry-run" do
     write_release_config(
       changelog: {
@@ -420,7 +354,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --required-remotes=origin,github --yes --events"])
   end
 
-  it "keeps 1Password OTP handling in kettle-family by default while passing no child secrets env" do
+  it "delegates configured 1Password secrets to kettle-release by default" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
       secrets: {
@@ -439,37 +373,35 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = workflow.results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --yes --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --yes --events"])
     expect(results.last.command).not_to include("cached-secret")
     expect(results.last.command).not_to include("one-time password")
     release_env = workflow.send(:release_env)
-    expect(release_env.keys).not_to include(
-      "KETTLE_RELEASE_SECRETS_PROVIDER",
-      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE",
-      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE",
-      "KETTLE_RELEASE_1PASSWORD_CLI",
-      "KETTLE_RELEASE_1PASSWORD_ITEM",
-      "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD"
+    expect(release_env).to include(
+      "KETTLE_RELEASE_SECRETS_PROVIDER" => "1password",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE" => "cached",
+      "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "cached-secret",
+      "KETTLE_RELEASE_1PASSWORD_CLI" => "/opt/1Password/op",
+      "KETTLE_RELEASE_1PASSWORD_ITEM" => "Rubygems",
+      "KETTLE_RELEASE_1PASSWORD_RUBYGEMS_OTP_FIELD" => "one-time password"
     )
   end
 
-  it "uses the family OTP coordinator for default kettle-release publish commands" do
+  it "does not create a family OTP coordinator for delegated kettle-release commands" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
       secrets: {"provider" => "1password"}
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
-    provider = instance_double(Kettle::Family::Secrets::OnePassword)
-    coordinator = instance_double(Kettle::Family::CommandRunner::OtpCoordinator)
+    provider = Kettle::Family::Secrets::OnePassword.new(config.release_secrets)
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true, secrets_provider: provider)
     workflow.instance_variable_set(:@gem_signing_password, "cached-secret")
-    allow(workflow).to receive(:release_otp_coordinator).and_return(coordinator)
 
     runner = workflow.send(:release_command_runner)
 
-    expect(runner.instance_variable_get(:@gem_signing_password)).to eq("cached-secret")
-    expect(runner.instance_variable_get(:@otp_coordinator)).to eq(coordinator)
+    expect(runner.instance_variable_get(:@gem_signing_password)).to be_nil
+    expect(runner.instance_variable_get(:@otp_coordinator)).to be_nil
   end
 
   it "delegates secrets to kettle-release when the publish command explicitly includes a secrets provider" do
@@ -1460,40 +1392,6 @@ RSpec.describe Kettle::Family::Workflow do
     expect(updates).to include(["ok", "."])
   end
 
-  it "places OTP prompt notifications on the dedicated progress notification line" do
-    write_release_config
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = ready_member("alpha")
-    notifications = []
-    updates = []
-    progress = Class.new do
-      define_method(:initialize) { |target, update_target|
-        @target = target
-        @update_target = update_target
-      }
-      define_method(:tty?) { true }
-      define_method(:notification) { |message| @target << message }
-      define_method(:update) { |_member, status:, mark:| @update_target << [status, mark] }
-    end.new(notifications, updates)
-    workflow = described_class.new(command: "release", config: config, members: [member], progress_io: StringIO.new)
-    workflow.instance_variable_set(:@release_progress, progress)
-    workflow.instance_variable_set(:@verbose, true)
-
-    workflow.send(
-      :handle_release_otp_event,
-      "alpha",
-      {"type" => "secret_provider", "action" => "prompt_request", "label" => "authorization", "status" => "started"}
-    )
-    workflow.send(
-      :handle_release_otp_event,
-      "alpha",
-      {"type" => "secret_provider", "action" => "prompt_response", "label" => "RubyGems MFA code", "status" => "ok"}
-    )
-
-    expect(notifications).to eq(["👀 🔒 watch for authorization prompt", ""])
-    expect(updates).to be_empty
-  end
-
   it "emits release wave markers for parallel release groups" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -1527,46 +1425,6 @@ RSpec.describe Kettle::Family::Workflow do
     expect(wave_results.map(&:stdout)).to eq(["alpha, gamma", "beta"])
     expect(wave_results.map(&:reason)).to eq(["jobs=2 total=2", "jobs=1 total=2"])
     expect(results.map(&:phase)).to start_with("release_wave")
-  end
-
-  it "sets the release MFA queue total to the active wave job count" do
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    members = [ready_member("alpha"), ready_member("beta"), ready_member("gamma")]
-    workflow = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 2)
-    coordinator = Class.new do
-      attr_reader :queue_totals
-
-      def initialize
-        @queue_totals = []
-      end
-
-      def queue_total=(value)
-        @queue_totals << value
-      end
-    end.new
-
-    allow(workflow).to receive_messages(release_otp_coordinator: coordinator, truffleruby?: false)
-    allow(workflow).to receive(:release_results_for_member) do |member, runner:|
-      [
-        Kettle::Family::CommandResult.new(
-          member_name: member.name,
-          phase: "release_build",
-          command: ["release"],
-          workdir: member.root,
-          status: 0,
-          success: true,
-          stdout: "",
-          stderr: "",
-          elapsed_seconds: 0.0,
-          skipped: false,
-          reason: nil
-        )
-      ]
-    end
-
-    workflow.send(:run_release_wave, members)
-
-    expect(coordinator.queue_totals).to eq([2])
   end
 
   it "runs release members sequentially on TruffleRuby" do

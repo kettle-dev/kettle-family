@@ -17,7 +17,6 @@ module Kettle
   module Family
     class Workflow
       PreflightProgressMember = Struct.new(:name)
-      RUBYGEMS_INVALID_OTP = /Your OTP code is incorrect\. Please check it and retry\./
 
       DEFAULT_COMMANDS = {
         "template" => "bundle exec kettle-jem install",
@@ -1128,7 +1127,6 @@ module Kettle
         wave_jobs = release_jobs(wave)
         mutex = Mutex.new
         stop = false
-        release_otp_coordinator&.queue_total = wave_jobs
         Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- family release intentionally runs independent members concurrently.
             runner = release_command_runner
@@ -1227,7 +1225,6 @@ module Kettle
             log_path: release_command_log_path(member, release_phase),
             passthrough_output: release_command_passthrough_output?
           )
-          release_result = retry_release_gem_push_after_invalid_otp(member: member, failed_result: release_result, runner: runner)
           memo << release_result
           emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
@@ -1267,39 +1264,11 @@ module Kettle
           execute: execute,
           accept: release_command_uses_kettle_release_yes? ? false : accept,
           gem_signing_password: release_command_delegates_secrets_to_kettle_release? ? nil : @gem_signing_password,
-          otp_coordinator: release_command_delegates_secrets_to_kettle_release? ? nil : release_otp_coordinator
+          # RubyGems MFA belongs to the child release command. Keeping an OTP
+          # coordinator here can make a family-level gem retry look successful
+          # while skipping the child's checksums and GitHub release steps.
+          otp_coordinator: nil
         )
-      end
-
-      def release_otp_coordinator
-        return nil unless execute && release_command_interactive?
-
-        @release_otp_coordinator ||= CommandRunner::OtpCoordinator.new(
-          secrets_provider: @secrets_provider,
-          event_handler: method(:handle_release_otp_event)
-        )
-      end
-
-      def handle_release_otp_event(member_name, event)
-        progress = @release_progress
-        return unless progress
-
-        member = release_progress_member_for(member_name)
-        if progress_io && suppress_release_secret_provider_event?(event, progress: progress)
-          return
-        end
-        if progress_io
-          if verbose || debug
-            emit_release_event_progress(member, event)
-          elsif progress.tty?
-            emit_release_event_status(member, event, progress: progress)
-          end
-        end
-      end
-
-      def release_progress_member_for(member_name)
-        @release_progress_members_by_name ||= members.to_h { |member| [member.name, member] }
-        @release_progress_members_by_name.fetch(member_name.to_s) { PreflightProgressMember.new(member_name.to_s) }
       end
 
       def parallel_release_members?(release_members)
@@ -1927,38 +1896,6 @@ module Kettle
         verbose || debug
       end
 
-      # kettle-family normally owns the RubyGems OTP prompt so one code can be
-      # coordinated across concurrent member releases. If RubyGems rejects
-      # that code, the member's release command has already tagged and pushed
-      # the repository before attempting the gem upload. Retry only the
-      # existing artifact; rerunning the full release command would repeat git
-      # tagging and CI work and can fail for an unrelated reason.
-      def retry_release_gem_push_after_invalid_otp(member:, failed_result:, runner:)
-        return failed_result unless release_phase == "release_publish"
-        return failed_result if failed_result.ok?
-        return failed_result unless [failed_result.stdout, failed_result.stderr].any? { |output| output.to_s.match?(RUBYGEMS_INVALID_OTP) }
-
-        gem_path = release_gem_path(member)
-        return failed_result unless gem_path
-
-        puts "RubyGems rejected the first OTP; retrying the existing gem artifact with a fresh OTP..."
-        runner.call(
-          member: member,
-          phase: release_phase,
-          command: ["gem", "push", gem_path],
-          env: release_env_for_member(member),
-          interactive: true,
-          stdout_line_handler: release_event_line_handler(member, progress: @release_progress),
-          log_path: release_command_log_path(member, "release_publish_otp_retry"),
-          passthrough_output: release_command_passthrough_output?
-        )
-      end
-
-      def release_gem_path(member)
-        suffix = "-#{member.version}.gem"
-        Dir.glob(File.join(member.root, "pkg", "*.gem")).find { |path| File.basename(path).end_with?(suffix) }
-      end
-
       def kettle_release_command?(command)
         case command
         when Array
@@ -1990,6 +1927,9 @@ module Kettle
         args << "--skip-bundle-audit" if skip_bundle_audit
         args << "--skip-remotes=#{skip_remotes}" if skip_remotes && !skip_remotes.to_s.empty?
         args << "--required-remotes=#{required_remotes}" if required_remotes && !required_remotes.to_s.empty?
+        if release_command_delegates_secrets_to_kettle_release? && !command_includes_arg?(command, "--secrets-provider")
+          args << "--secrets-provider=1password"
+        end
         args << "--yes" if release_command_uses_kettle_release_yes? && !command_includes_arg?(command, "--yes")
         args << "--events" unless command_includes_arg?(command, "--events")
         return command if args.empty?
@@ -2233,7 +2173,6 @@ module Kettle
       def release_command_delegates_secrets_to_kettle_release?
         kettle_release_supports_direct_secrets? &&
           kettle_release_command?(raw_release_command) &&
-          command_includes_arg?(raw_release_command, "--secrets-provider") &&
           release_secrets_provider_one_password?
       end
 

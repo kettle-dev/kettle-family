@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Delegate configured release secrets to kettle-release so its native OTP retry can complete all remaining release steps.
+
 ### Security
 
 ## [1.2.45] - 2026-08-09
