@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Retry the existing gem artifact with a fresh OTP when RubyGems rejects the first MFA code during a family release.
 
+- Allow kettle-family to resolve against kettle-dev 3.x after the kettle-dev 3.0.0 executable split.
+
 ### Security
 
 ## [1.2.44] - 2026-08-09
