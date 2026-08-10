@@ -28,13 +28,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.45] - 2026-08-09
+
+- TAG: [v1.2.45][1.2.45t]
+- COVERAGE: 93.59% -- 5109/5459 lines in 32 files
+- BRANCH COVERAGE: 76.10% -- 2051/2695 branches in 32 files
+- 29.64% documented
+
+### Fixed
+
 - Run family release-state changelog probes outside the parent Bundler environment so --only pend can inspect all members.
 
 - Retry the existing gem artifact with a fresh OTP when RubyGems rejects the first MFA code during a family release.
 
 - Allow kettle-family to resolve against kettle-dev 3.x after the kettle-dev 3.0.0 executable split.
-
-### Security
 
 ## [1.2.44] - 2026-08-09
 
@@ -1983,7 +1992,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.44...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.45...HEAD
+[1.2.45]: https://github.com/kettle-dev/kettle-family/compare/v1.2.44...v1.2.45
+[1.2.45t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.45
 [1.2.44]: https://github.com/kettle-dev/kettle-family/compare/v1.2.43...v1.2.44
 [1.2.44t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.44
 [1.2.43]: https://github.com/kettle-dev/kettle-family/compare/v1.2.42...v1.2.43
