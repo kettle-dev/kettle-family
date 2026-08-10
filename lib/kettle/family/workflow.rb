@@ -17,6 +17,7 @@ module Kettle
   module Family
     class Workflow
       PreflightProgressMember = Struct.new(:name)
+      RUBYGEMS_INVALID_OTP = /Your OTP code is incorrect\. Please check it and retry\./
 
       DEFAULT_COMMANDS = {
         "template" => "bundle exec kettle-jem install",
@@ -1216,7 +1217,7 @@ module Kettle
           memo.last(2).each { |result| emit_member_result_progress(member, result, progress: progress) }
           return memo unless memo.last(2).all?(&:ok?)
 
-          memo << runner.call(
+          release_result = runner.call(
             member: member,
             phase: release_phase,
             command: release_command,
@@ -1226,6 +1227,8 @@ module Kettle
             log_path: release_command_log_path(member, release_phase),
             passthrough_output: release_command_passthrough_output?
           )
+          release_result = retry_release_gem_push_after_invalid_otp(member: member, failed_result: release_result, runner: runner)
+          memo << release_result
           emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
 
@@ -1922,6 +1925,38 @@ module Kettle
 
       def release_command_passthrough_output?
         verbose || debug
+      end
+
+      # kettle-family normally owns the RubyGems OTP prompt so one code can be
+      # coordinated across concurrent member releases. If RubyGems rejects
+      # that code, the member's release command has already tagged and pushed
+      # the repository before attempting the gem upload. Retry only the
+      # existing artifact; rerunning the full release command would repeat git
+      # tagging and CI work and can fail for an unrelated reason.
+      def retry_release_gem_push_after_invalid_otp(member:, failed_result:, runner:)
+        return failed_result unless release_phase == "release_publish"
+        return failed_result if failed_result.ok?
+        return failed_result unless [failed_result.stdout, failed_result.stderr].any? { |output| output.to_s.match?(RUBYGEMS_INVALID_OTP) }
+
+        gem_path = release_gem_path(member)
+        return failed_result unless gem_path
+
+        puts "RubyGems rejected the first OTP; retrying the existing gem artifact with a fresh OTP..."
+        runner.call(
+          member: member,
+          phase: release_phase,
+          command: ["gem", "push", gem_path],
+          env: release_env_for_member(member),
+          interactive: true,
+          stdout_line_handler: release_event_line_handler(member, progress: @release_progress),
+          log_path: release_command_log_path(member, "release_publish_otp_retry"),
+          passthrough_output: release_command_passthrough_output?
+        )
+      end
+
+      def release_gem_path(member)
+        suffix = "-#{member.version}.gem"
+        Dir.glob(File.join(member.root, "pkg", "*.gem")).find { |path| File.basename(path).end_with?(suffix) }
       end
 
       def kettle_release_command?(command)

@@ -36,6 +36,72 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
+  it "retries only the built gem after RubyGems rejects the first OTP" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    gem_path = File.join(member.root, "pkg", "alpha-1.0.0.gem")
+    FileUtils.mkdir_p(File.dirname(gem_path))
+    File.write(gem_path, "gem")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    failed = Kettle::Family::CommandResult.new(
+      member.name,
+      "release_publish",
+      ["bundle", "exec", "kettle-release"],
+      member.root,
+      1,
+      false,
+      "Your OTP code is incorrect. Please check it and retry.",
+      "",
+      1.0,
+      false,
+      "command failed"
+    )
+    retried = Kettle::Family::CommandResult.new(
+      member.name,
+      "release_publish",
+      ["gem", "push", gem_path],
+      member.root,
+      0,
+      true,
+      "",
+      "",
+      1.0,
+      false,
+      nil
+    )
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(workflow).to receive_messages(
+      release_env_for_member: {},
+      release_event_line_handler: nil,
+      release_command_log_path: nil
+    )
+    allow(runner).to receive(:call).with(
+      member: member,
+      phase: "release_publish",
+      command: ["gem", "push", gem_path],
+      env: {},
+      interactive: true,
+      stdout_line_handler: nil,
+      log_path: nil,
+      passthrough_output: false
+    ).and_return(retried)
+
+    result = workflow.send(:retry_release_gem_push_after_invalid_otp, member: member, failed_result: failed, runner: runner)
+
+    expect(runner).to have_received(:call).with(
+      member: member,
+      phase: "release_publish",
+      command: ["gem", "push", gem_path],
+      env: {},
+      interactive: true,
+      stdout_line_handler: nil,
+      log_path: nil,
+      passthrough_output: false
+    )
+    expect(result).to equal(retried)
+  end
+
   it "does not execute the aggregate monorepo release during a dry-run" do
     write_release_config(
       changelog: {

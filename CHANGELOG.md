@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Run family release-state changelog probes outside the parent Bundler environment so --only pend can inspect all members.
 
+- Retry the existing gem artifact with a fresh OTP when RubyGems rejects the first MFA code during a family release.
+
 ### Security
 
 ## [1.2.44] - 2026-08-09
