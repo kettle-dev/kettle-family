@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep centralized GitHub Actions pin review payloads in release logs instead of replaying verbose JSON in terminal reports.
 
+- Continue release preflight after successful GitHub Actions pin review.
+
 ### Security
 
 ## [1.2.46] - 2026-08-10

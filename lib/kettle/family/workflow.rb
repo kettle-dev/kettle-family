@@ -898,12 +898,13 @@ module Kettle
           label = phase.fetch(:label)
           progress&.update(preflight_member, status: label, mark: ">")
           result = send(phase.fetch(:method))
-          progress&.advance(preflight_member, status: label, success: result.empty?, mark: result.empty? ? "." : "F")
-          unless result.empty?
+          failed = result.any? { |entry| !entry.ok? }
+          progress&.advance(preflight_member, status: label, success: !failed, mark: failed ? "F" : ".")
+          if failed
             progress&.finish_member(preflight_member, success: false, status: label)
             progress&.stop
+            return result
           end
-          return result unless result.empty?
         end
         progress&.finish_member(preflight_member, success: true, status: "ok")
         progress&.stop
