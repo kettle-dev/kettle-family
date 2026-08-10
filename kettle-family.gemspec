@@ -97,7 +97,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
   # kettle-dev 3 owns the standalone kettle-changelog executable.
-  spec.add_dependency("kettle-dev", ">= 2.5.26", "< 4.0.0")                 # ruby >= 3.2.0
+  spec.add_dependency("kettle-dev", ">= 3.0.2", "< 4.0.0")                 # ruby >= 3.2.0
   spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.18")              # ruby >= 2.4
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("tty-screen", "~> 0.8")                                  # ruby >= 2.0.0
