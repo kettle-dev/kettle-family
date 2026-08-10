@@ -798,6 +798,41 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
   end
 
+  it "reviews action pins once and passes the reviewed cache to delegated releases" do
+    fake_bin = File.join(@tmpdir, "fake-bin")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), <<~BASH)
+      #!/usr/bin/env bash
+      case "$*" in
+        *--list*) printf '%s\\n' '{"schema_version":1,"repositories":["actions/checkout"]}' ;;
+        *--review*) printf '%s\\n' '{"mode":"review","repositories":[{"repository":"actions/checkout"}]}' ;;
+        *) exit 0 ;;
+      esac
+    BASH
+    FileUtils.chmod("u+x", File.join(fake_bin, "bundle"))
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      execute: true,
+      publish: true,
+      commit: false,
+      gem_signing_password: "secret",
+      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+    )
+
+    results = workflow.send(:release_preflight_gha_sha_pins_results)
+
+    expect(results.map(&:phase)).to eq(%w[gha_sha_pins_list gha_sha_pins_review])
+    expect(results).to all(be_ok)
+    expect(workflow.send(:release_env_for_member, member)).to include(
+      "KETTLE_PRE_RELEASE_GHA_SHA_PINS_OFFLINE" => "true"
+    )
+  end
+
   it "renders a singular release preflight phase heading" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

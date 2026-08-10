@@ -503,7 +503,7 @@ module Kettle
         results
       end
 
-      def review_gha_sha_pins(workflow_members, runner:, memo:)
+      def review_gha_sha_pins(workflow_members, runner:, memo:, env: command_env)
         return true if workflow_members.empty?
 
         repositories = []
@@ -511,8 +511,8 @@ module Kettle
           result = runner.call(
             member: member,
             phase: "gha_sha_pins_list",
-            command: gha_sha_pins_command(mode: :list),
-            env: command_env
+            command: gha_sha_pins_command(mode: :list, command_text: command_for("gha-sha-pins")),
+            env: env
           )
           memo << result
           return false unless result.ok?
@@ -523,7 +523,7 @@ module Kettle
           memo << CommandResult.new(
             member_name: member.name,
             phase: "gha_sha_pins_list",
-            command: gha_sha_pins_command(mode: :list),
+            command: gha_sha_pins_command(mode: :list, command_text: command_for("gha-sha-pins")),
             workdir: member.root,
             status: 1,
             success: false,
@@ -546,8 +546,8 @@ module Kettle
         review_result = runner.call(
           member: workflow_members.first,
           phase: "gha_sha_pins_review",
-          command: gha_sha_pins_command(mode: :review, input: review_path),
-          env: command_env
+          command: gha_sha_pins_command(mode: :review, input: review_path, command_text: command_for("gha-sha-pins")),
+          env: env
         )
         memo << review_result
         review_result.ok?
@@ -901,12 +901,27 @@ module Kettle
         dirty_phase = {label: "branch checkout readiness", method: :release_preflight_branch_checkout_dirty_results}
         signing_phase = {label: "gem signing password", method: :release_preflight_signing_password_results}
         secrets_phase = release_secrets_authorization_required? ? {label: "secrets provider authorization", method: :release_preflight_secrets_authorization_results} : nil
+        gha_sha_pins_phase = release_gha_sha_pins_review_required? ? {label: "GitHub Actions SHA pins", method: :release_preflight_gha_sha_pins_results} : nil
 
-        if secrets_phase
-          [secrets_phase, dirty_phase, signing_phase]
-        else
-          [dirty_phase, signing_phase]
-        end
+        [secrets_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
+      end
+
+      def release_preflight_gha_sha_pins_results
+        results = []
+        review_gha_sha_pins(members, runner: command_runner, memo: results, env: command_env)
+        results
+      end
+
+      def release_gha_sha_pins_review_required?
+        execute && kettle_release_command?(raw_release_command) && !release_gha_sha_pins_offline_requested?
+      end
+
+      def release_gha_sha_pins_offline_requested?
+        value = env_overrides.fetch(
+          "KETTLE_PRE_RELEASE_GHA_SHA_PINS_OFFLINE",
+          ENV.fetch("KETTLE_PRE_RELEASE_GHA_SHA_PINS_OFFLINE", "")
+        )
+        %w[true yes 1 on enabled].include?(value.to_s.strip.downcase)
       end
 
       def release_preflight_branch_checkout_dirty_results
@@ -2011,6 +2026,12 @@ module Kettle
       def release_env_for_member(member)
         env = release_env
         env.merge!(release_wave_local_path_env_for(member))
+        # Family release performs one live pin review before member releases.
+        # Child kettle-release must consume that reviewed cache instead of
+        # repeating the GitHub API lookup for every member.
+        if release_gha_sha_pins_review_required? || release_gha_sha_pins_offline_requested?
+          env["KETTLE_PRE_RELEASE_GHA_SHA_PINS_OFFLINE"] = "true"
+        end
         # Run the member's kettle-release from the local kettle-dev checkout
         # when the family workflow itself is using local release tooling. The
         # child release commands disable local dependency paths explicitly;
@@ -2402,8 +2423,8 @@ module Kettle
         ["bundle", "exec", *Array(bex_args).map(&:to_s)]
       end
 
-      def gha_sha_pins_command(mode: nil, input: nil)
-        command_text = command_for(command)
+      def gha_sha_pins_command(mode: nil, input: nil, command_text: nil)
+        command_text ||= command_for(command)
         args = []
         if mode == :list
           return append_command_args(command_text, ["--list", "--json"])
