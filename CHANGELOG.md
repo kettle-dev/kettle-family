@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Delegate configured release secrets to kettle-release so its native OTP retry can complete all remaining release steps.
-
 ### Security
+
+## [1.2.46] - 2026-08-10
+
+- TAG: [v1.2.46][1.2.46t]
+- COVERAGE: 93.63% -- 5083/5429 lines in 32 files
+- BRANCH COVERAGE: 76.32% -- 2040/2673 branches in 32 files
+- 29.72% documented
+
+### Fixed
+
+- Delegate configured release secrets to kettle-release so its native OTP retry can complete all remaining release steps.
 
 ## [1.2.45] - 2026-08-09
 
@@ -1994,7 +2003,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.45...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.46...HEAD
+[1.2.46]: https://github.com/kettle-dev/kettle-family/compare/v1.2.45...v1.2.46
+[1.2.46t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.46
 [1.2.45]: https://github.com/kettle-dev/kettle-family/compare/v1.2.44...v1.2.45
 [1.2.45t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.45
 [1.2.44]: https://github.com/kettle-dev/kettle-family/compare/v1.2.43...v1.2.44
