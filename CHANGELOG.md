@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Let kettle-release own release lockfile normalization to prevent competing Bundler platform rewrites during family releases.
-
 ### Security
+
+## [1.2.48] - 2026-08-10
+
+- TAG: [v1.2.48][1.2.48t]
+- COVERAGE: 93.55% -- 5164/5520 lines in 33 files
+- BRANCH COVERAGE: 76.09% -- 2069/2719 branches in 33 files
+- 29.86% documented
+
+### Fixed
+
+- Let kettle-release own release lockfile normalization to prevent competing Bundler platform rewrites during family releases.
 
 ## [1.2.47] - 2026-08-10
 
@@ -2022,7 +2031,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.47...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.48...HEAD
+[1.2.48]: https://github.com/kettle-dev/kettle-family/compare/v1.2.47...v1.2.48
+[1.2.48t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.48
 [1.2.47]: https://github.com/kettle-dev/kettle-family/compare/v1.2.46...v1.2.47
 [1.2.47t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.47
 [1.2.46]: https://github.com/kettle-dev/kettle-family/compare/v1.2.45...v1.2.46
