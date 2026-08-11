@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    kettle-family (1.2.48)
+    kettle-family (1.2.49)
       command_kit (~> 0.6)
       command_kit-completion (~> 0.1)
       kettle-dev (>= 3.0.2, < 4.0.0)
@@ -30,7 +30,7 @@ PATH
 PATH
   remote: /var/home/pboling/src/my/kettle-dev/kettle-dev
   specs:
-    kettle-dev (3.0.5)
+    kettle-dev (3.0.6)
       emoji_regex (>= 15.0)
       kettle-gha-pins (~> 0.3, >= 0.3.11)
       kettle-ndjson (~> 0.1, >= 0.1.10)
@@ -924,9 +924,9 @@ CHECKSUMS
   json (2.21.2) sha256=1f1d3b7cf2b3ba1a69beca0bb6db13d5438b80bff3cd54cdaaa620b9b07c1c6a
   json-merge (7.1.3)
   kettle-changelog (1.0.0)
-  kettle-dev (3.0.5)
+  kettle-dev (3.0.6)
   kettle-drift (1.0.12)
-  kettle-family (1.2.48)
+  kettle-family (1.2.49)
   kettle-gha-pins (0.3.11) sha256=f0239d2f91df5093a0d961bffa1f1b8308e63e3d0e5ff6fbf0cc567c479251fa
   kettle-jem (7.1.3)
   kettle-ndjson (0.1.11) sha256=f09d3d926b0734a1b257109247b919725489b04235a871372e223f46b826a1ca
