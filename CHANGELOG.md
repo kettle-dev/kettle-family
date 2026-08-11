@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Run shared monorepo changelog gates with the family-local dependency graph.
 
+- Preserve active workspace roots during release lockfile readiness checks.
+
 ### Security
 
 ## [1.2.48] - 2026-08-10

@@ -431,6 +431,38 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_phase_total, member)).to eq(3)
   end
 
+  it "allows active family roots through readiness when release env disables them" do
+    local_root = File.join(@tmpdir, "gems")
+    FileUtils.mkdir_p(File.join(local_root, "beta"))
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      release_env: {
+        family_local_env_name => false,
+        "KETTLE_DEV_DEV" => false
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(local_root, "beta")}\n")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true,
+      execute: true,
+      env_overrides: {
+        family_local_env_name => local_root,
+        "KETTLE_DEV_DEV" => File.join(@tmpdir, "kettle-dev")
+      }
+    )
+
+    expect(workflow.send(:release_allowed_local_path_roots)).to include(local_root)
+    expect(workflow.send(:normalize_release_lockfiles?, member)).to be(false)
+    memo = []
+    workflow.send(:append_release_internal_checks, member: member, memo: memo)
+    expect(memo.first).to be_ok
+  end
+
   it "passes configured required release remotes through kettle-release commands" do
     write_release_config(
       publish_command: "bundle exec kettle-release",

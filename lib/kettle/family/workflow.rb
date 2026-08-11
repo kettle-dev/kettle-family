@@ -3655,7 +3655,9 @@ module Kettle
       end
 
       def release_allowed_local_path_roots
-        release_local_path_env_sources.filter_map do |key, value|
+        # Release env disables are passed to Bundler normalization, but they
+        # must not hide the active workspace roots from readiness diagnostics.
+        release_local_path_env_detection_sources.filter_map do |key, value|
           next unless key.end_with?("_LOCAL", "_DEV")
           next unless local_path_env_value?(value)
           next unless value.to_s.strip.start_with?("/", "./", "../", "~")
