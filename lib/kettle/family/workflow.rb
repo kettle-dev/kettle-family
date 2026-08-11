@@ -1946,7 +1946,9 @@ module Kettle
 
       def family_changelog_command
         command = config.release_family_changelog_command
-        kettle_changelog_command?(command) ? append_kettle_changelog_args(command) : command
+        return command unless kettle_changelog_command?(command)
+
+        append_kettle_changelog_args(standalone_kettle_changelog_command(command))
       end
 
       def raw_release_command
@@ -2504,13 +2506,51 @@ module Kettle
         executable_index = argv.index { |token| File.basename(token) == "kettle-gha-pins" }
         return command_text unless executable_index
 
-        spec = Gem::Specification.find_by_name("kettle-gha-pins")
-        executable = File.join(spec.full_gem_path, "exe", "kettle-gha-pins")
-        return command_text unless File.file?(executable)
+        executable = installed_gem_executable("kettle-gha-pins", "kettle-gha-pins")
+        return command_text unless executable
 
         [RbConfig.ruby, executable, *argv[(executable_index + 1)..]]
       rescue Gem::LoadError
         command_text
+      end
+
+      # The family changelog phase must run the standalone published tool. A
+      # member's generated bin/kettle-changelog wrapper belongs to kettle-dev
+      # and can no longer resolve the executable after kettle-changelog moved
+      # into its own gem. Calling the gem's executable directly also avoids
+      # Gem.use_gemdeps loading an unrelated member Gemfile.
+      def standalone_kettle_changelog_command(command_text)
+        argv = command_text.is_a?(Array) ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
+        executable_index = argv.index { |token| File.basename(token) == "kettle-changelog" }
+        return command_text unless executable_index
+
+        executable = installed_gem_executable("kettle-changelog", "kettle-changelog")
+        return command_text unless executable
+
+        [RbConfig.ruby, executable, *argv[(executable_index + 1)..]]
+      rescue Gem::LoadError
+        command_text
+      end
+
+      def installed_gem_executable(gem_name, executable_name)
+        spec_executable = begin
+          spec = Gem::Specification.find_by_name(gem_name)
+          File.join(spec.full_gem_path, "exe", executable_name)
+        rescue Gem::LoadError
+          nil
+        end
+        return spec_executable if spec_executable && File.file?(spec_executable)
+
+        candidates = Gem.path.flat_map do |gem_path|
+          Dir[File.join(gem_path, "gems", "#{gem_name}-*", "exe", executable_name)]
+        end
+        candidates.max_by do |candidate|
+          directory = File.basename(File.dirname(candidate, 2))
+          version = directory.delete_prefix("#{gem_name}-")
+          Gem::Version.new(version)
+        rescue ArgumentError
+          Gem::Version.new("0")
+        end
       end
 
       def template_command(member)

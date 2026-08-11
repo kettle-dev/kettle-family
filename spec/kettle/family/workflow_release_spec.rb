@@ -240,7 +240,10 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "release", config: config, members: [member], publish: true).results
 
-    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog --yes"])
+    expect(results.first.command.first).to eq(RbConfig.ruby)
+    expect(results.first.command[1]).to end_with("/exe/kettle-changelog")
+    expect(results.first.command).to include("--yes")
+    expect(results.first.command).not_to include("bundle", "exec")
   end
 
   it "does not duplicate accept mode for configured kettle-changelog family changelog commands" do
@@ -258,7 +261,10 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "release", config: config, members: [member], publish: true).results
 
-    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog --yes"])
+    expect(results.first.command.first).to eq(RbConfig.ruby)
+    expect(results.first.command[1]).to end_with("/exe/kettle-changelog")
+    expect(results.first.command).to include("--yes")
+    expect(results.first.command).not_to include("bundle", "exec")
   end
 
   it "does not pass accept mode to kettle-changelog when accept mode is disabled" do
@@ -276,7 +282,9 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "release", config: config, members: [member], publish: true, accept: false).results
 
-    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-changelog"])
+    expect(results.first.command.first).to eq(RbConfig.ruby)
+    expect(results.first.command[1]).to end_with("/exe/kettle-changelog")
+    expect(results.first.command).not_to include("bundle", "exec", "--yes")
   end
 
   it "falls back to a selected member version file for partial shared root releases" do

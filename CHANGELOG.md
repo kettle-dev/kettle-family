@@ -36,6 +36,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Run release action-pin preflight outside member Bundler environments.
 
+- Run family changelog phases with the installed kettle-changelog executable outside member Bundler environments.
+
 ### Security
 
 ## [1.2.48] - 2026-08-10
