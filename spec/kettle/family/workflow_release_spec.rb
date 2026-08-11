@@ -466,6 +466,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_phase_total, member)).to eq(3)
   end
 
+  it "lets kettle-release normalize existing local path remotes before readiness" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    local_root = File.join(@tmpdir, "local-family")
+    FileUtils.mkdir_p(File.join(local_root, "beta"))
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(local_root, "beta")}\n")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish])
+    expect(results.first).to be_ok
+  end
+
   it "allows active family roots through readiness when release env disables them" do
     local_root = File.join(@tmpdir, "gems")
     FileUtils.mkdir_p(File.join(local_root, "beta"))

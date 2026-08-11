@@ -46,6 +46,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Fix family release planning to use standalone tool executables and preserve the monorepo local dependency root.
 
+- Allow child kettle-release to normalize local lockfile paths before family readiness checks.
+
 ### Security
 
 ## [1.2.48] - 2026-08-10

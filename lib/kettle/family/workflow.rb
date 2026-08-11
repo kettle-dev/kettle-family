@@ -1856,8 +1856,22 @@ module Kettle
       end
 
       def append_release_internal_checks(member:, memo:)
-        memo << ReadinessCheck.call(member: member, config: config, allowed_local_path_roots: release_allowed_local_path_roots)
+        memo << ReadinessCheck.call(
+          member: member,
+          config: config,
+          allowed_local_path_roots: release_readiness_allowed_local_path_roots(member)
+        )
         memo << ChangelogCheck.call(member: member, config: config) if memo.last.ok?
+      end
+
+      def release_readiness_allowed_local_path_roots(member)
+        roots = release_allowed_local_path_roots
+        return roots unless kettle_release_command?(raw_release_command)
+
+        # kettle-release resets local path remotes before running its own
+        # readiness checks. Let the child own that transition rather than
+        # rejecting the lockfile one step before it can normalize it.
+        (roots + release_lockfile_local_path_remotes(member)).uniq
       end
 
       def release_skipped_after_lockfile_normalization_result(member)
