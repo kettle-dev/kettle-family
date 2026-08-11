@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Shared-version release state now keeps members already at the highest local target out of the per-member bump flag while retaining complete-family selection.
 
+- Run shared monorepo changelog gates with the family-local dependency graph.
+
 ### Security
 
 ## [1.2.48] - 2026-08-10

@@ -1885,14 +1885,14 @@ module Kettle
       def family_changelog_env
         env = release_env.merge(config.changelog_env)
         # A shared monorepo changelog runs the aggregate suite before each
-        # member release. Keep unpublished selected siblings on local paths for
-        # that suite; the member release's lockfile reset still disables them
-        # before building and publishing the gem.
+        # member release. Keep that suite on the family-local dependency graph;
+        # the member release's lockfile reset still disables local paths before
+        # building and publishing each gem.
         family_env_name = config.family_local_path_env_name
-        if config.family_mode == "monorepo" && family_env_name &&
-            local_path_env_value?(release_env[family_env_name])
-          env[family_env_name] = release_env.fetch(family_env_name)
+        if config.family_mode == "monorepo" && family_env_name
+          env[family_env_name] = family_changelog_family_path(family_env_name)
         end
+        family_changelog_tooling_env.each { |name, value| env[name] = value }
         return env unless config.shared_changelog?
 
         env.merge(
@@ -1901,6 +1901,23 @@ module Kettle
           "K_CHANGELOG_PATH" => File.expand_path(config.changelog_path, config.root),
           "K_CHANGELOG_VERSION_FILE" => File.expand_path(family_changelog_version_file, config.root)
         )
+      end
+
+      def family_changelog_family_path(name)
+        return config.changelog_env.fetch(name) if config.changelog_env.key?(name)
+
+        return env_overrides.fetch(name) if env_overrides.key?(name)
+
+        return ENV.fetch(name) if ENV.key?(name)
+
+        config.family_local_path_root
+      end
+
+      def family_changelog_tooling_env
+        %w[KETTLE_DEV_DEV].each_with_object({}) do |name, env|
+          value = env_overrides.fetch(name, ENV[name])
+          env[name] = value if value && local_path_env_value?(value)
+        end
       end
 
       def family_changelog_version_file

@@ -124,6 +124,23 @@ RSpec.describe Kettle::Family::Workflow do
       },
       release_env: {"STRUCTUREDMERGE_DEV" => false}
     )
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump(
+        "family" => {
+          "name" => "structuredmerge-ruby",
+          "mode" => "monorepo",
+          "local_path_env" => "STRUCTUREDMERGE_DEV",
+          "members_root" => "alpha"
+        },
+        "release" => {"env" => {"STRUCTUREDMERGE_DEV" => false}},
+        "changelog" => {
+          "mode" => "root",
+          "path" => "CHANGELOG.md",
+          "version_file" => "alpha/lib/alpha/version.rb"
+        }
+      )
+    )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member(
@@ -140,6 +157,71 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(workflow.send(:family_changelog_env)).to include(
       "STRUCTUREDMERGE_DEV" => File.join(@tmpdir, "gems")
+    )
+  end
+
+  it "uses the configured monorepo member root for the shared changelog suite by default" do
+    write_release_config(
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      },
+      release_env: {"STRUCTUREDMERGE_DEV" => false}
+    )
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump(
+        "family" => {
+          "name" => "structuredmerge-ruby",
+          "mode" => "monorepo",
+          "local_path_env" => "STRUCTUREDMERGE_DEV",
+          "members_root" => "alpha"
+        },
+        "release" => {"env" => {"STRUCTUREDMERGE_DEV" => false}},
+        "changelog" => {
+          "mode" => "root",
+          "path" => "CHANGELOG.md",
+          "version_file" => "alpha/lib/alpha/version.rb"
+        }
+      )
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member(
+      "alpha",
+      changelog: false,
+      version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
+    )
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:family_changelog_env)).to include(
+      "STRUCTUREDMERGE_DEV" => File.join(@tmpdir, "alpha")
+    )
+  end
+
+  it "preserves explicitly selected local kettle-dev tooling for the shared changelog suite" do
+    local_kettle_dev = File.join(@tmpdir, "kettle-dev-workspace")
+    stub_env("KETTLE_DEV_DEV" => local_kettle_dev)
+    write_release_config(
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      },
+      release_env: {"KETTLE_DEV_DEV" => false}
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member(
+      "alpha",
+      changelog: false,
+      version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
+    )
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:family_changelog_env)).to include(
+      "KETTLE_DEV_DEV" => local_kettle_dev
     )
   end
 
