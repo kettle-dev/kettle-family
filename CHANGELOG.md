@@ -44,6 +44,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Honor configured release waves for sequential monorepo releases.
 
+- Fix family release planning to use standalone tool executables and preserve the monorepo local dependency root.
+
 ### Security
 
 ## [1.2.48] - 2026-08-10

@@ -74,6 +74,10 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <h3 id="added">Added</h3>
 
+<ul>
+  <li>Add –skip-changelog to release orchestration while retaining pre-release gates and specs.</li>
+</ul>
+
 <h3 id="changed">Changed</h3>
 
 <h3 id="deprecated">Deprecated</h3>
@@ -81,6 +85,33 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="removed">Removed</h3>
 
 <h3 id="fixed">Fixed</h3>
+
+<ul>
+  <li>
+    <p>Shared-version release state now keeps members already at the highest local target out of the per-member bump flag while retaining complete-family selection.</p>
+  </li>
+  <li>
+    <p>Run shared monorepo changelog gates with the family-local dependency graph.</p>
+  </li>
+  <li>
+    <p>Preserve active workspace roots during release lockfile readiness checks.</p>
+  </li>
+  <li>
+    <p>Run release action-pin preflight outside member Bundler environments.</p>
+  </li>
+  <li>
+    <p>Run family changelog phases with the installed kettle-changelog executable outside member Bundler environments.</p>
+  </li>
+  <li>
+    <p>Defer dependency-floor lockfile refreshes until all selected sibling dependencies are published.</p>
+  </li>
+  <li>
+    <p>Honor configured release waves for sequential monorepo releases.</p>
+  </li>
+  <li>
+    <p>Fix family release planning to use standalone tool executables and preserve the monorepo local dependency root.</p>
+  </li>
+</ul>
 
 <h3 id="security">Security</h3>
 

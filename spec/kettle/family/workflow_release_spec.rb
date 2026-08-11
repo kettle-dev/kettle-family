@@ -259,7 +259,9 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
 
-    results = described_class.new(command: "release", config: config, members: [member], publish: true).results
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+    stub_standalone_kettle_changelog(workflow)
+    results = workflow.results
 
     expect(results.first.command.first).to eq(RbConfig.ruby)
     expect(results.first.command[1]).to end_with("/exe/kettle-changelog")
@@ -280,7 +282,9 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
 
-    results = described_class.new(command: "release", config: config, members: [member], publish: true).results
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+    stub_standalone_kettle_changelog(workflow)
+    results = workflow.results
 
     expect(results.first.command.first).to eq(RbConfig.ruby)
     expect(results.first.command[1]).to end_with("/exe/kettle-changelog")
@@ -301,7 +305,9 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
 
-    results = described_class.new(command: "release", config: config, members: [member], publish: true, accept: false).results
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true, accept: false)
+    stub_standalone_kettle_changelog(workflow)
+    results = workflow.results
 
     expect(results.first.command.first).to eq(RbConfig.ruby)
     expect(results.first.command[1]).to end_with("/exe/kettle-changelog")
@@ -2377,6 +2383,12 @@ RSpec.describe Kettle::Family::Workflow do
       "PATH" => "#{bin_dir}:#{ENV.fetch("PATH")}",
       "BUNDLE_ATTEMPTS_FILE" => File.join(@tmpdir, "bundle-attempts")
     }
+  end
+
+  def stub_standalone_kettle_changelog(workflow)
+    allow(workflow).to receive(:installed_gem_executable)
+      .with("kettle-changelog", "kettle-changelog")
+      .and_return(File.join(@tmpdir, "kettle-changelog", "exe", "kettle-changelog"))
   end
 
   def ready_member(name, changelog: true, dependencies: [], release_dependencies: nil, version_file: nil)

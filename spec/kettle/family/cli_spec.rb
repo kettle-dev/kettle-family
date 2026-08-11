@@ -545,7 +545,10 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     result = JSON.parse(out.string).fetch("results").first
     expect(result.fetch("phase")).to eq("gha-sha-pins")
-    expect(result.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-gha-pins --check --upgrade minor --events"])
+    command = result.fetch("command")
+    expect(command.first).to eq(RbConfig.ruby)
+    expect(command[1]).to end_with("/exe/kettle-gha-pins")
+    expect(command).to include("--check", "--upgrade", "minor", "--events")
   end
 
   it "plans workflow environment overrides after mise" do

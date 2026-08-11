@@ -1934,11 +1934,14 @@ module Kettle
       end
 
       def family_changelog_family_path(name)
-        return config.changelog_env.fetch(name) if config.changelog_env.key?(name)
+        configured = config.changelog_env.fetch(name, nil)
+        return configured if local_path_env_value?(configured)
 
-        return env_overrides.fetch(name) if env_overrides.key?(name)
+        override = env_overrides.fetch(name, nil)
+        return override if local_path_env_value?(override)
 
-        return ENV.fetch(name) if ENV.key?(name)
+        ambient = ENV.fetch(name, nil)
+        return ambient if local_path_env_value?(ambient)
 
         config.family_local_path_root
       end
