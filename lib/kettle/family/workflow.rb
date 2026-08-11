@@ -507,11 +507,12 @@ module Kettle
         return true if workflow_members.empty?
 
         repositories = []
+        command_text = standalone_gha_sha_pins_command(command_for("gha-sha-pins"))
         workflow_members.each do |member|
           result = runner.call(
             member: member,
             phase: "gha_sha_pins_list",
-            command: gha_sha_pins_command(mode: :list, command_text: command_for("gha-sha-pins")),
+            command: gha_sha_pins_command(mode: :list, command_text: command_text),
             env: env,
             log_path: gha_sha_pins_log_path(member, phase: "list")
           )
@@ -524,7 +525,7 @@ module Kettle
           memo << CommandResult.new(
             member_name: member.name,
             phase: "gha_sha_pins_list",
-            command: gha_sha_pins_command(mode: :list, command_text: command_for("gha-sha-pins")),
+            command: gha_sha_pins_command(mode: :list, command_text: command_text),
             workdir: member.root,
             status: 1,
             success: false,
@@ -548,7 +549,7 @@ module Kettle
         review_result = runner.call(
           member: workflow_members.first,
           phase: "gha_sha_pins_review",
-          command: gha_sha_pins_command(mode: :review, input: review_path, command_text: command_for("gha-sha-pins")),
+          command: gha_sha_pins_command(mode: :review, input: review_path, command_text: command_text),
           env: env,
           log_path: gha_sha_pins_log_path(workflow_members.first, phase: "review")
         )
@@ -2488,6 +2489,25 @@ module Kettle
       def command_for(name)
         configured = config.command_for(name)
         configured || DEFAULT_COMMANDS.fetch(name)
+      end
+
+      # GHA pin inventory is a workspace-level release preflight, not a member
+      # bundle operation. The installed RubyGems wrapper calls Gem.use_gemdeps,
+      # which can load the member's Gemfile and make an otherwise independent
+      # pin scan fail on unpublished sibling gems. Run the gem's actual
+      # executable so this phase uses the shared installed tool and cache.
+      def standalone_gha_sha_pins_command(command_text)
+        argv = command_text.is_a?(Array) ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
+        executable_index = argv.index { |token| File.basename(token) == "kettle-gha-pins" }
+        return command_text unless executable_index
+
+        spec = Gem::Specification.find_by_name("kettle-gha-pins")
+        executable = File.join(spec.full_gem_path, "exe", "kettle-gha-pins")
+        return command_text unless File.file?(executable)
+
+        [RbConfig.ruby, executable, *argv[(executable_index + 1)..]]
+      rescue Gem::LoadError
+        command_text
       end
 
       def template_command(member)

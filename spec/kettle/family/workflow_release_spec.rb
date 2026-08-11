@@ -955,6 +955,8 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[gha_sha_pins_list gha_sha_pins_review])
     expect(results).to all(be_ok)
+    expect(results.first.command.first).to eq(RbConfig.ruby)
+    expect(results.first.command).not_to include("bundle", "exec")
     expect(results.map(&:log_path)).to all(start_with(File.join(@tmpdir, "tmp", "kettle-family")))
     expect(results.map(&:log_path)).to all(satisfy { |path| File.file?(path) })
     expect(workflow.send(:release_preflight_results)).to be_empty

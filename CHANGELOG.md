@@ -34,6 +34,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Preserve active workspace roots during release lockfile readiness checks.
 
+- Run release action-pin preflight outside member Bundler environments.
+
 ### Security
 
 ## [1.2.48] - 2026-08-10

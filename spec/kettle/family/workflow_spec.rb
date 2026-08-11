@@ -290,7 +290,8 @@ RSpec.describe Kettle::Family::Workflow do
   it "reviews family action metadata once before running member pin updates offline" do
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
+    gha_executable = File.join(fake_bin, "kettle-gha-pins")
+    File.write(gha_executable, <<~RUBY)
       #!/usr/bin/env ruby
       require "json"
       File.open("gha-calls.log", "a") { |file| file.puts(ARGV.join(" ")) }
@@ -300,19 +301,23 @@ RSpec.describe Kettle::Family::Workflow do
         puts JSON.generate("mode" => "review", "repositories" => [{"repository" => "actions/checkout"}])
       end
     RUBY
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    FileUtils.chmod("+x", gha_executable)
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = member_at("alpha")
     beta = member_at("beta")
 
-    results = described_class.new(
+    workflow = described_class.new(
       command: "gha-sha-pins",
       config: config,
       members: [alpha, beta],
       execute: true,
       commit: false,
       env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
-    ).results
+    )
+    allow(workflow).to receive(:standalone_gha_sha_pins_command).and_return([gha_executable])
+    allow(workflow).to receive(:command_for).with("gha-sha-pins").and_return([gha_executable])
+
+    results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[gha_sha_pins_list gha_sha_pins_list gha_sha_pins_review gha-sha-pins gha-sha-pins])
     member_commands = results.select { |result| result.phase == "gha-sha-pins" }.map(&:command)
