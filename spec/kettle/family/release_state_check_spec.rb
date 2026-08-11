@@ -131,16 +131,28 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("bump_release_pending" => true)
   end
 
-  it "propagates a shared-version bump to every successful member" do
+  it "keeps an already-bumped shared-version member out of the bump state" do
     check = described_class.new(members: [member("alpha"), member("beta")])
     results = [
-      release_state_result("alpha", "bump_release_pending" => true),
-      release_state_result("beta", "bump_release_pending" => false)
+      release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
+      release_state_result("beta", "version" => "1.2.4", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => false)
     ]
 
     normalized = check.send(:normalize_shared_version_bump, results)
 
-    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, true])
+    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, false])
+  end
+
+  it "does not invent a bump for shared members without unreleased entries" do
+    check = described_class.new(members: [member("alpha"), member("beta")])
+    results = [
+      release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
+      release_state_result("beta", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => false, "bump_release_pending" => false)
+    ]
+
+    normalized = check.send(:normalize_shared_version_bump, results)
+
+    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, false])
   end
 
   it "reports command failures without treating pending release work as an error" do

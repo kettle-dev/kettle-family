@@ -760,8 +760,21 @@ module Kettle
       def normalize_shared_version_bump(results)
         return results unless results.any? { |result| result.ok? && result.state["bump_release_pending"] == true }
 
+        successful = results.select(&:ok?)
+        target_version = successful.filter_map { |result| parse_version(result.state["version"]) }.max
+        released_version = successful.filter_map { |result| parse_version(result.state["latest_released"]) }.max
+        target_already_bumped = target_version && released_version && target_version > released_version
+
         results.map do |result|
           next result unless result.ok?
+
+          state = result.state
+          version = parse_version(state["version"])
+          bump_pending = if target_already_bumped && version == target_version
+            false
+          else
+            state["bump_release_pending"] == true
+          end
 
           result.class.new(
             member_name: result.member_name,
@@ -772,11 +785,17 @@ module Kettle
             stdout: result.stdout,
             stderr: result.stderr,
             elapsed_seconds: result.elapsed_seconds,
-            state: result.state.merge("bump_release_pending" => true),
+            state: state.merge("bump_release_pending" => bump_pending),
             reason: result.reason,
             branch: result.branch
           )
         end
+      end
+
+      def parse_version(value)
+        Gem::Version.new(value.to_s) unless value.to_s.empty?
+      rescue ArgumentError
+        nil
       end
 
       def git_root
