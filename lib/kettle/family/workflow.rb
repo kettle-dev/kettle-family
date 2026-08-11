@@ -2415,7 +2415,10 @@ module Kettle
 
       def workflow_command(member = nil)
         return template_command(member) if command == "template"
-        return gha_sha_pins_command if command == "gha-sha-pins"
+        if command == "gha-sha-pins"
+          command_text = standalone_gha_sha_pins_command(command_for("gha-sha-pins"))
+          return gha_sha_pins_command(command_text: command_text)
+        end
         return bup_command if command == "bup"
         return bex_command if command == "bex"
 

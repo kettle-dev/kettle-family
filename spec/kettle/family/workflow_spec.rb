@@ -287,6 +287,18 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-gha-pins --write --upgrade patch --events"])
   end
 
+  it "uses the standalone GHA executable for member pin commands" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    workflow = described_class.new(command: "gha-sha-pins", config: config, members: [member], execute: true)
+    executable = File.join(@tmpdir, "kettle-gha-pins")
+    allow(workflow).to receive(:standalone_gha_sha_pins_command).and_return([RbConfig.ruby, executable])
+
+    expect(workflow.send(:workflow_command, member)).to eq(
+      [RbConfig.ruby, executable, "--write", "--upgrade", "patch", "--offline", "--events"]
+    )
+  end
+
   it "reviews family action metadata once before running member pin updates offline" do
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
