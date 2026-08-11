@@ -160,6 +160,7 @@ module Kettle
             publish: false,
             release_start_step: nil,
             release_skip_steps: nil,
+            release_skip_changelog: false,
             release_local_ci: false,
             release_continue_ci_failures: false,
             release_ci_workflows: nil,
@@ -519,6 +520,7 @@ module Kettle
         end
         option :start_step, long: "--start-step", value: {type: Integer, usage: "N"}, desc: "Pass start_step=N through to kettle-release commands"
         option :skip_steps, long: "--skip-steps", value: {type: String, usage: "LIST"}, desc: "Pass skip_steps=LIST through to kettle-release commands"
+        option :skip_changelog, long: "--skip-changelog", desc: "Run pre-release gates and specs, but skip kettle-changelog"
         option :local_ci, long: "--local-ci", desc: "Pass --local-ci through to kettle-release commands"
         option :continue_ci_failures, long: "--continue-ci-failures", desc: "Set K_RELEASE_CI_CONTINUE=true for release commands"
         option :ci_workflows, long: "--ci-workflows", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated CI workflow monitor subset through to kettle-release commands"
@@ -543,6 +545,7 @@ module Kettle
             publish: truthy_option?(:publish),
             release_start_step: options[:start_step],
             release_skip_steps: options[:skip_steps],
+            release_skip_changelog: truthy_option?(:skip_changelog),
             release_local_ci: truthy_option?(:local_ci),
             release_continue_ci_failures: truthy_option?(:continue_ci_failures),
             release_ci_workflows: options[:ci_workflows],
@@ -779,6 +782,7 @@ module Kettle
           tag: options[:tag],
           start_step: options[:release_start_step],
           skip_steps: options[:release_skip_steps],
+          skip_changelog: options[:release_skip_changelog],
           local_ci: options[:release_local_ci],
           continue_ci_failures: options[:release_continue_ci_failures],
           ci_workflows: options[:release_ci_workflows],

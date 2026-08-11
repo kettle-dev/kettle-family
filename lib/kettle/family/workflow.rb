@@ -102,7 +102,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -116,6 +116,7 @@ module Kettle
         @tag = tag
         @start_step = start_step
         @skip_steps = skip_steps
+        @skip_changelog = !!skip_changelog
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
         @ci_workflows = validate_ci_workflows(ci_workflows)
@@ -184,7 +185,7 @@ module Kettle
         execute && release_command_delegates_secrets_to_kettle_release?
       end
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -420,7 +421,7 @@ module Kettle
         return check_results(workflow_members) if command == "check"
         return reset_member_results(workflow_members) if command == "reset"
         if command == "release"
-          results = release_member_results(workflow_members, include_family_changelog: true)
+          results = release_member_results(workflow_members, include_family_changelog: !skip_changelog)
           return results unless explicit_monorepo_mode? && results.all?(&:ok?)
 
           results << aggregate_monorepo_github_release(workflow_members)
@@ -1062,7 +1063,7 @@ module Kettle
       def release_member_local_branch_target_results
         runner = command_runner
         results = []
-        append_family_changelog_result(runner: runner, memo: results)
+        append_family_changelog_result(runner: runner, memo: results) unless skip_changelog
         return results unless results.all?(&:ok?)
 
         members.each_with_object(results) do |member, memo|
@@ -1090,6 +1091,7 @@ module Kettle
           tag: tag,
           start_step: start_step,
           skip_steps: skip_steps,
+          skip_changelog: skip_changelog,
           local_ci: local_ci,
           continue_ci_failures: continue_ci_failures,
           ci_workflows: ci_workflows,
@@ -1990,6 +1992,7 @@ module Kettle
         args = []
         args << "start_step=#{start_step}" if start_step
         args << "skip_steps=#{skip_steps}" if skip_steps && !skip_steps.to_s.empty?
+        args << "--skip-changelog" if skip_changelog
         args << "--ci-workflows=#{ci_workflows}" if ci_workflows && !ci_workflows.to_s.empty?
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit

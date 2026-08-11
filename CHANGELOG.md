@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Add --skip-changelog to release orchestration while retaining pre-release gates and specs.
+
 ### Changed
 
 ### Deprecated

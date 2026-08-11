@@ -36,6 +36,27 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
+  it "skips family and member changelog commands when requested" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true,
+      skip_changelog: true
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish])
+    expect(results.map(&:command).join(" ")).to include("--skip-changelog")
+    expect(results.map(&:phase)).not_to include("family_changelog")
+  end
+
   it "does not execute the aggregate monorepo release during a dry-run" do
     write_release_config(
       changelog: {
