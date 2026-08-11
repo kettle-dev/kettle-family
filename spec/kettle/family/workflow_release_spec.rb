@@ -1656,6 +1656,41 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:parallel_release_members?, members)).to be(false)
   end
 
+  it "honors configured release waves for sequential releases" do
+    write_release_config(release_waves: [["beta"], ["alpha"]])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, jobs: 2)
+    released = []
+
+    allow(workflow).to receive(:release_results_for_member) do |member, runner:|
+      released << member.name
+      [
+        Kettle::Family::CommandResult.new(
+          member_name: member.name,
+          phase: "release_build",
+          command: ["release"],
+          workdir: member.root,
+          status: 0,
+          success: true,
+          stdout: "",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: nil
+        )
+      ]
+    end
+
+    results = workflow.results
+    wave_results = results.select { |result| result.phase == "release_wave" }
+
+    expect(released).to eq(%w[beta alpha])
+    expect(wave_results.map(&:stdout)).to eq(["beta", "alpha"])
+    expect(wave_results.map(&:reason)).to eq(["jobs=1 total=2", "jobs=1 total=2"])
+  end
+
   it "plans family dependency floor updates between sequential releases" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -2297,7 +2332,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -2310,6 +2345,7 @@ RSpec.describe Kettle::Family::Workflow do
     release["secrets"] = secrets if secrets
     release["required_remotes"] = required_remotes if required_remotes
     release["normalize_lockfiles"] = release_normalize_lockfiles unless release_normalize_lockfiles.nil?
+    release["waves"] = release_waves if release_waves
     config = {"release" => release}
     config["template"] = template if template
     config["check"] = check if check

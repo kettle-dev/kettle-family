@@ -1125,22 +1125,35 @@ module Kettle
         return results unless results.all?(&:ok?)
         return parallel_release_member_results(release_members, results) if parallel_release_members?(release_members)
 
+        sequential_release_member_results(release_members, results, runner: runner)
+      end
+
+      def sequential_release_member_results(release_members, initial_results, runner:)
+        results = initial_results
+        waves = release_waves(release_members)
+        ordered_members = waves.flatten
+        show_wave_markers = config.release_waves.any? && waves.length > 1
         release_progress = start_release_progress(release_members)
         @release_progress = release_progress
         begin
-          release_members.each_with_object(results) do |member, memo|
-            memo.concat(release_results_for_member(member, runner: runner))
-            break memo unless memo.last.ok?
+          waves.each_with_index do |wave, index|
+            results << release_wave_result(wave, index: index, total: waves.length, jobs: 1) if show_wave_markers
+            wave.each do |member|
+              results.concat(release_results_for_member(member, runner: runner))
+              break unless results.last.ok?
 
-            remaining_members = release_members.drop(release_members.index(member) + 1)
-            @release_completed_member_names << member.name
-            append_dependency_floor_results(released_members: [member], dependent_members: remaining_members, runner: runner, memo: memo)
-            break memo unless memo.last&.ok?
+              remaining_members = ordered_members.drop(ordered_members.index(member) + 1)
+              @release_completed_member_names << member.name
+              append_dependency_floor_results(released_members: [member], dependent_members: remaining_members, runner: runner, memo: results)
+              break unless results.last&.ok?
+            end
+            break unless results.last&.ok?
           end
         ensure
           emit_release_progress_summary(results, progress: release_progress)
           @release_progress = nil
         end
+        results
       end
 
       def parallel_release_member_results(release_members, initial_results)
@@ -1203,7 +1216,7 @@ module Kettle
         ordered_results.compact
       end
 
-      def release_wave_result(wave, index:, total:)
+      def release_wave_result(wave, index:, total:, jobs: nil)
         CommandResult.new(
           member_name: "wave #{index + 1}",
           phase: "release_wave",
@@ -1215,7 +1228,7 @@ module Kettle
           stderr: "",
           elapsed_seconds: 0.0,
           skipped: false,
-          reason: "jobs=#{release_jobs(wave)} total=#{total}"
+          reason: "jobs=#{jobs || release_jobs(wave)} total=#{total}"
         )
       end
 

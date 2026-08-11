@@ -42,6 +42,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Defer dependency-floor lockfile refreshes until all selected sibling dependencies are published.
 
+- Honor configured release waves for sequential monorepo releases.
+
 ### Security
 
 ## [1.2.48] - 2026-08-10
