@@ -40,6 +40,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Run family changelog phases with the installed kettle-changelog executable outside member Bundler environments.
 
+- Defer dependency-floor lockfile refreshes until all selected sibling dependencies are published.
+
 ### Security
 
 ## [1.2.48] - 2026-08-10

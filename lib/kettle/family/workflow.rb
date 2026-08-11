@@ -1352,6 +1352,9 @@ module Kettle
         require_relative "dependency_floor"
 
         affected_dependent_members = dependent_members_depending_on(released_members: released_members, dependent_members: dependent_members)
+        lockfile_ready_dependent_members = affected_dependent_members.select do |member|
+          dependency_floor_refresh_ready?(member, released_members: released_members)
+        end
         floor_results = DependencyFloor.new(
           released_members: released_members,
           dependent_members: dependent_members,
@@ -1361,10 +1364,10 @@ module Kettle
         return if floor_results.empty?
         return if floor_results.any? && !floor_results.all?(&:ok?)
 
-        append_dependency_floor_lockfile_results(released_members: released_members, dependent_members: affected_dependent_members, runner: runner, memo: memo)
+        append_dependency_floor_lockfile_results(released_members: released_members, dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
-        append_dependency_floor_ci_bundle_results(released_members: released_members, dependent_members: affected_dependent_members, runner: runner, memo: memo)
+        append_dependency_floor_ci_bundle_results(released_members: released_members, dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
         commit_dependency_floor_changes(dependent_members: floor_results.map(&:member_name), runner: runner, memo: memo) if floor_results.any? && execute && commit
@@ -1375,6 +1378,17 @@ module Kettle
         dependent_members.select do |member|
           release_dependency_names(member).any? { |dependency| released_names.include?(dependency) }
         end
+      end
+
+      # A release-valid lockfile must resolve every selected sibling dependency
+      # from the registry. Defer refreshes for dependents that still require a
+      # selected sibling from a later release wave; their gemspec floors can be
+      # updated now, but Bundler cannot resolve the future sibling remotely yet.
+      def dependency_floor_refresh_ready?(member, released_members:)
+        selected_names = members.map(&:name)
+        selected_dependencies = release_dependency_names(member).select { |dependency| selected_names.include?(dependency) }
+        completed_names = Array(@release_completed_member_names) + released_members.map(&:name)
+        selected_dependencies.all? { |dependency| completed_names.include?(dependency) }
       end
 
       def release_dependency_names(member)

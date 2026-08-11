@@ -1906,6 +1906,42 @@ RSpec.describe Kettle::Family::Workflow do
     expect(memo).to be_empty
   end
 
+  it "defers dependent lockfile refreshes until all selected sibling dependencies are released" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec(
+      "beta",
+      dependencies: {
+        "alpha" => ["~> 1.0", ">= 1.0.0"],
+        "gamma" => ["~> 1.0", ">= 1.0.0"]
+      }
+    )
+    gamma = ready_member_with_gemspec("gamma", version: "1.2.3")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [alpha, beta, gamma],
+      execute: true,
+      publish: true,
+      commit: false,
+      jobs: 1
+    )
+    workflow.instance_variable_set(:@release_completed_member_names, ["alpha"])
+    runner = ->(**_options) { raise "lockfile refresh should be deferred" }
+    memo = []
+
+    workflow.send(
+      :append_dependency_floor_results,
+      released_members: [alpha],
+      dependent_members: [beta],
+      runner: runner,
+      memo: memo
+    )
+
+    expect(memo.map(&:phase)).to eq(["dependency_floor"])
+  end
+
   it "uses a checksum-aware dependent lockfile refresh command" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)
