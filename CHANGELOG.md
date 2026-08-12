@@ -48,6 +48,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Allow child kettle-release to normalize local lockfile paths before family readiness checks.
 
+- Resolve kettle-changelog through the active RubyGems bundle during family release-state checks so older global executables cannot hide pending entries.
+
 ### Security
 
 ## [1.2.50] - 2026-08-11

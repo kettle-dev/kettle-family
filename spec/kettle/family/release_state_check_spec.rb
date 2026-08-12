@@ -29,8 +29,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     result = described_class.new(members: [member]).results.fetch(0)
 
     expect(result).to be_ok
-    expect(result.command.first).to eq(RbConfig.ruby)
-    expect(result.command).to include("-S", "kettle-changelog", "--release-state", "--json")
+    expect(result.command).to eq(changelog_command)
     expect(result.workdir).to eq(member.root)
     expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true, "bump_release_pending" => false)
   end
@@ -665,11 +664,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
         "K_CHANGELOG_GEM_NAME" => "alpha",
         "K_CHANGELOG_VERSION_FILE" => alpha.version_file
       ),
-      RbConfig.ruby,
-      "-S",
-      "kettle-changelog",
-      "--release-state",
-      "--json",
+      *changelog_command,
       chdir: @tmpdir
     )
     expect(Open3).to have_received(:capture3).with(
@@ -677,11 +672,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
         "K_CHANGELOG_GEM_NAME" => "beta",
         "K_CHANGELOG_VERSION_FILE" => beta.version_file
       ),
-      RbConfig.ruby,
-      "-S",
-      "kettle-changelog",
-      "--release-state",
-      "--json",
+      *changelog_command,
       chdir: @tmpdir
     )
   end
@@ -704,23 +695,16 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(results.map(&:member_name)).to eq(%w[alpha kettle-jem])
     expect(Open3).to have_received(:capture3).with(
       hash_including("K_CHANGELOG_GEM_NAME" => "alpha"),
-      RbConfig.ruby,
-      "-S",
-      "kettle-changelog",
-      "--release-state",
-      "--json",
+      *changelog_command,
       chdir: @tmpdir
     )
     expect(Open3).to have_received(:capture3).with(
       hash_including(
         "K_CHANGELOG_GEM_NAME" => "kettle-jem",
+        "K_CHANGELOG_PATH" => File.join(kettle_jem.root, "CHANGELOG.md"),
         "K_CHANGELOG_VERSION_FILE" => kettle_jem.version_file
       ),
-      RbConfig.ruby,
-      "-S",
-      "kettle-changelog",
-      "--release-state",
-      "--json",
+      *changelog_command,
       chdir: kettle_jem.root
     )
   end
@@ -793,6 +777,10 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: version_file, version: "1.0.0", dependencies: [])
+  end
+
+  def changelog_command
+    [RbConfig.ruby, Gem.bin_path("kettle-changelog", "kettle-changelog"), "--release-state", "--json"]
   end
 
   def release_state_result(member_name, state)

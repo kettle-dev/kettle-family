@@ -107,7 +107,15 @@ module Kettle
       end
 
       def release_state_command
+        [RbConfig.ruby, kettle_changelog_executable, "--release-state", "--json"]
+      rescue Gem::GemNotFoundException
         [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
+      end
+
+      def kettle_changelog_executable
+        # Resolve the active bundle's executable before unbundling the child
+        # process; PATH lookup afterward can select an older global install.
+        Gem.bin_path("kettle-changelog", "kettle-changelog")
       end
 
       def capture_release_state(env:, command:, workdir:)
@@ -192,7 +200,7 @@ module Kettle
       end
 
       def release_state_env(member = nil)
-        return member_changelog_env(member) if member && shared_changelog? && member_local_changelog?(member)
+        return member_changelog_env(member) if member && member_local_changelog?(member)
 
         config ? config.changelog_env : {}
       end
@@ -204,7 +212,10 @@ module Kettle
       end
 
       def member_changelog_env(member)
-        env = {"K_CHANGELOG_GEM_NAME" => member.name.to_s}
+        env = {
+          "K_CHANGELOG_GEM_NAME" => member.name.to_s,
+          "K_CHANGELOG_PATH" => File.join(member.root, "CHANGELOG.md")
+        }
         env["K_CHANGELOG_VERSION_FILE"] = member.version_file.to_s if member.version_file
         env
       end
