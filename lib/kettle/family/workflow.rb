@@ -2609,9 +2609,34 @@ module Kettle
 
       def template_prepare_command(member)
         command_text = template_prepare_command_from(config.template_command || default_template_command(member))
-        command_text = localize_kettle_jem_template_command(command_text)
+        command_text = standalone_kettle_jem_prepare_command(command_text)
         command_text = append_template_family_args(command_text)
         append_template_skip_commit(command_text)
+      end
+
+      # Preparation must run before Bundler can safely evaluate the member's
+      # Gemfile. Use the local or installed kettle-jem executable directly so
+      # it can create newly referenced modular Gemfiles without that bootstrap
+      # dependency cycle. The full install phase remains bundle-managed.
+      def standalone_kettle_jem_prepare_command(command_text)
+        local_executable = local_kettle_jem_executable
+        executable = local_executable || installed_gem_executable("kettle-jem", "kettle-jem")
+        return command_text unless executable
+
+        array_command = command_text.is_a?(Array)
+        argv = array_command ? command_text.map(&:to_s) : Shellwords.split(command_text.to_s)
+        executable_index = argv.index { |token| File.basename(token) == "kettle-jem" }
+        return command_text unless executable_index
+        return command_text if !array_command && argv.any? { |token| %w[&& || ; |].include?(token) }
+
+        prefix = argv[0...executable_index]
+        bundle_exec = prefix.last(2) == %w[bundle exec]
+        return command_text unless local_executable || bundle_exec
+
+        prefix = prefix[0...-2] if bundle_exec
+        prefix + [RbConfig.ruby, executable] + argv[(executable_index + 1)..]
+      rescue ArgumentError
+        command_text
       end
 
       def template_prepare_command_from(command_text)

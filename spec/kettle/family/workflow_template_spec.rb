@@ -43,9 +43,18 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    installed_exe = installed_kettle_jem_executable
+    allow(workflow).to receive(:installed_gem_executable).with("kettle-jem", "kettle-jem").and_return(installed_exe)
 
     expect(workflow.send(:template_command, member)).to eq(%w[bundle exec kettle-jem install --quiet --events --skip-commit])
-    expect(workflow.send(:template_prepare_command, member)).to eq(%w[bundle exec kettle-jem prepare --quiet --events --skip-commit])
+    expect(workflow.send(:template_prepare_command, member)).to eq([
+      RbConfig.ruby,
+      installed_exe,
+      "prepare",
+      "--quiet",
+      "--events",
+      "--skip-commit"
+    ])
   end
 
   it "runs the local kettle-jem executable directly when templating from a local StructuredMerge stack" do
@@ -471,10 +480,13 @@ RSpec.describe Kettle::Family::Workflow do
       eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
     RUBY
 
-    results = described_class.new(command: "template", config: config, members: [member]).results
+    workflow = described_class.new(command: "template", config: config, members: [member])
+    installed_exe = installed_kettle_jem_executable
+    allow(workflow).to receive(:installed_gem_executable).with("kettle-jem", "kettle-jem").and_return(installed_exe)
+    results = workflow.results
 
     expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle exec kettle-jem prepare --quiet --events"])
+    expect(results.fetch(0).command).to eq([RbConfig.ruby, installed_exe, "prepare", "--quiet", "--events"])
     expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --events"])
   end
 
@@ -485,9 +497,12 @@ RSpec.describe Kettle::Family::Workflow do
       eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?
     RUBY
 
-    results = described_class.new(command: "template", config: config, members: [member], verbose: true).results
+    workflow = described_class.new(command: "template", config: config, members: [member], verbose: true)
+    installed_exe = installed_kettle_jem_executable
+    allow(workflow).to receive(:installed_gem_executable).with("kettle-jem", "kettle-jem").and_return(installed_exe)
+    results = workflow.results
 
-    expect(results.fetch(0).command).to eq(["sh", "-lc", "bundle exec kettle-jem prepare --verbose --events"])
+    expect(results.fetch(0).command).to eq([RbConfig.ruby, installed_exe, "prepare", "--verbose", "--events"])
     expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --verbose --events"])
     expect(results.fetch(1).command.join(" ")).not_to include("--quiet")
     expect(results.fetch(1).command.join(" ")).to include("--events")
@@ -650,7 +665,9 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     expect(results.fetch(1).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(1).command.last(4)).to eq(["kettle-jem", "prepare", "--quiet", "--events"])
+    expect(results.fetch(1).command.last(3)).to eq(["prepare", "--quiet", "--events"])
+    expect(results.fetch(1).command).to include(RbConfig.ruby)
+    expect(results.fetch(1).command).to include(a_string_ending_with("/kettle-jem"))
     expect(results.fetch(2).command).to eq(
       [
         "mise",
@@ -1582,6 +1599,10 @@ RSpec.describe Kettle::Family::Workflow do
 
   def family_local_env_name
     "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV"
+  end
+
+  def installed_kettle_jem_executable
+    File.join(@tmpdir, "installed", "kettle-jem", "exe", "kettle-jem")
   end
 
   def member_at(name)

@@ -44,10 +44,13 @@ RSpec.describe Kettle::Family::Workflow do
       eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false") == "true"
     RUBY
 
-    results = described_class.new(command: "template", config: config, members: [member]).results
+    workflow = described_class.new(command: "template", config: config, members: [member])
+    installed_exe = File.join(@tmpdir, "installed", "kettle-jem", "exe", "kettle-jem")
+    allow(workflow).to receive(:installed_gem_executable).with("kettle-jem", "kettle-jem").and_return(installed_exe)
+    results = workflow.results
 
     expect(results.first.phase).to eq("prepare_template_dependencies")
-    expect(results.first.command).to eq(["sh", "-lc", "bundle exec kettle-jem prepare --quiet --events"])
+    expect(results.first.command).to eq([RbConfig.ruby, installed_exe, "prepare", "--quiet", "--events"])
   end
 
   it "uses gitmoji-valid generated commit subjects" do

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Template dependency preparation now invokes standalone kettle-jem before Bundler evaluates modular Gemfiles.
+
 ### Security
 
 ## [1.2.51] - 2026-08-11
