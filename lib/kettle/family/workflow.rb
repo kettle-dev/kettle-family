@@ -3404,7 +3404,7 @@ module Kettle
       end
 
       def template_progress_summary_label(template_results, changed_files, outcome_counts)
-        label = "template summary: #{template_results.count(&:ok?)}/#{template_results.length} members ok"
+        label = "template summary: #{template_results.count(&:ok?)}/#{members.length} members ok"
         return "#{label}, #{template_summary_label(changed_files)}" unless outcome_counts.all?
 
         totals = outcome_counts.each_with_object({checksum_hits: 0, checksum_protected: 0, unchanged: 0}) do |outcomes, memo|

@@ -839,6 +839,33 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("template summary: 2/2 members ok, 2 files changed")
   end
 
+  it "counts selected members, including pending members, in the template summary" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [member_at("alpha"), member_at("beta"), member_at("gamma")]
+    progress = instance_double(Kettle::Family::WorkflowProgress)
+    summary = []
+    allow(progress).to receive(:stop)
+    allow(progress).to receive(:summary) { |label| summary << label }
+    result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "template",
+      ["kettle-jem", "install"],
+      members.first.root,
+      0,
+      true,
+      JSON.generate(changed_files: ["Gemfile"]),
+      "",
+      1.0,
+      false,
+      nil
+    )
+    workflow = described_class.new(command: "template", config: config, members: members, execute: true)
+
+    workflow.send(:emit_template_progress_summary, [result], progress: progress)
+
+    expect(summary).to eq(["template summary: 1/3 members ok, 1 file changed"])
+  end
+
   it "keeps kettle-jem NDJSON template events summarized by default" do
     event_script = [
       "require 'json';",

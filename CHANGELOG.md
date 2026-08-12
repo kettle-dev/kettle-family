@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Report templating failures and pending members accurately instead of counting sync-only members as successfully templated.
+
 ### Security
 
 ## [1.2.52] - 2026-08-12

@@ -324,7 +324,7 @@ module Kettle
         changed_files = template_results.sum { |result| template_changed_file_count(result) }
         outcome_counts = template_results.map { |result| template_file_outcomes(result) }
         lines << "template summary:"
-        lines << "  #{template_results.count(&:ok?)}/#{template_results.length} members ok"
+        lines << "  #{template_results.count(&:ok?)}/#{selected_members.length} members ok"
         if outcome_counts.all?
           lines << "  #{outcome_counts.sum { |outcomes| outcomes.fetch(:checksum_hits) }} checksum hits"
           protected = outcome_counts.sum { |outcomes| outcomes.fetch(:checksum_protected) }
@@ -421,6 +421,8 @@ module Kettle
           next if member_results.empty?
           member_results = summary_terminal_member_results(member_results)
           next if member_results.empty?
+          next if command == "template" && member_results.none? { |result| result.phase == "template" }
+          next if command == "template" && member_results.any? { |result| result.phase == "template" && result.skipped }
           next if member_results.any? { |result| !result.ok? }
           next if member_results.all?(&:skipped)
 
@@ -473,6 +475,14 @@ module Kettle
       end
 
       def summary_ran_member_names
+        if command == "template"
+          failed = visible_results.reject(&:ok?).map(&:member_name)
+          templated = selected_member_results.filter_map do |member_name, member_results|
+            member_name if member_results.any? { |result| result.phase == "template" }
+          end
+          return (failed + templated).uniq
+        end
+
         return selected_member_results.keys unless command == "release"
 
         failed = visible_results.reject(&:ok?).map(&:member_name)
