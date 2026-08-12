@@ -90,7 +90,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.51">v1.2.51</a>
 </li>
-  <li>COVERAGE: 93.40% – 5222/5591 lines in 33 files</li>
+  <li>COVERAGE: 93.42% – 5223/5591 lines in 33 files</li>
   <li>BRANCH COVERAGE: 76.14% – 2093/2749 branches in 33 files</li>
   <li>29.86% documented</li>
 </ul>
@@ -133,6 +133,9 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   </li>
   <li>
     <p>Resolve kettle-changelog through the active RubyGems bundle during family release-state checks so older global executables cannot hide pending entries.</p>
+  </li>
+  <li>
+    <p>Fall back to the standalone kettle-changelog executable when the active appraisal bundle does not include it during release-state checks.</p>
   </li>
 </ul>
 

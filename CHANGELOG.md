@@ -28,14 +28,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Fall back to the standalone kettle-changelog executable when the active appraisal bundle does not include it during release-state checks.
-
 ### Security
 
 ## [1.2.51] - 2026-08-11
 
 - TAG: [v1.2.51][1.2.51t]
-- COVERAGE: 93.40% -- 5222/5591 lines in 33 files
+- COVERAGE: 93.42% -- 5223/5591 lines in 33 files
 - BRANCH COVERAGE: 76.14% -- 2093/2749 branches in 33 files
 - 29.86% documented
 
@@ -64,6 +62,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Allow child kettle-release to normalize local lockfile paths before family readiness checks.
 
 - Resolve kettle-changelog through the active RubyGems bundle during family release-state checks so older global executables cannot hide pending entries.
+
+- Fall back to the standalone kettle-changelog executable when the active appraisal bundle does not include it during release-state checks.
 
 ## [1.2.50] - 2026-08-11
 
