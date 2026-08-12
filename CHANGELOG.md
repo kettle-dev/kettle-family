@@ -20,13 +20,26 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Add --skip-changelog to release orchestration while retaining pre-release gates and specs.
-
 ### Changed
 
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.51] - 2026-08-11
+
+- TAG: [v1.2.51][1.2.51t]
+- COVERAGE: 93.40% -- 5222/5591 lines in 33 files
+- BRANCH COVERAGE: 76.14% -- 2093/2749 branches in 33 files
+- 29.86% documented
+
+### Added
+
+- Add --skip-changelog to release orchestration while retaining pre-release gates and specs.
 
 ### Fixed
 
@@ -49,8 +62,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Allow child kettle-release to normalize local lockfile paths before family readiness checks.
 
 - Resolve kettle-changelog through the active RubyGems bundle during family release-state checks so older global executables cannot hide pending entries.
-
-### Security
 
 ## [1.2.50] - 2026-08-11
 
@@ -2061,7 +2072,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.50...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.51...HEAD
+[1.2.51]: https://github.com/kettle-dev/kettle-family/compare/v1.2.50...v1.2.51
+[1.2.51t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.51
 [1.2.50]: https://github.com/kettle-dev/kettle-family/compare/e4a9ca8ed52605b6375bbdd4f745b905a68b8b24...v1.2.50
 [1.2.50t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.50
 [1.2.48]: https://github.com/kettle-dev/kettle-family/compare/v1.2.47...v1.2.48
