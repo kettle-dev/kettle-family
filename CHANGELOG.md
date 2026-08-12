@@ -28,8 +28,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Make GitHub Actions pin preflight coverage independent of ambient installed executables so dependency-head CI validates the review phase consistently.
-
 ### Security
 
 ## [1.2.51] - 2026-08-11
@@ -66,6 +64,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Resolve kettle-changelog through the active RubyGems bundle during family release-state checks so older global executables cannot hide pending entries.
 
 - Fall back to the standalone kettle-changelog executable when the active appraisal bundle does not include it during release-state checks.
+
+- Make GitHub Actions pin preflight coverage independent of ambient installed executables so dependency-head CI validates the review phase consistently.
 
 ## [1.2.50] - 2026-08-11
 
