@@ -982,15 +982,20 @@ RSpec.describe Kettle::Family::Workflow do
   it "reviews action pins once and passes the reviewed cache to delegated releases" do
     fake_bin = File.join(@tmpdir, "fake-bin")
     FileUtils.mkdir_p(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~BASH)
-      #!/usr/bin/env bash
-      case "$*" in
-        *--list*) printf '%s\\n' '{"schema_version":1,"repositories":["actions/checkout"]}' ;;
-        *--review*) printf '%s\\n' '{"mode":"review","repositories":[{"repository":"actions/checkout"}]}' ;;
-        *) exit 0 ;;
-      esac
-    BASH
-    FileUtils.chmod("u+x", File.join(fake_bin, "bundle"))
+    fake_executable = File.join(fake_bin, "kettle-gha-pins")
+    File.write(fake_executable, <<~RUBY)
+      #!/usr/bin/env ruby
+      require "json"
+
+      if ARGV.include?("--list")
+        puts JSON.generate("schema_version" => 1, "repositories" => ["actions/checkout"])
+      elsif ARGV.include?("--review")
+        puts JSON.generate("mode" => "review", "repositories" => [{"repository" => "actions/checkout"}])
+      else
+        exit 0
+      end
+    RUBY
+    FileUtils.chmod("u+x", fake_executable)
     write_release_config(publish_command: "bundle exec kettle-release")
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
@@ -1004,6 +1009,7 @@ RSpec.describe Kettle::Family::Workflow do
       gem_signing_password: "secret",
       env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
     )
+    allow(workflow).to receive(:installed_gem_executable).with("kettle-gha-pins", "kettle-gha-pins").and_return(fake_executable)
 
     results = workflow.send(:release_preflight_gha_sha_pins_results)
 

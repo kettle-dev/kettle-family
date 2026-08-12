@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Make GitHub Actions pin preflight coverage independent of ambient installed executables so dependency-head CI validates the review phase consistently.
+
 ### Security
 
 ## [1.2.51] - 2026-08-11
