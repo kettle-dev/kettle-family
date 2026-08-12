@@ -652,8 +652,8 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\nK_JEM_TEMPLATING = \"false\"\n")
-
-    results = described_class.new(
+    installed_exe = installed_kettle_jem_executable
+    workflow = described_class.new(
       command: "template",
       config: config,
       members: [member],
@@ -662,7 +662,10 @@ RSpec.describe Kettle::Family::Workflow do
         "STRUCTUREDMERGE_DEV" => "/workspace/structuredmerge/ruby/gems",
         "RUBOCOP_LTS_LOCAL" => "/workspace/rubocop-lts"
       }
-    ).results
+    )
+    allow(workflow).to receive(:installed_gem_executable).with("kettle-jem", "kettle-jem").and_return(installed_exe)
+
+    results = workflow.results
 
     expect(results.fetch(1).phase).to eq("prepare_template_dependencies")
     expect(results.fetch(1).command.last(3)).to eq(["prepare", "--quiet", "--events"])
