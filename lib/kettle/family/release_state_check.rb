@@ -108,7 +108,7 @@ module Kettle
 
       def release_state_command
         [RbConfig.ruby, kettle_changelog_executable, "--release-state", "--json"]
-      rescue Gem::GemNotFoundException
+      rescue Gem::Exception
         [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
       end
 

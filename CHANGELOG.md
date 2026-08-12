@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Fall back to the standalone kettle-changelog executable when the active appraisal bundle does not include it during release-state checks.
+
 ### Security
 
 ## [1.2.51] - 2026-08-11

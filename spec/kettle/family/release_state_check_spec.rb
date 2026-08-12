@@ -46,6 +46,18 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(Bundler).to have_received(:with_unbundled_env)
   end
 
+  it "falls back to PATH when kettle-changelog is absent from the active bundle" do
+    member = member("alpha")
+    state = {"gem_name" => "alpha", "pending_release" => false}
+    allow(Gem).to receive(:bin_path).and_raise(Gem::Exception, "kettle-changelog is not bundled")
+    allow(Open3).to receive(:capture3).and_return([JSON.generate(state), "", status(0, true)])
+
+    result = described_class.new(members: [member]).results.fetch(0)
+
+    expect(result).to be_ok
+    expect(result.command).to eq([RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"])
+  end
+
   it "runs state checks in parallel with explicit jobs while preserving order" do
     check = described_class.new(members: [member("alpha"), member("beta")], jobs: 2)
     started = Queue.new
@@ -781,6 +793,8 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
   def changelog_command
     [RbConfig.ruby, Gem.bin_path("kettle-changelog", "kettle-changelog"), "--release-state", "--json"]
+  rescue Gem::Exception
+    [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
   end
 
   def release_state_result(member_name, state)
