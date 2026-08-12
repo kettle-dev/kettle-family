@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Report templating failures and pending members accurately instead of counting sync-only members as successfully templated.
-
 ### Security
+
+## [1.2.53] - 2026-08-12
+
+- TAG: [v1.2.53][1.2.53t]
+- COVERAGE: 93.55% -- 5251/5613 lines in 33 files
+- BRANCH COVERAGE: 76.20% -- 2110/2769 branches in 33 files
+- 29.86% documented
+
+### Fixed
+
+- Report templating failures and pending members accurately instead of counting sync-only members as successfully templated.
 
 ## [1.2.52] - 2026-08-12
 
@@ -2089,7 +2098,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.52...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.53...HEAD
+[1.2.53]: https://github.com/kettle-dev/kettle-family/compare/v1.2.52...v1.2.53
+[1.2.53t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.53
 [1.2.52]: https://github.com/kettle-dev/kettle-family/compare/v1.2.51...v1.2.52
 [1.2.52t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.52
 [1.2.51]: https://github.com/kettle-dev/kettle-family/compare/v1.2.50...v1.2.51
