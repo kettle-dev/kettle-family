@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Template dependency preparation now invokes standalone kettle-jem before Bundler evaluates modular Gemfiles.
-
 ### Security
+
+## [1.2.52] - 2026-08-12
+
+- TAG: [v1.2.52][1.2.52t]
+- COVERAGE: 93.54% -- 5244/5606 lines in 33 files
+- BRANCH COVERAGE: 76.13% -- 2102/2761 branches in 33 files
+- 29.86% documented
+
+### Fixed
+
+- Template dependency preparation now invokes standalone kettle-jem before Bundler evaluates modular Gemfiles.
 
 ## [1.2.51] - 2026-08-11
 
@@ -2078,7 +2087,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.51...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.52...HEAD
+[1.2.52]: https://github.com/kettle-dev/kettle-family/compare/v1.2.51...v1.2.52
+[1.2.52t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.52
 [1.2.51]: https://github.com/kettle-dev/kettle-family/compare/v1.2.50...v1.2.51
 [1.2.51t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.51
 [1.2.50]: https://github.com/kettle-dev/kettle-family/compare/e4a9ca8ed52605b6375bbdd4f745b905a68b8b24...v1.2.50
