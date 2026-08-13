@@ -652,7 +652,10 @@ module Kettle
         effective_only = default_only_filter(command: command, only: options[:only])
         discovery = Discovery.new(
           config: config,
-          release_dependency_member_names: direct_member_only_names(effective_only)
+          # Release reconciliation needs the complete family graph: a
+          # dependency that published in an earlier invocation is not part of
+          # a subsequent --only pend selection.
+          release_dependency_member_names: (command == "release") ? nil : direct_member_only_names(effective_only)
         )
         members = discovery.members
         ordered = if command == "install"
@@ -685,6 +688,7 @@ module Kettle
           command: command,
           config: config,
           members: result_members,
+          family_members: ordered,
           options: options,
           start_at: start_at,
           state_event_handler: state_event_handler
@@ -712,11 +716,11 @@ module Kettle
 
       StartAt = Struct.new(:member, :branch)
 
-      def command_results(command:, config:, members:, options:, start_at:, state_event_handler: nil)
-        return branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if branch_target_command?(command, config)
-        return member_local_branch_target_command_results(command: command, config: config, members: members, options: options, start_at: start_at) if member_local_branch_target_command?(command, config, members)
+      def command_results(command:, config:, members:, family_members:, options:, start_at:, state_event_handler: nil)
+        return branch_target_command_results(command: command, config: config, members: members, family_members: family_members, options: options, start_at: start_at) if branch_target_command?(command, config)
+        return member_local_branch_target_command_results(command: command, config: config, members: members, family_members: family_members, options: options, start_at: start_at) if member_local_branch_target_command?(command, config, members)
 
-        command_results_for_current_branch(command: command, config: config, members: members, options: options, start_at: start_at, state_event_handler: state_event_handler)
+        command_results_for_current_branch(command: command, config: config, members: members, family_members: family_members, options: options, start_at: start_at, state_event_handler: state_event_handler)
       end
 
       def release_state_results_for_selection(config:, members:, only:, jobs: nil)
@@ -757,7 +761,7 @@ module Kettle
         members
       end
 
-      def command_results_for_current_branch(command:, config:, members:, options:, start_at: StartAt.new(nil, nil), state_event_handler: nil)
+      def command_results_for_current_branch(command:, config:, members:, options:, family_members: members, start_at: StartAt.new(nil, nil), state_event_handler: nil)
         return mise_trust_results(config: config, members: members) if command == "mise-trust"
         return bump_version_results(config: config, members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
@@ -772,6 +776,7 @@ module Kettle
           command: command,
           config: config,
           members: members,
+          family_members: family_members,
           execute: options[:execute],
           accept: options[:accept],
           commit: options[:commit],
@@ -931,7 +936,7 @@ module Kettle
         members.any? { |member| member_release_config(member: member, config: config) }
       end
 
-      def branch_target_command_results(command:, config:, members:, options:, start_at:)
+      def branch_target_command_results(command:, config:, members:, family_members:, options:, start_at:)
         runner = CommandRunner.new(execute: options[:execute])
         selected_names = members.map(&:name)
         release_target_branches(command: command, config: config, start_at: start_at).each_with_object([]) do |branch, memo|
@@ -945,7 +950,7 @@ module Kettle
 
           branch_members = rediscovered_selected_members(config: config, selected_names: selected_names, command: command)
           branch_members = members if branch_members.empty?
-          branch_results = command_results_for_current_branch(command: command, config: config, members: branch_members, options: options)
+          branch_results = command_results_for_current_branch(command: command, config: config, members: branch_members, family_members: family_members, options: options)
           branch_results.each { |result| result.branch = branch if result.respond_to?(:branch=) }
           memo.concat(branch_results)
           break memo unless memo.last&.ok?
@@ -955,12 +960,12 @@ module Kettle
         end
       end
 
-      def member_local_branch_target_command_results(command:, config:, members:, options:, start_at:)
+      def member_local_branch_target_command_results(command:, config:, members:, family_members:, options:, start_at:)
         runner = CommandRunner.new(execute: options[:execute])
         members.each_with_object([]) do |member, memo|
           member_config = member_release_config(member: member, config: config)
           unless member_config
-            memo.concat(command_results_for_current_branch(command: command, config: config, members: [member], options: options))
+            memo.concat(command_results_for_current_branch(command: command, config: config, members: [member], family_members: family_members, options: options))
             break memo unless memo.last&.ok?
             next
           end
@@ -976,7 +981,7 @@ module Kettle
 
             branch_members = rediscovered_selected_members(config: member_config, selected_names: [member.name], command: command)
             branch_members = [member] if branch_members.empty?
-            branch_results = command_results_for_current_branch(command: command, config: member_config, members: branch_members, options: options)
+            branch_results = command_results_for_current_branch(command: command, config: member_config, members: branch_members, family_members: family_members, options: options)
             branch_results.each { |result| result.branch = branch if result.respond_to?(:branch=) }
             memo.concat(branch_results)
             break unless memo.last&.ok?

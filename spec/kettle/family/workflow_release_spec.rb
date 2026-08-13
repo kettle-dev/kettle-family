@@ -1972,6 +1972,56 @@ RSpec.describe Kettle::Family::Workflow do
     expect(memo).to be_empty
   end
 
+  it "reconciles published family dependencies before a resumed release" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [beta],
+      family_members: [alpha, beta],
+      execute: true,
+      publish: true,
+      commit: false,
+      jobs: 1
+    )
+    allow(workflow).to receive(:released_version?).with("alpha", "1.2.3").and_return(true)
+    runner = lambda do |member:, phase:, command:, **_options|
+      if phase == "dependency_floor_lockfiles"
+        File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+          GEM
+            specs:
+              alpha (1.2.3)
+
+          CHECKSUMS
+            alpha (1.2.3) sha256=abc123
+        LOCK
+      end
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        0,
+        true,
+        phase,
+        "",
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    memo = []
+    allow(workflow).to receive(:release_command_runner).and_return(runner)
+    workflow.send(:release_dependency_floor_reconciliation_results, [beta]).each { |result| memo << result }
+
+    expect(memo.map(&:phase)).to eq(%w[dependency_floor dependency_floor_lockfiles])
+    expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.2.3"')
+  end
+
   it "defers dependent lockfile refreshes until all selected sibling dependencies are released" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

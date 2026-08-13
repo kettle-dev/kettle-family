@@ -102,10 +102,11 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
+        @family_members = family_members || members
         @execute = execute
         @accept = accept
         @commit = commit
@@ -185,7 +186,7 @@ module Kettle
         execute && release_command_delegates_secrets_to_kettle_release?
       end
 
-      attr_reader :command, :config, :members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -421,7 +422,10 @@ module Kettle
         return check_results(workflow_members) if command == "check"
         return reset_member_results(workflow_members) if command == "reset"
         if command == "release"
-          results = release_member_results(workflow_members, include_family_changelog: !skip_changelog)
+          results = release_dependency_floor_reconciliation_results(workflow_members)
+          return results unless results.all?(&:ok?)
+
+          results.concat(release_member_results(workflow_members, include_family_changelog: !skip_changelog))
           return results unless explicit_monorepo_mode? && results.all?(&:ok?)
 
           results << aggregate_monorepo_github_release(workflow_members)
@@ -1082,6 +1086,7 @@ module Kettle
           command: command,
           config: member_config,
           members: [member],
+          family_members: family_members,
           execute: execute,
           accept: accept,
           commit: commit,
@@ -1356,6 +1361,38 @@ module Kettle
 
       def release_waves(release_members)
         ReleaseWaves.new(members: release_members, configured_waves: config.release_waves, strict_cycles: true).waves
+      end
+
+      def release_dependency_floor_reconciliation_results(release_members)
+        return [] unless execute && auto_dependency_floors
+
+        published_members = published_family_dependencies_for(release_members)
+        return [] if published_members.empty?
+
+        results = []
+        append_dependency_floor_results(
+          released_members: published_members,
+          dependent_members: release_members,
+          runner: release_command_runner,
+          memo: results
+        )
+        results
+      end
+
+      # A resumed --only pend release no longer includes members that finished
+      # in an earlier invocation. Reconcile against the registry before the
+      # next release wave so those already-published versions still update
+      # sibling floors and lockfiles.
+      def published_family_dependencies_for(release_members)
+        dependency_names = release_members.flat_map { |member| release_dependency_names(member) }.uniq
+        family_members_by_name = family_members.to_h { |member| [member.name, member] }
+        dependency_names.filter_map do |dependency_name|
+          member = family_members_by_name[dependency_name]
+          next unless member
+          next unless released_version?(member.name, member.version)
+
+          member
+        end
       end
 
       def append_dependency_floor_results(released_members:, dependent_members:, runner:, memo:)

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family releases now reconcile already-published sibling dependency floors and remote lockfiles before resuming a selected release set.
+
 ### Security
 
 ## [1.2.53] - 2026-08-12
