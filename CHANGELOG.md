@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Do not prepare the shared family changelog when releasing an independent member with its own changelog.
-
 ### Security
+
+## [1.2.55] - 2026-08-15
+
+- TAG: [v1.2.55][1.2.55t]
+- COVERAGE: 93.58% -- 5278/5640 lines in 33 files
+- BRANCH COVERAGE: 76.23% -- 2123/2785 branches in 33 files
+- 29.86% documented
+
+### Fixed
+
+- Do not prepare the shared family changelog when releasing an independent member with its own changelog.
 
 ## [1.2.54] - 2026-08-12
 
@@ -2111,7 +2120,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.54...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.55...HEAD
+[1.2.55]: https://github.com/kettle-dev/kettle-family/compare/v1.2.54...v1.2.55
+[1.2.55t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.55
 [1.2.54]: https://github.com/kettle-dev/kettle-family/compare/v1.2.53...v1.2.54
 [1.2.54t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.54
 [1.2.53]: https://github.com/kettle-dev/kettle-family/compare/v1.2.52...v1.2.53
