@@ -201,7 +201,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     allow(Open3).to receive(:capture3).and_return([JSON.generate(state), "", status(0, true)])
     check = described_class.new(members: [member])
     allow(check).to receive(:enrich_git_state) { |_root, value, branch:| value }
-    allow(check).to receive(:enrich_github_release) { |_root, value, branch:| value }
+    allow(check).to receive(:enrich_github_release) { |_root, value, **| value }
     allow(check).to receive(:enrich_transfer_changelog_lag) { |_root, value| value }
 
     result = check.results(event_handler: ->(event) { events << event }).fetch(0)
@@ -389,6 +389,20 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     state = check.send(:enrich_github_release, @tmpdir, {})
 
     expect(state).to include("github_latest_release" => "v1.1.7")
+  end
+
+  it "looks up the expected tag for a shared-root monorepo member" do
+    member = member("alpha")
+    config = instance_double(Kettle::Family::Config, shared_changelog?: true)
+    check = described_class.new(members: [], config: config)
+    allow(check).to receive(:github_repo_slug).with(@tmpdir).and_return("structuredmerge/structuredmerge-ruby")
+    allow(Open3).to receive(:capture3).with(
+      "gh", "release", "view", "v7.1.3", "--repo", "structuredmerge/structuredmerge-ruby", "--json", "tagName", "--jq", ".tagName"
+    ).and_return(["v7.1.3\n", "", status(0, true)])
+
+    state = check.send(:enrich_github_release, @tmpdir, {"latest_released" => "7.1.3"}, member: member)
+
+    expect(state).to include("github_latest_release" => "v7.1.3")
   end
 
   it "looks up the branch release version instead of the repository-wide latest release" do

@@ -92,7 +92,7 @@ module Kettle
         state = enrich_git_state(member.root, state, branch: branch) if success
         emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "running") if success
-        state = enrich_github_release(member.root, state, branch: branch) if success
+        state = enrich_github_release(member.root, state, branch: branch, member: member) if success
         emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "transfer_changelog", status: "running") if success
         state = enrich_transfer_changelog_lag(member.root, state) if success
@@ -153,7 +153,7 @@ module Kettle
         state = enrich_git_state(member.root, state, branch: branch) if success
         emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "running") if success
-        state = enrich_github_release(member.root, state, branch: branch) if success
+        state = enrich_github_release(member.root, state, branch: branch, member: member) if success
         emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "transfer_changelog", status: "running") if success
         state = enrich_transfer_changelog_lag(member.root, state) if success
@@ -385,11 +385,19 @@ module Kettle
         state["unreleased_entries"] == true && state["version"].to_s == state["latest_released"].to_s
       end
 
-      def enrich_github_release(root, state, branch: nil)
-        tag = branch ? github_release_for_version(root, state["latest_released"]) : github_latest_release(root)
+      def enrich_github_release(root, state, branch: nil, member: nil)
+        tag = if branch || shared_root_member?(member)
+          github_release_for_version(root, state["latest_released"])
+        else
+          github_latest_release(root)
+        end
         return state unless tag
 
         state.merge("github_latest_release" => tag)
+      end
+
+      def shared_root_member?(member)
+        shared_changelog? && member && !member_local_changelog?(member)
       end
 
       def github_release_for_version(root, version)

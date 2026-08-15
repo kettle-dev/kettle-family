@@ -136,6 +136,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'publish'"])
   end
 
+  it "skips the shared family changelog for an independent member-local release" do
+    write_release_config(
+      publish_command: [RbConfig.ruby, "-e", "puts 'publish'"],
+      family_changelog: {"enabled" => true, "command" => [RbConfig.ruby, "-e", "puts 'changelog'"]},
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      }
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", changelog: true, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
+
+    results = described_class.new(command: "release", config: config, members: [member], publish: true).results
+
+    expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish])
+  end
+
   it "keeps local monorepo siblings available to the shared changelog suite" do
     write_release_config(
       changelog: {

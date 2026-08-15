@@ -1929,6 +1929,7 @@ module Kettle
 
       def append_family_changelog_result(runner:, memo:)
         return unless config.release_family_changelog?
+        return unless family_changelog_applies_to_selected_members?
 
         member = family_changelog_member
         memo << runner.call(
@@ -1937,6 +1938,14 @@ module Kettle
           command: family_changelog_command,
           env: family_changelog_env
         )
+      end
+
+      def family_changelog_applies_to_selected_members?
+        return true unless config.shared_changelog?
+
+        # A member-local changelog is an independent release lane. Do not
+        # prepare the shared root changelog when that is the only lane selected.
+        members.any? { |member| !config.member_local_changelog?(member) }
       end
 
       # simplecov:disable

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Do not prepare the shared family changelog when releasing an independent member with its own changelog.
+
 ### Security
 
 ## [1.2.54] - 2026-08-12
