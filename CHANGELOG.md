@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family version bumps now apply shared targets only to shared-root members and independently bump local-changelog members when release state marks them pending.
+
 ### Security
 
 ## [1.2.55] - 2026-08-15

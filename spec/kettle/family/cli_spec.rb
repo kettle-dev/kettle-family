@@ -733,6 +733,53 @@ RSpec.describe Kettle::Family::CLI do
     expect(File.read(File.join(@tmpdir, "beta", "beta.gemspec"))).to include('add_development_dependency "alpha", "= 1.0.1"')
   end
 
+  it "bumps an independent local-changelog member when shared state marks it pending", :prism do
+    write_gem("alpha")
+    write_gem("beta")
+    alpha_root = File.join(@tmpdir, "alpha")
+    beta_root = File.join(@tmpdir, "beta")
+    set_gem_version(alpha_root, "alpha", "1.1.0")
+    set_gem_version(beta_root, "beta", "1.1.0")
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(@tmpdir, "beta", "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        mode: monorepo
+      members:
+        roots:
+          - alpha
+          - beta
+      changelog:
+        mode: root
+        version_file: alpha/lib/alpha/version.rb
+    YAML
+    results = [
+      release_state_result("alpha", {
+        "version" => "1.1.0",
+        "latest_released" => "1.0.0",
+        "unreleased_entries" => true,
+        "bump_release_pending" => false
+      }),
+      release_state_result("beta", {
+        "version" => "1.1.0",
+        "latest_released" => "1.1.0",
+        "unreleased_entries" => true,
+        "bump_release_pending" => true
+      })
+    ]
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: results)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "bump", "--execute", "--no-commit"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("alpha bump\n    1.1.0 -> 1.1.0")
+    expect(out.string).to include("beta bump\n    1.1.0 -> 1.1.1")
+    expect(File.read(File.join(alpha_root, "lib", "alpha", "version.rb"))).to include('VERSION = "1.1.0"')
+    expect(File.read(File.join(beta_root, "lib", "beta", "version.rb"))).to include('VERSION = "1.1.1"')
+  end
+
   it "keeps bump-version as a deprecated alias", :prism do
     write_gem("alpha")
     out = StringIO.new

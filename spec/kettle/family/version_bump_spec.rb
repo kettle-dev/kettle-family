@@ -121,6 +121,23 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(results.map(&:reason)).to eq(["version changes required", nil])
   end
 
+  it "uses the shared target only for shared-root members" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "1.1.0")
+
+    results = described_class.new(
+      members: [alpha, beta],
+      target_version: "patch",
+      shared_target_version: "1.1.0",
+      shared_member_names: ["alpha"],
+      mode: :execute
+    ).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(alpha.version_file)).to include('VERSION = "1.1.0"')
+    expect(File.read(beta.version_file)).to include('VERSION = "1.1.1"')
+  end
+
   it "supports minor, major, and prerelease bump targets" do
     minor = write_gem("minor", version: "1.2.3")
     major = write_gem("major", version: "1.2.3")

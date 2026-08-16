@@ -691,7 +691,8 @@ module Kettle
           family_members: ordered,
           options: options,
           start_at: start_at,
-          state_event_handler: state_event_handler
+          state_event_handler: state_event_handler,
+          release_state_results: release_state_results
         )
         state_progress&.finish
         elapsed_seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
@@ -716,11 +717,40 @@ module Kettle
 
       StartAt = Struct.new(:member, :branch)
 
-      def command_results(command:, config:, members:, family_members:, options:, start_at:, state_event_handler: nil)
-        return branch_target_command_results(command: command, config: config, members: members, family_members: family_members, options: options, start_at: start_at) if branch_target_command?(command, config)
-        return member_local_branch_target_command_results(command: command, config: config, members: members, family_members: family_members, options: options, start_at: start_at) if member_local_branch_target_command?(command, config, members)
+      def command_results(command:, config:, members:, family_members:, options:, start_at:, state_event_handler: nil, release_state_results: nil)
+        if branch_target_command?(command, config)
+          return branch_target_command_results(
+            command: command,
+            config: config,
+            members: members,
+            family_members: family_members,
+            options: options,
+            start_at: start_at,
+            release_state_results: release_state_results
+          )
+        end
+        if member_local_branch_target_command?(command, config, members)
+          return member_local_branch_target_command_results(
+            command: command,
+            config: config,
+            members: members,
+            family_members: family_members,
+            options: options,
+            start_at: start_at,
+            release_state_results: release_state_results
+          )
+        end
 
-        command_results_for_current_branch(command: command, config: config, members: members, family_members: family_members, options: options, start_at: start_at, state_event_handler: state_event_handler)
+        command_results_for_current_branch(
+          command: command,
+          config: config,
+          members: members,
+          family_members: family_members,
+          options: options,
+          start_at: start_at,
+          state_event_handler: state_event_handler,
+          release_state_results: release_state_results
+        )
       end
 
       def release_state_results_for_selection(config:, members:, only:, jobs: nil)
@@ -761,9 +791,9 @@ module Kettle
         members
       end
 
-      def command_results_for_current_branch(command:, config:, members:, options:, family_members: members, start_at: StartAt.new(nil, nil), state_event_handler: nil)
+      def command_results_for_current_branch(command:, config:, members:, options:, family_members: members, start_at: StartAt.new(nil, nil), state_event_handler: nil, release_state_results: nil)
         return mise_trust_results(config: config, members: members) if command == "mise-trust"
-        return bump_version_results(config: config, members: members, options: options, phase: command) if %w[bump bump-version].include?(command)
+        return bump_version_results(config: config, members: members, options: options, phase: command, release_state_results: release_state_results) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
         return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
@@ -936,7 +966,7 @@ module Kettle
         members.any? { |member| member_release_config(member: member, config: config) }
       end
 
-      def branch_target_command_results(command:, config:, members:, family_members:, options:, start_at:)
+      def branch_target_command_results(command:, config:, members:, family_members:, options:, start_at:, release_state_results: nil)
         runner = CommandRunner.new(execute: options[:execute])
         selected_names = members.map(&:name)
         release_target_branches(command: command, config: config, start_at: start_at).each_with_object([]) do |branch, memo|
@@ -950,7 +980,14 @@ module Kettle
 
           branch_members = rediscovered_selected_members(config: config, selected_names: selected_names, command: command)
           branch_members = members if branch_members.empty?
-          branch_results = command_results_for_current_branch(command: command, config: config, members: branch_members, family_members: family_members, options: options)
+          branch_results = command_results_for_current_branch(
+            command: command,
+            config: config,
+            members: branch_members,
+            family_members: family_members,
+            options: options,
+            release_state_results: release_state_results
+          )
           branch_results.each { |result| result.branch = branch if result.respond_to?(:branch=) }
           memo.concat(branch_results)
           break memo unless memo.last&.ok?
@@ -960,12 +997,19 @@ module Kettle
         end
       end
 
-      def member_local_branch_target_command_results(command:, config:, members:, family_members:, options:, start_at:)
+      def member_local_branch_target_command_results(command:, config:, members:, family_members:, options:, start_at:, release_state_results: nil)
         runner = CommandRunner.new(execute: options[:execute])
         members.each_with_object([]) do |member, memo|
           member_config = member_release_config(member: member, config: config)
           unless member_config
-            memo.concat(command_results_for_current_branch(command: command, config: config, members: [member], family_members: family_members, options: options))
+            memo.concat(command_results_for_current_branch(
+              command: command,
+              config: config,
+              members: [member],
+              family_members: family_members,
+              options: options,
+              release_state_results: release_state_results
+            ))
             break memo unless memo.last&.ok?
             next
           end
@@ -981,7 +1025,14 @@ module Kettle
 
             branch_members = rediscovered_selected_members(config: member_config, selected_names: [member.name], command: command)
             branch_members = [member] if branch_members.empty?
-            branch_results = command_results_for_current_branch(command: command, config: member_config, members: branch_members, family_members: family_members, options: options)
+            branch_results = command_results_for_current_branch(
+              command: command,
+              config: member_config,
+              members: branch_members,
+              family_members: family_members,
+              options: options,
+              release_state_results: release_state_results
+            )
             branch_results.each { |result| result.branch = branch if result.respond_to?(:branch=) }
             memo.concat(branch_results)
             break unless memo.last&.ok?
@@ -1019,13 +1070,19 @@ module Kettle
         StartAt.new(member, branch)
       end
 
-      def bump_version_results(config:, members:, options:, phase:)
+      def bump_version_results(config:, members:, options:, phase:, release_state_results: nil)
         require_relative "version_bump"
         require_relative "release_waves"
 
         results = []
         completed_target_versions = {}
-        shared_target_version = shared_bump_target_version(config: config, members: members, options: options)
+        shared_member_names = shared_bump_member_names(config: config, members: members)
+        shared_target_version = shared_bump_target_version(
+          config: config,
+          members: members,
+          options: options,
+          release_state_results: release_state_results
+        )
         ReleaseWaves.new(members: members).waves.each do |wave|
           bump = VersionBump.new(
             members: wave,
@@ -1034,6 +1091,7 @@ module Kettle
             mode: bump_version_mode(options),
             phase: phase,
             shared_target_version: shared_target_version,
+            shared_member_names: shared_member_names,
             dependency_target_versions: completed_target_versions
           )
           wave_results = bump.results
@@ -1060,13 +1118,37 @@ module Kettle
         end
       end
 
-      def shared_bump_target_version(config:, members:, options:)
+      def shared_bump_member_names(config:, members:)
+        return [] unless config.shared_changelog?
+
+        members.reject { |member| config.member_local_changelog?(member) }.map(&:name)
+      end
+
+      def shared_bump_target_version(config:, members:, options:, release_state_results: nil)
         return unless config.shared_changelog?
         return unless Kettle::Dev::VersionBump::BUMP_TYPES.include?(options[:target_version].to_s)
 
-        versions = members.map { |member| Gem::Version.new(member.version.to_s) }.uniq
+        shared_members = members.reject { |member| config.member_local_changelog?(member) }
+        return if shared_members.empty?
+
+        versions = shared_members.map { |member| Gem::Version.new(member.version.to_s) }.uniq
         current = versions.max
         return current.to_s if versions.length > 1
+
+        released_versions = Array(release_state_results).filter_map do |result|
+          next unless shared_members.any? { |member| member.name == result.member_name }
+
+          state = result.state
+          next unless state.respond_to?(:[])
+
+          value = state["latest_released"]
+          next if value.to_s.empty?
+
+          Gem::Version.new(value.to_s)
+        rescue ArgumentError
+          nil
+        end
+        return current.to_s if released_versions.any? && current > released_versions.max
 
         Kettle::Dev::VersionBump.resolve_target_version(options[:target_version].to_s, current.to_s)
       end
