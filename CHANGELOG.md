@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Release secret brokers now choose a compact repository-local Unix socket path when deep checkout paths exceed the platform socket limit.
-
 ### Security
+
+## [1.2.57] - 2026-08-23
+
+- TAG: [v1.2.57][1.2.57t]
+- COVERAGE: 93.65% -- 5307/5667 lines in 33 files
+- BRANCH COVERAGE: 76.42% -- 2142/2803 branches in 33 files
+- 29.78% documented
+
+### Fixed
+
+- Release secret brokers now choose a compact repository-local Unix socket path when deep checkout paths exceed the platform socket limit.
 
 ## [1.2.56] - 2026-08-18
 
@@ -2133,7 +2142,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.56...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.57...HEAD
+[1.2.57]: https://github.com/kettle-dev/kettle-family/compare/v1.2.56...v1.2.57
+[1.2.57t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.57
 [1.2.56]: https://github.com/kettle-dev/kettle-family/compare/v1.2.55...v1.2.56
 [1.2.56t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.56
 [1.2.55]: https://github.com/kettle-dev/kettle-family/compare/v1.2.54...v1.2.55
