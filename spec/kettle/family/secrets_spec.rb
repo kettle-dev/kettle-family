@@ -188,6 +188,20 @@ RSpec.describe Kettle::Family::Secrets do
     broker&.close
   end
 
+  it "uses a compact repository-local socket path for deep release roots" do
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+
+    Dir.mktmpdir("kettle-family-broker-spec") do |sandbox|
+      root = File.join(sandbox, "a" * 25)
+      broker = described_class::Broker.new(provider: provider, root: root)
+
+      expect(broker.path.bytesize).to be <= described_class::Broker::UNIX_SOCKET_PATH_MAX
+      expect(broker.path).to start_with(File.join(root, "tmp", "kf", "s-"))
+    ensure
+      broker&.close
+    end
+  end
+
   def status(success:, exitstatus: success ? 0 : 1)
     instance_double(Process::Status, success?: success, exitstatus: exitstatus)
   end

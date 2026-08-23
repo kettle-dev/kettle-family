@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release secret brokers now choose a compact repository-local Unix socket path when deep checkout paths exceed the platform socket limit.
+
 ### Security
 
 ## [1.2.56] - 2026-08-18

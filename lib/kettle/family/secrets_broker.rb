@@ -13,14 +13,27 @@ module Kettle
       # one release session is shared across sequential and parallel waves.
       class Broker
         OPERATIONS = %w[gem_signing_passphrase rubygems_otp].freeze
+        UNIX_SOCKET_PATH_MAX = 108
 
         attr_reader :path
 
         def initialize(provider:, root:)
           @provider = provider
           directory = File.join(root, "tmp", "kettle-family")
+          basename = "secrets-#{SecureRandom.hex(8)}.sock"
+          @path = File.join(directory, basename)
+
+          if @path.bytesize > UNIX_SOCKET_PATH_MAX
+            directory = File.join(root, "tmp", "kf")
+            @path = File.join(directory, "s-#{SecureRandom.hex(8)}")
+          end
+
+          if @path.bytesize > UNIX_SOCKET_PATH_MAX
+            raise Error,
+              "release secrets broker socket path is too long (#{@path.bytesize} bytes; Unix sockets allow #{UNIX_SOCKET_PATH_MAX})"
+          end
+
           FileUtils.mkdir_p(directory, mode: 0o700)
-          @path = File.join(directory, "secrets-#{SecureRandom.hex(8)}.sock")
           @mutex = Mutex.new
           @closed = false
         end
