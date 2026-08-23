@@ -432,6 +432,26 @@ and leaves RubyGems MFA prompts interactive by default:
 kettle-family release --publish --execute
 ```
 
+Use named recovery modes when a publish wave has already prepared a member:
+
+```console
+kettle-family release --publish --execute --fast-recovery retry-ci --fast-recovery-members gem_name
+kettle-family release --publish --execute --fast-recovery skip-ci --fast-recovery-members gem_name
+```
+
+`retry-ci` resumes the named members at CI monitoring; `skip-ci` bypasses that
+monitor and continues with the merge and publish steps. Both modes are intended
+only for the same release commit. They apply only to the named members, so other
+members continue their normal release flow. To run every selected member from
+step 0 while skipping remote CI monitoring, use `--skip-ci` instead:
+
+```console
+kettle-family release --publish --execute --skip-ci
+```
+
+The existing `--continue-ci-failures` option still monitors CI and only changes
+whether a failed result blocks the release; it does not skip CI monitoring.
+
 By default, family publish runs pass `--yes` to configured `kettle-changelog`
 family changelog commands and child `kettle-release` commands. Use
 `--no-accept` when you want each child command to ask its own confirmation

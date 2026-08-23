@@ -102,7 +102,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -117,6 +117,19 @@ module Kettle
         @tag = tag
         @start_step = start_step
         @skip_steps = skip_steps
+        @fast_recovery = normalize_fast_recovery(fast_recovery, publish: publish)
+        if (@fast_recovery || skip_ci) && !kettle_release_command?(raw_release_command)
+          raise Error, "named CI recovery requires a kettle-release publish command"
+        end
+        raise Error, "--skip-ci requires --publish" if skip_ci && !publish
+        if @fast_recovery && (start_step || (skip_steps && !skip_steps.to_s.empty?) || skip_ci)
+          raise Error, "--fast-recovery cannot be combined with --start-step, --skip-steps, or --skip-ci"
+        end
+        if fast_recovery_members_given?(fast_recovery_members) && !@fast_recovery
+          raise Error, "--fast-recovery-members requires --fast-recovery"
+        end
+        @fast_recovery_members = normalize_fast_recovery_members(fast_recovery_members)
+        @skip_ci = !!skip_ci
         @skip_changelog = !!skip_changelog
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
@@ -186,7 +199,7 @@ module Kettle
         execute && release_command_delegates_secrets_to_kettle_release?
       end
 
-      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -1096,6 +1109,9 @@ module Kettle
           tag: tag,
           start_step: start_step,
           skip_steps: skip_steps,
+          fast_recovery: fast_recovery,
+          fast_recovery_members: fast_recovery_members,
+          skip_ci: skip_ci,
           skip_changelog: skip_changelog,
           local_ci: local_ci,
           continue_ci_failures: continue_ci_failures,
@@ -1286,7 +1302,7 @@ module Kettle
           release_result = runner.call(
             member: member,
             phase: release_phase,
-            command: release_command,
+            command: release_command_for(member),
             env: release_env_for_member(member),
             interactive: release_command_interactive?,
             stdout_line_handler: release_event_line_handler(member, progress: progress),
@@ -1915,7 +1931,7 @@ module Kettle
         CommandResult.new(
           member_name: member.name,
           phase: release_phase,
-          command: release_command,
+          command: release_command_for(member),
           workdir: member.root,
           status: nil,
           success: true,
@@ -2032,8 +2048,12 @@ module Kettle
       end
 
       def release_command
+        release_command_for(nil)
+      end
+
+      def release_command_for(member)
         command = raw_release_command
-        kettle_release_command?(command) ? append_kettle_release_args(command) : command
+        kettle_release_command?(command) ? append_kettle_release_args(command, member: member) : command
       end
 
       def family_changelog_command
@@ -2077,11 +2097,13 @@ module Kettle
         end
       end
 
-      def append_kettle_release_args(command)
+      def append_kettle_release_args(command, member: nil)
         command = replace_kettle_release_provider(command) if @release_secrets_broker
         args = []
-        args << "start_step=#{start_step}" if start_step
-        args << "skip_steps=#{skip_steps}" if skip_steps && !skip_steps.to_s.empty?
+        effective_start_step = release_start_step_for(member)
+        effective_skip_steps = release_skip_steps_for(member)
+        args << "start_step=#{effective_start_step}" if effective_start_step
+        args << "skip_steps=#{effective_skip_steps}" unless effective_skip_steps.empty?
         args << "--skip-changelog" if skip_changelog
         args << "--ci-workflows=#{ci_workflows}" if ci_workflows && !ci_workflows.to_s.empty?
         args << "--local-ci" if local_ci
@@ -2097,6 +2119,25 @@ module Kettle
         return command if args.empty?
 
         command.is_a?(Array) ? [*command, *args] : "#{command} #{args.join(" ")}"
+      end
+
+      def release_start_step_for(member)
+        return start_step unless fast_recovery_for?(member)
+
+        (fast_recovery == "retry-ci") ? 10 : 11
+      end
+
+      def release_skip_steps_for(_member)
+        steps = Array(skip_steps).flat_map { |entry| entry.to_s.split(",") }.map(&:strip).reject(&:empty?)
+        steps << "10" if skip_ci
+        steps.uniq.join(",")
+      end
+
+      def fast_recovery_for?(member)
+        return false unless fast_recovery
+        return false unless member
+
+        fast_recovery_members.include?(member.name)
       end
 
       def replace_kettle_release_provider(command)
@@ -2127,6 +2168,43 @@ module Kettle
         raise Error, "invalid --ci-workflows value #{value.inspect}" if invalid
 
         workflows.join(",")
+      end
+
+      def normalize_fast_recovery(value, publish:)
+        return nil if value.nil? || value.to_s.strip.empty?
+        raise Error, "--fast-recovery requires --publish" unless publish
+
+        mode = value.to_s.strip.downcase.tr("_", "-")
+        return mode if %w[retry-ci skip-ci].include?(mode)
+
+        raise Error, "invalid --fast-recovery value #{value.inspect}; use retry-ci or skip-ci"
+      end
+
+      def normalize_fast_recovery_members(value)
+        return [] unless fast_recovery
+
+        names = if value.nil? || value.to_s.strip.empty?
+          members.map(&:name)
+        else
+          value.to_s.split(",").map(&:strip).reject(&:empty?).uniq
+        end
+        raise Error, "--fast-recovery-members requires at least one member" if names.empty?
+
+        known = family_members.map(&:name)
+        unknown = names - known
+        raise Error, "unknown fast recovery member(s): #{unknown.join(", ")}" unless unknown.empty?
+
+        selected = members.map(&:name)
+        unselected = names - selected
+        unless unselected.empty?
+          raise Error, "fast recovery member(s) must be selected: #{unselected.join(", ")}"
+        end
+
+        names
+      end
+
+      def fast_recovery_members_given?(value)
+        Array(value).flat_map { |entry| entry.to_s.split(",") }.map(&:strip).reject(&:empty?).any?
       end
 
       def validate_remote_list(value, option_name)

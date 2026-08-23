@@ -160,6 +160,9 @@ module Kettle
             publish: false,
             release_start_step: nil,
             release_skip_steps: nil,
+            release_fast_recovery: nil,
+            release_fast_recovery_members: nil,
+            release_skip_ci: false,
             release_skip_changelog: false,
             release_local_ci: false,
             release_continue_ci_failures: false,
@@ -520,6 +523,9 @@ module Kettle
         end
         option :start_step, long: "--start-step", value: {type: Integer, usage: "N"}, desc: "Pass start_step=N through to kettle-release commands"
         option :skip_steps, long: "--skip-steps", value: {type: String, usage: "LIST"}, desc: "Pass skip_steps=LIST through to kettle-release commands"
+        option :fast_recovery, long: "--fast-recovery", value: {type: String, usage: "MODE"}, desc: "Recover selected CI failures with retry-ci or skip-ci"
+        option :fast_recovery_members, long: "--fast-recovery-members", value: {type: String, usage: "MEMBERS"}, desc: "Limit fast recovery to comma-separated selected members"
+        option :skip_ci, long: "--skip-ci", desc: "Skip remote CI monitoring for every selected member while running from step 0"
         option :skip_changelog, long: "--skip-changelog", desc: "Run pre-release gates and specs, but skip kettle-changelog"
         option :local_ci, long: "--local-ci", desc: "Pass --local-ci through to kettle-release commands"
         option :continue_ci_failures, long: "--continue-ci-failures", desc: "Set K_RELEASE_CI_CONTINUE=true for release commands"
@@ -545,6 +551,9 @@ module Kettle
             publish: truthy_option?(:publish),
             release_start_step: options[:start_step],
             release_skip_steps: options[:skip_steps],
+            release_fast_recovery: options[:fast_recovery],
+            release_fast_recovery_members: options[:fast_recovery_members],
+            release_skip_ci: truthy_option?(:skip_ci),
             release_skip_changelog: truthy_option?(:skip_changelog),
             release_local_ci: truthy_option?(:local_ci),
             release_continue_ci_failures: truthy_option?(:continue_ci_failures),
@@ -817,6 +826,9 @@ module Kettle
           tag: options[:tag],
           start_step: options[:release_start_step],
           skip_steps: options[:release_skip_steps],
+          fast_recovery: options[:release_fast_recovery],
+          fast_recovery_members: options[:release_fast_recovery_members],
+          skip_ci: options[:release_skip_ci],
           skip_changelog: options[:release_skip_changelog],
           local_ci: options[:release_local_ci],
           continue_ci_failures: options[:release_continue_ci_failures],
@@ -915,6 +927,18 @@ module Kettle
         start_label = start_at.branch ? "#{start_at.member}@#{start_at.branch}" : start_at.member
         stdout.puts("  start: #{start_label}") if start_at.member
         stdout.puts("  members: #{members.map(&:name).join(", ")}")
+        if options[:release_fast_recovery]
+          fast_members = options[:release_fast_recovery_members] || "selected members"
+          stdout.puts("  fast recovery: #{options[:release_fast_recovery]} (#{fast_members})")
+          recovery_warning = if options[:release_fast_recovery].to_s.tr("_", "-") == "retry-ci"
+            "fast recovery resumes the named members at CI monitoring; use only for the same release commit"
+          else
+            "fast recovery bypasses CI monitoring for the named members; use only for the same release commit"
+          end
+          stdout.puts("  warning: #{recovery_warning}")
+        elsif options[:release_skip_ci]
+          stdout.puts("  warning: remote CI monitoring is skipped for every selected member")
+        end
         stdout.flush
         countdown_before_execution
       end

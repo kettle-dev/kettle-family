@@ -626,6 +626,80 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "applies fast recovery only to the named release member" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [alpha, beta],
+      family_members: [alpha, beta],
+      publish: true,
+      fast_recovery: "skip-ci",
+      fast_recovery_members: "alpha"
+    )
+
+    alpha_command = workflow.send(:release_command_for, alpha)
+    beta_command = workflow.send(:release_command_for, beta)
+
+    expect(alpha_command.to_s).to include("start_step=11")
+    expect(beta_command.to_s).not_to include("start_step=")
+  end
+
+  it "supports retrying CI as a named fast recovery mode" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [alpha],
+      publish: true,
+      fast_recovery: "retry-ci"
+    )
+
+    expect(workflow.send(:release_command_for, alpha).to_s).to include("start_step=10")
+  end
+
+  it "skips remote CI for every selected member without skipping release preparation" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [alpha],
+      publish: true,
+      skip_ci: true
+    )
+
+    command = workflow.send(:release_command_for, alpha)
+
+    expect(command.to_s).to include("skip_steps=10")
+    expect(command.to_s).not_to include("start_step=")
+  end
+
+  it "rejects fast recovery members that are not selected" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+
+    expect {
+      described_class.new(
+        command: "release",
+        config: config,
+        members: [alpha],
+        family_members: [alpha, beta],
+        publish: true,
+        fast_recovery: "skip-ci",
+        fast_recovery_members: "beta"
+      )
+    }.to raise_error(Kettle::Family::Error, /must be selected/)
+  end
+
   it "delegates secrets to kettle-release when the publish command explicitly includes a secrets provider" do
     write_release_config(
       publish_command: "bundle exec kettle-release --secrets-provider=1password",

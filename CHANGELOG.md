@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Family releases support member-scoped CI fast recovery and an explicit global remote-CI bypass.
+
 ### Changed
 
 ### Deprecated

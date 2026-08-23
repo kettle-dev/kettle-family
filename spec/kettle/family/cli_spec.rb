@@ -1260,6 +1260,38 @@ RSpec.describe Kettle::Family::CLI do
     expect(release.fetch("command")).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --required-remotes=origin --yes --events"])
   end
 
+  it "passes named fast recovery options through the CLI" do
+    write_ready_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(
+      ["release", "--root", @tmpdir, "--only", "alpha", "--publish", "--fast-recovery", "skip-ci", "--fast-recovery-members", "alpha", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    release = report.fetch("results").find { |result| result.fetch("phase") == "release_publish" }
+    expect(release.fetch("command").join(" ")).to include("start_step=11")
+  end
+
+  it "passes global skip-ci through the CLI" do
+    write_ready_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(
+      ["release", "--root", @tmpdir, "--only", "alpha", "--publish", "--skip-ci", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    release = report.fetch("results").find { |result| result.fetch("phase") == "release_publish" }
+    expect(release.fetch("command").join(" ")).to include("skip_steps=10")
+  end
+
   it "accepts a release secrets provider override" do
     write_ready_gem("alpha")
     out = StringIO.new
