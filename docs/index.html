@@ -130,7 +130,7 @@ provider supplies them.</p>
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.667-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.726-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -638,6 +638,24 @@ and leaves RubyGems MFA prompts interactive by default:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --execute
 </code></pre>
+
+<p>Use named recovery modes when a publish wave has already prepared a member:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --publish --execute --fast-recovery retry-ci --fast-recovery-members gem_name
+kettle-family release --publish --execute --fast-recovery skip-ci --fast-recovery-members gem_name
+</code></pre>
+
+<p><code>retry-ci</code> resumes the named members at CI monitoring; <code>skip-ci</code> bypasses that<br>
+monitor and continues with the merge and publish steps. Both modes are intended<br>
+only for the same release commit. They apply only to the named members, so other<br>
+members continue their normal release flow. To run every selected member from<br>
+step 0 while skipping remote CI monitoring, use <code>--skip-ci</code> instead:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family release --publish --execute --skip-ci
+</code></pre>
+
+<p>The existing <code>--continue-ci-failures</code> option still monitors CI and only changes<br>
+whether a failed result blocks the release; it does not skip CI monitoring.</p>
 
 <p>By default, family publish runs pass <code>--yes</code> to configured <code>kettle-changelog</code><br>
 family changelog commands and child <code>kettle-release</code> commands. Use<br>

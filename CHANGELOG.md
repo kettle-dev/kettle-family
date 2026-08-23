@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Family releases support member-scoped CI fast recovery and an explicit global remote-CI bypass.
-
 ### Changed
 
 ### Deprecated
@@ -31,6 +29,17 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.2.58] - 2026-08-23
+
+- TAG: [v1.2.58][1.2.58t]
+- COVERAGE: 93.50% -- 5354/5726 lines in 33 files
+- BRANCH COVERAGE: 76.29% -- 2169/2843 branches in 33 files
+- 29.78% documented
+
+### Added
+
+- Family releases support member-scoped CI fast recovery and an explicit global remote-CI bypass.
 
 ## [1.2.57] - 2026-08-23
 
@@ -2144,7 +2153,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.57...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.58...HEAD
+[1.2.58]: https://github.com/kettle-dev/kettle-family/compare/v1.2.57...v1.2.58
+[1.2.58t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.58
 [1.2.57]: https://github.com/kettle-dev/kettle-family/compare/v1.2.56...v1.2.57
 [1.2.57t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.57
 [1.2.56]: https://github.com/kettle-dev/kettle-family/compare/v1.2.55...v1.2.56
