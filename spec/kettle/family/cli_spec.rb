@@ -92,6 +92,18 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).not_to include("--section")
   end
 
+  it "documents release recovery options in release help" do
+    out = StringIO.new
+
+    status = described_class.call(["release", "--help"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(out.string).to include("--fast-recovery MODE")
+    expect(out.string).to include("--fast-recovery-members MEMBERS")
+    expect(out.string).to include("--skip-ci")
+    expect(out.string).to include("same release commit")
+  end
+
   it "rejects unknown commands" do
     err = StringIO.new
 

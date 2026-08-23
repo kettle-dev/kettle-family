@@ -521,12 +521,12 @@ module Kettle
         option :build_only, long: "--build-only", desc: "Use build release command" do
           options[:publish] = false
         end
-        option :start_step, long: "--start-step", value: {type: Integer, usage: "N"}, desc: "Pass start_step=N through to kettle-release commands"
-        option :skip_steps, long: "--skip-steps", value: {type: String, usage: "LIST"}, desc: "Pass skip_steps=LIST through to kettle-release commands"
-        option :fast_recovery, long: "--fast-recovery", value: {type: String, usage: "MODE"}, desc: "Recover selected CI failures with retry-ci or skip-ci"
-        option :fast_recovery_members, long: "--fast-recovery-members", value: {type: String, usage: "MEMBERS"}, desc: "Limit fast recovery to comma-separated selected members"
-        option :skip_ci, long: "--skip-ci", desc: "Skip remote CI monitoring for every selected member while running from step 0"
-        option :skip_changelog, long: "--skip-changelog", desc: "Run pre-release gates and specs, but skip kettle-changelog"
+        option :start_step, long: "--start-step", value: {type: Integer, usage: "N"}, desc: "Resume the same release commit at kettle-release step N; use only after that step's prerequisites passed"
+        option :skip_steps, long: "--skip-steps", value: {type: String, usage: "LIST"}, desc: "Skip comma-separated kettle-release steps for the same release commit"
+        option :fast_recovery, long: "--fast-recovery", value: {type: String, usage: "MODE"}, desc: "Recover selected same-commit CI failures with retry-ci or skip-ci"
+        option :fast_recovery_members, long: "--fast-recovery-members", value: {type: String, usage: "MEMBERS"}, desc: "Limit fast recovery to selected comma-separated members; defaults to all selected members"
+        option :skip_ci, long: "--skip-ci", desc: "Run every selected member from step 0 while skipping only remote CI monitoring; requires --publish"
+        option :skip_changelog, long: "--skip-changelog", desc: "Run release checks and child releases while skipping kettle-changelog"
         option :local_ci, long: "--local-ci", desc: "Pass --local-ci through to kettle-release commands"
         option :continue_ci_failures, long: "--continue-ci-failures", desc: "Set K_RELEASE_CI_CONTINUE=true for release commands"
         option :ci_workflows, long: "--ci-workflows", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated CI workflow monitor subset through to kettle-release commands"

@@ -39,7 +39,9 @@ is, avoiding duplicate release-prep commits after a failure/fix/retry cycle.
 options such as `start_step=N` and `--local-ci` pass through, CI failures still
 abort by default, and gem signing passphrases are cached once per family run
 while RubyGems MFA prompts remain interactive unless an opt-in release secrets
-provider supplies them.
+provider supplies them. Resume options are deliberately scoped: use them only
+when the member's prepared release commit is unchanged. If a CI failure requires
+code, version, changelog, or lockfile changes, rerun that member from step 0.
 
 ## 💡 Info you can shake a stick at
 
@@ -286,8 +288,9 @@ release:
 
 Resume and security-release options pass through to `kettle-release`. Passing
 `--start-step N` appends `start_step=N`; as with direct `kettle-release` usage,
-`N > 1` resumes after the pre-release gate and should be used only after that
-gate already passed or the failure was intentionally handled:
+`N > 0` skips the pre-release gate and should be used only for the same
+prepared release commit after the earlier prerequisites passed. A code or
+metadata fix requires a new full release run from step 0:
 
 ```console
 kettle-family release --publish --start-step 10 --local-ci
@@ -296,6 +299,13 @@ kettle-family release --publish --start-step 10 --local-ci
 Executed publish runs skip versions that are already published. CI failures
 abort by default; pass `--continue-ci-failures` to set
 `K_RELEASE_CI_CONTINUE=true` for the underlying `kettle-release` process.
+That option still monitors CI and only changes whether a failed result blocks
+the release. It does not skip monitoring. Use `--fast-recovery retry-ci`
+for a selected same-commit member when the failure was transient, or
+`--fast-recovery skip-ci` only when you intentionally accept the CI result.
+Use `--skip-ci` when every selected member should run from step 0 while
+skipping remote CI monitoring; it is not a substitute for fixing code and
+creating a new release commit.
 
 Executed publish runs can also use a release secrets provider. The default
 provider is `interactive`. The `1password` provider is supplied by
@@ -448,9 +458,6 @@ step 0 while skipping remote CI monitoring, use `--skip-ci` instead:
 ```console
 kettle-family release --publish --execute --skip-ci
 ```
-
-The existing `--continue-ci-failures` option still monitors CI and only changes
-whether a failed result blocks the release; it does not skip CI monitoring.
 
 By default, family publish runs pass `--yes` to configured `kettle-changelog`
 family changelog commands and child `kettle-release` commands. Use
