@@ -2469,6 +2469,37 @@ RSpec.describe Kettle::Family::Workflow do
     expect(waves.map { |wave| wave.map(&:name) }).to eq([["beta"], ["gamma"]])
   end
 
+  it "rejects configured waves that place a runtime dependency later" do
+    config = Kettle::Family::Config.new(
+      root: @tmpdir,
+      path: nil,
+      data: {"release" => {"waves" => [["beta"], ["alpha"]]}}
+    )
+    alpha = ready_member("alpha")
+    beta = ready_member("beta", dependencies: ["alpha"])
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, jobs: 2)
+
+    expect { workflow.send(:release_waves, [alpha, beta]) }
+      .to raise_error(
+        Kettle::Family::Error,
+        "configured release waves violate runtime dependency order: beta (wave 1) requires alpha (wave 2); move alpha to an earlier wave"
+      )
+  end
+
+  it "rejects configured waves that place a runtime dependency in the same wave" do
+    config = Kettle::Family::Config.new(
+      root: @tmpdir,
+      path: nil,
+      data: {"release" => {"waves" => [["alpha", "beta"]]}}
+    )
+    alpha = ready_member("alpha")
+    beta = ready_member("beta", dependencies: ["alpha"])
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, jobs: 2)
+
+    expect { workflow.send(:release_waves, [alpha, beta]) }
+      .to raise_error(Kettle::Family::Error, /beta \(wave 1\) requires alpha \(wave 1\)/)
+  end
+
   it "rejects unresolved release-only dependency cycles" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member("alpha", release_dependencies: ["beta"])

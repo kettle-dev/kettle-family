@@ -13,8 +13,11 @@ module Kettle
         configured = configured_waves_for_selected_members
         configured_names = configured.flatten.map(&:name)
         remaining_members = members.reject { |member| configured_names.include?(member.name) }
+        planned = configured + inferred_waves(remaining_members)
 
-        configured + inferred_waves(remaining_members)
+        validate_configured_dependency_order!(planned) unless configured.empty?
+
+        planned
       end
 
       private
@@ -72,6 +75,27 @@ module Kettle
 
       def selected_dependencies_for(member, by_name)
         release_dependency_names(member).select { |dependency| by_name.key?(dependency) }
+      end
+
+      def validate_configured_dependency_order!(planned_waves)
+        wave_indexes = planned_waves.each_with_index.flat_map do |wave, index|
+          wave.map { |member| [member.name, index] }
+        end.to_h
+
+        members.each do |member|
+          member_wave = wave_indexes.fetch(member.name)
+          Array(member.dependencies).map(&:to_s).filter_map do |dependency|
+            dependency_wave = wave_indexes[dependency]
+            next unless dependency_wave
+            next if dependency_wave < member_wave
+
+            [member.name, dependency, member_wave + 1, dependency_wave + 1]
+          end.each do |dependent, dependency, dependent_wave, dependency_wave|
+            raise Error,
+              "configured release waves violate runtime dependency order: #{dependent} (wave #{dependent_wave}) " \
+                "requires #{dependency} (wave #{dependency_wave}); move #{dependency} to an earlier wave"
+          end
+        end
       end
 
       def release_dependency_names(member)

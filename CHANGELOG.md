@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Reject configured release waves that place runtime gem dependencies after their dependents.
+
 ### Security
 
 ## [1.2.58] - 2026-08-23
