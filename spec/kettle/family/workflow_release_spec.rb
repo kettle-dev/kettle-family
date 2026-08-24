@@ -392,6 +392,37 @@ RSpec.describe Kettle::Family::Workflow do
       .to raise_error(Kettle::Family::Error, /shared root changelog release requires changelog.version_file/)
   end
 
+  it "keeps the configured shared root version file when its member was released earlier" do
+    write_release_config(
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      }
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    anchor = ready_member(
+      "alpha",
+      changelog: false,
+      version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb")
+    )
+    selected = ready_member("beta", changelog: false)
+    kettle_jem = ready_member("kettle-jem")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [selected, kettle_jem],
+      family_members: [anchor, selected, kettle_jem],
+      publish: true
+    )
+
+    expect(workflow.send(:family_changelog_member)).to eq(anchor)
+    expect(workflow.send(:family_changelog_env).fetch("K_CHANGELOG_VERSION_FILE"))
+      .to eq(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
+  end
+
   it "plans releases across configured target branches" do
     write_release_config(target_branches: %w[r1_8-even-v0 r1_9-even-v2])
     config = Kettle::Family::Config.load(root: @tmpdir)

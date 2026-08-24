@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Reject configured release waves that place runtime gem dependencies after their dependents.
 
+- Keep configured shared changelog version anchors authoritative during partial family releases.
+
 ### Security
 
 ## [1.2.58] - 2026-08-23

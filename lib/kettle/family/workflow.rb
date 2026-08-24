@@ -1979,13 +1979,16 @@ module Kettle
         end
 
         version_path = File.expand_path(version_file, config.root)
-        member = members.find { |candidate| path_inside?(version_path, candidate.root) }
+        # The root anchor may belong to an earlier wave, so partial releases
+        # must not fall back to a selected member's independent version.
+        known_members = family_members.empty? ? members : family_members
+        member = known_members.find { |candidate| path_inside?(version_path, candidate.root) }
         return member if member
 
         fallback = members.first
         return fallback if fallback&.version_file
 
-        raise Error, "shared root changelog version file #{version_file} is not inside any selected family member"
+        raise Error, "shared root changelog version file #{version_file} is not inside any family member"
       end
 
       def family_changelog_env
@@ -2031,7 +2034,8 @@ module Kettle
 
       def family_changelog_version_file
         configured = config.changelog_version_file.to_s
-        return configured if !configured.empty? && members.any? { |member| path_inside?(File.expand_path(configured, config.root), member.root) }
+        known_members = family_members.empty? ? members : family_members
+        return configured if !configured.empty? && known_members.any? { |member| path_inside?(File.expand_path(configured, config.root), member.root) }
 
         members.first&.version_file.to_s
       end
