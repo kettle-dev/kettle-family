@@ -244,7 +244,10 @@
 15
 16
 17
-18</pre>
+18
+19
+20
+21</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/release_waves.rb', line 12</span>
@@ -253,8 +256,11 @@
   <span class='id identifier rubyid_configured'>configured</span> <span class='op'>=</span> <span class='id identifier rubyid_configured_waves_for_selected_members'>configured_waves_for_selected_members</span>
   <span class='id identifier rubyid_configured_names'>configured_names</span> <span class='op'>=</span> <span class='id identifier rubyid_configured'>configured</span><span class='period'>.</span><span class='id identifier rubyid_flatten'>flatten</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:name</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_remaining_members'>remaining_members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span><span class='period'>.</span><span class='id identifier rubyid_reject'>reject</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span> <span class='id identifier rubyid_configured_names'>configured_names</span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+  <span class='id identifier rubyid_planned'>planned</span> <span class='op'>=</span> <span class='id identifier rubyid_configured'>configured</span> <span class='op'>+</span> <span class='id identifier rubyid_inferred_waves'>inferred_waves</span><span class='lparen'>(</span><span class='id identifier rubyid_remaining_members'>remaining_members</span><span class='rparen'>)</span>
 
-  <span class='id identifier rubyid_configured'>configured</span> <span class='op'>+</span> <span class='id identifier rubyid_inferred_waves'>inferred_waves</span><span class='lparen'>(</span><span class='id identifier rubyid_remaining_members'>remaining_members</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_validate_configured_dependency_order!'>validate_configured_dependency_order!</span><span class='lparen'>(</span><span class='id identifier rubyid_planned'>planned</span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='id identifier rubyid_configured'>configured</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
+  <span class='id identifier rubyid_planned'>planned</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
