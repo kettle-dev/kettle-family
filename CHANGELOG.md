@@ -22,17 +22,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Use kettle-dev lockfile inspection primitives for family release and reset validation.
-
 ### Deprecated
 
 ### Removed
 
-- Remove unused family-side pre-release image URL parsing; kettle-dev owns validation for both standalone and family releases.
-
 ### Fixed
 
 ### Security
+
+## [1.2.60] - 2026-08-25
+
+- TAG: [v1.2.60][1.2.60t]
+- COVERAGE: 93.47% -- 5311/5682 lines in 33 files
+- BRANCH COVERAGE: 76.24% -- 2140/2807 branches in 33 files
+- 29.86% documented
+
+### Changed
+
+- Use kettle-dev lockfile inspection primitives for family release and reset validation.
+
+### Removed
+
+- Remove unused family-side pre-release image URL parsing; kettle-dev owns validation for both standalone and family releases.
 
 ## [1.2.59] - 2026-08-25
 
@@ -2170,7 +2181,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.59...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.60...HEAD
+[1.2.60]: https://github.com/kettle-dev/kettle-family/compare/v1.2.59...v1.2.60
+[1.2.60t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.60
 [1.2.59]: https://github.com/kettle-dev/kettle-family/compare/v1.2.58...v1.2.59
 [1.2.59t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.59
 [1.2.58]: https://github.com/kettle-dev/kettle-family/compare/v1.2.57...v1.2.58
