@@ -2394,6 +2394,9 @@ module Kettle
 
       def base_release_env
         env = config.release_env
+        # kettle-family transports family policy to the standalone kettle-dev
+        # release command. It does not interpret pre-release URL patterns;
+        # kettle-pre-release owns validation for both release entry points.
         env["KETTLE_FAMILY_CONFIG"] = config.path if config.path
         env.merge!(TEMPLATE_QUIET_ENV) unless debug
         env["K_RELEASE_CI_CONTINUE"] = "true" if continue_ci_failures

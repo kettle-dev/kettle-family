@@ -26,6 +26,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Removed
 
+- Remove unused family-side pre-release image URL parsing; kettle-dev owns validation for both standalone and family releases.
+
 ### Fixed
 
 ### Security

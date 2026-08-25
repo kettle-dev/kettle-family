@@ -173,10 +173,11 @@ members:
     - "**/vendor/**"
 ```
 
-Pre-release checks can skip project-specific volatile image URLs with
-shell-style URL patterns. Family release commands pass the active config path
-to member release commands so this setting works when releases run from member
-directories.
+Member pre-release checks can skip project-specific volatile image URLs with
+shell-style URL patterns. `kettle-family` treats this as family policy and
+passes the active config path to the member's standalone `kettle-dev` release
+command. URL matching and validation remain owned by `kettle-pre-release`, so
+the same setting also works when a member is released directly.
 
 ```yaml
 pre_release:
