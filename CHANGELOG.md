@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Use kettle-dev lockfile inspection primitives for family release and reset validation.
+
 ### Deprecated
 
 ### Removed

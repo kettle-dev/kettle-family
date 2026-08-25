@@ -1546,14 +1546,15 @@ module Kettle
         return ["Gemfile.lock was not created by dependency floor lockfile refresh"] unless File.file?(lockfile)
 
         lockfile_source = File.read(lockfile)
-        diagnostics = release_lockfile_local_path_remote_lines(lockfile_source).map do |line_number|
+        diagnostics = Kettle::Dev::LockfileReset.local_path_remote_lines_from_source(lockfile_source).map do |line_number|
           "Gemfile.lock has local path remote at line #{line_number}"
         end
+        checksum_entries = Kettle::Dev::LockfileReset.checksum_entries_from_source(lockfile_source) || {}
         diagnostics.concat(released_members.filter_map do |released_member|
-          checksum_line = checksum_line_for(lockfile_source: lockfile_source, member: released_member)
-          if checksum_line.nil?
+          checksum = checksum_entries[[released_member.name, released_member.version]]
+          if checksum.nil?
             "Gemfile.lock CHECKSUMS is missing #{released_member.name} #{released_member.version}"
-          elsif !checksum_line.include?("sha256=")
+          elsif !checksum.include?("sha256=")
             "Gemfile.lock CHECKSUMS has no sha256 for #{released_member.name} #{released_member.version}"
           end
         end)
@@ -1712,16 +1713,16 @@ module Kettle
       def reset_lockfile_diagnostics(lockfile)
         lockfile_name = File.basename(lockfile)
         lockfile_source = File.read(lockfile)
-        diagnostics = release_lockfile_local_path_remote_lines(lockfile_source).map do |line_number|
+        diagnostics = Kettle::Dev::LockfileReset.local_path_remote_lines_from_source(lockfile_source).map do |line_number|
           "#{lockfile_name} has local path remote at line #{line_number}"
         end
-        checksum_entries = lockfile_checksum_entries(lockfile_source)
+        checksum_entries = Kettle::Dev::LockfileReset.checksum_entries_from_source(lockfile_source)
         if checksum_entries.nil?
           diagnostics << "#{lockfile_name} CHECKSUMS section is missing"
           return diagnostics
         end
 
-        lockfile_gem_specs(lockfile_source).each do |name, version|
+        Kettle::Dev::LockfileReset.gem_specs_from_source(lockfile_source).each do |name, version|
           checksum = checksum_entries[[name, version]]
           if checksum.nil?
             diagnostics << "#{lockfile_name} CHECKSUMS is missing #{name} #{version}"
@@ -1730,87 +1731,6 @@ module Kettle
           end
         end
         diagnostics
-      end
-
-      def release_lockfile_local_path_remote_lines(lockfile_source)
-        lockfile_source.each_line.with_index(1).filter_map do |line, line_number|
-          next if line == "  remote: .\n"
-
-          line_number if line.start_with?("  remote: /", "  remote: .", "  remote: ./", "  remote: ../")
-        end
-      end
-
-      def checksum_line_for(lockfile_source:, member:)
-        in_checksums = false
-        lockfile_source.each_line do |line|
-          stripped = line.chomp
-          if stripped == "CHECKSUMS"
-            in_checksums = true
-            next
-          end
-          next unless in_checksums
-          break if !stripped.empty? && stripped == stripped.upcase && !stripped.start_with?(" ")
-
-          return stripped if stripped.start_with?("  #{member.name} (#{member.version})")
-        end
-        nil
-      end
-
-      def lockfile_checksum_entries(lockfile_source)
-        in_checksums = false
-        entries = {}
-        lockfile_source.each_line do |line|
-          stripped = line.chomp
-          if stripped == "CHECKSUMS"
-            in_checksums = true
-            next
-          end
-          next unless in_checksums
-          break if !stripped.empty? && stripped == stripped.upcase && !stripped.start_with?(" ")
-          next unless stripped.start_with?("  ")
-
-          parsed = parse_lockfile_spec_line(stripped)
-          entries[[parsed.fetch(:name), parsed.fetch(:version)]] = parsed.fetch(:suffix) if parsed
-        end
-        in_checksums ? entries : nil
-      end
-
-      def lockfile_gem_specs(lockfile_source)
-        in_gem = false
-        in_specs = false
-        specs = []
-        lockfile_source.each_line do |line|
-          stripped = line.chomp
-          if stripped == "GEM"
-            in_gem = true
-            in_specs = false
-            next
-          end
-          next unless in_gem
-          break if !stripped.empty? && stripped == stripped.upcase && !stripped.start_with?(" ")
-
-          if stripped == "  specs:"
-            in_specs = true
-            next
-          end
-          next unless in_specs
-          next unless line.start_with?("    ") && !line.start_with?("      ")
-
-          parsed = parse_lockfile_spec_line(stripped)
-          specs << [parsed.fetch(:name), parsed.fetch(:version)] if parsed
-        end
-        specs.uniq
-      end
-
-      def parse_lockfile_spec_line(line)
-        stripped = line.to_s.strip
-        return nil if stripped.empty? || !stripped.include?(" (")
-
-        name, remainder = stripped.split(" (", 2)
-        version, suffix = remainder.to_s.split(")", 2)
-        return nil if name.to_s.empty? || version.to_s.empty?
-
-        {name: name, version: version, suffix: suffix.to_s.strip}
       end
 
       def annotate_dependency_floor_lockfile_result(result, attempts)

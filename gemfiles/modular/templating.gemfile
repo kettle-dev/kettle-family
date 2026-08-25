@@ -12,7 +12,10 @@ if tslp_dev.to_s.empty?
   end
 else
   # Explicit local override for unreleased TSLP debugging.
+  # These mutually exclusive branches intentionally use the same dependency name.
+  # rubocop:disable Bundler/DuplicatedGem -- The local path overrides the released source when explicitly requested.
   gem "tree_sitter_language_pack", path: tslp_dev
+  # rubocop:enable Bundler/DuplicatedGem
 end
 
 if structuredmerge_remote
