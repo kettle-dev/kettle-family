@@ -132,7 +132,7 @@ code, version, changelog, or lockfile changes, rerun that member from step 0.</p
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.676-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.696-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -765,6 +765,7 @@ overridden with <code>--jobs</code>.</p>
 <pre class="code language-console"><code class="language-console">kettle-family template
 kettle-family template --execute --jobs 4
 kettle-family template --execute --only kettle-family
+kettle-family template --execute --no-cleanup
 </code></pre>
 
 <p>Templating uses <code>kettle-jem --events</code> as the default child interface, so<br>
@@ -772,6 +773,12 @@ executed runs stream member-prefixed progress while still keeping the final<br>
 family report. Each member line includes a scheduled family-step counter and a<br>
 per-member elapsed timer. Child <code>kettle-jem</code> events can still add progress marks,<br>
 but only completed family steps advance the counter. Progress marks include:</p>
+
+<p>Executed template runs clean up failed member output and restore autostashes by<br>
+default. Use <code>--no-cleanup</code> when debugging a failed template: the failed<br>
+member’s generated files and autostash are left in place for inspection, while<br>
+successful or unreached members are restored normally. A successful run always<br>
+restores its autostashes regardless of this option.</p>
 
 <table>
   <thead>

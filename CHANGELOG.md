@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Add --no-cleanup to preserve failed template output and autostashes for debugging while keeping cleanup enabled by default.
-
 ### Changed
 
 ### Deprecated
@@ -31,6 +29,17 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.2.62] - 2026-08-26
+
+- TAG: [v1.2.62][1.2.62t]
+- COVERAGE: 93.36% -- 5318/5696 lines in 33 files
+- BRANCH COVERAGE: 76.20% -- 2142/2811 branches in 33 files
+- 29.78% documented
+
+### Added
+
+- Add --no-cleanup to preserve failed template output and autostashes for debugging while keeping cleanup enabled by default.
 
 ## [1.2.61] - 2026-08-26
 
@@ -2198,7 +2207,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.61...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.62...HEAD
+[1.2.62]: https://github.com/kettle-dev/kettle-family/compare/v1.2.61...v1.2.62
+[1.2.62t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.62
 [1.2.61]: https://github.com/kettle-dev/kettle-family/compare/v1.2.60...v1.2.61
 [1.2.61t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.61
 [1.2.60]: https://github.com/kettle-dev/kettle-family/compare/v1.2.59...v1.2.60
