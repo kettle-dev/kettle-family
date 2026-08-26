@@ -177,6 +177,7 @@ module Kettle
             commit: !options.key?(:commit) || options[:commit],
             allow_dirty: truthy_option?(:allow_dirty),
             autostash: !options.key?(:autostash) || options[:autostash],
+            template_cleanup: true,
             target_version: nil,
             reset_target: nil,
             bup_args: [],
@@ -383,6 +384,15 @@ module Kettle
         command_name "template"
         usage "[options]"
         description "Plan or execute kettle-jem templating per member."
+
+        option :no_cleanup, long: "--no-cleanup", desc: "Preserve failed template output and autostashes for debugging" do
+          options[:template_cleanup] = false
+        end
+
+        def run(*args)
+          unexpected_arguments!(args)
+          run_family("template", template_cleanup: options.fetch(:template_cleanup, true))
+        end
       end
 
       class GhaShaPins < WorkflowCommand
@@ -821,6 +831,7 @@ module Kettle
           commit: options[:commit],
           allow_dirty: options[:allow_dirty],
           autostash: options[:autostash],
+          template_cleanup: options[:template_cleanup],
           publish: options[:publish],
           push: options[:push],
           tag: options[:tag],

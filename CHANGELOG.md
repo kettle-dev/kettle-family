@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Add --no-cleanup to preserve failed template output and autostashes for debugging while keeping cleanup enabled by default.
+
 ### Changed
 
 ### Deprecated

@@ -570,6 +570,7 @@ overridden with `--jobs`.
 kettle-family template
 kettle-family template --execute --jobs 4
 kettle-family template --execute --only kettle-family
+kettle-family template --execute --no-cleanup
 ```
 
 Templating uses `kettle-jem --events` as the default child interface, so
@@ -577,6 +578,12 @@ executed runs stream member-prefixed progress while still keeping the final
 family report. Each member line includes a scheduled family-step counter and a
 per-member elapsed timer. Child `kettle-jem` events can still add progress marks,
 but only completed family steps advance the counter. Progress marks include:
+
+Executed template runs clean up failed member output and restore autostashes by
+default. Use `--no-cleanup` when debugging a failed template: the failed
+member's generated files and autostash are left in place for inspection, while
+successful or unreached members are restored normally. A successful run always
+restores its autostashes regardless of this option.
 
 | Mark | Meaning |
 |------|---------|

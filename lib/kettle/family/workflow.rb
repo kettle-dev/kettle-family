@@ -105,7 +105,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -115,6 +115,7 @@ module Kettle
         @commit = commit
         @allow_dirty = allow_dirty
         @autostash = autostash
+        @template_cleanup = template_cleanup
         @publish = publish
         @push = push
         @tag = tag
@@ -202,7 +203,7 @@ module Kettle
         execute && release_command_delegates_secrets_to_kettle_release?
       end
 
-      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -214,7 +215,11 @@ module Kettle
 
         sync_results, stashes = template_worktree_sync_results(runner: runner)
         unless sync_results.all?(&:ok?)
-          return checkout_preflight + sync_results + restore_template_autostashes(stashes, runner: runner)
+          return checkout_preflight + sync_results + restore_template_autostashes(
+            stashes,
+            runner: runner,
+            preserve_members: template_cleanup ? [] : failed_template_members(sync_results)
+          )
         end
 
         workflow_results = branch_checkout_dirty_preflight_results
@@ -228,8 +233,18 @@ module Kettle
           end
         end
 
-        rollback_results = rollback_failed_template_worktrees(stashes, workflow_results, runner: runner)
-        checkout_preflight + sync_results + workflow_results + rollback_results + restore_template_autostashes(stashes, runner: runner)
+        failed_members = failed_template_members(workflow_results)
+        rollback_results = if template_cleanup
+          rollback_failed_template_worktrees(stashes, workflow_results, runner: runner)
+        else
+          []
+        end
+        restore_results = restore_template_autostashes(
+          stashes,
+          runner: runner,
+          preserve_members: template_cleanup ? [] : failed_members
+        )
+        checkout_preflight + sync_results + workflow_results + rollback_results + restore_results
       end
 
       def template_worktree_sync_results(runner:)
@@ -268,27 +283,33 @@ module Kettle
         [results, stashes]
       end
 
-      def restore_template_autostashes(stashes, runner:)
+      def restore_template_autostashes(stashes, runner:, preserve_members: [])
+        preserve_members = Array(preserve_members).map(&:to_s)
         stashes.reverse_each.map do |stash|
+          member = stash.fetch(:member)
+          if preserve_members.include?(member.name.to_s)
+            next template_autostash_preserved_result(member: member, ref: stash.fetch(:ref))
+          end
+
           restore = runner.call(
-            member: stash.fetch(:member),
+            member: member,
             phase: "template_autostash_restore",
             command: ["git", "stash", "pop", stash.fetch(:ref)]
           )
           next restore if restore.ok?
 
-          if template_generated_lockfile_restore_refusal?(stash.fetch(:member), restore)
+          if template_generated_lockfile_restore_refusal?(member, restore)
             next runner.call(
-              member: stash.fetch(:member),
+              member: member,
               phase: "template_autostash_generated_lockfile_recovery",
               command: template_generated_lockfile_restore_command(stash)
             )
           end
 
-          next restore if !template_generated_lockfile_only_conflict?(stash.fetch(:member))
+          next restore if !template_generated_lockfile_only_conflict?(member)
 
           runner.call(
-            member: stash.fetch(:member),
+            member: member,
             phase: "template_autostash_generated_lockfile_recovery",
             command: [
               "sh", "-lc",
@@ -306,6 +327,26 @@ module Kettle
             ]
           )
         end
+      end
+
+      def failed_template_members(results)
+        results.reject(&:ok?).filter_map(&:member_name).uniq
+      end
+
+      def template_autostash_preserved_result(member:, ref:)
+        CommandResult.new(
+          member.name,
+          "template_autostash_preserved",
+          ["internal", "template-autostash-preserved"],
+          member.root,
+          0,
+          true,
+          "preserved failed template output and autostash #{ref} for debugging",
+          "",
+          0.0,
+          true,
+          "template cleanup disabled"
+        )
       end
 
       def template_generated_lockfile_restore_refusal?(member, restore)

@@ -1433,6 +1433,63 @@ RSpec.describe Kettle::Family::Workflow do
     expect(`git -C #{member.root} stash list`).to be_empty
   end
 
+  it "preserves failed template output and its autostash when cleanup is disabled" do
+    write_template_config(command: [RbConfig.ruby, "-e", "File.write('templated.txt', 'partial'); exit 1"], normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      execute: true,
+      template_cleanup: false
+    ).results
+
+    preserved = results.find { |result| result.phase == "template_autostash_preserved" }
+    expect(preserved).to be_ok
+    expect(preserved.skipped).to be(true)
+    expect(results.map(&:phase)).not_to include("template_autostash_rollback")
+    expect(File).to exist(File.join(member.root, "templated.txt"))
+    expect(File).not_to exist(File.join(member.root, "scratch.txt"))
+    expect(`git -C #{member.root} stash list`).to include("kettle-family-template-alpha")
+  end
+
+  it "restores non-failed member autostashes when cleanup is disabled" do
+    write_template_config(
+      command: [
+        RbConfig.ruby,
+        "-e",
+        "if File.basename(Dir.pwd) == 'alpha'; File.write('templated.txt', 'partial'); exit 1; end"
+      ],
+      normalize_lockfiles: false
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    [alpha, beta].each do |member|
+      initialize_git_repo(member.root, branches: [])
+      File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+    end
+
+    results = described_class.new(
+      command: "template",
+      config: config,
+      members: [alpha, beta],
+      execute: true,
+      jobs: 1,
+      template_cleanup: false
+    ).results
+
+    expect(results.count { |result| result.phase == "template_autostash_preserved" }).to eq(1)
+    expect(`git -C #{alpha.root} stash list`).to include("kettle-family-template-alpha")
+    expect(`git -C #{beta.root} stash list`).to be_empty
+    expect(File).not_to exist(File.join(alpha.root, "scratch.txt"))
+    expect(File.read(File.join(beta.root, "scratch.txt"))).to eq("dirty\n")
+  end
+
   it "keeps a generated Gemfile lockfile when restoring a dirty lockfile would conflict" do
     write_template_config(normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
