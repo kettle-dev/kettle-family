@@ -28,13 +28,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.61] - 2026-08-26
+
+- TAG: [v1.2.61][1.2.61t]
+- COVERAGE: 93.34% -- 5298/5676 lines in 33 files
+- BRANCH COVERAGE: 76.17% -- 2135/2803 branches in 33 files
+- 29.86% documented
+
+### Fixed
+
 - Run default family templating through standalone kettle-jem so it can bootstrap member bundles.
 
 - Declare kettle-jem, kettle-changelog, and kettle-gha-pins as direct runtime dependencies for built-in workflows.
 
 - Declare version_gem as a direct runtime dependency for the public version entrypoint.
-
-### Security
 
 ## [1.2.60] - 2026-08-25
 
@@ -2187,7 +2196,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.60...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.61...HEAD
+[1.2.61]: https://github.com/kettle-dev/kettle-family/compare/v1.2.60...v1.2.61
+[1.2.61t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.61
 [1.2.60]: https://github.com/kettle-dev/kettle-family/compare/v1.2.59...v1.2.60
 [1.2.60t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.60
 [1.2.59]: https://github.com/kettle-dev/kettle-family/compare/v1.2.58...v1.2.59
