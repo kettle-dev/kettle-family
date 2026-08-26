@@ -486,8 +486,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(0).command).to eq([RbConfig.ruby, installed_exe, "prepare", "--quiet", "--events"])
-    expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --quiet --events"])
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
+    expect(results.fetch(1).command).to eq(["sh", "-lc", "kettle-jem install --quiet --events"])
   end
 
   it "passes verbose mode through to kettle-jem templating while keeping event output" do
@@ -502,8 +502,8 @@ RSpec.describe Kettle::Family::Workflow do
     allow(workflow).to receive(:installed_gem_executable).with("kettle-jem", "kettle-jem").and_return(installed_exe)
     results = workflow.results
 
-    expect(results.fetch(0).command).to eq([RbConfig.ruby, installed_exe, "prepare", "--verbose", "--events"])
-    expect(results.fetch(1).command).to eq(["sh", "-lc", "bundle exec kettle-jem install --verbose --events"])
+    expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --verbose --events"])
+    expect(results.fetch(1).command).to eq(["sh", "-lc", "kettle-jem install --verbose --events"])
     expect(results.fetch(1).command.join(" ")).not_to include("--quiet")
     expect(results.fetch(1).command.join(" ")).to include("--events")
   end
@@ -1607,6 +1607,20 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.fetch(0).command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
     expect(results.fetch(1).command).to eq(["sh", "-lc", "kettle-jem install --quiet --events"])
+  end
+
+  it "runs default templating outside the member bundle when templating wiring is present" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump("template" => {"normalize_lockfiles" => false}))
+    member = member_at("alpha")
+    File.write(
+      File.join(member.root, "Gemfile"),
+      %(eval_gemfile "gemfiles/modular/templating.gemfile" if ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero?\n)
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [member])
+
+    expect(workflow.send(:default_template_command, member)).to eq("kettle-jem install")
+    expect(workflow.send(:template_command, member)).to eq("kettle-jem install --quiet --events")
   end
 
   def write_template_config(root: @tmpdir, command: [RbConfig.ruby, "-e", "puts 'templated'"], release_target_branches: nil, normalize_lockfiles: true, family_mode: nil)

@@ -35,7 +35,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.command).to eq(["sh", "-lc", "bundle exec rake rubocop_gradual"])
   end
 
-  it "plans template preparation through the member bundle when templating wiring is present" do
+  it "plans template preparation outside the member bundle when templating wiring is present" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     File.write(File.join(member.root, "Gemfile"), <<~RUBY)
@@ -50,7 +50,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.first.phase).to eq("prepare_template_dependencies")
-    expect(results.first.command).to eq([RbConfig.ruby, installed_exe, "prepare", "--quiet", "--events"])
+    expect(results.first.command).to eq(["sh", "-lc", "kettle-jem prepare --quiet --events"])
   end
 
   it "uses gitmoji-valid generated commit subjects" do

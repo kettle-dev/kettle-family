@@ -28,6 +28,12 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Run default family templating through standalone kettle-jem so it can bootstrap member bundles.
+
+- Declare kettle-jem, kettle-changelog, and kettle-gha-pins as direct runtime dependencies for built-in workflows.
+
+- Declare version_gem as a direct runtime dependency for the public version entrypoint.
+
 ### Security
 
 ## [1.2.60] - 2026-08-25

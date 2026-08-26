@@ -3,13 +3,17 @@
 RSpec.describe Gem::Specification do
   let(:specification) { described_class.load(File.expand_path("../../../../kettle-family.gemspec", __dir__)) }
 
-  it "ships provider gems for built-in kettle-family workflow commands" do
+  it "ships tool gems for built-in kettle-family workflow commands" do
     runtime_dependencies = specification.dependencies.select { |dependency| dependency.type == :runtime }
     runtime_dependency_names = runtime_dependencies.map(&:name)
 
     expect(runtime_dependency_names).to include(
+      "kettle-changelog",
       "kettle-dev",
-      "kettle-test"
+      "kettle-gha-pins",
+      "kettle-jem",
+      "kettle-test",
+      "version_gem"
     )
   end
 

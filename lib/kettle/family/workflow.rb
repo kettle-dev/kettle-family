@@ -19,7 +19,10 @@ module Kettle
       PreflightProgressMember = Struct.new(:name)
 
       DEFAULT_COMMANDS = {
-        "template" => "bundle exec kettle-jem install",
+        # kettle-jem owns the member bundle bootstrap, so it must not be
+        # launched through that bundle. The standalone executable prepares the
+        # templating dependencies before the member bundle can include them.
+        "template" => "kettle-jem install",
         "test" => "bundle exec kettle-test",
         "lint" => "bundle exec rake rubocop_gradual",
         "docs" => "bundle exec rake yard",
@@ -2665,10 +2668,11 @@ module Kettle
         append_template_skip_commit(command_text)
       end
 
-      # Preparation must run before Bundler can safely evaluate the member's
-      # Gemfile. Use the local or installed kettle-jem executable directly so
-      # it can create newly referenced modular Gemfiles without that bootstrap
-      # dependency cycle. The full install phase remains bundle-managed.
+      # Preparation and installation invoke kettle-jem outside the member
+      # bundle by default. Explicit local executable handling remains
+      # available for development stacks. kettle-jem owns the member bundle
+      # bootstrap, so invoking it with `bundle exec` would require the
+      # dependency it is responsible for installing.
       def standalone_kettle_jem_prepare_command(command_text)
         local_executable = local_kettle_jem_executable
         executable = local_executable || installed_gem_executable("kettle-jem", "kettle-jem")
@@ -2721,18 +2725,8 @@ module Kettle
         execute && commit && monorepo_template? && kettle_jem_template_command?(command_text)
       end
 
-      def default_template_command(member)
-        return DEFAULT_COMMANDS.fetch("template") if templating_bundle_wired?(member)
-
-        "kettle-jem install"
-      end
-
-      def templating_bundle_wired?(member)
-        gemfile = File.join(member.root, "Gemfile")
-        return false unless File.file?(gemfile)
-
-        content = File.read(gemfile)
-        content.include?("K_JEM_TEMPLATING") || content.include?("gemfiles/modular/templating")
+      def default_template_command(_member)
+        DEFAULT_COMMANDS.fetch("template")
       end
 
       def workflow_env
