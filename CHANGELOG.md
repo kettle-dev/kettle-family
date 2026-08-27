@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Document release-wave dependency propagation and later-wave lockfile refresh behavior.
+
 ### Deprecated
 
 ### Removed

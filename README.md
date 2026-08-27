@@ -260,6 +260,38 @@ completed an earlier release wave; once the dependency is available, the
 member resolves it from the registry. Release lockfile normalization always
 disables local paths regardless of this strategy.
 
+### Release waves and dependency refresh
+
+Release waves are both a sequencing mechanism and a dependency propagation
+mechanism. `kettle-family` does not start a later wave until every member in
+the current wave has succeeded. Members in one wave may run concurrently; if
+one member fails, other members already running in that wave are allowed to
+finish, but later waves do not start.
+
+After a wave succeeds during an executed publish run, `kettle-family`
+automatically reconciles declared family dependency floors in the remaining
+members. Once all selected family dependencies of a later member have
+completed, it waits for their published versions to become available in the
+registry and runs a targeted lockfile refresh equivalent to:
+
+```console
+bundle lock --update RELEASED_MEMBER_NAMES --add-checksums
+```
+
+The same targeted refresh is applied to the member's CI/Appraisal bundle
+lockfiles when those files are present. The refreshed lockfiles and dependency
+floor changes are committed before that member's release starts, so later
+waves test and publish against the versions produced by earlier waves rather
+than stale published versions. A resumed `--only pend` publish also reconciles
+family dependencies that were published by an earlier invocation.
+
+This propagation runs for `kettle-family release --execute --publish` when
+`release.auto_dependency_floors` is enabled (the default). It is distinct from
+`release.normalize_lockfiles`, which removes local-path and checksum problems
+before an individual release. A dry run or a standalone member
+`kettle-release` cannot update downstream family lockfiles. Registry
+propagation is retried before the family reports a dependency refresh failure.
+
 For `changelog.mode: root`, release commands pass `K_CHANGELOG_GEM_NAME` as the
 configured family name and `K_CHANGELOG_VERSION_FILE` when `version_file` is
 configured, so `kettle-changelog` can operate from a repository root without a
