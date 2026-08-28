@@ -37,6 +37,13 @@ RBS:
 
 Layout/IndentationConsistency:
   Exclude: ['*.md']
+
+# The shared RuboCop LTS configuration parses for Ruby 3.2, while this gem's
+# runtime floor is intentionally Ruby 4.0.
+Gemspec/RequiredRubyVersion:
+  Exclude:
+    - kettle-family.gemspec
+
 # Appraisal uses this filename for the moving HEAD dependency fixture.
 Naming/FileName:
   Exclude:

@@ -1503,7 +1503,6 @@ module Kettle
           mode: execute ? :execute : :dry_run
         ).results
         memo.concat(floor_results)
-        return if floor_results.empty?
         return if floor_results.any? && !floor_results.all?(&:ok?)
 
         append_dependency_floor_lockfile_results(released_members: released_members, dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
@@ -1512,7 +1511,8 @@ module Kettle
         append_dependency_floor_ci_bundle_results(released_members: released_members, dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
-        commit_dependency_floor_changes(dependent_members: floor_results.map(&:member_name), runner: runner, memo: memo) if floor_results.any? && execute && commit
+        reconciled_members = (floor_results.map(&:member_name) + lockfile_ready_dependent_members.map(&:name)).uniq
+        commit_dependency_floor_changes(dependent_members: reconciled_members, runner: runner, memo: memo) if reconciled_members.any? && execute && commit
       end
 
       def dependent_members_depending_on(released_members:, dependent_members:)
@@ -1843,7 +1843,7 @@ module Kettle
               "sh",
               "-lc",
               "files=$(git ls-files --modified --others --exclude-standard -- '*.gemspec' Gemfile.lock); " \
-                "if [ -n \"$files\" ]; then git add -- $files && git commit -m '⬆️ Raise family dependency floors'; fi"
+                "if [ -n \"$files\" ]; then git add -- $files && git commit -m '⬆️ Reconcile family dependencies'; fi"
             ]
           )
           break unless memo.last.ok?

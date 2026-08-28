@@ -272,7 +272,9 @@ finish, but later waves do not start.
 
 After a wave succeeds during an executed publish run, `kettle-family`
 automatically reconciles declared family dependency floors in the remaining
-members. Once all selected family dependencies of a later member have
+members. This propagation still runs when a member's declared floor already
+matches the newly released version: its lockfiles may still resolve the prior
+published release. Once all selected family dependencies of a later member have
 completed, it waits for their published versions to become available in the
 registry and runs a targeted lockfile refresh equivalent to:
 

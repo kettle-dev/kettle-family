@@ -49,6 +49,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Reject template autostashes outside lib/, spec/, and test/ before any member is mutated.
 
+- Family release waves now refresh dependent lockfiles even when their declared dependency floors already match a newly released family version.
+
+- Restore the runtime version_gem dependency required by the version API.
+
 ### Security
 
 ## [1.2.62] - 2026-08-26

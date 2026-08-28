@@ -2082,18 +2082,34 @@ RSpec.describe Kettle::Family::Workflow do
     expect(memo.last.command.join(" ")).to include("Gemfile.lock")
   end
 
-  it "skips dependency floor bundle refreshes when no floor changed" do
+  it "refreshes and commits dependent lockfiles when the dependency floor is already current" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
     beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.2.3"]})
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, jobs: 1)
-    runner = ->(**_options) { raise "dependency floor runner should not be called" }
+    phases = []
+    runner = lambda do |member:, phase:, command:, **_options|
+      phases << phase
+      if phase == "dependency_floor_lockfiles"
+        File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+          GEM
+            specs:
+              alpha (1.2.3)
+
+          CHECKSUMS
+            alpha (1.2.3) sha256=abc123
+        LOCK
+      end
+      Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, phase, "", 0.0, false, nil)
+    end
 
     memo = []
     workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
 
-    expect(memo).to be_empty
+    expect(memo.map(&:phase)).to eq(%w[dependency_floor_lockfiles commit_dependency_floor])
+    expect(phases).to eq(%w[dependency_floor_lockfiles commit_dependency_floor])
+    expect(memo.last.command.join(" ")).to include("Gemfile.lock")
   end
 
   it "reconciles published family dependencies before a resumed release" do
