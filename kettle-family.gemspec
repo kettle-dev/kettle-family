@@ -100,7 +100,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency("kettle-dev", ">= 3.0.14", "< 4.0.0")                 # ruby >= 3.2.0
   spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.14")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow
   spec.add_dependency("kettle-jem", "~> 7.0", ">= 7.0.0")                    # ruby >= 4.0.0, built-in templating workflow
-  spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.20")              # ruby >= 2.4
+  spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.21")              # ruby >= 2.4
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("tty-screen", "~> 0.8")                                  # ruby >= 2.0.0
   spec.add_dependency("unicode-display_width", "~> 2.6")                        # ruby >= 2.3.0
