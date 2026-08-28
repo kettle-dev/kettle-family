@@ -53,6 +53,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Restore the runtime version_gem dependency required by the version API.
 
+- Install refreshed downstream release bundles before invoking their release commands.
+
 ### Security
 
 ## [1.2.62] - 2026-08-26

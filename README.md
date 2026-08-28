@@ -282,6 +282,8 @@ registry and runs a targeted lockfile refresh equivalent to:
 bundle lock --update RELEASED_MEMBER_NAMES --add-checksums
 ```
 
+It then installs that exact locked bundle before starting the dependent release.
+
 The same targeted refresh is applied to the member's CI/Appraisal bundle
 lockfiles when those files are present. The refreshed lockfiles and dependency
 floor changes are committed before that member's release starts, so later

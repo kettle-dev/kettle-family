@@ -1508,6 +1508,9 @@ module Kettle
         append_dependency_floor_lockfile_results(released_members: released_members, dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
+        append_dependency_floor_bundle_install_results(dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
+        return if memo.any? && !memo.last.ok?
+
         append_dependency_floor_ci_bundle_results(released_members: released_members, dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
@@ -1557,6 +1560,25 @@ module Kettle
             break unless memo.last.ok?
           end
           break if memo.any? && !memo.last.ok?
+        end
+      end
+
+      # `bundle lock` deliberately updates only resolution metadata. Install the
+      # resulting locked bundle before invoking the dependent's `bundle exec
+      # kettle-release`, otherwise a just-published family gem can be absent
+      # from the local RubyGems installation.
+      def append_dependency_floor_bundle_install_results(dependent_members:, runner:, memo:)
+        return unless execute && publish
+        return if dependent_members.empty?
+
+        dependent_members.each do |member|
+          memo << runner.call(
+            member: member,
+            phase: "dependency_floor_bundle_install",
+            command: ["bundle", "install"],
+            env: release_lockfile_env(member)
+          )
+          break unless memo.last.ok?
         end
       end
 
