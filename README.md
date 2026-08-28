@@ -368,6 +368,48 @@ publish command explicitly includes `--secrets-provider`.
 
 ## 🔧 Basic Usage
 
+### Command reference
+
+The command names below are available from `kettle-family --help`:
+
+| Command | Purpose |
+|---------|---------|
+| `version` | Print the kettle-family version. |
+| `help` | Print top-level or command-specific help. |
+| `mise-trust` | Trust mise configuration for the family. |
+| `discover` | Discover members and print their execution order. |
+| `plan` | Alias for `discover`. |
+| `report` | Print family discovery and configuration details. |
+| `metadata` | Print member version, Ruby floor, license, and author metadata. |
+| `check` | Run internal read-only readiness checks. |
+| `clean-unreleased` | Uninstall locally installed family versions newer than released versions. |
+| `reconcile-releases` | Create verified missing GitHub Releases for published tags. |
+| `reset` | Reset a managed family artifact, such as release lockfiles. |
+| `test` | Run the configured test workflow for each selected member. |
+| `lint` | Run the configured lint workflow for each selected member. |
+| `docs` | Run the configured documentation workflow for each selected member. |
+| `template` | Apply the configured `kettle-jem` template for each selected member. |
+| `gha-sha-pins` | Inspect or update GitHub Actions SHA pins. |
+| `bup` | Run `bundle update --all`, or update a named dependency, per member. |
+| `bupb` | Run `bundle update --bundler` per member. |
+| `bex` | Run an arbitrary `bundle exec` command per member. |
+| `install` | Build and install selected local family gems. |
+| `bump` | Check, plan, or execute family version alignment. |
+| `bump-version` | Deprecated alias for `bump`. |
+| `add-changelog` | Add a structured entry to a member's `Unreleased` section. |
+| `release` | Prepare or publish selected member releases in dependency waves. |
+| `push` | Push selected member repositories. |
+| `pull` | Pull selected member repositories with rebase. |
+| `sync` | Fetch and rebase selected member repositories and branches. |
+| `up` | Pull with rebase, then push selected member repositories. |
+| `branch-lanes` | Audit configured long-lived release branches. |
+| `release-state` | Report release state for selected members. |
+| `state` | Alias for `release-state`. |
+
+Use `kettle-family help COMMAND` for command-specific options. Most workflow
+commands also accept `--only`, `--exclude`, `--start-at`, `--jobs`,
+`--execute`, `--dry-run`, `--commit`, and `--no-commit` as applicable.
+
 Inspect discovery and release plans before executing them:
 
 ```console
@@ -433,6 +475,22 @@ limit; results remain in family order.
 Most commands accept `--json` to print a machine-readable report instead of the
 text report, and `--report PATH` to write that JSON report while still printing
 the normal text report.
+
+Refresh member dependencies before templating when the generated project should
+be validated against the latest compatible releases:
+
+```console
+kettle-family bup --execute
+kettle-family template --execute
+```
+
+`bup` runs `bundle update --all` for every selected member. A gem name may be
+passed to update only that dependency, for example `kettle-family bup --execute
+kettle-test`. Executed updates commit successful lockfile changes by default;
+use `--no-commit` for a working-tree-only refresh, or `--commit` to state the
+default explicitly. Local dependency environment variables are preserved when
+explicitly supplied, so use the family's local or released dependency mode
+deliberately before running it.
 
 Plan or update GitHub Actions workflow SHA pins across the selected family
 members:
@@ -616,6 +674,14 @@ default. Use `--no-cleanup` when debugging a failed template: the failed
 member's generated files and autostash are left in place for inspection, while
 successful or unreached members are restored normally. A successful run always
 restores its autostashes regardless of this option.
+
+Before creating any autostash, the workflow checks every selected member
+checkout. Automatic stashing is allowed only when all dirty paths are under
+`lib/`, `spec/`, or `test/`; changes elsewhere, including changelogs, lockfiles,
+configuration, and generated workflow files, fail the run before templating
+starts and are listed in the error. This preflight is separate from
+`--no-cleanup`: the latter preserves a failed template for debugging, while
+`--no-autostash` disables even the permitted source/test stashes.
 
 | Mark | Meaning |
 |------|---------|

@@ -24,11 +24,19 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Document release-wave dependency propagation and later-wave lockfile refresh behavior.
 
+- Document kettle-family bup as the pre-templating bundle update workflow.
+
+- Document the complete kettle-family command reference, including bup and workflow aliases.
+
+- Clarify that executed kettle-family bup runs commit successful lockfile updates unless --no-commit is supplied.
+
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Reject template autostashes outside lib/, spec/, and test/ before any member is mutated.
 
 ### Security
 

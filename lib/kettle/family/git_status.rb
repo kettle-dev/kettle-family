@@ -16,6 +16,13 @@ module Kettle
 
         stdout.lines.map(&:chomp).reject(&:empty?)
       end
+
+      def self.path_from_status_line(status_line)
+        line = status_line.to_s
+        path = (line.length >= 3 && line[2] == " ") ? line[3..] : line
+        path = path.to_s.strip
+        path.include?(" -> ") ? path.split(" -> ", 2).last : path
+      end
     end
   end
 end

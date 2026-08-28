@@ -61,8 +61,8 @@ module Kettle
             options[:commit] = false
           end
           base.option :allow_dirty, long: "--allow-dirty", desc: "Reserved for compatibility; member repos manage their own commit safety"
-          base.option :autostash, long: "--autostash", desc: "Use the default template autostash behavior"
-          base.option :no_autostash, long: "--no-autostash", desc: "Fail template runs when a member worktree is dirty" do
+          base.option :autostash, long: "--autostash", desc: "Allow automatic stashing of eligible lib/, spec/, and test/ changes"
+          base.option :no_autostash, long: "--no-autostash", desc: "Disable automatic stashing and fail when a member worktree is dirty" do
             options[:autostash] = false
           end
         end

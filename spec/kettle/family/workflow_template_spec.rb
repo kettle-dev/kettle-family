@@ -14,6 +14,26 @@ RSpec.describe Kettle::Family::Workflow do
     end
   end
 
+  it "normalizes paths from git status lines" do
+    expect(Kettle::Family::GitStatus.path_from_status_line(" M lib/example.rb")).to eq("lib/example.rb")
+    expect(Kettle::Family::GitStatus.path_from_status_line("?? spec/example_spec.rb")).to eq("spec/example_spec.rb")
+    expect(Kettle::Family::GitStatus.path_from_status_line("R  old.rb -> lib/new.rb")).to eq("lib/new.rb")
+    expect(Kettle::Family::GitStatus.path_from_status_line("Gemfile.lock")).to eq("Gemfile.lock")
+    expect(Kettle::Family::GitStatus.path_from_status_line("x")).to eq("x")
+  end
+
+  it "reports clean and dirty git worktrees" do
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+
+    expect(Kettle::Family::GitStatus.dirty?(member.root)).to be(false)
+
+    FileUtils.mkdir_p(File.join(member.root, "lib"))
+    File.write(File.join(member.root, "lib", "scratch.rb"), "dirty\n")
+
+    expect(Kettle::Family::GitStatus.dirty?(member.root)).to be(true)
+  end
+
   it "allows member templating commits by default and adds lockfile normalization" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -1343,20 +1363,20 @@ RSpec.describe Kettle::Family::Workflow do
     expect(calls.fetch(2).fetch(:command)).to eq("bundle update nomono kettle-dev --bundler && bundle lock")
   end
 
-  it "allows dirty member target branch checkout preflight when explicitly requested" do
+  it "autostashes permitted changes before member target branch checkout" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     write_template_config(root: member.root, release_target_branches: %w[r1 r2])
     initialize_git_repo(member.root, branches: %w[r1 r2])
-    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+    FileUtils.mkdir_p(File.join(member.root, "lib"))
+    File.write(File.join(member.root, "lib", "scratch.rb"), "dirty\n")
 
     results = described_class.new(
       command: "template",
       config: config,
       members: [member],
-      execute: true,
-      allow_dirty: true
+      execute: true
     ).results
 
     expect(results.map(&:phase)).to include("release_checkout")
@@ -1374,15 +1394,72 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member], execute: true, autostash: false).results
 
     expect(results).to contain_exactly(have_attributes(phase: "template_sync_preflight", success: false))
-    expect(results.first.stderr).to include("remove --no-autostash")
+    expect(results.first.stderr).to include("automatic template autostash is disabled")
   end
 
-  it "keeps an autostash out of template work and restores it afterward" do
+  it "rejects disallowed dirty files for every member before creating any autostash" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    [alpha, beta].each { |member| initialize_git_repo(member.root, branches: []) }
+    FileUtils.mkdir_p(File.join(alpha.root, "lib"))
+    File.write(File.join(alpha.root, "lib", "scratch.rb"), "allowed\n")
+    File.write(File.join(beta.root, "README.md"), "disallowed\n")
+
+    results = described_class.new(command: "template", config: config, members: [alpha, beta], execute: true, jobs: 1).results
+
+    expect(results.map(&:member_name)).to eq(["beta"])
+    expect(results.first.stderr).to include("README.md")
+    expect(results.first.stderr).not_to include("lib/scratch.rb")
+    expect(`git -C #{alpha.root} stash list`).to be_empty
+    expect(`git -C #{beta.root} stash list`).to be_empty
+  end
+
+  it "restores completed autostashes when template synchronization fails" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    failure = Kettle::Family::CommandResult.new(
+      member.name,
+      "template_sync",
+      ["git", "pull", "--rebase"],
+      member.root,
+      1,
+      false,
+      "",
+      "pull failed",
+      0.0,
+      false,
+      "command failed"
+    )
+    stashes = [{member: member, ref: "stash@{0}"}]
+    allow(workflow).to receive_messages(
+      template_worktree_sync_results: [[failure], stashes],
+      restore_template_autostashes: []
+    )
+
+    results = workflow.results
+
+    expect(results).to contain_exactly(failure)
+    expect(workflow).to have_received(:restore_template_autostashes).with(
+      stashes,
+      runner: anything,
+      preserve_members: []
+    )
+  end
+
+  it "autostashes changes under lib, spec, and test and restores them afterward" do
     write_template_config(command: [RbConfig.ruby, "-e", "File.write('templated.txt', 'ok')"], normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     initialize_git_repo(member.root, branches: [])
-    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+    %w[lib spec test].each do |directory|
+      FileUtils.mkdir_p(File.join(member.root, directory))
+      File.write(File.join(member.root, directory, "scratch.rb"), "dirty\n")
+    end
 
     workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
     runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
@@ -1390,30 +1467,29 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results).to all(be_ok)
     expect(stashes).to contain_exactly(include(member: member))
-    expect(File).not_to exist(File.join(member.root, "scratch.txt"))
+    %w[lib spec test].each do |directory|
+      expect(File).not_to exist(File.join(member.root, directory, "scratch.rb"))
+    end
 
     restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
 
     expect(restores).to all(be_ok)
-    expect(File.read(File.join(member.root, "scratch.txt"))).to eq("dirty\n")
+    %w[lib spec test].each do |directory|
+      expect(File.read(File.join(member.root, directory, "scratch.rb"))).to eq("dirty\n")
+    end
   end
 
-  it "restores a stashed lockfile when uncommitted template lockfile dirt blocks stash pop" do
+  it "rejects dirty lockfiles before creating an autostash" do
     write_template_config(normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     initialize_git_repo(member.root, branches: [])
     File.write(File.join(member.root, "Gemfile.lock"), "local\n")
 
-    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
-    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
-    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
-    File.write(File.join(member.root, "Gemfile.lock"), "template\n")
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
-    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
-
-    expect(restores).to all(be_ok), restores.map { |result| [result.stdout, result.stderr].join("\n") }.join("\n")
-    expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("local\n")
+    expect(results).to contain_exactly(have_attributes(phase: "template_sync_preflight", success: false))
+    expect(results.first.stderr).to include("Gemfile.lock")
     expect(`git -C #{member.root} stash list`).to be_empty
   end
 
@@ -1422,13 +1498,14 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     initialize_git_repo(member.root, branches: [])
-    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+    FileUtils.mkdir_p(File.join(member.root, "lib"))
+    File.write(File.join(member.root, "lib", "scratch.rb"), "dirty\n")
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
     expect(results.map(&:phase)).to include("template_autostash_rollback")
     expect(results.find { |result| result.phase == "template_autostash_rollback" }).to be_ok
-    expect(File.read(File.join(member.root, "scratch.txt"))).to eq("dirty\n")
+    expect(File.read(File.join(member.root, "lib", "scratch.rb"))).to eq("dirty\n")
     expect(File).not_to exist(File.join(member.root, "templated.txt"))
     expect(`git -C #{member.root} stash list`).to be_empty
   end
@@ -1438,7 +1515,8 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     initialize_git_repo(member.root, branches: [])
-    File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+    FileUtils.mkdir_p(File.join(member.root, "lib"))
+    File.write(File.join(member.root, "lib", "scratch.rb"), "dirty\n")
 
     results = described_class.new(
       command: "template",
@@ -1453,7 +1531,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(preserved.skipped).to be(true)
     expect(results.map(&:phase)).not_to include("template_autostash_rollback")
     expect(File).to exist(File.join(member.root, "templated.txt"))
-    expect(File).not_to exist(File.join(member.root, "scratch.txt"))
+    expect(File).not_to exist(File.join(member.root, "lib", "scratch.rb"))
     expect(`git -C #{member.root} stash list`).to include("kettle-family-template-alpha")
   end
 
@@ -1471,7 +1549,8 @@ RSpec.describe Kettle::Family::Workflow do
     beta = member_at("beta")
     [alpha, beta].each do |member|
       initialize_git_repo(member.root, branches: [])
-      File.write(File.join(member.root, "scratch.txt"), "dirty\n")
+      FileUtils.mkdir_p(File.join(member.root, "lib"))
+      File.write(File.join(member.root, "lib", "scratch.rb"), "dirty\n")
     end
 
     results = described_class.new(
@@ -1486,119 +1565,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.count { |result| result.phase == "template_autostash_preserved" }).to eq(1)
     expect(`git -C #{alpha.root} stash list`).to include("kettle-family-template-alpha")
     expect(`git -C #{beta.root} stash list`).to be_empty
-    expect(File).not_to exist(File.join(alpha.root, "scratch.txt"))
-    expect(File.read(File.join(beta.root, "scratch.txt"))).to eq("dirty\n")
-  end
-
-  it "keeps a generated Gemfile lockfile when restoring a dirty lockfile would conflict" do
-    write_template_config(normalize_lockfiles: false)
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = member_at("alpha")
-    initialize_git_repo(member.root, branches: [])
-    File.write(File.join(member.root, "Gemfile.lock"), "local\n")
-
-    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
-    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
-    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
-    File.write(File.join(member.root, "Gemfile.lock"), "template\n")
-    run_git(member.root, "add", "Gemfile.lock")
-    run_git(member.root, "commit", "--quiet", "-m", "Template lockfile")
-
-    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
-
-    expect(restores).to all(be_ok)
-    expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("template\n")
-    expect(`git -C #{member.root} diff --name-only --diff-filter=U`).to be_empty
-  end
-
-  it "restores all generated lockfiles before popping a monorepo autostash" do
-    write_template_config(normalize_lockfiles: false)
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = Kettle::Family::Member.new(
-      name: "monorepo",
-      root: @tmpdir,
-      gemspec_path: File.join(@tmpdir, "monorepo.gemspec"),
-      version: "1.0.0",
-      dependencies: []
-    )
-    initialize_git_repo(@tmpdir, branches: [])
-    lockfiles = ["gems/alpha/Gemfile.lock", "gems/beta/Gemfile.lock"]
-    lockfiles.each do |path|
-      FileUtils.mkdir_p(File.dirname(File.join(@tmpdir, path)))
-      File.write(File.join(@tmpdir, path), "base\n")
-    end
-    run_git(@tmpdir, "add", ".")
-    run_git(@tmpdir, "commit", "--quiet", "-m", "Track member lockfiles")
-    lockfiles.each { |path| File.write(File.join(@tmpdir, path), "local\n") }
-
-    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
-    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
-    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
-    lockfiles.each { |path| File.write(File.join(@tmpdir, path), "generated\n") }
-    run_git(@tmpdir, "add", ".")
-    run_git(@tmpdir, "commit", "--quiet", "-m", "Template member lockfiles")
-
-    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
-
-    expect(restores).to all(be_ok), restores.map { |result| [result.stdout, result.stderr].join("\n") }.join("\n")
-    lockfiles.each { |path| expect(File.read(File.join(@tmpdir, path))).to eq("generated\n") }
-    expect(`git -C #{Shellwords.escape(@tmpdir)} stash list`).to be_empty
-  end
-
-  it "restores nested monorepo lockfiles from the repository root" do
-    write_template_config(normalize_lockfiles: false)
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member_root = File.join(@tmpdir, "gems", "alpha")
-    FileUtils.mkdir_p(member_root)
-    member = Kettle::Family::Member.new(
-      name: "alpha",
-      root: member_root,
-      gemspec_path: File.join(member_root, "alpha.gemspec"),
-      version: "1.0.0",
-      dependencies: []
-    )
-    File.write(File.join(@tmpdir, "README.md"), "root\n")
-    File.write(File.join(member_root, "Gemfile.lock"), "base\n")
-    run_git(@tmpdir, "init", "--quiet")
-    run_git(@tmpdir, "config", "user.email", "kettle-family@example.test")
-    run_git(@tmpdir, "config", "user.name", "Kettle Family")
-    run_git(@tmpdir, "add", ".")
-    run_git(@tmpdir, "commit", "--quiet", "-m", "Initial")
-    File.write(File.join(member_root, "Gemfile.lock"), "local\n")
-
-    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
-    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
-    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
-    File.write(File.join(member_root, "Gemfile.lock"), "generated\n")
-    run_git(@tmpdir, "add", "gems/alpha/Gemfile.lock")
-    run_git(@tmpdir, "commit", "--quiet", "-m", "Template lockfile")
-
-    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
-
-    expect(restores).to all(be_ok), restores.map { |result| [result.stdout, result.stderr].join("\n") }.join("\n")
-    expect(File.read(File.join(member_root, "Gemfile.lock"))).to eq("generated\n")
-    expect(`git -C #{Shellwords.escape(@tmpdir)} stash list`).to be_empty
-  end
-
-  it "resolves a partially applied autostash conflict for a generated lockfile" do
-    write_template_config(normalize_lockfiles: false)
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = member_at("alpha")
-    initialize_git_repo(member.root, branches: [])
-    File.write(File.join(member.root, "Gemfile.lock"), "local\n")
-
-    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
-    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
-    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
-    File.write(File.join(member.root, "Gemfile.lock"), "generated\n")
-    run_git(member.root, "add", "Gemfile.lock")
-
-    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
-
-    expect(restores).to all(be_ok), restores.map { |result| [result.stdout, result.stderr].join("\n") }.join("\n")
-    expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("generated\n")
-    expect(`git -C #{member.root} diff --name-only --diff-filter=U`).to be_empty
-    expect(`git -C #{member.root} stash list`).to be_empty
+    expect(File).not_to exist(File.join(alpha.root, "lib", "scratch.rb"))
+    expect(File.read(File.join(beta.root, "lib", "scratch.rb"))).to eq("dirty\n")
   end
 
   it "recognizes generated lockfiles below a monorepo root" do
@@ -1610,33 +1578,6 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:template_generated_lockfile_path?, " M gems/alpha/Gemfile.lock")).to be(true)
     expect(workflow.send(:template_generated_lockfile_path?, " M gems/alpha/.structuredmerge/kettle-jem.lock")).to be(true)
     expect(workflow.send(:template_generated_lockfile_path?, " M gems/alpha/README.md")).to be(false)
-  end
-
-  it "keeps the generated kettle-jem lockfile when restoring its prior state would conflict" do
-    write_template_config(normalize_lockfiles: false)
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    member = member_at("alpha")
-    initialize_git_repo(member.root, branches: [])
-    lockfile = File.join(member.root, ".structuredmerge", "kettle-jem.lock")
-    FileUtils.mkdir_p(File.dirname(lockfile))
-    File.write(lockfile, "base\n")
-    run_git(member.root, "add", ".structuredmerge/kettle-jem.lock")
-    run_git(member.root, "commit", "--quiet", "-m", "Track kettle-jem state")
-    File.write(lockfile, "local\n")
-
-    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
-    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
-    _results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
-    FileUtils.mkdir_p(File.dirname(lockfile))
-    File.write(lockfile, "template\n")
-    run_git(member.root, "add", ".structuredmerge/kettle-jem.lock")
-    run_git(member.root, "commit", "--quiet", "-m", "Template kettle-jem state")
-
-    restores = workflow.send(:restore_template_autostashes, stashes, runner: runner)
-
-    expect(restores).to all(be_ok), restores.map { |result| [result.stdout, result.stderr].join("\n") }.join("\n")
-    expect(File.read(lockfile)).to eq("template\n")
-    expect(`git -C #{member.root} diff --name-only --diff-filter=U`).to be_empty
   end
 
   it "pulls an upstream branch before a clean template run" do

@@ -59,6 +59,7 @@ module Kettle
         ],
         "bupb" => %w[bundle update --bundler]
       }.freeze
+      TEMPLATE_AUTOSTASH_ALLOWED_DIRECTORIES = %w[lib spec test].freeze
       PRE_TEMPLATE_BOOTSTRAP_GEMS = %w[nomono kettle-dev].freeze
       GIT_SYNC_COMMANDS = {
         "push" => [["push", %w[git push]]],
@@ -213,6 +214,9 @@ module Kettle
         end
         checkout_preflight = [] unless checkout_preflight.all?(&:ok?)
 
+        dirty_preflight = template_dirty_worktree_preflight_results
+        return checkout_preflight + dirty_preflight unless dirty_preflight.all?(&:ok?)
+
         sync_results, stashes = template_worktree_sync_results(runner: runner)
         unless sync_results.all?(&:ok?)
           return checkout_preflight + sync_results + restore_template_autostashes(
@@ -253,8 +257,9 @@ module Kettle
         template_sync_members.each do |member|
           dirty_paths = GitStatus.dirty_paths(member.root)
           if dirty_paths.any?
-            unless autostash
-              results << template_dirty_worktree_result(member, dirty_paths)
+            blocked_paths = template_blocking_dirty_paths(dirty_paths)
+            if blocked_paths.any?
+              results << template_dirty_worktree_result(member, blocked_paths)
               break
             end
 
@@ -281,6 +286,27 @@ module Kettle
           break unless results.last.ok?
         end
         [results, stashes]
+      end
+
+      def template_dirty_worktree_preflight_results
+        template_sync_members.filter_map do |member|
+          dirty_paths = GitStatus.dirty_paths(member.root)
+          blocked_paths = template_blocking_dirty_paths(dirty_paths)
+          next if blocked_paths.empty?
+
+          template_dirty_worktree_result(member, blocked_paths)
+        end
+      end
+
+      def template_blocking_dirty_paths(dirty_paths)
+        return dirty_paths unless autostash
+
+        dirty_paths.reject { |path| template_autostash_allowed_path?(path) }
+      end
+
+      def template_autostash_allowed_path?(status_line)
+        path = GitStatus.path_from_status_line(status_line)
+        TEMPLATE_AUTOSTASH_ALLOWED_DIRECTORIES.include?(path.split("/", 2).first)
       end
 
       def restore_template_autostashes(stashes, runner:, preserve_members: [])
@@ -379,7 +405,7 @@ module Kettle
       end
 
       def template_generated_lockfile_path?(status_line)
-        path = status_line.to_s.sub(/\A.../, "").strip
+        path = GitStatus.path_from_status_line(status_line)
         [
           "Gemfile.lock",
           "Appraisal.root.gemfile.lock",
@@ -449,11 +475,17 @@ module Kettle
       end
 
       def template_dirty_worktree_result(member, dirty_paths)
+        stash_guidance = if autostash
+          "automatic template autostash is limited to lib/, spec/, and test/ files"
+        else
+          "automatic template autostash is disabled"
+        end
         template_sync_failure_result(
           member,
           [
-            "dirty worktree blocks template sync; remove --no-autostash, or commit or stash changes before retrying",
-            *dirty_paths
+            "dirty worktree blocks template sync; clean these files before retrying:",
+            *dirty_paths.map { |path| "  #{GitStatus.path_from_status_line(path)}" },
+            stash_guidance
           ].join("\n"),
           reason: "dirty worktree blocks template sync"
         )
