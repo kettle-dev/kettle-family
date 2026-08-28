@@ -132,7 +132,7 @@ code, version, changelog, or lockfile changes, rerun that member from step 0.</p
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.696-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.729-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -296,8 +296,9 @@ not practical for the current toolchain.</p>
 
 </details>
 
-<h3 id="enterprise-support-">Enterprise Support <a href="https://tidelift.com/subscription/pkg/rubygems-kettle-family?utm_source=rubygems-kettle-family&amp;utm_medium=referral&amp;utm_campaign=readme"><img src="https://tidelift.com/badges/package/rubygems/kettle-family" alt="Tidelift"></a>
-</h3>
+<h3 id="enterprise-support">Enterprise Support</h3>
+
+<p><a href="https://tidelift.com/subscription/pkg/rubygems-kettle-family?utm_source=rubygems-kettle-family&amp;utm_medium=referral&amp;utm_campaign=readme"><img src="https://tidelift.com/badges/package/rubygems/kettle-family" alt="Tidelift"></a></p>
 
 <p>Available as part of the Tidelift Subscription.</p>
 
@@ -458,6 +459,41 @@ completed an earlier release wave; once the dependency is available, the<br>
 member resolves it from the registry. Release lockfile normalization always<br>
 disables local paths regardless of this strategy.</p>
 
+<h3 id="release-waves-and-dependency-refresh">Release waves and dependency refresh</h3>
+
+<p>Release waves are both a sequencing mechanism and a dependency propagation<br>
+mechanism. <code>kettle-family</code> does not start a later wave until every member in<br>
+the current wave has succeeded. Members in one wave may run concurrently; if<br>
+one member fails, other members already running in that wave are allowed to<br>
+finish, but later waves do not start.</p>
+
+<p>After a wave succeeds during an executed publish run, <code>kettle-family</code><br>
+automatically reconciles declared family dependency floors in the remaining<br>
+members. This propagation still runs when a member’s declared floor already<br>
+matches the newly released version: its lockfiles may still resolve the prior<br>
+published release. Once all selected family dependencies of a later member have<br>
+completed, it waits for their published versions to become available in the<br>
+registry and runs a targeted lockfile refresh equivalent to:</p>
+
+<pre class="code language-console"><code class="language-console">bundle lock --update RELEASED_MEMBER_NAMES --add-checksums
+</code></pre>
+
+<p>It then installs that exact locked bundle before starting the dependent release.</p>
+
+<p>The same targeted refresh is applied to the member’s CI/Appraisal bundle<br>
+lockfiles when those files are present. The refreshed lockfiles and dependency<br>
+floor changes are committed before that member’s release starts, so later<br>
+waves test and publish against the versions produced by earlier waves rather<br>
+than stale published versions. A resumed <code>--only pend</code> publish also reconciles<br>
+family dependencies that were published by an earlier invocation.</p>
+
+<p>This propagation runs for <code>kettle-family release --execute --publish</code> when<br>
+<code>release.auto_dependency_floors</code> is enabled (the default). It is distinct from<br>
+<code>release.normalize_lockfiles</code>, which removes local-path and checksum problems<br>
+before an individual release. A dry run or a standalone member<br>
+<code>kettle-release</code> cannot update downstream family lockfiles. Registry<br>
+propagation is retried before the family reports a dependency refresh failure.</p>
+
 <p>For <code>changelog.mode: root</code>, release commands pass <code>K_CHANGELOG_GEM_NAME</code> as the<br>
 configured family name and <code>K_CHANGELOG_VERSION_FILE</code> when <code>version_file</code> is<br>
 configured, so <code>kettle-changelog</code> can operate from a repository root without a<br>
@@ -529,6 +565,149 @@ RubyGems OTP values from 1Password when each MFA prompt arrives. A child<br>
 publish command explicitly includes <code>--secrets-provider</code>.</p>
 
 <h2 id="-basic-usage">🔧 Basic Usage</h2>
+
+<h3 id="command-reference">Command reference</h3>
+
+<p>The command names below are available from <code>kettle-family --help</code>:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Command</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>version</code></td>
+      <td>Print the kettle-family version.</td>
+    </tr>
+    <tr>
+      <td><code>help</code></td>
+      <td>Print top-level or command-specific help.</td>
+    </tr>
+    <tr>
+      <td><code>mise-trust</code></td>
+      <td>Trust mise configuration for the family.</td>
+    </tr>
+    <tr>
+      <td><code>discover</code></td>
+      <td>Discover members and print their execution order.</td>
+    </tr>
+    <tr>
+      <td><code>plan</code></td>
+      <td>Alias for <code>discover</code>.</td>
+    </tr>
+    <tr>
+      <td><code>report</code></td>
+      <td>Print family discovery and configuration details.</td>
+    </tr>
+    <tr>
+      <td><code>metadata</code></td>
+      <td>Print member version, Ruby floor, license, and author metadata.</td>
+    </tr>
+    <tr>
+      <td><code>check</code></td>
+      <td>Run internal read-only readiness checks.</td>
+    </tr>
+    <tr>
+      <td><code>clean-unreleased</code></td>
+      <td>Uninstall locally installed family versions newer than released versions.</td>
+    </tr>
+    <tr>
+      <td><code>reconcile-releases</code></td>
+      <td>Create verified missing GitHub Releases for published tags.</td>
+    </tr>
+    <tr>
+      <td><code>reset</code></td>
+      <td>Reset a managed family artifact, such as release lockfiles.</td>
+    </tr>
+    <tr>
+      <td><code>test</code></td>
+      <td>Run the configured test workflow for each selected member.</td>
+    </tr>
+    <tr>
+      <td><code>lint</code></td>
+      <td>Run the configured lint workflow for each selected member.</td>
+    </tr>
+    <tr>
+      <td><code>docs</code></td>
+      <td>Run the configured documentation workflow for each selected member.</td>
+    </tr>
+    <tr>
+      <td><code>template</code></td>
+      <td>Apply the configured <code>kettle-jem</code> template for each selected member.</td>
+    </tr>
+    <tr>
+      <td><code>gha-sha-pins</code></td>
+      <td>Inspect or update GitHub Actions SHA pins.</td>
+    </tr>
+    <tr>
+      <td><code>bup</code></td>
+      <td>Run <code>bundle update --all</code>, or update a named dependency, per member.</td>
+    </tr>
+    <tr>
+      <td><code>bupb</code></td>
+      <td>Run <code>bundle update --bundler</code> per member.</td>
+    </tr>
+    <tr>
+      <td><code>bex</code></td>
+      <td>Run an arbitrary <code>bundle exec</code> command per member.</td>
+    </tr>
+    <tr>
+      <td><code>install</code></td>
+      <td>Build and install selected local family gems.</td>
+    </tr>
+    <tr>
+      <td><code>bump</code></td>
+      <td>Check, plan, or execute family version alignment.</td>
+    </tr>
+    <tr>
+      <td><code>bump-version</code></td>
+      <td>Deprecated alias for <code>bump</code>.</td>
+    </tr>
+    <tr>
+      <td><code>add-changelog</code></td>
+      <td>Add a structured entry to a member’s <code>Unreleased</code> section.</td>
+    </tr>
+    <tr>
+      <td><code>release</code></td>
+      <td>Prepare or publish selected member releases in dependency waves.</td>
+    </tr>
+    <tr>
+      <td><code>push</code></td>
+      <td>Push selected member repositories.</td>
+    </tr>
+    <tr>
+      <td><code>pull</code></td>
+      <td>Pull selected member repositories with rebase.</td>
+    </tr>
+    <tr>
+      <td><code>sync</code></td>
+      <td>Fetch and rebase selected member repositories and branches.</td>
+    </tr>
+    <tr>
+      <td><code>up</code></td>
+      <td>Pull with rebase, then push selected member repositories.</td>
+    </tr>
+    <tr>
+      <td><code>branch-lanes</code></td>
+      <td>Audit configured long-lived release branches.</td>
+    </tr>
+    <tr>
+      <td><code>release-state</code></td>
+      <td>Report release state for selected members.</td>
+    </tr>
+    <tr>
+      <td><code>state</code></td>
+      <td>Alias for <code>release-state</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Use <code>kettle-family help COMMAND</code> for command-specific options. Most workflow<br>
+commands also accept <code>--only</code>, <code>--exclude</code>, <code>--start-at</code>, <code>--jobs</code>,<br>
+<code>--execute</code>, <code>--dry-run</code>, <code>--commit</code>, and <code>--no-commit</code> as applicable.</p>
 
 <p>Inspect discovery and release plans before executing them:</p>
 
@@ -612,6 +791,21 @@ limit; results remain in family order.</p>
 <p>Most commands accept <code>--json</code> to print a machine-readable report instead of the<br>
 text report, and <code>--report PATH</code> to write that JSON report while still printing<br>
 the normal text report.</p>
+
+<p>Refresh member dependencies before templating when the generated project should<br>
+be validated against the latest compatible releases:</p>
+
+<pre class="code language-console"><code class="language-console">kettle-family bup --execute
+kettle-family template --execute
+</code></pre>
+
+<p><code>bup</code> runs <code>bundle update --all</code> for every selected member. A gem name may be<br>
+passed to update only that dependency, for example <code>kettle-family bup --execute
+kettle-test</code>. Executed updates commit successful lockfile changes by default;<br>
+use <code>--no-commit</code> for a working-tree-only refresh, or <code>--commit</code> to state the<br>
+default explicitly. Local dependency environment variables are preserved when<br>
+explicitly supplied, so use the family’s local or released dependency mode<br>
+deliberately before running it.</p>
 
 <p>Plan or update GitHub Actions workflow SHA pins across the selected family<br>
 members:</p>
@@ -779,6 +973,14 @@ default. Use <code>--no-cleanup</code> when debugging a failed template: the fai
 member’s generated files and autostash are left in place for inspection, while<br>
 successful or unreached members are restored normally. A successful run always<br>
 restores its autostashes regardless of this option.</p>
+
+<p>Before creating any autostash, the workflow checks every selected member<br>
+checkout. Automatic stashing is allowed only when all dirty paths are under<br>
+<code>lib/</code>, <code>spec/</code>, or <code>test/</code>; changes elsewhere, including changelogs, lockfiles,<br>
+configuration, and generated workflow files, fail the run before templating<br>
+starts and are listed in the error. This preflight is separate from<br>
+<code>--no-cleanup</code>: the latter preserves a failed template for debugging, while<br>
+<code>--no-autostash</code> disables even the permitted source/test stashes.</p>
 
 <table>
   <thead>

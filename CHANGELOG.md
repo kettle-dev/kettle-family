@@ -22,6 +22,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.63] - 2026-08-28
+
+- TAG: [v1.2.63][1.2.63t]
+- COVERAGE: 93.07% -- 5332/5729 lines in 33 files
+- BRANCH COVERAGE: 76.07% -- 2152/2829 branches in 33 files
+- 29.62% documented
+
+### Changed
+
 - Document release-wave dependency propagation and later-wave lockfile refresh behavior.
 
 - Document kettle-family bup as the pre-templating bundle update workflow.
@@ -41,10 +58,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - documentation (2)
   - other (2)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Reject template autostashes outside lib/, spec/, and test/ before any member is mutated.
@@ -54,8 +67,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Restore the runtime version_gem dependency required by the version API.
 
 - Install refreshed downstream release bundles before invoking their release commands.
-
-### Security
 
 ## [1.2.62] - 2026-08-26
 
@@ -2234,7 +2245,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.62...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.63...HEAD
+[1.2.63]: https://github.com/kettle-dev/kettle-family/compare/v1.2.62...v1.2.63
+[1.2.63t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.63
 [1.2.62]: https://github.com/kettle-dev/kettle-family/compare/v1.2.61...v1.2.62
 [1.2.62t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.62
 [1.2.61]: https://github.com/kettle-dev/kettle-family/compare/v1.2.60...v1.2.61
