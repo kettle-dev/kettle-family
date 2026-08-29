@@ -22,11 +22,24 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Make temporary CI/Appraisal dependency-bundle validation opt-in with release.validate_ci_bundles or --validate-ci-bundles.
-
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.2.64] - 2026-08-29
+
+- TAG: [v1.2.64][1.2.64t]
+- COVERAGE: 93.11% -- 5378/5776 lines in 33 files
+- BRANCH COVERAGE: 76.03% -- 2169/2853 branches in 33 files
+- 29.81% documented
+
+### Changed
+
+- Make temporary CI/Appraisal dependency-bundle validation opt-in with release.validate_ci_bundles or --validate-ci-bundles.
 
 ### Fixed
 
@@ -37,8 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Show dependency-floor reconciliation retries before release waves begin.
 
 - Refresh each CI dependency bundle only for family dependencies declared by that bundle.
-
-### Security
 
 ## [1.2.63] - 2026-08-28
 
@@ -2255,7 +2266,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.63...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.64...HEAD
+[1.2.64]: https://github.com/kettle-dev/kettle-family/compare/v1.2.63...v1.2.64
+[1.2.64t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.64
 [1.2.63]: https://github.com/kettle-dev/kettle-family/compare/v1.2.62...v1.2.63
 [1.2.63t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.63
 [1.2.62]: https://github.com/kettle-dev/kettle-family/compare/v1.2.61...v1.2.62

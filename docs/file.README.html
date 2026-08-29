@@ -132,7 +132,7 @@ code, version, changelog, or lockfile changes, rerun that member from step 0.</p
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.729-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.776-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -480,12 +480,17 @@ registry and runs a targeted lockfile refresh equivalent to:</p>
 
 <p>It then installs that exact locked bundle before starting the dependent release.</p>
 
-<p>The same targeted refresh is applied to the member’s CI/Appraisal bundle<br>
-lockfiles when those files are present. The refreshed lockfiles and dependency<br>
-floor changes are committed before that member’s release starts, so later<br>
-waves test and publish against the versions produced by earlier waves rather<br>
-than stale published versions. A resumed <code>--only pend</code> publish also reconciles<br>
-family dependencies that were published by an earlier invocation.</p>
+<p>The root lockfile refresh and dependency-floor changes are committed before<br>
+that member’s release starts, so later waves test and publish against the<br>
+versions produced by earlier waves rather than stale published versions. A<br>
+resumed <code>--only pend</code> publish also reconciles family dependencies that were<br>
+published by an earlier invocation.</p>
+
+<p>Use <code>--validate-ci-bundles</code> (or <code>release.validate_ci_bundles: true</code>) to also<br>
+resolve each CI/Appraisal Gemfile into a temporary lockfile after the root<br>
+refresh. These temporary lockfiles are not committed; this is an optional<br>
+early registry-resolution gate for coordinated releases where waiting for CI<br>
+would be too late to discover an incompatible dependency floor.</p>
 
 <p>This propagation runs for <code>kettle-family release --execute --publish</code> when<br>
 <code>release.auto_dependency_floors</code> is enabled (the default). It is distinct from<br>
