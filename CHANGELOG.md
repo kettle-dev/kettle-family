@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Make temporary CI/Appraisal dependency-bundle validation opt-in with release.validate_ci_bundles or --validate-ci-bundles.
+
 ### Deprecated
 
 ### Removed

@@ -2033,7 +2033,7 @@ RSpec.describe Kettle::Family::Workflow do
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
     beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
     write_direct_bundle_workflow(beta, "gemfiles/dep_heads.gemfile")
-    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, validate_ci_bundles: true, jobs: 1)
 
     allow(workflow).to receive(:prompt_for_gem_signing_password)
     allow(workflow).to receive(:released_version?).and_return(false)
@@ -2069,7 +2069,7 @@ RSpec.describe Kettle::Family::Workflow do
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
     beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
     write_env_bundle_workflow(beta, "Appraisal.root.gemfile")
-    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, validate_ci_bundles: true, jobs: 1)
 
     allow(workflow).to receive(:prompt_for_gem_signing_password)
     allow(workflow).to receive(:released_version?).and_return(false)
@@ -2123,7 +2123,7 @@ RSpec.describe Kettle::Family::Workflow do
     alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
     beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
     write_direct_bundle_workflow(beta, "gemfiles/dep_heads.gemfile")
-    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, validate_ci_bundles: true, jobs: 1)
 
     allow(workflow).to receive(:prompt_for_gem_signing_password)
     allow(workflow).to receive(:released_version?).and_return(false)

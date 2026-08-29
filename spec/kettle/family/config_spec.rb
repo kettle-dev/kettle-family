@@ -240,6 +240,23 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_auto_dependency_floors?).to be(false)
   end
 
+  it "does not validate CI bundles during releases by default" do
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_validate_ci_bundles?).to be(false)
+  end
+
+  it "allows CI bundle validation during releases to be enabled" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        validate_ci_bundles: true
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_validate_ci_bundles?).to be(true)
+  end
+
   it "defaults release lockfile normalization to template normalization" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       template:

@@ -284,12 +284,17 @@ bundle lock --update RELEASED_MEMBER_NAMES --add-checksums
 
 It then installs that exact locked bundle before starting the dependent release.
 
-The same targeted refresh is applied to the member's CI/Appraisal bundle
-lockfiles when those files are present. The refreshed lockfiles and dependency
-floor changes are committed before that member's release starts, so later
-waves test and publish against the versions produced by earlier waves rather
-than stale published versions. A resumed `--only pend` publish also reconciles
-family dependencies that were published by an earlier invocation.
+The root lockfile refresh and dependency-floor changes are committed before
+that member's release starts, so later waves test and publish against the
+versions produced by earlier waves rather than stale published versions. A
+resumed `--only pend` publish also reconciles family dependencies that were
+published by an earlier invocation.
+
+Use `--validate-ci-bundles` (or `release.validate_ci_bundles: true`) to also
+resolve each CI/Appraisal Gemfile into a temporary lockfile after the root
+refresh. These temporary lockfiles are not committed; this is an optional
+early registry-resolution gate for coordinated releases where waiting for CI
+would be too late to discover an incompatible dependency floor.
 
 This propagation runs for `kettle-family release --execute --publish` when
 `release.auto_dependency_floors` is enabled (the default). It is distinct from

@@ -1429,6 +1429,17 @@ RSpec.describe Kettle::Family::CLI do
     expect(Kettle::Family::Workflow).to have_received(:new).with(hash_including(auto_dependency_floors: false))
   end
 
+  it "passes CI bundle validation through release workflows" do
+    write_ready_gem("alpha")
+    workflow = instance_double(Kettle::Family::Workflow, results: [])
+    allow(Kettle::Family::Workflow).to receive(:new).and_return(workflow)
+
+    status = described_class.call(["release", "--root", @tmpdir, "--only", "alpha", "--validate-ci-bundles"], out: StringIO.new, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(Kettle::Family::Workflow).to have_received(:new).with(hash_including(validate_ci_bundles: true))
+  end
+
   it "enables template autostash and cleanup by default with explicit opt-outs" do
     write_gem("alpha")
     workflow = instance_double(Kettle::Family::Workflow, results: [])

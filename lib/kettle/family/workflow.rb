@@ -106,7 +106,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -143,6 +143,7 @@ module Kettle
         @skip_remotes = validate_remote_list(skip_remotes, "--skip-remotes")
         @required_remotes = validate_remote_list(required_remotes.nil? ? config.release_required_remotes : required_remotes, "--required-remotes")
         @auto_dependency_floors = auto_dependency_floors.nil? ? config.release_auto_dependency_floors? : auto_dependency_floors
+        @validate_ci_bundles = validate_ci_bundles.nil? ? config.release_validate_ci_bundles? : validate_ci_bundles
         @gha_sha_pins_upgrade = gha_sha_pins_upgrade
         @gha_sha_pins_check = gha_sha_pins_check
         @gha_sha_pins_ttl_days = gha_sha_pins_ttl_days.nil? ? 1.0 : gha_sha_pins_ttl_days.to_f
@@ -204,7 +205,7 @@ module Kettle
         execute && release_command_delegates_secrets_to_kettle_release?
       end
 
-      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :validate_ci_bundles, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -1550,8 +1551,10 @@ module Kettle
         append_dependency_floor_bundle_install_results(dependent_members: lockfile_refresh_members.map(&:first), runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
-        append_dependency_floor_ci_bundle_results(dependent_members: lockfile_refresh_members, runner: runner, memo: memo)
-        return if memo.any? && !memo.last.ok?
+        if validate_ci_bundles
+          append_dependency_floor_ci_bundle_results(dependent_members: lockfile_refresh_members, runner: runner, memo: memo)
+          return if memo.any? && !memo.last.ok?
+        end
 
         reconciled_members = (floor_results.map(&:member_name) + lockfile_refresh_members.map { |member, _released_members| member.name }).uniq
         commit_dependency_floor_changes(dependent_members: reconciled_members, runner: runner, memo: memo) if reconciled_members.any? && execute && commit

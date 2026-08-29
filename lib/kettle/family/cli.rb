@@ -547,6 +547,7 @@ module Kettle
         option :no_auto_floors, long: "--no-auto-floors", desc: "Do not raise family dependency floors between member releases" do
           options[:no_auto_floors] = true
         end
+        option :validate_ci_bundles, long: "--validate-ci-bundles", desc: "Validate temporary CI/Appraisal bundle locks after dependency-floor refreshes"
         option :accept, desc: "Answer yes to confirmation prompts in interactive commands"
         option :no_accept, long: "--no-accept", desc: "Wait for user input at confirmation prompts" do
           options[:accept] = false
@@ -573,6 +574,7 @@ module Kettle
             release_required_remotes: options[:required_remotes],
             release_secrets_provider: options[:secrets_provider],
             release_auto_dependency_floors: !truthy_option?(:no_auto_floors),
+            release_validate_ci_bundles: truthy_option?(:validate_ci_bundles),
             accept: !options.key?(:accept) || options[:accept],
             tag: truthy_option?(:tag),
             push: truthy_option?(:push)
@@ -849,6 +851,7 @@ module Kettle
           required_remotes: options[:release_required_remotes],
           secrets_provider: release_secrets_provider(command: command, config: config, options: options),
           auto_dependency_floors: options[:release_auto_dependency_floors],
+          validate_ci_bundles: options[:release_validate_ci_bundles],
           gha_sha_pins_upgrade: options[:gha_sha_pins_upgrade],
           gha_sha_pins_check: options[:check],
           gha_sha_pins_ttl_days: options[:gha_sha_pins_ttl_days],
