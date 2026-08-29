@@ -1886,6 +1886,23 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).not_to have_received(:sleep)
   end
 
+  it "excludes inactive conditional Gemfile dependencies from release lockfile refreshes" do
+    write_release_config(release_env: {"KETTLE_DEV_DEV" => "false"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    optional = ready_member_with_gemspec("optional", version: "4.5.6")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => [">= 1.0.0"]})
+    File.write(File.join(beta.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gemspec
+      gem "optional" unless ENV.fetch("KETTLE_DEV_DEV", "false") == "false"
+    RUBY
+    beta.release_dependencies = %w[alpha optional]
+    workflow = described_class.new(command: "release", config: config, members: [alpha, optional, beta], execute: true, publish: true)
+
+    expect(workflow.send(:active_release_dependencies_for, beta, [alpha, optional])).to eq([alpha])
+  end
+
   it "retries dependent bundle refreshes after just-published dependency floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)
@@ -2699,6 +2716,7 @@ RSpec.describe Kettle::Family::Workflow do
       #{dependency_lines.join("\n")}
       end
     RUBY
+    File.write(File.join(member.root, "Gemfile"), "source \"https://gem.coop\"\ngemspec\n")
     Kettle::Family::Member.new(name: name, root: member.root, gemspec_path: gemspec, version_file: nil, version: version, dependencies: dependencies.keys)
   end
 

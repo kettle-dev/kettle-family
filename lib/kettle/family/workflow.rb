@@ -1497,6 +1497,14 @@ module Kettle
         lockfile_ready_dependent_members = affected_dependent_members.select do |member|
           dependency_floor_refresh_ready?(member, released_members: released_members)
         end
+        lockfile_refresh_members = if execute && publish
+          lockfile_ready_dependent_members.filter_map do |member|
+            active_released_members = active_release_dependencies_for(member, released_members)
+            [member, active_released_members] unless active_released_members.empty?
+          end
+        else
+          []
+        end
         floor_results = DependencyFloor.new(
           released_members: released_members,
           dependent_members: dependent_members,
@@ -1505,16 +1513,16 @@ module Kettle
         memo.concat(floor_results)
         return if floor_results.any? && !floor_results.all?(&:ok?)
 
-        append_dependency_floor_lockfile_results(released_members: released_members, dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
+        append_dependency_floor_lockfile_results(dependent_members: lockfile_refresh_members, runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
-        append_dependency_floor_bundle_install_results(dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
+        append_dependency_floor_bundle_install_results(dependent_members: lockfile_refresh_members.map(&:first), runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
-        append_dependency_floor_ci_bundle_results(released_members: released_members, dependent_members: lockfile_ready_dependent_members, runner: runner, memo: memo)
+        append_dependency_floor_ci_bundle_results(dependent_members: lockfile_refresh_members, runner: runner, memo: memo)
         return if memo.any? && !memo.last.ok?
 
-        reconciled_members = (floor_results.map(&:member_name) + lockfile_ready_dependent_members.map(&:name)).uniq
+        reconciled_members = (floor_results.map(&:member_name) + lockfile_refresh_members.map { |member, _released_members| member.name }).uniq
         commit_dependency_floor_changes(dependent_members: reconciled_members, runner: runner, memo: memo) if reconciled_members.any? && execute && commit
       end
 
@@ -1540,21 +1548,60 @@ module Kettle
         Array(member.release_dependencies || member.dependencies).map(&:to_s)
       end
 
-      def append_dependency_floor_lockfile_results(released_members:, dependent_members:, runner:, memo:)
+      # Prism-based discovery intentionally includes every literal Gemfile
+      # declaration so release ordering is conservative. Lockfile refreshes
+      # must instead use the Gemfile as evaluated in the release environment:
+      # optional local/template declarations are not valid --update targets.
+      def active_release_dependencies_for(member, released_members)
+        runtime_names = Array(member.dependencies).map(&:to_s)
+        gemfile_candidates = released_members.reject { |released_member| runtime_names.include?(released_member.name) }
+        return released_members if gemfile_candidates.empty?
+
+        active_names = runtime_names + active_release_gemfile_dependency_names(member)
+        released_members.select { |released_member| active_names.include?(released_member.name) }
+      end
+
+      def active_release_gemfile_dependency_names(member)
+        gemfile = File.join(member.root, "Gemfile")
+        return [] unless File.file?(gemfile)
+
+        script = <<~RUBY
+          require "bundler"
+          dsl = Bundler::Dsl.evaluate(ARGV.fetch(0), ARGV.fetch(1), {})
+          puts dsl.dependencies.map(&:name)
+        RUBY
+        lockfile = File.join(member.root, "Gemfile.lock")
+        stdout, stderr, status = Open3.capture3(
+          release_lockfile_env(member).compact,
+          RbConfig.ruby,
+          "-e",
+          script,
+          gemfile,
+          lockfile,
+          chdir: member.root
+        )
+        unless status.success?
+          raise Error, "could not evaluate release Gemfile for #{member.name}: #{stderr.strip}"
+        end
+
+        stdout.lines.map(&:strip).reject(&:empty?).uniq
+      end
+
+      def append_dependency_floor_lockfile_results(dependent_members:, runner:, memo:)
         return unless execute && publish
         return if dependent_members.empty?
 
-        dependent_members.each do |member|
+        dependent_members.each do |member, released_members|
           memo << wait_for_dependency_floor_lockfiles_result(member: member, released_members: released_members, runner: runner)
           break unless memo.last.ok?
         end
       end
 
-      def append_dependency_floor_ci_bundle_results(released_members:, dependent_members:, runner:, memo:)
+      def append_dependency_floor_ci_bundle_results(dependent_members:, runner:, memo:)
         return unless execute && publish
         return if dependent_members.empty?
 
-        dependent_members.each do |member|
+        dependent_members.each do |member, released_members|
           dependency_floor_ci_bundle_gemfiles(member).each do |gemfile|
             memo << wait_for_dependency_floor_ci_bundle_result(member: member, gemfile: gemfile, released_members: released_members, runner: runner)
             break unless memo.last.ok?
