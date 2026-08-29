@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Avoid refreshing inactive conditional Gemfile dependencies during release lockfile reconciliation.
 
+- Avoid probing inactive conditional Gemfile dependencies before release reconciliation.
+
 ### Security
 
 ## [1.2.63] - 2026-08-28

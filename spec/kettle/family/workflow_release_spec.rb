@@ -1903,6 +1903,33 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:active_release_dependencies_for, beta, [alpha, optional])).to eq([alpha])
   end
 
+  it "does not probe inactive conditional Gemfile dependencies before a resumed publish" do
+    write_release_config(release_env: {"KETTLE_DEV_DEV" => "false"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    optional = ready_member_with_gemspec("optional", version: "4.5.6")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => [">= 1.0.0"]})
+    File.write(File.join(beta.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gemspec
+      gem "optional" unless ENV.fetch("KETTLE_DEV_DEV", "false") == "false"
+    RUBY
+    beta.release_dependencies = %w[alpha optional]
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [beta],
+      family_members: [alpha, optional, beta],
+      execute: true,
+      publish: true
+    )
+
+    allow(workflow).to receive(:released_version?).with("alpha", "1.2.3").and_return(true)
+    expect(workflow).not_to receive(:released_version?).with("optional", "4.5.6")
+
+    expect(workflow.send(:published_family_dependencies_for, [beta])).to eq([alpha])
+  end
+
   it "retries dependent bundle refreshes after just-published dependency floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)
@@ -2687,9 +2714,8 @@ RSpec.describe Kettle::Family::Workflow do
   def ready_member(name, changelog: true, dependencies: [], release_dependencies: nil, version_file: nil)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))
-    %w[Gemfile Rakefile README.md LICENSE.md].each do |path|
-      File.write(File.join(root, path), "stub\n")
-    end
+    File.write(File.join(root, "Gemfile"), "source \"https://gem.coop\"\n")
+    %w[Rakefile README.md LICENSE.md].each { |path| File.write(File.join(root, path), "stub\n") }
     File.write(File.join(root, "CHANGELOG.md"), "## [Unreleased]\n") if changelog
     %w[bin/rake bin/rspec].each do |path|
       full_path = File.join(root, path)

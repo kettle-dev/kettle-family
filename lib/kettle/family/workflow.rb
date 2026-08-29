@@ -1476,7 +1476,9 @@ module Kettle
       # next release wave so those already-published versions still update
       # sibling floors and lockfiles.
       def published_family_dependencies_for(release_members)
-        dependency_names = release_members.flat_map { |member| release_dependency_names(member) }.uniq
+        dependency_names = release_members.flat_map do |member|
+          publish ? active_release_dependency_names(member) : release_dependency_names(member)
+        end.uniq
         family_members_by_name = family_members.to_h { |member| [member.name, member] }
         dependency_names.filter_map do |dependency_name|
           member = family_members_by_name[dependency_name]
@@ -1557,8 +1559,14 @@ module Kettle
         gemfile_candidates = released_members.reject { |released_member| runtime_names.include?(released_member.name) }
         return released_members if gemfile_candidates.empty?
 
-        active_names = runtime_names + active_release_gemfile_dependency_names(member)
+        active_names = active_release_dependency_names(member)
         released_members.select { |released_member| active_names.include?(released_member.name) }
+      end
+
+      def active_release_dependency_names(member)
+        (Array(member.dependencies).map(&:to_s) + active_release_gemfile_dependency_names(member)).reject do |name|
+          name == member.name
+        end
       end
 
       def active_release_gemfile_dependency_names(member)
