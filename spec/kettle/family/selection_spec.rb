@@ -92,6 +92,13 @@ RSpec.describe Kettle::Family::Selection do
     expect { selection.apply(only: "pending,alpha") }.to raise_error(Kettle::Family::Error, /cannot be combined with member names: alpha/)
   end
 
+  it "rejects release-state selection when a state probe failed" do
+    failed_result = release_state("alpha", {"pending_release" => true}, {status: 1, success: false})
+    selection = described_class.new(members: [member("alpha")], release_state_results: [failed_result])
+
+    expect { selection.apply(only: "pending") }.to raise_error(Kettle::Family::Error, /release-state check failed for: alpha/)
+  end
+
   it "excludes comma-separated members from the family order" do
     selected = described_class.new(members: [member("alpha"), member("beta"), member("gamma")]).apply(exclude: "beta, gamma")
 
@@ -134,13 +141,13 @@ RSpec.describe Kettle::Family::Selection do
     expect { selection.apply }.to raise_error(Kettle::Family::Error, /selection is empty/)
   end
 
-  def release_state(member_name, state)
+  def release_state(member_name, state, options = {})
     Kettle::Family::ReleaseStateResult.new(
       member_name: member_name,
       command: %w[kettle-changelog --release-state --json],
       workdir: member_name,
-      status: 0,
-      success: true,
+      status: options.fetch(:status, 0),
+      success: options.fetch(:success, true),
       stdout: "",
       stderr: "",
       elapsed_seconds: 0.0,

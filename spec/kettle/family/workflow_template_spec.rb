@@ -565,6 +565,10 @@ RSpec.describe Kettle::Family::Workflow do
   it "preserves an inherited family local path env during template prepare and recovery" do
     allow(ENV).to receive(:key?).and_call_original
     allow(ENV).to receive(:fetch).and_call_original
+    allow(ENV).to receive(:each).and_wrap_original do |original, &block|
+      original.call(&block)
+      block.call(family_local_env_name, "/workspace/family")
+    end
     allow(ENV).to receive(:key?).with(family_local_env_name).and_return(true)
     allow(ENV).to receive(:fetch).with(family_local_env_name).and_return("/workspace/family")
     config = Kettle::Family::Config.load(root: @tmpdir)

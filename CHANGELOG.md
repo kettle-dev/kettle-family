@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Validate mixed release-state selectors before probing member release state.
+
 ### Security
 
 ## [1.2.64] - 2026-08-29

@@ -326,6 +326,7 @@ RSpec.describe Kettle::Family::CLI do
 
   it "rejects release-state status tokens mixed with member names" do
     write_ready_gem("alpha")
+    expect(Kettle::Family::ReleaseStateCheck).not_to receive(:new)
     err = StringIO.new
 
     status = described_class.call(["release", "--root", @tmpdir, "--only", "pending,alpha"], out: StringIO.new, err: err)

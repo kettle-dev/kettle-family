@@ -21,6 +21,15 @@ module Kettle
         STATUS_TOKEN_KEYS.key?(value.to_s)
       end
 
+      def self.validate_release_state_only_filter!(only)
+        names = only.to_s.split(",").map(&:strip).reject(&:empty?)
+        status_tokens = names.select { |name| status_token?(name) }
+        return if status_tokens.empty?
+
+        member_names = names - status_tokens
+        raise Error, "--only release-state tokens cannot be combined with member names: #{member_names.join(", ")}" unless member_names.empty?
+      end
+
       def initialize(members:, release_state_results: nil, shared_version: false)
         @members = members
         @release_state_results = release_state_results
@@ -47,8 +56,7 @@ module Kettle
 
         status_tokens = names.select { |name| self.class.status_token?(name) }
         unless status_tokens.empty?
-          member_names = names - status_tokens
-          raise Error, "--only release-state tokens cannot be combined with member names: #{member_names.join(", ")}" unless member_names.empty?
+          self.class.validate_release_state_only_filter!(only)
 
           return select_release_state_status(selected, status_tokens)
         end

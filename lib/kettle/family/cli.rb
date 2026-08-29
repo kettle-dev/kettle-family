@@ -687,6 +687,7 @@ module Kettle
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
         end
         state_event_tape = release_state_event_tape(command: command, config: config, options: options)
+        Selection.validate_release_state_only_filter!(effective_only)
         release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only, jobs: options[:jobs])
         selected = Selection.new(
           members: ordered,

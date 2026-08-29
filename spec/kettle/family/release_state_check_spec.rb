@@ -77,6 +77,19 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(worker.value).to eq(%w[alpha beta])
   end
 
+  it "leaves release state unchanged when the member root is not a Git worktree" do
+    state = {"version" => "1.2.4", "latest_released" => "1.2.3"}
+    check = described_class.new(members: [])
+
+    expect(check.send(:enrich_git_state, @tmpdir, state)).to eq(state)
+  end
+
+  it "does not infer a GitHub repository for a root without Git remotes" do
+    check = described_class.new(members: [])
+
+    expect(check.send(:github_repo_slug, @tmpdir)).to be_nil
+  end
+
   it "defaults state checks to at most four jobs" do
     allow(Etc).to receive(:nprocessors).and_return(22)
     check = described_class.new(members: Array.new(6) { |index| member("member-#{index}") })
