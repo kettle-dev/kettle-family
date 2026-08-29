@@ -1978,6 +1978,44 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).to have_received(:sleep).with(15).twice
   end
 
+  it "renders startup dependency-floor retry progress before release waves begin" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    progress = StringIO.new
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [alpha, beta],
+      execute: true,
+      publish: true,
+      commit: false,
+      progress_io: progress
+    )
+    allow(workflow).to receive(:released_version?).with("alpha", "1.2.3").and_return(true)
+    runner = lambda do |member:, phase:, command:, **_options|
+      if phase == "dependency_floor_lockfiles"
+        File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+          GEM
+            specs:
+              alpha (1.2.3)
+
+          CHECKSUMS
+            alpha (1.2.3) sha256=abc123
+        LOCK
+      end
+      Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, "", "", 0.0, false, nil)
+    end
+    allow(workflow).to receive(:release_command_runner).and_return(runner)
+
+    workflow.send(:release_dependency_floor_reconciliation_results, [beta])
+
+    expect(progress.string).to include("reconciling dependency floors for 1 member with 1 job:")
+    expect(progress.string).to include("dependency floors")
+    expect(progress.string).to include("lockfiles 1/15")
+  end
+
   it "validates direct CI appraisal gemfiles after just-published dependency floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)

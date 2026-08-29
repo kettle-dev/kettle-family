@@ -1461,14 +1461,43 @@ module Kettle
         published_members = published_family_dependencies_for(release_members)
         return [] if published_members.empty?
 
-        results = []
-        append_dependency_floor_results(
-          released_members: published_members,
-          dependent_members: release_members,
-          runner: release_command_runner,
-          memo: results
+        with_dependency_floor_progress(release_members) do
+          results = []
+          append_dependency_floor_results(
+            released_members: published_members,
+            dependent_members: release_members,
+            runner: release_command_runner,
+            memo: results
+          )
+          results
+        end
+      end
+
+      # Startup reconciliation happens before release waves initialize their
+      # progress renderer. Give its retrying Bundler work a dedicated renderer
+      # so registry propagation is visible instead of appearing hung.
+      def with_dependency_floor_progress(release_members)
+        return yield if @release_progress
+
+        progress = start_dependency_floor_progress(release_members)
+        @release_progress = progress
+        yield
+      ensure
+        progress&.finish
+        @release_progress = nil if progress
+      end
+
+      def start_dependency_floor_progress(release_members)
+        progress = WorkflowProgress.new(
+          io: progress_io,
+          label: "reconciling dependency floors for",
+          total: release_members.length,
+          jobs: 1,
+          members: release_members
         )
-        results
+        progress.start
+        release_members.each { |member| progress.start_member(member, total: 0, status: "dependency floors") }
+        progress
       end
 
       # A resumed --only pend release no longer includes members that finished
