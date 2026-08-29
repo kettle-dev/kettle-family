@@ -28,16 +28,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Validate mixed release-state selectors before probing member release state.
-
 ### Security
 
 ## [1.2.64] - 2026-08-29
 
 - TAG: [v1.2.64][1.2.64t]
-- COVERAGE: 93.11% -- 5378/5776 lines in 33 files
-- BRANCH COVERAGE: 76.03% -- 2169/2853 branches in 33 files
-- 29.81% documented
+- COVERAGE: 93.10% -- 5383/5782 lines in 33 files
+- BRANCH COVERAGE: 76.04% -- 2171/2855 branches in 33 files
+- 30.00% documented
 
 ### Changed
 
@@ -52,6 +50,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Show dependency-floor reconciliation retries before release waves begin.
 
 - Refresh each CI dependency bundle only for family dependencies declared by that bundle.
+
+- Validate mixed release-state selectors before probing member release state.
 
 ## [1.2.63] - 2026-08-28
 

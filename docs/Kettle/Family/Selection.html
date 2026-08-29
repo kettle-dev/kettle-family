@@ -187,6 +187,29 @@
 </li>
 
       
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#validate_release_state_only_filter!-class_method" title="validate_release_state_only_filter! (class method)">.<strong>validate_release_state_only_filter!</strong>(only)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
     </ul>
     
   
@@ -277,14 +300,14 @@
       <pre class="lines">
 
 
-24
-25
-26
-27
-28</pre>
+33
+34
+35
+36
+37</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 24</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 33</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>release_state_results:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>shared_version:</span> <span class='kw'>false</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
@@ -386,6 +409,69 @@
 </table>
 </div>
     
+      <div class="method_details ">
+  <h3 class="signature " id="validate_release_state_only_filter!-class_method">
+  
+    .<strong>validate_release_state_only_filter!</strong>(only)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt><span class='object_link'><a href="Error.html" title="Kettle::Family::Error (class)">Error</a></span></tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+24
+25
+26
+27
+28
+29
+30
+31</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 24</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_validate_release_state_only_filter!'>validate_release_state_only_filter!</span><span class='lparen'>(</span><span class='id identifier rubyid_only'>only</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_names'>names</span> <span class='op'>=</span> <span class='id identifier rubyid_only'>only</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_split'>split</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>,</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:strip</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_reject'>reject</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:empty?</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_status_tokens'>status_tokens</span> <span class='op'>=</span> <span class='id identifier rubyid_names'>names</span><span class='period'>.</span><span class='id identifier rubyid_select'>select</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_name'>name</span><span class='op'>|</span> <span class='id identifier rubyid_status_token?'>status_token?</span><span class='lparen'>(</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+  <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_status_tokens'>status_tokens</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
+  <span class='id identifier rubyid_member_names'>member_names</span> <span class='op'>=</span> <span class='id identifier rubyid_names'>names</span> <span class='op'>-</span> <span class='id identifier rubyid_status_tokens'>status_tokens</span>
+  <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="Error.html" title="Kettle::Family::Error (class)">Error</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>--only release-state tokens cannot be combined with member names: </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_member_names'>member_names</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>, </span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>unless</span> <span class='id identifier rubyid_member_names'>member_names</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
   </div>
 
   <div id="instance_method_details" class="method_details_list">
@@ -430,18 +516,18 @@
       <pre class="lines">
 
 
-30
-31
-32
-33
-34
-35
-36
-37
-38</pre>
+39
+40
+41
+42
+43
+44
+45
+46
+47</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 30</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 39</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_apply'>apply</span><span class='lparen'>(</span><span class='label'>only:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>exclude:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>start_at:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_selected'>selected</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
