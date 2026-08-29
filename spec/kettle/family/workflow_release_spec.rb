@@ -2089,6 +2089,27 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).not_to have_received(:sleep)
   end
 
+  it "excludes root-Gemfile-only family dependencies from an appraisal CI bundle refresh" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    nomono = ready_member_with_gemspec("nomono", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    beta.release_dependencies = %w[alpha nomono]
+    File.write(File.join(beta.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gemspec
+      gem "nomono"
+    RUBY
+    appraisal_gemfile = File.join(beta.root, "Appraisal.root.gemfile")
+    File.write(appraisal_gemfile, "source \"https://gem.coop\"\ngemspec\n")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, nomono, beta], execute: true, publish: true)
+
+    active_members = workflow.send(:active_release_dependencies_for_gemfile, beta, appraisal_gemfile, [alpha, nomono])
+
+    expect(active_members).to eq([alpha])
+  end
+
   it "stops before releasing a dependent when direct CI appraisal gemfiles cannot resolve just-published floors" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)

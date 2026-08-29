@@ -1593,28 +1593,29 @@ module Kettle
       end
 
       def active_release_dependency_names(member)
-        (Array(member.dependencies).map(&:to_s) + active_release_gemfile_dependency_names(member)).reject do |name|
+        active_release_dependency_names_for_gemfile(member, File.join(member.root, "Gemfile"))
+      end
+
+      def active_release_dependency_names_for_gemfile(member, gemfile)
+        (Array(member.dependencies).map(&:to_s) + active_release_gemfile_dependency_names(member, gemfile)).reject do |name|
           name == member.name
         end
       end
 
-      def active_release_gemfile_dependency_names(member)
-        gemfile = File.join(member.root, "Gemfile")
+      def active_release_gemfile_dependency_names(member, gemfile = File.join(member.root, "Gemfile"))
         return [] unless File.file?(gemfile)
 
         script = <<~RUBY
           require "bundler"
-          dsl = Bundler::Dsl.evaluate(ARGV.fetch(0), ARGV.fetch(1), {})
+          dsl = Bundler::Dsl.evaluate(ARGV.fetch(0), nil, {})
           puts dsl.dependencies.map(&:name)
         RUBY
-        lockfile = File.join(member.root, "Gemfile.lock")
         stdout, stderr, status = Open3.capture3(
           release_lockfile_env(member).compact,
           RbConfig.ruby,
           "-e",
           script,
           gemfile,
-          lockfile,
           chdir: member.root
         )
         unless status.success?
@@ -1640,7 +1641,10 @@ module Kettle
 
         dependent_members.each do |member, released_members|
           dependency_floor_ci_bundle_gemfiles(member).each do |gemfile|
-            memo << wait_for_dependency_floor_ci_bundle_result(member: member, gemfile: gemfile, released_members: released_members, runner: runner)
+            gemfile_released_members = active_release_dependencies_for_gemfile(member, gemfile, released_members)
+            next if gemfile_released_members.empty?
+
+            memo << wait_for_dependency_floor_ci_bundle_result(member: member, gemfile: gemfile, released_members: gemfile_released_members, runner: runner)
             break unless memo.last.ok?
           end
           break if memo.any? && !memo.last.ok?
@@ -1768,6 +1772,11 @@ module Kettle
         workflow_bundle_gemfiles(member).select do |gemfile|
           File.file?(gemfile)
         end.uniq.sort
+      end
+
+      def active_release_dependencies_for_gemfile(member, gemfile, released_members)
+        active_names = active_release_dependency_names_for_gemfile(member, gemfile)
+        released_members.select { |released_member| active_names.include?(released_member.name) }
       end
 
       def workflow_bundle_gemfiles(member)
