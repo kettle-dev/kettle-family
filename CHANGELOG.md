@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Block release execution before family changelog generation when a selected member still requires a version bump.
+
 ### Security
 
 ## [1.2.68] - 2026-08-30
