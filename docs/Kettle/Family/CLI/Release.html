@@ -265,8 +265,6 @@
       <pre class="lines">
 
 
-558
-559
 560
 561
 562
@@ -289,10 +287,13 @@
 579
 580
 581
-582</pre>
+582
+583
+584
+585</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 558</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 560</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_run'>run</span><span class='lparen'>(</span><span class='op'>*</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_unexpected_arguments!'>unexpected_arguments!</span><span class='lparen'>(</span><span class='id identifier rubyid_args'>args</span><span class='rparen'>)</span>
@@ -305,6 +306,7 @@
     <span class='label'>release_fast_recovery_members:</span> <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:fast_recovery_members</span><span class='rbracket'>]</span><span class='comma'>,</span>
     <span class='label'>release_skip_ci:</span> <span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:skip_ci</span><span class='rparen'>)</span><span class='comma'>,</span>
     <span class='label'>release_skip_changelog:</span> <span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:skip_changelog</span><span class='rparen'>)</span><span class='comma'>,</span>
+    <span class='label'>release_skip_appraisals:</span> <span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:skip_appraisals</span><span class='rparen'>)</span><span class='comma'>,</span>
     <span class='label'>release_local_ci:</span> <span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:local_ci</span><span class='rparen'>)</span><span class='comma'>,</span>
     <span class='label'>release_continue_ci_failures:</span> <span class='id identifier rubyid_truthy_option?'>truthy_option?</span><span class='lparen'>(</span><span class='symbol'>:continue_ci_failures</span><span class='rparen'>)</span><span class='comma'>,</span>
     <span class='label'>release_ci_workflows:</span> <span class='id identifier rubyid_options'>options</span><span class='lbracket'>[</span><span class='symbol'>:ci_workflows</span><span class='rbracket'>]</span><span class='comma'>,</span>

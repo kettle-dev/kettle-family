@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.824-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.853-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -577,6 +577,12 @@ metadata fix requires a new full release run from step 0:</p>
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --start-step 10 --local-ci
 </code></pre>
 
+<p><code>--skip-changelog</code> skips only <code>kettle-changelog</code>; <code>--skip-appraisals</code> skips<br>
+only the Appraisal generation portion of release step 5 and still runs<br>
+<code>bin/rake yard</code>; and <code>--skip-ci</code> skips only remote CI monitoring. The generic<br>
+<code>--skip-steps LIST</code> remains available when a numbered release step is the<br>
+intended boundary.</p>
+
 <p>Executed publish runs skip versions that are already published. CI failures<br>
 abort by default; pass <code>--continue-ci-failures</code> to set<br>
 <code>K_RELEASE_CI_CONTINUE=true</code> for the underlying <code>kettle-release</code> process.<br>
@@ -975,9 +981,12 @@ Executed family resets fail if the resulting lockfiles still contain sibling<br>
 path remotes or checksum gaps.</p>
 
 <p>Resume a failed family publish after fixing the failure. Already published<br>
-versions are skipped automatically; <code>start_step</code> is passed to <code>kettle-release</code><br>
-for unreleased members that still need work. Use <code>--start-step</code> only after the<br>
-pre-release gate already passed or the failure was intentionally handled:</p>
+versions are skipped automatically. A release report gives a member-scoped<br>
+resume command for each failed child, including the recorded <code>--start-step</code><br>
+when the child emitted a failed release-step event. Run those commands one at a<br>
+time. If any members were never started, the report also gives a separate<br>
+normal-flow command for exactly those members. Use <code>--start-step</code> only after<br>
+the pre-release gate already passed or the failure was intentionally handled:</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --execute --start-step 10
 </code></pre>

@@ -22,28 +22,30 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- [kc] release-recovery-docs: Clarify direct release recovery from later steps.
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
-- Emit member-scoped family release recovery commands from failed child release steps.
-
 ### Security
 
 ## [1.2.67] - 2026-08-30
 
 - TAG: [v1.2.67][1.2.67t]
-- COVERAGE: 93.13% -- 5424/5824 lines in 33 files
-- BRANCH COVERAGE: 76.10% -- 2194/2883 branches in 33 files
-- 30.13% documented
+- COVERAGE: 93.17% -- 5453/5853 lines in 33 files
+- BRANCH COVERAGE: 76.13% -- 2210/2903 branches in 33 files
+- 30.32% documented
 
 ### Changed
 
 - Add configurable aggregate release validation that runs shared changelog coverage and one monitored CI validation while preserving excluded independent members.
+
+- [kc] release-recovery-docs: Clarify direct release recovery from later steps.
+
+### Fixed
+
+- Emit member-scoped family release recovery commands from failed child release steps.
 
 ## [1.2.66] - 2026-08-30
 
