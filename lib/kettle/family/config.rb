@@ -266,6 +266,23 @@ module Kettle
         fetch_path("release", "local_path_strategy").to_s
       end
 
+      def release_allowed_local_path_roots
+        inferred = configured_monorepo_release? ? [family_local_path_root] : []
+        configured = Array(fetch_path("release", "allowed_local_path_roots"))
+          .map { |path| expand_config_relative_path(path) }
+        (inferred + configured).uniq
+      end
+
+      def release_allowed_local_path_env_names
+        inferred = configured_monorepo_release? ? [family_local_path_env_name] : []
+        configured = Array(fetch_path("release", "allowed_local_path_env"))
+        (inferred + configured).compact.map(&:to_s).reject(&:empty?).uniq
+      end
+
+      def configured_monorepo_release?
+        fetch_path("family", "mode") == "monorepo"
+      end
+
       def release_secrets
         stringify_keys(fetch_path("release", "secrets") || {})
       end

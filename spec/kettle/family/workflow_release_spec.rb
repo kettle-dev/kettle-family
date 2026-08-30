@@ -223,6 +223,32 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "derives a monorepo-only local path policy for member releases" do
+    monorepo_gems = File.join(@tmpdir, "gems")
+    FileUtils.mkdir_p(monorepo_gems)
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump(
+        "family" => {
+          "name" => "structuredmerge-ruby",
+          "mode" => "monorepo",
+          "local_path_env" => "STRUCTUREDMERGE_DEV",
+          "members_root" => "gems"
+        }
+      )
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+
+    expect(workflow.send(:release_env_for_member, member)).to include(
+      "STRUCTUREDMERGE_DEV" => monorepo_gems,
+      "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ROOTS" => monorepo_gems,
+      "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ENVS" => "STRUCTUREDMERGE_DEV"
+    )
+    expect(workflow.send(:release_allowed_local_path_roots)).to eq([monorepo_gems])
+  end
+
   it "uses the configured monorepo member root for the shared changelog suite by default" do
     write_release_config(
       changelog: {
@@ -566,7 +592,8 @@ RSpec.describe Kettle::Family::Workflow do
       release_env: {
         family_local_env_name => false,
         "KETTLE_DEV_DEV" => false
-      }
+      },
+      release_allowed_local_path_roots: [local_root]
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
@@ -1395,7 +1422,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
 
     roots = workflow.send(:release_allowed_local_path_roots)
-    expect(roots).to include(local_root)
+    expect(roots).not_to include(local_root)
     expect(roots).not_to include("enabled", "1")
   end
 
@@ -1418,11 +1445,14 @@ RSpec.describe Kettle::Family::Workflow do
     expect(lockfile_env).to include("RUBY_OAUTH_DEV" => "false")
   end
 
-  it "allows release readiness to use explicitly requested local source roots" do
-    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+  it "allows release readiness to use explicitly configured local source roots" do
+    local_root = File.join(@tmpdir, "rubocop-lts")
+    write_release_config(
+      build_command: [RbConfig.ruby, "-e", "puts 'build'"],
+      release_allowed_local_path_roots: [local_root]
+    )
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
-    local_root = File.join(@tmpdir, "rubocop-lts")
     FileUtils.mkdir_p(File.join(local_root, "rubocop-ruby3_2"))
     File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(local_root, "rubocop-ruby3_2")}\n")
 
@@ -1430,16 +1460,17 @@ RSpec.describe Kettle::Family::Workflow do
       command: "release",
       config: config,
       members: [member],
-      env_overrides: {
-        "RUBOCOP_LTS_LOCAL" => local_root
-      }
+      env_overrides: {"RUBOCOP_LTS_LOCAL" => local_root}
     ).results
 
     expect(results.find { |result| result.phase == "check" }).to be_ok
   end
 
-  it "allows implicit family-local lockfile paths during release readiness" do
-    write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
+  it "allows configured family-local lockfile paths during release readiness" do
+    write_release_config(
+      build_command: [RbConfig.ruby, "-e", "puts 'build'"],
+      release_allowed_local_path_roots: [@tmpdir]
+    )
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
     File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(@tmpdir, "beta")}\n")
@@ -2740,7 +2771,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil, release_allowed_local_path_roots: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -2754,6 +2785,7 @@ RSpec.describe Kettle::Family::Workflow do
     release["required_remotes"] = required_remotes if required_remotes
     release["normalize_lockfiles"] = release_normalize_lockfiles unless release_normalize_lockfiles.nil?
     release["waves"] = release_waves if release_waves
+    release["allowed_local_path_roots"] = release_allowed_local_path_roots if release_allowed_local_path_roots
     config = {"release" => release}
     config["template"] = template if template
     config["check"] = check if check

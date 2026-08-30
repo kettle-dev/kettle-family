@@ -252,21 +252,30 @@ release:
 ```
 
 `family.local_path_env` names the environment variable that activates local
-path dependencies for this family. It is the family identity used by other
-families when they scan lockfile `PATH` remotes and need to disable local
-resolution before writing CI-facing release lockfiles. Configure it when the
-env name is not the default derived from `family.name`.
+path dependencies for this family. For an explicitly configured
+`family.mode: monorepo`, `kettle-family` derives a release-lock policy that
+allows only `family.members_root` (or the configured member root) and passes
+that policy to each `kettle-release` child. Those paths are valid because the
+same monorepo checkout exists in CI. The tracked `Gemfile.lock` remains a
+development lockfile and may retain those member `PATH` sources.
+
+Sibling-repository families do not receive this exception. Their canonical
+lockfiles must use released dependencies: a local Kettle Dev workspace, or
+any other sibling workspace, is never allowed merely because its `*_DEV`
+variable is set. Use `release.allowed_local_path_roots` together with
+`release.allowed_local_path_env` only for an intentionally CI-available path
+layout that cannot be inferred from a monorepo configuration.
 
 `release.disable_local_path_env` is different: it is an extra release-lockfile
 normalization shutoff list for path-injecting env vars that are not themselves
 discoverable as family roots, such as vendored parser/tooling paths.
 
-`release.local_path_strategy: waves` allows a release task to provide the
-family local-path environment as its default. Member release commands keep
-that path only while they have a selected sibling dependency that has not
-completed an earlier release wave; once the dependency is available, the
-member resolves it from the registry. Release lockfile normalization always
-disables local paths regardless of this strategy.
+`release.local_path_strategy: waves` is for sibling families that explicitly
+choose wave-local development resolution. An explicit monorepo instead keeps
+its configured member-root path available throughout its waves, because its
+canonical development lockfile and CI checkout share that path graph. In both
+cases, release normalization rejects every path outside the configured allow
+list.
 
 ### Release waves and dependency refresh
 

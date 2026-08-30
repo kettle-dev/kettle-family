@@ -2349,6 +2349,7 @@ module Kettle
       def release_env_for_member(member)
         env = release_env
         env.merge!(release_wave_local_path_env_for(member))
+        env.merge!(release_local_path_policy_env)
         # Family release performs one live pin review before member releases.
         # Child kettle-release must consume that reviewed cache instead of
         # repeating the GitHub API lookup for every member.
@@ -2412,6 +2413,14 @@ module Kettle
       # already treated as registry dependencies; this is what makes resume
       # runs work after an earlier wave has been published.
       def release_wave_local_path_env_for(member)
+        # Monorepo members and their sibling dependencies share the same CI
+        # checkout, so their canonical development lockfile may keep those
+        # paths throughout every release wave.
+        if config.configured_monorepo_release?
+          env_name = config.family_local_path_env_name
+          return env_name ? {env_name => config.family_local_path_root} : {}
+        end
+
         return {} unless config.release_local_path_strategy == "waves"
 
         env_name = config.family_local_path_env_name
@@ -4034,15 +4043,22 @@ module Kettle
       end
 
       def release_allowed_local_path_roots
-        # Release env disables are passed to Bundler normalization, but they
-        # must not hide the active workspace roots from readiness diagnostics.
-        release_local_path_env_detection_sources.filter_map do |key, value|
-          next unless key.end_with?("_LOCAL", "_DEV")
-          next unless local_path_env_value?(value)
-          next unless value.to_s.strip.start_with?("/", "./", "../", "~")
+        config.release_allowed_local_path_roots
+      end
 
-          value
-        end
+      def release_allowed_local_path_env_names
+        config.release_allowed_local_path_env_names
+      end
+
+      def release_local_path_policy_env
+        roots = release_allowed_local_path_roots
+        env_names = release_allowed_local_path_env_names
+        return {} if roots.empty? && env_names.empty?
+
+        {
+          "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ROOTS" => roots.join(File::PATH_SEPARATOR),
+          "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ENVS" => env_names.join(",")
+        }
       end
 
       def release_lockfile_local_path_env_overrides(member = nil)
@@ -4051,11 +4067,18 @@ module Kettle
           key = key.to_s
           next unless key.end_with?("_LOCAL", "_DEV")
           next unless local_path_env_value?(value)
+          next if release_allowed_local_path_env_names.include?(key)
 
           memo[key] = "false"
         end
         inferred = member ? release_lockfile_inferred_local_path_env(member).to_h { |key| [key, "false"] } : {}
-        explicit.merge(derived).merge(inferred)
+        explicit.merge(derived).merge(inferred).merge(release_member_local_path_env(member))
+      end
+
+      def release_member_local_path_env(member)
+        return {} unless config.configured_monorepo_release?
+
+        release_wave_local_path_env_for(member)
       end
 
       def release_lockfile_inferred_local_path_env(member)

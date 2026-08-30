@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Derive monorepo release lockfile path policy from family configuration and keep sibling tool paths opt-in.
+
 ### Security
 
 ## [1.2.65] - 2026-08-30
