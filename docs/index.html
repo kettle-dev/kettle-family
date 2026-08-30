@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.782-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.804-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -449,21 +449,30 @@ release:
 </code></pre>
 
 <p><code>family.local_path_env</code> names the environment variable that activates local<br>
-path dependencies for this family. It is the family identity used by other<br>
-families when they scan lockfile <code>PATH</code> remotes and need to disable local<br>
-resolution before writing CI-facing release lockfiles. Configure it when the<br>
-env name is not the default derived from <code>family.name</code>.</p>
+path dependencies for this family. For an explicitly configured<br>
+<code>family.mode: monorepo</code>, <code>kettle-family</code> derives a release-lock policy that<br>
+allows only <code>family.members_root</code> (or the configured member root) and passes<br>
+that policy to each <code>kettle-release</code> child. Those paths are valid because the<br>
+same monorepo checkout exists in CI. The tracked <code>Gemfile.lock</code> remains a<br>
+development lockfile and may retain those member <code>PATH</code> sources.</p>
+
+<p>Sibling-repository families do not receive this exception. Their canonical<br>
+lockfiles must use released dependencies: a local Kettle Dev workspace, or<br>
+any other sibling workspace, is never allowed merely because its <code>*_DEV</code><br>
+variable is set. Use <code>release.allowed_local_path_roots</code> together with<br>
+<code>release.allowed_local_path_env</code> only for an intentionally CI-available path<br>
+layout that cannot be inferred from a monorepo configuration.</p>
 
 <p><code>release.disable_local_path_env</code> is different: it is an extra release-lockfile<br>
 normalization shutoff list for path-injecting env vars that are not themselves<br>
 discoverable as family roots, such as vendored parser/tooling paths.</p>
 
-<p><code>release.local_path_strategy: waves</code> allows a release task to provide the<br>
-family local-path environment as its default. Member release commands keep<br>
-that path only while they have a selected sibling dependency that has not<br>
-completed an earlier release wave; once the dependency is available, the<br>
-member resolves it from the registry. Release lockfile normalization always<br>
-disables local paths regardless of this strategy.</p>
+<p><code>release.local_path_strategy: waves</code> is for sibling families that explicitly<br>
+choose wave-local development resolution. An explicit monorepo instead keeps<br>
+its configured member-root path available throughout its waves, because its<br>
+canonical development lockfile and CI checkout share that path graph. In both<br>
+cases, release normalization rejects every path outside the configured allow<br>
+list.</p>
 
 <h3 id="release-waves-and-dependency-refresh">Release waves and dependency refresh</h3>
 
