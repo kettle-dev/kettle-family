@@ -2370,7 +2370,11 @@ module Kettle
           # live at the shared repository root.
           env["K_RELEASE_CI_ROOT"] = config.root
           env["K_RELEASE_CI_WORKFLOWS"] ||= "current.yml"
-          env["KETTLE_RELEASE_SKIP_GITHUB_RELEASE"] = "true"
+          # Explicit multi-gem monorepos publish one aggregate GitHub Release
+          # after their member gems. A standalone gem uses the default
+          # monorepo mode too, but must let kettle-release create its own
+          # GitHub Release.
+          env["KETTLE_RELEASE_SKIP_GITHUB_RELEASE"] = "true" if aggregate_monorepo_github_release?
         end
         return env unless config.shared_changelog?
         if config.member_local_changelog?(member)
@@ -2471,6 +2475,10 @@ module Kettle
 
       def explicit_monorepo_mode?
         config.data.dig("family", "mode").to_s == "monorepo"
+      end
+
+      def aggregate_monorepo_github_release?
+        explicit_monorepo_mode? && family_members.length > 1
       end
       # simplecov:enable
 

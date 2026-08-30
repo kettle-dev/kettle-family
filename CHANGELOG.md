@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Create individual GitHub Releases for standalone gems using the default monorepo mode.
+
 ### Security
 
 ## [1.2.64] - 2026-08-29

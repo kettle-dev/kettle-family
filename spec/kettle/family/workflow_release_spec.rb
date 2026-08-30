@@ -36,6 +36,29 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
+  it "lets a standalone default-mode gem create its own GitHub Release" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:release_env_for_member, member)).not_to have_key("KETTLE_RELEASE_SKIP_GITHUB_RELEASE")
+  end
+
+  it "defers GitHub Release creation for selected members of an explicit multi-gem monorepo" do
+    write_release_config
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump("family" => {"name" => "example", "mode" => "monorepo", "members_root" => "gems"})
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    workflow = described_class.new(command: "release", config: config, members: [alpha], family_members: [alpha, beta])
+
+    expect(workflow.send(:release_env_for_member, alpha)).to include("KETTLE_RELEASE_SKIP_GITHUB_RELEASE" => "true")
+  end
+
   it "skips family and member changelog commands when requested" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
