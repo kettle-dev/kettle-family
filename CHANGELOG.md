@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Allow monorepo bundle updates to retain configured in-repository path dependencies.
+
 ### Security
 
 ## [1.2.69] - 2026-08-30

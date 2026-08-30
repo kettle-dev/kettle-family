@@ -4319,14 +4319,11 @@ module Kettle
       end
 
       def bundle_update_lockfile_diagnostics(member)
-        lockfile = File.join(member.root, "Gemfile.lock")
-        return [] unless File.file?(lockfile)
-
-        File.readlines(lockfile).filter_map.with_index(1) do |line, index|
-          next unless line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
-
-          "release lockfile has local path remote at Gemfile.lock:#{index}"
-        end
+        ReadinessCheck.call(
+          member: member,
+          config: config,
+          allowed_local_path_roots: release_allowed_local_path_roots
+        ).stdout.lines.grep(/^release lockfile has local path remote at /).map(&:chomp)
       end
 
       def commit_bex_changes(member:, runner:, memo:)

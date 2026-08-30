@@ -450,6 +450,35 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.stdout).to include("release lockfile has local path remote")
   end
 
+  it "commits monorepo bundle updates that retain paths inside the configured family root" do
+    gems_root = File.join(@tmpdir, "gems")
+    member_root = File.join(gems_root, "alpha")
+    FileUtils.mkdir_p(member_root)
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        mode: monorepo
+        members_root: gems
+        local_path_env: STRUCTUREDMERGE_DEV
+    YAML
+    member = Kettle::Family::Member.new(
+      name: "alpha",
+      root: member_root,
+      gemspec_path: File.join(member_root, "alpha.gemspec"),
+      version: "1.0.0",
+      dependencies: []
+    )
+    write_lockfile(member.root, <<~LOCK)
+      PATH
+        remote: #{gems_root}/beta
+        specs:
+          beta (1.0.0)
+    LOCK
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "bup", config: config, members: [member], execute: true)
+
+    expect(workflow.send(:bundle_update_lockfile_diagnostics, member)).to be_empty
+  end
+
   it "plans named bundle updates when bup args are provided" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
