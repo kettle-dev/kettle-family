@@ -2425,8 +2425,8 @@ module Kettle
         local_kettle_dev = ENV.fetch("KETTLE_DEV_DEV", "").to_s.strip
         env["KETTLE_DEV_DEV"] = local_kettle_dev if kettle_release_command?(raw_release_command) && local_path_env_value?(local_kettle_dev)
         if kettle_release_command?(raw_release_command)
-          local_kettle_dev_gemfile = local_kettle_dev_gemfile_path(local_kettle_dev)
-          env["BUNDLE_GEMFILE"] = local_kettle_dev_gemfile if local_kettle_dev_gemfile
+          release_tool_gemfile = release_tool_gemfile_path(local_kettle_dev)
+          env["BUNDLE_GEMFILE"] = release_tool_gemfile if release_tool_gemfile
         end
         if config.family_mode == "monorepo"
           # Monorepo members release from subdirectories, while CI workflows
@@ -2469,6 +2469,20 @@ module Kettle
           File.join(local_kettle_dev, "Gemfile")
         ]
         candidates.find { |path| File.file?(path) }
+      end
+
+      # A member's development lockfile can pin an older kettle-dev than the
+      # family runner. That older release tool may not understand the current
+      # family policy, notably configured monorepo PATH dependencies. Launch
+      # kettle-release from the family bundle instead; the release tool still
+      # runs member project commands from the member checkout.
+      def release_tool_gemfile_path(local_kettle_dev)
+        local_kettle_dev_gemfile = local_kettle_dev_gemfile_path(local_kettle_dev)
+        return local_kettle_dev_gemfile if local_kettle_dev_gemfile
+        return unless config.configured_monorepo_release?
+
+        family_gemfile = File.join(config.root, "Gemfile")
+        family_gemfile if File.file?(family_gemfile)
       end
 
       # A release task may start with local sibling paths so a member can

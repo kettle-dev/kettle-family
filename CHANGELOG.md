@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Allow monorepo bundle updates to retain configured in-repository path dependencies.
 
+- Launch monorepo member release tools from the family bundle so configured in-repository dependencies remain available across release waves.
+
 ### Security
 
 ## [1.2.69] - 2026-08-30

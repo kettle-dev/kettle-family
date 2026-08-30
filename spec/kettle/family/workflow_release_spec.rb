@@ -278,6 +278,30 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_allowed_local_path_roots)).to eq([monorepo_gems])
   end
 
+  it "launches monorepo member releases from the family tool bundle" do
+    File.write(File.join(@tmpdir, "Gemfile"), "source \"https://gem.coop\"\n")
+    monorepo_gems = File.join(@tmpdir, "gems")
+    FileUtils.mkdir_p(monorepo_gems)
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump(
+        "family" => {
+          "name" => "structuredmerge-ruby",
+          "mode" => "monorepo",
+          "local_path_env" => "STRUCTUREDMERGE_DEV",
+          "members_root" => "gems"
+        }
+      )
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+
+    expect(workflow.send(:release_env_for_member, member)).to include(
+      "BUNDLE_GEMFILE" => File.join(@tmpdir, "Gemfile")
+    )
+  end
+
   it "uses the configured monorepo member root for the shared changelog suite by default" do
     write_release_config(
       changelog: {
