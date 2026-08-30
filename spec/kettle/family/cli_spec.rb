@@ -1336,6 +1336,36 @@ RSpec.describe Kettle::Family::CLI do
     expect(report.fetch("results").map { |result| result.fetch("phase") }).to include("release_publish")
   end
 
+  it "replays release options in a failed publish resume hint" do
+    write_ready_gem("alpha")
+    failed_result = Kettle::Family::CommandResult.new(
+      "alpha",
+      "release_publish",
+      ["bundle", "exec", "kettle-release"],
+      File.join(@tmpdir, "alpha"),
+      1,
+      false,
+      "",
+      "",
+      0.0,
+      false,
+      "command failed"
+    )
+    workflow = instance_double(Kettle::Family::Workflow, results: [failed_result])
+    allow(Kettle::Family::Workflow).to receive(:new).and_return(workflow)
+    out = StringIO.new
+
+    status = described_class.call(
+      ["release", "--root", @tmpdir, "--only", "alpha", "--publish", "--secrets-provider", "op", "--skip-ci", "--env", "RELEASE_CHANNEL=stable", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(1)
+    report = JSON.parse(out.string)
+    expect(report.fetch("resume_hint")).to eq("kettle-family release --execute --publish --secrets-provider op --skip-ci --env RELEASE_CHANNEL=stable --only alpha")
+  end
+
   it "prints release execution intent before release preflight progress" do
     write_ready_gem("alpha")
     File.write(

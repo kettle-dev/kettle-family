@@ -740,6 +740,7 @@ module Kettle
           release_target_branches: release_target_branches(command: command, config: config, start_at: start_at),
           member_release_target_branches: member_release_target_branches(command: command, members: selected, config: config, start_at: start_at),
           release_mode: release_mode(command: command, options: options),
+          release_resume_arguments: release_resume_arguments(command: command, options: options),
           command: command,
           results: results,
           warnings: discovery.warnings,
@@ -1282,6 +1283,33 @@ module Kettle
         return unless command == "release"
 
         options[:publish] ? "publish" : "build-only"
+      end
+
+      def release_resume_arguments(command:, options:)
+        return [] unless command == "release"
+
+        arguments = []
+        arguments.concat(["--secrets-provider", options[:release_secrets_provider]]) if options[:release_secrets_provider]
+        arguments.concat(["--skip-steps", options[:release_skip_steps]]) if options[:release_skip_steps]
+        arguments << "--skip-ci" if options[:release_skip_ci]
+        arguments << "--skip-changelog" if options[:release_skip_changelog]
+        arguments << "--skip-appraisals" if options[:release_skip_appraisals]
+        arguments << "--local-ci" if options[:release_local_ci]
+        arguments << "--continue-ci-failures" if options[:release_continue_ci_failures]
+        arguments.concat(["--ci-workflows", options[:release_ci_workflows]]) if options[:release_ci_workflows]
+        arguments << "--skip-bundle-audit" if options[:release_skip_bundle_audit]
+        arguments.concat(["--skip-remotes", options[:release_skip_remotes]]) if options[:release_skip_remotes]
+        arguments.concat(["--required-remotes", options[:release_required_remotes]]) if options[:release_required_remotes]
+        arguments << "--no-auto-floors" unless options[:release_auto_dependency_floors]
+        arguments << "--validate-ci-bundles" if options[:release_validate_ci_bundles]
+        arguments << "--no-accept" unless options[:accept]
+        arguments << "--no-commit" unless options[:commit]
+        arguments << "--no-autostash" unless options[:autostash]
+        arguments << "--tag" if options[:tag]
+        arguments << "--push" if options[:push]
+        arguments.concat(["--jobs", options[:jobs].to_s]) if options[:jobs]
+        options[:workflow_env].each { |key, value| arguments.concat(["--env", "#{key}=#{value}"]) }
+        arguments
       end
 
       def release_target_branches(command:, config:, start_at:)

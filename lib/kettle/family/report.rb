@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "shellwords"
 
 module Kettle
   module Family
@@ -30,9 +31,9 @@ module Kettle
         up
       ].freeze
 
-      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode, :warnings, :event_log_dirs
+      attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode, :release_resume_arguments, :warnings, :event_log_dirs
 
-      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, command: nil, results: [], warnings: [], event_log_dirs: [], elapsed_seconds: nil)
+      def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, release_resume_arguments: [], command: nil, results: [], warnings: [], event_log_dirs: [], elapsed_seconds: nil)
         @family_name = family_name
         @family_mode = family_mode
         @order_mode = order_mode
@@ -45,6 +46,7 @@ module Kettle
         @release_target_branches = release_target_branches
         @member_release_target_branches = member_release_target_branches
         @release_mode = release_mode
+        @release_resume_arguments = release_resume_arguments.dup.freeze
         @warnings = warnings
         @event_log_dirs = event_log_dirs
         @elapsed_seconds = elapsed_seconds
@@ -710,8 +712,16 @@ module Kettle
       end
 
       def release_resume_base
-        hint = "kettle-family release --execute"
-        (release_mode == "publish") ? "#{hint} --publish" : hint
+        arguments = ["kettle-family", "release", "--execute"]
+        arguments << "--publish" if release_mode == "publish"
+        shell_join([*arguments, *release_resume_arguments])
+      end
+
+      def shell_join(arguments)
+        arguments.map do |argument|
+          value = argument.to_s
+          value.match?(/\A[A-Za-z0-9_.,:=+\/-]+\z/) ? value : Shellwords.escape(value)
+        end.join(" ")
       end
     end
   end

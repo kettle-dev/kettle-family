@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Replay original release options in member-scoped family release resume hints.
+
 ### Security
 
 ## [1.2.69] - 2026-08-30

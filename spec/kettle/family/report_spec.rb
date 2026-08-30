@@ -639,6 +639,24 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("resume_hints")).to eq(["kettle-family release --execute --publish --only alpha --start-step 15"])
   end
 
+  it "replays relevant release options in member-scoped publish retries" do
+    failed = result("alpha", success: false, reason: "OTP failed")
+    failed.resume_step = 15
+    report = described_class.new(
+      family_name: "example",
+      order_mode: "dependency",
+      members: [member("alpha")],
+      selected_members: [member("alpha")],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      release_resume_arguments: ["--secrets-provider", "op", "--skip-ci", "--env", "RELEASE_CHANNEL=stable"],
+      results: [failed]
+    )
+
+    expect(report.to_h.fetch("resume_hint")).to eq("kettle-family release --execute --publish --secrets-provider op --skip-ci --env RELEASE_CHANNEL=stable --only alpha --start-step 15")
+  end
+
   it "renders a final summary for successful commands" do
     report = described_class.new(
       family_name: "rubocop-lts",

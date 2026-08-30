@@ -699,6 +699,13 @@ time. If any members were never started, the report also gives a separate
 normal-flow command for exactly those members. Use `--start-step` only after
 the pre-release gate already passed or the failure was intentionally handled:
 
+The generated command replays the original release's relevant options, such as
+`--secrets-provider`, release skip controls, CI selection, dependency-floor
+mode, explicit workflow environment values, and non-default commit or prompt
+behavior. It replaces member selection and any original recovery position with
+the failed member and its recorded child step; original `--start-step` and
+fast-recovery selections are not replayed.
+
 ```console
 kettle-family release --publish --execute --start-step 10
 ```
