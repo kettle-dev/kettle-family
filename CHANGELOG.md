@@ -28,22 +28,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Replay original release options in member-scoped family release resume hints.
-
 ### Security
 
 ## [1.2.69] - 2026-08-30
 
 - TAG: [v1.2.69][1.2.69t]
-- COVERAGE: 93.18% -- 5469/5869 lines in 33 files
-- BRANCH COVERAGE: 76.26% -- 2220/2911 branches in 33 files
-- 30.32% documented
+- COVERAGE: 93.22% -- 5500/5900 lines in 33 files
+- BRANCH COVERAGE: 76.36% -- 2255/2953 branches in 33 files
+- 30.50% documented
 
 ### Fixed
 
 - Block release execution before family changelog generation when a selected member still requires a version bump.
 
 - Avoid release-state probes for executed build-only releases.
+
+- Replay original release options in member-scoped family release resume hints.
 
 ## [1.2.68] - 2026-08-30
 
