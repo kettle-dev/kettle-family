@@ -22,11 +22,15 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- [kc] release-recovery-docs: Clarify direct release recovery from later steps.
+
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Emit member-scoped family release recovery commands from failed child release steps.
 
 ### Security
 

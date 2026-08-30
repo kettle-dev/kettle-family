@@ -382,6 +382,12 @@ metadata fix requires a new full release run from step 0:
 kettle-family release --publish --start-step 10 --local-ci
 ```
 
+`--skip-changelog` skips only `kettle-changelog`; `--skip-appraisals` skips
+only the Appraisal generation portion of release step 5 and still runs
+`bin/rake yard`; and `--skip-ci` skips only remote CI monitoring. The generic
+`--skip-steps LIST` remains available when a numbered release step is the
+intended boundary.
+
 Executed publish runs skip versions that are already published. CI failures
 abort by default; pass `--continue-ci-failures` to set
 `K_RELEASE_CI_CONTINUE=true` for the underlying `kettle-release` process.
@@ -675,9 +681,12 @@ Executed family resets fail if the resulting lockfiles still contain sibling
 path remotes or checksum gaps.
 
 Resume a failed family publish after fixing the failure. Already published
-versions are skipped automatically; `start_step` is passed to `kettle-release`
-for unreleased members that still need work. Use `--start-step` only after the
-pre-release gate already passed or the failure was intentionally handled:
+versions are skipped automatically. A release report gives a member-scoped
+resume command for each failed child, including the recorded `--start-step`
+when the child emitted a failed release-step event. Run those commands one at a
+time. If any members were never started, the report also gives a separate
+normal-flow command for exactly those members. Use `--start-step` only after
+the pre-release gate already passed or the failure was intentionally handled:
 
 ```console
 kettle-family release --publish --execute --start-step 10

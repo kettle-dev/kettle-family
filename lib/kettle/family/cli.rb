@@ -164,6 +164,7 @@ module Kettle
             release_fast_recovery_members: nil,
             release_skip_ci: false,
             release_skip_changelog: false,
+            release_skip_appraisals: false,
             release_local_ci: false,
             release_continue_ci_failures: false,
             release_ci_workflows: nil,
@@ -537,6 +538,7 @@ module Kettle
         option :fast_recovery_members, long: "--fast-recovery-members", value: {type: String, usage: "MEMBERS"}, desc: "Limit fast recovery to selected comma-separated members; defaults to all selected members"
         option :skip_ci, long: "--skip-ci", desc: "Run every selected member from step 0 while skipping only remote CI monitoring; requires --publish"
         option :skip_changelog, long: "--skip-changelog", desc: "Run release checks and child releases while skipping kettle-changelog"
+        option :skip_appraisals, long: "--skip-appraisals", desc: "Skip appraisal generation while retaining documentation generation"
         option :local_ci, long: "--local-ci", desc: "Pass --local-ci through to kettle-release commands"
         option :continue_ci_failures, long: "--continue-ci-failures", desc: "Set K_RELEASE_CI_CONTINUE=true for release commands"
         option :ci_workflows, long: "--ci-workflows", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated CI workflow monitor subset through to kettle-release commands"
@@ -566,6 +568,7 @@ module Kettle
             release_fast_recovery_members: options[:fast_recovery_members],
             release_skip_ci: truthy_option?(:skip_ci),
             release_skip_changelog: truthy_option?(:skip_changelog),
+            release_skip_appraisals: truthy_option?(:skip_appraisals),
             release_local_ci: truthy_option?(:local_ci),
             release_continue_ci_failures: truthy_option?(:continue_ci_failures),
             release_ci_workflows: options[:ci_workflows],
@@ -844,6 +847,7 @@ module Kettle
           fast_recovery_members: options[:release_fast_recovery_members],
           skip_ci: options[:release_skip_ci],
           skip_changelog: options[:release_skip_changelog],
+          skip_appraisals: options[:release_skip_appraisals],
           local_ci: options[:release_local_ci],
           continue_ci_failures: options[:release_continue_ci_failures],
           ci_workflows: options[:release_ci_workflows],

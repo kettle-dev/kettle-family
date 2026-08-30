@@ -1305,6 +1305,22 @@ RSpec.describe Kettle::Family::CLI do
     expect(release.fetch("command").join(" ")).to include("skip_steps=10")
   end
 
+  it "passes appraisal-only skip through the CLI" do
+    write_ready_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(
+      ["release", "--root", @tmpdir, "--only", "alpha", "--publish", "--skip-appraisals", "--json"],
+      out: out,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    release = report.fetch("results").find { |result| result.fetch("phase") == "release_publish" }
+    expect(release.fetch("command").join(" ")).to include("--skip-appraisals")
+  end
+
   it "accepts a release secrets provider override" do
     write_ready_gem("alpha")
     out = StringIO.new

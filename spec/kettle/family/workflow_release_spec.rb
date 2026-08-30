@@ -552,6 +552,32 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --required-remotes=origin --yes --events"])
   end
 
+  it "passes the appraisal-only skip through release commands" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true,
+      skip_appraisals: true
+    ).results
+
+    expect(results.last.command.join(" ")).to include("--skip-appraisals")
+  end
+
+  it "records the failed child release step for a member-scoped retry" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], publish: true)
+    state = {}
+    handler = workflow.send(:release_event_line_handler, ready_member("alpha"), state: state)
+
+    expect(handler.call(JSON.generate(type: "command_step", event_version: 1, phase: "release", index: 15, status: "failed"))).to be(true)
+    expect(state).to eq(failed_step: 15)
+  end
+
   it "lets kettle-release own release lockfile normalization" do
     write_release_config(
       publish_command: "bundle exec kettle-release",

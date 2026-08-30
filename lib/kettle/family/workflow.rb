@@ -106,7 +106,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -136,6 +136,7 @@ module Kettle
         @fast_recovery_members = normalize_fast_recovery_members(fast_recovery_members)
         @skip_ci = !!skip_ci
         @skip_changelog = !!skip_changelog
+        @skip_appraisals = !!skip_appraisals
         @local_ci = local_ci
         @continue_ci_failures = continue_ci_failures
         @ci_workflows = validate_ci_workflows(ci_workflows)
@@ -205,7 +206,7 @@ module Kettle
         execute && release_command_delegates_secrets_to_kettle_release?
       end
 
-      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :validate_ci_bundles, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :skip_appraisals, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :validate_ci_bundles, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -1377,16 +1378,18 @@ module Kettle
           memo.last(2).each { |result| emit_member_result_progress(member, result, progress: progress) }
           return memo unless memo.last(2).all?(&:ok?)
 
+          release_event_state = {}
           release_result = runner.call(
             member: member,
             phase: release_phase,
             command: release_command_for(member),
             env: release_env_for_member(member),
             interactive: release_command_interactive?,
-            stdout_line_handler: release_event_line_handler(member, progress: progress),
+            stdout_line_handler: release_event_line_handler(member, progress: progress, state: release_event_state),
             log_path: release_command_log_path(member, release_phase),
             passthrough_output: release_command_passthrough_output?
           )
+          release_result.resume_step = release_event_state[:failed_step] unless release_result.ok?
           memo << release_result
           emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
@@ -2224,6 +2227,7 @@ module Kettle
         args << "start_step=#{effective_start_step}" if effective_start_step
         args << "skip_steps=#{effective_skip_steps}" unless effective_skip_steps.empty?
         args << "--skip-changelog" if skip_changelog || aggregate_validation_member?(member)
+        args << "--skip-appraisals" if skip_appraisals
         args << "--ci-workflows=#{ci_workflows}" if ci_workflows && !ci_workflows.to_s.empty?
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
@@ -3270,10 +3274,14 @@ module Kettle
         end
       end
 
-      def release_event_line_handler(member, progress: nil)
+      def release_event_line_handler(member, progress: nil, state: nil)
         lambda do |line|
           event = parse_template_event(line)
           next false unless event
+
+          if event["type"] == "command_step" && event["phase"] == "release" && event["status"] == "failed"
+            state[:failed_step] = event["index"].to_i if state && event["index"].to_s.match?(/\A\d+\z/)
+          end
 
           if progress_io
             if suppress_release_secret_provider_event?(event, progress: progress)

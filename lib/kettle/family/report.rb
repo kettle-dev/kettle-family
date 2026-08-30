@@ -67,7 +67,8 @@ module Kettle
           "command" => command,
           "results" => results.map(&:to_h),
           "summary" => summary,
-          "resume_hint" => resume_hint
+          "resume_hint" => resume_hint,
+          "resume_hints" => resume_hints
         }
       end
 
@@ -145,7 +146,13 @@ module Kettle
         lines << "  skipped: #{summary_list(data.fetch("skipped"))}"
         lines << "  failed: #{summary_list(data.fetch("failed").map { |entry| summary_entry(entry) })}"
         lines << "  pending: #{summary_list(data.fetch("pending").map { |entry| summary_entry(entry) })}"
-        lines << "  resume: #{data.fetch("resume_hint")}" if data.fetch("resume_hint")
+        hints = data.fetch("resume_hints")
+        if hints.one?
+          lines << "  resume: #{hints.first}"
+        elsif hints.any?
+          lines << "  resume:"
+          hints.each { |hint| lines << "    #{hint}" }
+        end
       end
 
       def report_context_lines
@@ -170,7 +177,8 @@ module Kettle
           "failed" => summary_failed,
           "pending" => summary_pending,
           "release_log_dirs" => release_log_dirs,
-          "resume_hint" => resume_hint
+          "resume_hint" => resume_hint,
+          "resume_hints" => resume_hints
         }
       end
 
@@ -661,20 +669,49 @@ module Kettle
       end
 
       def resume_hint
+        resume_hints.first
+      end
+
+      def resume_hints
+        return [] if success?
+        return non_release_resume_hints unless command == "release"
+
+        release_resume_hints
+      end
+
+      def non_release_resume_hints
         failed = results.find { |result| !result.ok? }
-        resume_hint_for(failed) if failed
+        failed ? [resume_hint_for(failed)] : []
+      end
+
+      def release_resume_hints
+        failed_hints = visible_results.reject(&:ok?).map { |result| resume_hint_for(result) }.uniq
+        pending_names = summary_pending.map { |entry| entry.fetch("member") }
+        return failed_hints if pending_names.empty?
+
+        [*failed_hints, release_resume_hint_for_pending(pending_names)]
       end
 
       def resume_hint_for(result)
-        return release_resume_hint if command == "release"
+        return release_resume_hint(result) if command == "release"
 
         "kettle-family #{command} --start-at #{result.member_name}"
       end
 
-      def release_resume_hint
-        hint = "kettle-family release --execute"
-        hint = "#{hint} --publish" if release_mode == "publish"
+      def release_resume_hint(result)
+        hint = release_resume_base
+        hint = "#{hint} --only #{result.member_name}" if result.member_name
+        hint = "#{hint} --start-step #{result.resume_step}" if result.respond_to?(:resume_step) && result.resume_step
         hint
+      end
+
+      def release_resume_hint_for_pending(member_names)
+        "#{release_resume_base} --only #{member_names.join(",")}"
+      end
+
+      def release_resume_base
+        hint = "kettle-family release --execute"
+        release_mode == "publish" ? "#{hint} --publish" : hint
       end
     end
   end

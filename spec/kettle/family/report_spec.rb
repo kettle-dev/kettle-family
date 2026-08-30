@@ -616,9 +616,27 @@ RSpec.describe Kettle::Family::Report do
       results: [result]
     )
 
-    expect(report.to_text).to include("resume: kettle-family release --execute --publish")
+    expect(report.to_text).to include("resume: kettle-family release --execute --publish --only rubocop-ruby3_2")
     expect(report.to_text).not_to include("--start-at rubocop-ruby3_2")
-    expect(report.to_h.fetch("resume_hint")).to eq("kettle-family release --execute --publish")
+    expect(report.to_h.fetch("resume_hint")).to eq("kettle-family release --execute --publish --only rubocop-ruby3_2")
+  end
+
+  it "uses the child release step for a member-scoped publish retry" do
+    failed = result("alpha", success: false, reason: "OTP failed")
+    failed.resume_step = 15
+    report = described_class.new(
+      family_name: "example",
+      order_mode: "dependency",
+      members: [member("alpha")],
+      selected_members: [member("alpha")],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [failed]
+    )
+
+    expect(report.to_text).to include("resume: kettle-family release --execute --publish --only alpha --start-step 15")
+    expect(report.to_h.fetch("resume_hints")).to eq(["kettle-family release --execute --publish --only alpha --start-step 15"])
   end
 
   it "renders a final summary for successful commands" do
@@ -749,7 +767,9 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("succeeded: beta")
     expect(text).to include("failed: alpha release_publish (Workflow failed)")
     expect(text).to include("pending: gamma release (not run after earlier failure)")
-    expect(text).to include("resume: kettle-family release --execute --publish")
+    expect(text).to include("resume:")
+    expect(text).to include("kettle-family release --execute --publish --only alpha")
+    expect(text).to include("kettle-family release --execute --publish --only gamma")
     expect(summary.fetch("pending")).to eq([
       {"member" => "gamma", "phase" => "release", "reason" => "not run after earlier failure"}
     ])
