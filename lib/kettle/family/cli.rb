@@ -691,7 +691,14 @@ module Kettle
         end
         state_event_tape = release_state_event_tape(command: command, config: config, options: options)
         Selection.validate_release_state_only_filter!(effective_only)
-        release_state_results = release_state_results_for_selection(config: config, members: ordered, only: effective_only, jobs: options[:jobs])
+        release_state_results = release_state_results_for_selection(
+          command: command,
+          config: config,
+          members: ordered,
+          only: effective_only,
+          execute: options[:execute],
+          jobs: options[:jobs]
+        )
         selected = Selection.new(
           members: ordered,
           release_state_results: release_state_results,
@@ -778,8 +785,10 @@ module Kettle
         )
       end
 
-      def release_state_results_for_selection(config:, members:, only:, jobs: nil)
-        return nil unless only.to_s.split(",").map(&:strip).any? { |token| Selection.status_token?(token) }
+      def release_state_results_for_selection(command:, config:, members:, only:, execute: false, jobs: nil)
+        status_filter = only.to_s.split(",").map(&:strip).any? { |token| Selection.status_token?(token) }
+        should_check = status_filter || (command == "release" && execute)
+        return nil unless should_check
 
         ReleaseStateCheck.new(config: config, members: members, jobs: jobs).results
       end
@@ -869,7 +878,8 @@ module Kettle
           bup_args: options[:bup_args],
           bex_args: options[:bex_args],
           start_member: start_at.member,
-          start_branch: start_at.branch
+          start_branch: start_at.branch,
+          release_state_results: release_state_results
         ).results
       end
 

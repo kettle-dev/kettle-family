@@ -527,6 +527,12 @@ The supported release-state tokens are:
 When `--only` is omitted, `kettle-family bump` defaults to `--only bump` and
 `kettle-family release` defaults to `--only pending`.
 
+Before starting release work, `kettle-family release` checks the selected
+members' release state. If any selected member has `bump: yes`, the release
+stops before family changelog generation or coverage and reports the members
+that need a version bump. Run `kettle-family bump --execute patch` first, then
+rerun the release.
+
 State checks run concurrently by default, using up to four jobs or the number
 of available CPU cores, whichever is lower. Use `--jobs N` to set an explicit
 limit; results remain in family order.

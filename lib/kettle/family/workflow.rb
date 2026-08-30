@@ -106,7 +106,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, release_state_results: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -160,6 +160,7 @@ module Kettle
         @bex_args = bex_args
         @start_member = start_member
         @start_branch = start_branch
+        @release_state_results = Array(release_state_results)
         @template_commit_mutex = Mutex.new
       end
 
@@ -206,7 +207,7 @@ module Kettle
         execute && release_command_delegates_secrets_to_kettle_release?
       end
 
-      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :skip_appraisals, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :validate_ci_bundles, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch
+      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :skip_appraisals, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :validate_ci_bundles, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch, :release_state_results
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -1009,12 +1010,33 @@ module Kettle
       end
 
       def release_preflight_phases
+        bump_phase = {label: "release version bump", method: :release_preflight_version_bump_results} unless release_state_results.empty?
         dirty_phase = {label: "branch checkout readiness", method: :release_preflight_branch_checkout_dirty_results}
         signing_phase = {label: "gem signing password", method: :release_preflight_signing_password_results}
         secrets_phase = release_secrets_authorization_required? ? {label: "secrets provider authorization", method: :release_preflight_secrets_authorization_results} : nil
         gha_sha_pins_phase = release_gha_sha_pins_review_required? ? {label: "GitHub Actions SHA pins", method: :release_preflight_gha_sha_pins_results} : nil
 
-        [secrets_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
+        [bump_phase, secrets_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
+      end
+
+      def release_preflight_version_bump_results
+        failed_members = release_state_results.reject(&:ok?).map(&:member_name).compact.uniq
+        unless failed_members.empty?
+          return [release_preflight_error_result(
+            "release_state",
+            "Release blocked because release state could not be determined for: #{failed_members.join(", ")}. Run kettle-family state and resolve the failed probes before retrying."
+          )]
+        end
+
+        bump_members = release_state_results.select do |result|
+          members.any? { |member| member.name == result.member_name } && result.state["bump_release_pending"] == true
+        end.map(&:member_name)
+        return [] if bump_members.empty?
+
+        [release_preflight_error_result(
+          "release_version_bump",
+          "Release blocked: selected member(s) require a version bump: #{bump_members.join(", ")}. Run kettle-family bump --execute patch, then rerun the release."
+        )]
       end
 
       def release_preflight_gha_sha_pins_results

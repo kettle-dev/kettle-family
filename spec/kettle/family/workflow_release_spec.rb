@@ -24,6 +24,35 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.skipped).to be(true)
   end
 
+  it "blocks release before changelog work when a selected member requires a version bump" do
+    write_release_config(family_changelog: {"enabled" => true, "command" => [RbConfig.ruby, "-e", "abort 'should not run'"]})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    release_state = Kettle::Family::ReleaseStateResult.new(
+      member_name: "alpha",
+      command: %w[kettle-changelog --release-state --json],
+      workdir: member.root,
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.0,
+      state: {"bump_release_pending" => true}
+    )
+
+    results = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      execute: true,
+      release_state_results: [release_state]
+    ).results
+
+    expect(results.map(&:phase)).to eq(["release_version_bump"])
+    expect(results.first).not_to be_ok
+    expect(results.first.stderr).to include("kettle-family bump --execute patch")
+  end
+
   it "plans publish, tag, and push only when explicitly requested" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
