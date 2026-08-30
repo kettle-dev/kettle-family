@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.70] - 2026-08-30
+
+- TAG: [v1.2.70][1.2.70t]
+- COVERAGE: 93.22% -- 5502/5902 lines in 33 files
+- BRANCH COVERAGE: 76.41% -- 2258/2955 branches in 33 files
+- 30.50% documented
+
+### Fixed
+
 - Allow monorepo bundle updates to retain configured in-repository path dependencies.
 
 - Launch monorepo member release tools from the family bundle so configured in-repository dependencies remain available across release waves.
-
-### Security
 
 ## [1.2.69] - 2026-08-30
 
@@ -2337,7 +2346,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.69...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.70...HEAD
+[1.2.70]: https://github.com/kettle-dev/kettle-family/compare/v1.2.69...v1.2.70
+[1.2.70t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.70
 [1.2.69]: https://github.com/kettle-dev/kettle-family/compare/v1.2.68...v1.2.69
 [1.2.69t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.69
 [1.2.68]: https://github.com/kettle-dev/kettle-family/compare/v1.2.67...v1.2.68
