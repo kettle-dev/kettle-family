@@ -697,6 +697,7 @@ module Kettle
           members: ordered,
           only: effective_only,
           execute: options[:execute],
+          publish: options[:publish],
           jobs: options[:jobs]
         )
         selected = Selection.new(
@@ -785,9 +786,9 @@ module Kettle
         )
       end
 
-      def release_state_results_for_selection(command:, config:, members:, only:, execute: false, jobs: nil)
+      def release_state_results_for_selection(command:, config:, members:, only:, execute: false, publish: false, jobs: nil)
         status_filter = only.to_s.split(",").map(&:strip).any? { |token| Selection.status_token?(token) }
-        should_check = status_filter || (command == "release" && execute)
+        should_check = status_filter || (command == "release" && execute && publish)
         return nil unless should_check
 
         ReleaseStateCheck.new(config: config, members: members, jobs: jobs).results

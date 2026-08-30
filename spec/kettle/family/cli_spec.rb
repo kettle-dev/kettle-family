@@ -1356,6 +1356,25 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.index("release intent:")).to be < out.string.index("release preflight")
   end
 
+  it "does not query release state for an executed build-only release" do
+    write_ready_gem("alpha")
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump("release" => {"build_command" => [RbConfig.ruby, "-e", "puts 'built'"]})
+    )
+    checker = instance_double(Kettle::Family::ReleaseStateCheck)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+
+    status = described_class.call(
+      ["release", "--root", @tmpdir, "--only", "alpha", "--execute"],
+      out: StringIO.new,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+    expect(Kettle::Family::ReleaseStateCheck).not_to have_received(:new)
+  end
+
   it "prints release execution intent in planned wave order" do
     write_ready_gem("alpha", dependencies: ["beta"])
     write_ready_gem("beta")

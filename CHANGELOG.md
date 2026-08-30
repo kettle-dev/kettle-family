@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Avoid release-state probes for executed build-only releases.
+
 ### Security
 
 ## [1.2.69] - 2026-08-30
