@@ -249,6 +249,10 @@ release:
   family_changelog:
     enabled: true
     command: bundle exec kettle-changelog
+  aggregate_validation:
+    enabled: true
+    exclude_members:
+      - kettle-jem
 ```
 
 `family.local_path_env` names the environment variable that activates local
@@ -322,6 +326,29 @@ For `changelog.mode: root`, release commands pass `K_CHANGELOG_GEM_NAME` as the
 configured family name and `K_CHANGELOG_VERSION_FILE` when `version_file` is
 configured, so `kettle-changelog` can operate from a repository root without a
 root gemspec.
+
+### Aggregate release validation
+
+Set `release.aggregate_validation.enabled: true` only for a shared-changelog
+family whose root suite validates the release graph. `kettle-family` then:
+
+1. Runs `family_changelog` once, which runs the root coverage suite once.
+2. Marks the first selected non-excluded member's release-prep commit as the
+   aggregate CI validation and waits for that one CI run.
+3. Skips member changelog generation, the duplicate `bin/rake` test task, and
+   remote CI monitoring for the remaining aggregate members.
+
+The marker is explicit (`[kettle-family:aggregate-ci]` for the validation
+commit and `[kettle-family:aggregate-member]` for later members), allowing the
+repository workflow to run one root suite for the validation commit and skip
+redundant jobs for later release-only commits. Configure that workflow behavior
+before enabling this policy.
+
+Use `release.aggregate_validation.exclude_members` for a member that remains
+independently releasable. Excluded members keep their own changelog coverage,
+local test task, and monitored CI release flow. This is appropriate for a tool
+such as `kettle-jem`, whose independent releases must not rely on a coordinated
+family release having run first.
 
 For a flat repository that releases from multiple long-lived branches, list the
 release branches under `release.target_branches`. The branch list is processed

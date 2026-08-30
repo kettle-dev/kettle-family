@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Add configurable aggregate release validation that runs shared changelog coverage and one monitored CI validation while preserving excluded independent members.
+
 ### Deprecated
 
 ### Removed

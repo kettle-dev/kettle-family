@@ -1219,6 +1219,7 @@ module Kettle
         runner = release_command_runner
         results = []
         @release_completed_member_names = []
+        @aggregate_validation_member_name = aggregate_validation_members(release_members).first&.name
         append_family_changelog_result(runner: runner, memo: results) if include_family_changelog
         return results unless results.all?(&:ok?)
         return parallel_release_member_results(release_members, results) if parallel_release_members?(release_members)
@@ -2222,7 +2223,7 @@ module Kettle
         effective_skip_steps = release_skip_steps_for(member)
         args << "start_step=#{effective_start_step}" if effective_start_step
         args << "skip_steps=#{effective_skip_steps}" unless effective_skip_steps.empty?
-        args << "--skip-changelog" if skip_changelog
+        args << "--skip-changelog" if skip_changelog || aggregate_validation_member?(member)
         args << "--ci-workflows=#{ci_workflows}" if ci_workflows && !ci_workflows.to_s.empty?
         args << "--local-ci" if local_ci
         args << "--skip-bundle-audit" if skip_bundle_audit
@@ -2245,10 +2246,35 @@ module Kettle
         (fast_recovery == "retry-ci") ? 10 : 11
       end
 
-      def release_skip_steps_for(_member)
+      def release_skip_steps_for(member)
         steps = Array(skip_steps).flat_map { |entry| entry.to_s.split(",") }.map(&:strip).reject(&:empty?)
         steps << "10" if skip_ci
+        if aggregate_validation_member?(member)
+          # The shared family changelog already ran the full local suite. The
+          # validation member waits for the one aggregate CI run; all later
+          # aggregate members publish without duplicate test/monitor phases.
+          steps << "4"
+          steps << "10" unless aggregate_validation_member_name?(member)
+        end
         steps.uniq.join(",")
+      end
+
+      def aggregate_validation_members(release_members = members)
+        return [] unless config.release_aggregate_validation?
+        return [] unless config.shared_changelog?
+
+        excluded = config.release_aggregate_validation_excluded_members
+        Array(release_members).reject { |member| excluded.include?(member.name) }
+      end
+
+      def aggregate_validation_member?(member)
+        return false unless member
+
+        aggregate_validation_members.include?(member)
+      end
+
+      def aggregate_validation_member_name?(member)
+        member && member.name == (@aggregate_validation_member_name || aggregate_validation_members.first&.name)
       end
 
       def fast_recovery_for?(member)
@@ -2376,6 +2402,9 @@ module Kettle
           # monorepo mode too, but must let kettle-release create its own
           # GitHub Release.
           env["KETTLE_RELEASE_SKIP_GITHUB_RELEASE"] = "true" if aggregate_monorepo_github_release?
+        end
+        if aggregate_validation_member?(member)
+          env["KETTLE_RELEASE_FAMILY_CI_MODE"] = aggregate_validation_member_name?(member) ? "validation" : "member"
         end
         return env unless config.shared_changelog?
         if config.member_local_changelog?(member)

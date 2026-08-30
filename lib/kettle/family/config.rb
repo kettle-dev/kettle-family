@@ -313,6 +313,21 @@ module Kettle
         fetch_path("release", "family_changelog", "command") || "bundle exec kettle-changelog"
       end
 
+      # An aggregate validation release runs the shared changelog/coverage
+      # suite once locally, then validates that family state once in CI before
+      # publishing the remaining members. Excluded members retain their normal
+      # independent kettle-release test and CI lifecycle.
+      def release_aggregate_validation?
+        fetch_path("release", "aggregate_validation", "enabled") == true
+      end
+
+      def release_aggregate_validation_excluded_members
+        Array(fetch_path("release", "aggregate_validation", "exclude_members"))
+          .map(&:to_s)
+          .map(&:strip)
+          .reject(&:empty?)
+      end
+
       def release_tag_command
         fetch_path("release", "tag_command") || command_for("release_tag") || "git tag"
       end
