@@ -28,8 +28,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Avoid release-state probes for executed build-only releases.
-
 ### Security
 
 ## [1.2.69] - 2026-08-30
@@ -42,6 +40,8 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 - Block release execution before family changelog generation when a selected member still requires a version bump.
+
+- Avoid release-state probes for executed build-only releases.
 
 ## [1.2.68] - 2026-08-30
 
