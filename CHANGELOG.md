@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Create individual GitHub Releases for standalone gems using the default monorepo mode.
-
 ### Security
+
+## [1.2.65] - 2026-08-30
+
+- TAG: [v1.2.65][1.2.65t]
+- COVERAGE: 93.10% -- 5383/5782 lines in 33 files
+- BRANCH COVERAGE: 76.06% -- 2173/2857 branches in 33 files
+- 30.00% documented
+
+### Fixed
+
+- Create individual GitHub Releases for standalone gems using the default monorepo mode.
 
 ## [1.2.64] - 2026-08-29
 
@@ -2270,7 +2279,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.64...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.65...HEAD
+[1.2.65]: https://github.com/kettle-dev/kettle-family/compare/v1.2.64...v1.2.65
+[1.2.65t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.65
 [1.2.64]: https://github.com/kettle-dev/kettle-family/compare/v1.2.63...v1.2.64
 [1.2.64t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.64
 [1.2.63]: https://github.com/kettle-dev/kettle-family/compare/v1.2.62...v1.2.63

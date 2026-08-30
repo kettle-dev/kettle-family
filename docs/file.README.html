@@ -105,6 +105,12 @@ provider supplies them. Resume options are deliberately scoped: use them only<br
 when the member’s prepared release commit is unchanged. If a CI failure requires<br>
 code, version, changelog, or lockfile changes, rerun that member from step 0.</p>
 
+<p>An explicitly configured multi-gem monorepo creates one aggregate GitHub Release<br>
+from the shared repository root after its member gems publish; member releases<br>
+skip individual GitHub Release creation to avoid competing for the shared tag.<br>
+Standalone gems, including gems using the default monorepo mode without a family<br>
+configuration, create their own GitHub Release through <code>kettle-release</code>.</p>
+
 <h2 id="-info-you-can-shake-a-stick-at">💡 Info you can shake a stick at</h2>
 
 <table>
