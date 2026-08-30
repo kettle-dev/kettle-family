@@ -711,7 +711,7 @@ module Kettle
 
       def release_resume_base
         hint = "kettle-family release --execute"
-        release_mode == "publish" ? "#{hint} --publish" : hint
+        (release_mode == "publish") ? "#{hint} --publish" : hint
       end
     end
   end
