@@ -1854,7 +1854,7 @@ module Kettle
       end
 
       def reset_gemfile_lock_command(member)
-        [
+        command = [
           "env",
           "-u",
           "BUNDLE_BIN_PATH",
@@ -1871,6 +1871,16 @@ module Kettle
           RESET_LOCKFILE_HELPER,
           "release-lockfiles"
         ]
+        command.insert(-1, "--skip-changelog-dependency") if reset_skips_member_changelog_dependency?(member)
+        command
+      end
+
+      # Root-changelog families already prepare the changelog in a dedicated
+      # root bundle. Keeping the optional member Gemfile dependency while a
+      # coordinated monorepo release is only partly published can force
+      # Bundler to select the prior registry dependency graph instead.
+      def reset_skips_member_changelog_dependency?(member)
+        config.shared_changelog? && !config.member_local_changelog?(member)
       end
 
       def reset_helper_ruby

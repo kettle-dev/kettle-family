@@ -102,6 +102,19 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.skipped).to be(true)
   end
 
+  it "omits the member changelog dependency for a shared root changelog reset" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      changelog:
+        mode: root
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    workflow = described_class.new(command: "reset", reset_target: "Gemfile.lock", config: config, members: [member], commit: false)
+
+    expect(workflow.results.first.command).to include("--skip-changelog-dependency")
+  end
+
   it "executes Gemfile.lock resets with local path environments disabled" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:

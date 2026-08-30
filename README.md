@@ -678,7 +678,12 @@ to materialize. The member-level reset rewrites local sibling paths and
 checksum-less local gem versions back to released registry versions with
 `sha256=` checksums in `Gemfile.lock` and `Appraisal.root.gemfile.lock`.
 Executed family resets fail if the resulting lockfiles still contain sibling
-path remotes or checksum gaps.
+path remotes or checksum gaps. For a family with a shared root changelog,
+member resets pass `--skip-changelog-dependency`: the root changelog is
+prepared in its own bundle, and omitting the optional member development tool
+prevents a partly published coordinated release from resolving an obsolete
+registry dependency chain. Members with their own `CHANGELOG.md` retain the
+normal dependency.
 
 Resume a failed family publish after fixing the failure. Already published
 versions are skipped automatically. A release report gives a member-scoped

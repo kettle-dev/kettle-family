@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Exclude the optional member changelog dependency when resetting locks for a shared root changelog family.
+
 ### Security
 
 ## [1.2.67] - 2026-08-30
