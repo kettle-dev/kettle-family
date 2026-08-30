@@ -1150,6 +1150,52 @@
         <li class="public ">
   <span class="summary_signature">
     
+      <a href="#release_aggregate_validation%3F-instance_method" title="#release_aggregate_validation? (instance method)">#<strong>release_aggregate_validation?</strong>  &#x21d2; Boolean </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>An aggregate validation release runs the shared changelog/coverage suite once locally, then validates that family state once in CI before publishing the remaining members.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#release_aggregate_validation_excluded_members-instance_method" title="#release_aggregate_validation_excluded_members (instance method)">#<strong>release_aggregate_validation_excluded_members</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#release_allowed_local_path_env_names-instance_method" title="#release_allowed_local_path_env_names (instance method)">#<strong>release_allowed_local_path_env_names</strong>  &#x21d2; Object </a>
     
 
@@ -1976,12 +2022,12 @@
       <pre class="lines">
 
 
-335
-336
-337</pre>
+350
+351
+352</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 335</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 350</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_branch_lanes'>branch_lanes</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branch_lanes</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branches</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>lanes</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
@@ -3002,15 +3048,15 @@
       <pre class="lines">
 
 
-328
-329
-330
-331
-332
-333</pre>
+343
+344
+345
+346
+347
+348</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 328</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 343</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_member_release_target_branches'>member_release_target_branches</span>
   <span class='id identifier rubyid_targets'>targets</span> <span class='op'>=</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>member_target_branches</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
@@ -3260,6 +3306,98 @@
     <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>sponsorships</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>corporate</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span>
     <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>corporate_sponsors</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
   <span class='id identifier rubyid_normalize_corporate_sponsors'>normalize_corporate_sponsors</span><span class='lparen'>(</span><span class='id identifier rubyid_raw'>raw</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="release_aggregate_validation?-instance_method">
+  
+    #<strong>release_aggregate_validation?</strong>  &#x21d2; <tt>Boolean</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>An aggregate validation release runs the shared changelog/coverage<br />
+suite once locally, then validates that family state once in CI before<br />
+publishing the remaining members. Excluded members retain their normal<br />
+independent kettle-release test and CI lifecycle.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+320
+321
+322</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 320</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_release_aggregate_validation?'>release_aggregate_validation?</span>
+  <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>aggregate_validation</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>enabled</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>==</span> <span class='kw'>true</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="release_aggregate_validation_excluded_members-instance_method">
+  
+    #<strong>release_aggregate_validation_excluded_members</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+324
+325
+326
+327
+328
+329</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 324</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_release_aggregate_validation_excluded_members'>release_aggregate_validation_excluded_members</span>
+  <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>aggregate_validation</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>exclude_members</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='rparen'>)</span>
+    <span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:to_s</span><span class='rparen'>)</span>
+    <span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:strip</span><span class='rparen'>)</span>
+    <span class='period'>.</span><span class='id identifier rubyid_reject'>reject</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:empty?</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -3756,12 +3894,12 @@
       <pre class="lines">
 
 
-320
-321
-322</pre>
+335
+336
+337</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 320</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 335</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_push_command'>release_push_command</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>push_command</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_command_for'>command_for</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release_push</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>git push --follow-tags</span><span class='tstring_end'>&quot;</span></span>
@@ -3846,12 +3984,12 @@
       <pre class="lines">
 
 
-316
-317
-318</pre>
+331
+332
+333</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 316</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 331</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_tag_command'>release_tag_command</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>tag_command</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_command_for'>command_for</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release_tag</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>git tag</span><span class='tstring_end'>&quot;</span></span>
@@ -3876,12 +4014,12 @@
       <pre class="lines">
 
 
-324
-325
-326</pre>
+339
+340
+341</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 324</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 339</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>target_branches</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branches</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release_targets</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>

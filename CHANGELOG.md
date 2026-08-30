@@ -22,8 +22,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Add configurable aggregate release validation that runs shared changelog coverage and one monitored CI validation while preserving excluded independent members.
-
 ### Deprecated
 
 ### Removed
@@ -31,6 +29,17 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.2.67] - 2026-08-30
+
+- TAG: [v1.2.67][1.2.67t]
+- COVERAGE: 93.13% -- 5424/5824 lines in 33 files
+- BRANCH COVERAGE: 76.10% -- 2194/2883 branches in 33 files
+- 30.13% documented
+
+### Changed
+
+- Add configurable aggregate release validation that runs shared changelog coverage and one monitored CI validation while preserving excluded independent members.
 
 ## [1.2.66] - 2026-08-30
 
@@ -2292,7 +2301,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.66...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.67...HEAD
+[1.2.67]: https://github.com/kettle-dev/kettle-family/compare/v1.2.66...v1.2.67
+[1.2.67t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.67
 [1.2.66]: https://github.com/kettle-dev/kettle-family/compare/v1.2.65...v1.2.66
 [1.2.66t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.66
 [1.2.65]: https://github.com/kettle-dev/kettle-family/compare/v1.2.64...v1.2.65

@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.804-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-5.824-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -446,6 +446,10 @@ release:
   family_changelog:
     enabled: true
     command: bundle exec kettle-changelog
+  aggregate_validation:
+    enabled: true
+    exclude_members:
+      - kettle-jem
 </code></pre>
 
 <p><code>family.local_path_env</code> names the environment variable that activates local<br>
@@ -518,6 +522,31 @@ propagation is retried before the family reports a dependency refresh failure.</
 configured family name and <code>K_CHANGELOG_VERSION_FILE</code> when <code>version_file</code> is<br>
 configured, so <code>kettle-changelog</code> can operate from a repository root without a<br>
 root gemspec.</p>
+
+<h3 id="aggregate-release-validation">Aggregate release validation</h3>
+
+<p>Set <code>release.aggregate_validation.enabled: true</code> only for a shared-changelog<br>
+family whose root suite validates the release graph. <code>kettle-family</code> then:</p>
+
+<ol>
+  <li>Runs <code>family_changelog</code> once, which runs the root coverage suite once.</li>
+  <li>Marks the first selected non-excluded member’s release-prep commit as the<br>
+aggregate CI validation and waits for that one CI run.</li>
+  <li>Skips member changelog generation, the duplicate <code>bin/rake</code> test task, and<br>
+remote CI monitoring for the remaining aggregate members.</li>
+</ol>
+
+<p>The marker is explicit (<code>[kettle-family:aggregate-ci]</code> for the validation<br>
+commit and <code>[kettle-family:aggregate-member]</code> for later members), allowing the<br>
+repository workflow to run one root suite for the validation commit and skip<br>
+redundant jobs for later release-only commits. Configure that workflow behavior<br>
+before enabling this policy.</p>
+
+<p>Use <code>release.aggregate_validation.exclude_members</code> for a member that remains<br>
+independently releasable. Excluded members keep their own changelog coverage,<br>
+local test task, and monitored CI release flow. This is appropriate for a tool<br>
+such as <code>kettle-jem</code>, whose independent releases must not rely on a coordinated<br>
+family release having run first.</p>
 
 <p>For a flat repository that releases from multiple long-lived branches, list the<br>
 release branches under <code>release.target_branches</code>. The branch list is processed<br>
