@@ -155,7 +155,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("bump_release_pending" => true)
   end
 
-  it "keeps an already-bumped shared-version member out of the bump state" do
+  it "propagates a required bump to every shared-version member" do
     check = described_class.new(members: [member("alpha"), member("beta")])
     results = [
       release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
@@ -164,19 +164,24 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
     normalized = check.send(:normalize_shared_version_bump, results)
 
-    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, false])
+    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, true])
   end
 
-  it "does not invent a bump for shared members without unreleased entries" do
-    check = described_class.new(members: [member("alpha"), member("beta")])
+  it "keeps member-local changelog bump state independent from a shared version" do
+    alpha = member("alpha")
+    beta = member("beta")
+    local = member("local")
+    File.write(File.join(local.root, "CHANGELOG.md"), "## [Unreleased]\n")
+    check = described_class.new(members: [alpha, beta, local])
     results = [
       release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
-      release_state_result("beta", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => false, "bump_release_pending" => false)
+      release_state_result("beta", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => false, "bump_release_pending" => false),
+      release_state_result("local", "version" => "1.2.4", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => false)
     ]
 
     normalized = check.send(:normalize_shared_version_bump, results)
 
-    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, false])
+    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, true, false])
   end
 
   it "reports command failures without treating pending release work as an error" do

@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Exclude already-bumped local-changelog members from shared family bump selection.
 
+- Propagate required shared-version bumps across shared-changelog members while keeping member-local changelogs independent.
+
 ### Security
 
 ## [1.2.71] - 2026-08-30
