@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Exclude already-bumped local-changelog members from shared family bump selection.
+
 ### Security
 
 ## [1.2.71] - 2026-08-30

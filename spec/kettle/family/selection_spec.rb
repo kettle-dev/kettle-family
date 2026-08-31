@@ -73,6 +73,24 @@ RSpec.describe Kettle::Family::Selection do
     expect(selected).to eq(members)
   end
 
+  it "keeps already-bumped local-changelog members out of a shared-version bump" do
+    members = [member("alpha"), member("beta"), member("local")]
+    results = [
+      release_state("alpha", "bump_release_pending" => true),
+      release_state("beta", "bump_release_pending" => false),
+      release_state("local", "bump_release_pending" => false)
+    ]
+
+    selected = described_class.new(
+      members: members,
+      release_state_results: results,
+      shared_version: true,
+      shared_bump_member_names: %w[alpha beta]
+    ).apply(only: "bump")
+
+    expect(selected.map(&:name)).to eq(%w[alpha beta])
+  end
+
   it "ANDs multiple release-state tokens" do
     members = [member("alpha"), member("beta"), member("gamma")]
     results = [

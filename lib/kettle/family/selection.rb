@@ -30,10 +30,11 @@ module Kettle
         raise Error, "--only release-state tokens cannot be combined with member names: #{member_names.join(", ")}" unless member_names.empty?
       end
 
-      def initialize(members:, release_state_results: nil, shared_version: false)
+      def initialize(members:, release_state_results: nil, shared_version: false, shared_bump_member_names: nil)
         @members = members
         @release_state_results = release_state_results
         @shared_version = shared_version
+        @shared_bump_member_names = Array(shared_bump_member_names || members.map(&:name)).map(&:to_s).freeze
       end
 
       def apply(only: nil, exclude: nil, start_at: nil)
@@ -48,7 +49,7 @@ module Kettle
 
       private
 
-      attr_reader :members, :release_state_results, :shared_version
+      attr_reader :members, :release_state_results, :shared_version, :shared_bump_member_names
 
       def select_only(selected, only)
         names = only.split(",").map(&:strip).reject(&:empty?)
@@ -90,7 +91,13 @@ module Kettle
         raise Error, "release-state check failed for: #{failed.map(&:member_name).join(", ")}" unless failed.empty?
 
         if shared_version && status_tokens.include?("bump")
-          return selected if selected.any? { |candidate| truthy_state?(results_by_member[candidate.name]&.state&.fetch("bump_release_pending", nil)) }
+          shared_members = selected.select { |candidate| shared_bump_member_names.include?(candidate.name) }
+          if shared_members.any? { |candidate| truthy_state?(results_by_member[candidate.name]&.state&.fetch("bump_release_pending", nil)) }
+            return selected.select do |candidate|
+              shared_bump_member_names.include?(candidate.name) ||
+                truthy_state?(results_by_member[candidate.name]&.state&.fetch("bump_release_pending", nil))
+            end
+          end
         end
 
         selected.select do |candidate|

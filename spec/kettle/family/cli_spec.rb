@@ -746,15 +746,17 @@ RSpec.describe Kettle::Family::CLI do
     expect(File.read(File.join(@tmpdir, "beta", "beta.gemspec"))).to include('add_development_dependency "alpha", "= 1.0.1"')
   end
 
-  it "bumps an independent local-changelog member when shared state marks it pending", :prism do
+  it "bumps only the independent local-changelog member that needs a bump", :prism do
     write_gem("alpha")
     write_gem("beta")
+    write_gem("gamma")
     alpha_root = File.join(@tmpdir, "alpha")
     beta_root = File.join(@tmpdir, "beta")
     set_gem_version(alpha_root, "alpha", "1.1.0")
     set_gem_version(beta_root, "beta", "1.1.0")
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     File.write(File.join(@tmpdir, "beta", "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(@tmpdir, "gamma", "CHANGELOG.md"), "## [Unreleased]\n")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:
         mode: monorepo
@@ -762,6 +764,7 @@ RSpec.describe Kettle::Family::CLI do
         roots:
           - alpha
           - beta
+          - gamma
       changelog:
         mode: root
         version_file: alpha/lib/alpha/version.rb
@@ -778,6 +781,12 @@ RSpec.describe Kettle::Family::CLI do
         "latest_released" => "1.1.0",
         "unreleased_entries" => true,
         "bump_release_pending" => true
+      }),
+      release_state_result("gamma", {
+        "version" => "1.1.0",
+        "latest_released" => "1.0.0",
+        "unreleased_entries" => true,
+        "bump_release_pending" => false
       })
     ]
     checker = instance_double(Kettle::Family::ReleaseStateCheck, results: results)
@@ -787,8 +796,9 @@ RSpec.describe Kettle::Family::CLI do
     status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "bump", "--execute", "--no-commit"], out: out, err: StringIO.new)
 
     expect(status).to eq(0)
-    expect(out.string).to include("alpha bump\n    1.1.0 -> 1.1.0")
+    expect(out.string).not_to include("alpha bump")
     expect(out.string).to include("beta bump\n    1.1.0 -> 1.1.1")
+    expect(out.string).not_to include("gamma bump")
     expect(File.read(File.join(alpha_root, "lib", "alpha", "version.rb"))).to include('VERSION = "1.1.0"')
     expect(File.read(File.join(beta_root, "lib", "beta", "version.rb"))).to include('VERSION = "1.1.1"')
   end
