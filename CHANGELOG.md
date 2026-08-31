@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Stream aggregate monorepo GitHub Release asset events through family release progress.
+
 ### Changed
 
 ### Deprecated

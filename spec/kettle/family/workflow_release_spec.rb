@@ -128,6 +128,47 @@ RSpec.describe Kettle::Family::Workflow do
     expect(result.reason).to eq("dry-run; pass --execute to run")
   end
 
+  it "streams aggregate GitHub Release events through CommandRunner", :aggregate_failures do
+    write_release_config(
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    progress = StringIO.new
+    member = ready_member("alpha", version: "1.2.3")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, progress_io: progress)
+    runner = instance_double(Kettle::Family::CommandRunner)
+    aggregate_result = Kettle::Family::CommandResult.new(
+      config.family_name,
+      "aggregate_github_release",
+      [],
+      config.root,
+      0,
+      true,
+      "",
+      "",
+      0.1,
+      false,
+      nil
+    )
+    allow(workflow).to receive(:command_runner).and_return(runner)
+    expect(runner).to receive(:call) do |member:, phase:, command:, stdout_line_handler:, **_options|
+      expect(member.name).to eq(config.family_name)
+      expect(phase).to eq("aggregate_github_release")
+      expect(command).to include("--events", "--release-version", "1.2.3")
+      stdout_line_handler.call(JSON.generate(event_version: 1, type: "github_release", action: "asset_upload", status: "retrying", asset: "alpha-1.2.3.gem", attempt: 1, attempts: 3))
+      aggregate_result
+    end
+
+    result = workflow.send(:aggregate_monorepo_github_release, [member])
+
+    expect(result).to be_ok
+    expect(progress.string).to include("github_release:asset_upload:alpha-1.2.3.gem:1/3")
+  end
+
   it "keeps raw kettle-release output in the transcript by default" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -961,7 +1002,7 @@ RSpec.describe Kettle::Family::Workflow do
     aggregate_result = workflow.send(:aggregate_monorepo_github_release, workflow.send(:aggregate_release_members))
 
     expect(aggregate_result).to be_ok
-    expect(aggregate_result.command).to include("--release-version", "7.1.6")
+    expect(aggregate_result.command).to include("--events", "--release-version", "7.1.6")
   end
 
   it "collects aggregate assets from the full shared cohort during a partial release resume" do
@@ -1965,6 +2006,28 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("[alpha] > probe:availability:alpha-1.2.3:1/3")
     expect(progress.string).to include("[alpha] ! cb unavailable")
     expect(progress.string).to include("[alpha] F failed")
+  end
+
+  it "renders aggregate GitHub Release asset events as they arrive" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    progress = StringIO.new
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], progress_io: progress)
+
+    handled = workflow.send(:aggregate_github_release_event_line_handler, workflow.send(:family_member)).call(
+      JSON.generate(
+        event_version: 1,
+        type: "github_release",
+        action: "asset_upload",
+        status: "retrying",
+        asset: "alpha-1.2.3.gem",
+        attempt: 1,
+        attempts: 3
+      )
+    )
+
+    expect(handled).to be(true)
+    expect(progress.string).to include("[#{config.family_name}] > github_release:asset_upload:alpha-1.2.3.gem:1/3")
   end
 
   it "consumes release NDJSON events when progress rendering is disabled" do

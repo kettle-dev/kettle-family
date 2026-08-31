@@ -2616,7 +2616,7 @@ module Kettle
           checksum_path = File.join(member.root, "checksums", "#{member.name}-#{version.first}.gem.sha256")
           gem_path + (File.file?(checksum_path) ? [checksum_path] : [])
         end
-        command = ["bundle", "exec", "kettle-gh-release", "--allow-unpublished", "--release-version", version.first]
+        command = ["bundle", "exec", "kettle-gh-release", "--allow-unpublished", "--events", "--release-version", version.first]
         assets.each { |asset| command.concat(["--asset", asset]) }
         return aggregate_release_dry_run_result(command) unless execute
 
@@ -2632,20 +2632,15 @@ module Kettle
         # implementation needed by this aggregate step.
         local_kettle_dev = ENV.fetch("KETTLE_DEV_DEV", "").to_s.strip
         env["KETTLE_DEV_DEV"] = local_kettle_dev if local_path_env_value?(local_kettle_dev)
-        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        stdout, stderr, status = Open3.capture3(env, *command, chdir: config.root)
-        result = CommandResult.new(
-          member_name: config.family_name,
+        aggregate_member = family_member
+        result = command_runner.call(
+          member: aggregate_member,
           phase: "aggregate_github_release",
           command: command,
-          workdir: config.root,
-          status: status.exitstatus,
-          success: status.success?,
-          stdout: stdout,
-          stderr: stderr,
-          elapsed_seconds: Process.clock_gettime(Process::CLOCK_MONOTONIC) - started,
-          skipped: false,
-          reason: status.success? ? nil : "aggregate GitHub release failed"
+          env: env,
+          stdout_line_handler: aggregate_github_release_event_line_handler(aggregate_member),
+          log_path: release_command_log_path(aggregate_member, "aggregate_github_release"),
+          passthrough_output: release_command_passthrough_output?
         )
         result.resume_command = aggregate_github_release_resume_command(env, command) unless result.ok?
         result
@@ -2666,6 +2661,16 @@ module Kettle
           "#{key}=#{Shellwords.escape(value.to_s)}" unless value.nil?
         end
         (["env", *assignments].join(" ") + " " + Shellwords.join(command)).strip
+      end
+
+      def aggregate_github_release_event_line_handler(member)
+        lambda do |line|
+          event = parse_template_event(line)
+          next false unless event && event["type"] == "github_release"
+
+          emit_template_event_line(member, github_release_event_mark(event), github_release_event_label(event)) if progress_io
+          true
+        end
       end
       # simplecov:enable
 
@@ -3739,6 +3744,21 @@ module Kettle
         parts << [gem_name, version].reject(&:empty?).join("-")
         parts << "#{event["attempt"]}/#{event["attempts"]}" if event["attempt"] && event["attempts"]
         parts.reject(&:empty?).join(":")
+      end
+
+      def github_release_event_label(event)
+        parts = ["github_release", event["action"].to_s]
+        asset = event["asset"].to_s
+        parts << asset unless asset.empty?
+        parts << "#{event["attempt"]}/#{event["attempts"]}" if event["attempt"] && event["attempts"]
+        parts.reject(&:empty?).join(":")
+      end
+
+      def github_release_event_mark(event)
+        return "F" if event["status"].to_s == "failed"
+        return "." if event["status"].to_s == "ok"
+
+        ">"
       end
 
       def diagnostic_event_label(event)
