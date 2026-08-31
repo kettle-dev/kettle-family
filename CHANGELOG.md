@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Restrict monorepo aggregate GitHub Releases to the shared-version cohort, preserving independently versioned excluded members' own releases.
-
 ### Security
+
+## [1.2.75] - 2026-08-31
+
+- TAG: [v1.2.75][1.2.75t]
+- COVERAGE: 93.31% -- 5553/5951 lines in 33 files
+- BRANCH COVERAGE: 76.70% -- 2281/2974 branches in 33 files
+- 30.50% documented
+
+### Fixed
+
+- Restrict monorepo aggregate GitHub Releases to the shared-version cohort, preserving independently versioned excluded members' own releases.
 
 ## [1.2.74] - 2026-08-31
 
@@ -2394,7 +2403,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.74...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.75...HEAD
+[1.2.75]: https://github.com/kettle-dev/kettle-family/compare/v1.2.74...v1.2.75
+[1.2.75t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.75
 [1.2.74]: https://github.com/kettle-dev/kettle-family/compare/v1.2.73...v1.2.74
 [1.2.74t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.74
 [1.2.73]: https://github.com/kettle-dev/kettle-family/compare/v1.2.72...v1.2.73
