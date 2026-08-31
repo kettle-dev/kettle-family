@@ -922,7 +922,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     command = workflow.send(:release_command_for, alpha).to_s
 
-    expect(command.scan(/skip_steps=/).length).to eq(1)
+    expect(command.scan("skip_steps=").length).to eq(1)
     expect(command).to include("skip_steps=1,10")
   end
 
