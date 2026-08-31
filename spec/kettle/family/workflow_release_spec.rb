@@ -278,6 +278,67 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_allowed_local_path_roots)).to eq([monorepo_gems])
   end
 
+  it "preserves an explicitly enabled template source graph for monorepo release lockfiles" do
+    monorepo_gems = File.join(@tmpdir, "gems")
+    FileUtils.mkdir_p(monorepo_gems)
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump(
+        "family" => {
+          "name" => "structuredmerge-ruby",
+          "mode" => "monorepo",
+          "local_path_env" => "STRUCTUREDMERGE_DEV",
+          "members_root" => "gems"
+        },
+        "release" => {"disable_local_path_env" => ["K_JEM_TEMPLATING"]}
+      )
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [ready_member("alpha")],
+      env_overrides: {"K_JEM_TEMPLATING" => "true"}
+    )
+
+    expect(workflow.send(:release_lockfile_env)).to include("K_JEM_TEMPLATING" => "true")
+    expect(workflow.send(:release_local_path_policy_env).fetch("KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ENVS"))
+      .to eq("STRUCTUREDMERGE_DEV,K_JEM_TEMPLATING")
+  end
+
+  it "accepts allowed monorepo path specs during dependency-floor validation" do
+    monorepo_gems = File.join(@tmpdir, "gems")
+    alpha_path = File.join(monorepo_gems, "alpha")
+    FileUtils.mkdir_p(alpha_path)
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump(
+        "family" => {
+          "name" => "structuredmerge-ruby",
+          "mode" => "monorepo",
+          "local_path_env" => "STRUCTUREDMERGE_DEV",
+          "members_root" => "gems"
+        }
+      )
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      PATH
+        remote: #{alpha_path}
+        specs:
+          alpha (1.0.0)
+
+      DEPENDENCIES
+        alpha!
+    LOCK
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    diagnostics = workflow.send(:dependency_floor_lockfile_diagnostics, member: member, released_members: [member])
+
+    expect(diagnostics).to be_empty
+  end
+
   it "launches monorepo member releases from the family tool bundle" do
     File.write(File.join(@tmpdir, "Gemfile"), "source \"https://gem.coop\"\n")
     monorepo_gems = File.join(@tmpdir, "gems")

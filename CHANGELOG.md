@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Preserve explicitly enabled monorepo template dependency graphs while reconciling release lockfiles.
+
 ### Security
 
 ## [1.2.70] - 2026-08-30

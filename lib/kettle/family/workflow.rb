@@ -1761,11 +1761,16 @@ module Kettle
         return ["Gemfile.lock was not created by dependency floor lockfile refresh"] unless File.file?(lockfile)
 
         lockfile_source = File.read(lockfile)
-        diagnostics = Kettle::Dev::LockfileReset.local_path_remote_lines_from_source(lockfile_source).map do |line_number|
+        allowed_path_gems = dependency_floor_allowed_path_gems(member: member, lockfile_source: lockfile_source)
+        diagnostics = Kettle::Dev::LockfileReset.local_path_remote_lines_from_source(lockfile_source).reject do |line_number|
+          dependency_floor_allowed_path_remote?(member: member, lockfile_source: lockfile_source, line_number: line_number)
+        end.map do |line_number|
           "Gemfile.lock has local path remote at line #{line_number}"
         end
         checksum_entries = Kettle::Dev::LockfileReset.checksum_entries_from_source(lockfile_source) || {}
         diagnostics.concat(released_members.filter_map do |released_member|
+          next if allowed_path_gems.include?(released_member.name)
+
           checksum = checksum_entries[[released_member.name, released_member.version]]
           if checksum.nil?
             "Gemfile.lock CHECKSUMS is missing #{released_member.name} #{released_member.version}"
@@ -1774,6 +1779,48 @@ module Kettle
           end
         end)
         diagnostics
+      end
+
+      def dependency_floor_allowed_path_remote?(member:, lockfile_source:, line_number:)
+        remote = lockfile_source.each_line.with_index(1).find { |_line, index| index == line_number }.first
+          .to_s.split("remote:", 2).last.to_s.strip
+        remote_path = File.expand_path(remote, member.root)
+        release_allowed_local_path_roots.any? do |root|
+          remote_path == root || remote_path.start_with?("#{root}/")
+        end
+      end
+
+      def dependency_floor_allowed_path_gems(member:, lockfile_source:)
+        in_path = false
+        in_specs = false
+        allowed_remote = false
+        lockfile_source.each_line.each_with_object(Set.new) do |line, gems|
+          stripped = line.strip
+          if stripped.match?(/\A[A-Z][A-Z ]*\z/)
+            in_path = stripped == "PATH"
+            in_specs = false
+            allowed_remote = false
+            next
+          end
+          next unless in_path
+
+          if stripped.start_with?("remote:")
+            remote = stripped.split("remote:", 2).last.to_s.strip
+            remote_path = File.expand_path(remote, member.root)
+            allowed_remote = release_allowed_local_path_roots.any? do |root|
+              remote_path == root || remote_path.start_with?("#{root}/")
+            end
+            next
+          end
+          if stripped == "specs:"
+            in_specs = true
+            next
+          end
+          next unless allowed_remote && in_specs && line.start_with?("    ") && !line.start_with?("      ")
+
+          name = stripped.split(" (", 2).first
+          gems << name unless name.empty?
+        end
       end
 
       def dependency_floor_lockfile_command(released_members)
@@ -4130,7 +4177,9 @@ module Kettle
       end
 
       def release_allowed_local_path_env_names
-        config.release_allowed_local_path_env_names
+        names = config.release_allowed_local_path_env_names
+        names << "K_JEM_TEMPLATING" if preserve_monorepo_template_context?
+        names.uniq
       end
 
       def release_local_path_policy_env
@@ -4146,6 +4195,7 @@ module Kettle
 
       def release_lockfile_local_path_env_overrides(member = nil)
         explicit = config.release_disable_local_path_env.to_h { |key| [key.to_s, "false"] }
+        explicit.delete("K_JEM_TEMPLATING") if preserve_monorepo_template_context?
         derived = release_local_path_env_detection_sources.each_with_object({}) do |(key, value), memo|
           key = key.to_s
           next unless key.end_with?("_LOCAL", "_DEV")
@@ -4155,7 +4205,21 @@ module Kettle
           memo[key] = "false"
         end
         inferred = member ? release_lockfile_inferred_local_path_env(member).to_h { |key| [key, "false"] } : {}
-        explicit.merge(derived).merge(inferred).merge(release_member_local_path_env(member))
+        explicit
+          .merge(derived)
+          .merge(inferred)
+          .merge(release_member_local_path_env(member))
+          .merge(preserve_monorepo_template_context? ? {"K_JEM_TEMPLATING" => "true"} : {})
+      end
+
+      # K_JEM_TEMPLATING activates the generated monorepo dependency closure;
+      # it is not an unrelated local checkout switch. Preserve it only when
+      # the caller explicitly enabled it for a configured monorepo release.
+      def preserve_monorepo_template_context?
+        return false unless config.configured_monorepo_release?
+
+        value = release_local_path_env_sources["K_JEM_TEMPLATING"].to_s.strip.downcase
+        %w[true yes 1 on].include?(value)
       end
 
       def release_member_local_path_env(member)
