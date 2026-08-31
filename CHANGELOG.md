@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Restrict monorepo aggregate GitHub Releases to the shared-version cohort, preserving independently versioned excluded members' own releases.
+
 ### Security
 
 ## [1.2.74] - 2026-08-31

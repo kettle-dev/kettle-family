@@ -926,11 +926,12 @@ RSpec.describe Kettle::Family::Workflow do
     expect(command).to include("skip_steps=1,10")
   end
 
-  it "runs one aggregate validation release while preserving excluded members' independent release checks" do
+  it "uses the shared-version cohort for aggregate validation and release" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
       family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
       aggregate_validation: {"enabled" => true, "exclude_members" => ["kettle-jem"]},
+      family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"},
       changelog: {
         "mode" => "root",
         "path" => "CHANGELOG.md",
@@ -939,9 +940,9 @@ RSpec.describe Kettle::Family::Workflow do
     )
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
-    alpha = ready_member("alpha", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
-    beta = ready_member("beta", changelog: false)
-    kettle_jem = ready_member("kettle-jem")
+    alpha = ready_member("alpha", changelog: false, version: "7.1.6", version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
+    beta = ready_member("beta", changelog: false, version: "7.1.6")
+    kettle_jem = ready_member("kettle-jem", version: "7.1.13")
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta, kettle_jem], publish: true)
 
     expect(workflow.send(:release_command_for, alpha).to_s).to include("skip_steps=4", "--skip-changelog")
@@ -954,6 +955,13 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_command_for, kettle_jem).to_s).not_to include("skip_steps=4")
     expect(workflow.send(:release_command_for, kettle_jem).to_s).not_to include("--skip-changelog")
     expect(workflow.send(:release_env_for_member, kettle_jem)).not_to have_key("KETTLE_RELEASE_FAMILY_CI_MODE")
+    expect(workflow.send(:release_env_for_member, alpha)).to include("KETTLE_RELEASE_SKIP_GITHUB_RELEASE" => "true")
+    expect(workflow.send(:release_env_for_member, kettle_jem)).not_to have_key("KETTLE_RELEASE_SKIP_GITHUB_RELEASE")
+
+    aggregate_result = workflow.send(:aggregate_monorepo_github_release, workflow.send(:aggregate_release_members))
+
+    expect(aggregate_result).to be_ok
+    expect(aggregate_result.command).to include("--release-version", "7.1.6")
   end
 
   it "rejects fast recovery members that are not selected" do
@@ -2965,7 +2973,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family_changelog: nil, aggregate_validation: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil, release_allowed_local_path_roots: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family: nil, family_changelog: nil, aggregate_validation: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil, release_allowed_local_path_roots: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -2982,6 +2990,7 @@ RSpec.describe Kettle::Family::Workflow do
     release["waves"] = release_waves if release_waves
     release["allowed_local_path_roots"] = release_allowed_local_path_roots if release_allowed_local_path_roots
     config = {"release" => release}
+    config["family"] = family if family
     config["template"] = template if template
     config["check"] = check if check
     config["changelog"] = changelog if changelog
@@ -3020,7 +3029,7 @@ RSpec.describe Kettle::Family::Workflow do
       .and_return(File.join(@tmpdir, "kettle-changelog", "exe", "kettle-changelog"))
   end
 
-  def ready_member(name, changelog: true, dependencies: [], release_dependencies: nil, version_file: nil)
+  def ready_member(name, changelog: true, dependencies: [], release_dependencies: nil, version: "1.0.0", version_file: nil)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))
     File.write(File.join(root, "Gemfile"), "source \"https://gem.coop\"\n")
@@ -3035,7 +3044,7 @@ RSpec.describe Kettle::Family::Workflow do
       FileUtils.mkdir_p(File.dirname(version_file))
       File.write(version_file, "module #{name.split(/[-_]/).map(&:capitalize).join}; VERSION = \"1.0.0\"; end\n")
     end
-    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: version_file, version: "1.0.0", dependencies: dependencies, release_dependencies: release_dependencies || dependencies)
+    Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: version_file, version: version, dependencies: dependencies, release_dependencies: release_dependencies || dependencies)
   end
 
   def ready_member_with_gemspec(name, version: "1.0.0", dependencies: {})

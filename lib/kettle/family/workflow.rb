@@ -520,7 +520,8 @@ module Kettle
           results.concat(release_member_results(workflow_members, include_family_changelog: !skip_changelog))
           return results unless explicit_monorepo_mode? && results.all?(&:ok?)
 
-          results << aggregate_monorepo_github_release(workflow_members)
+          aggregate_members = aggregate_release_members(workflow_members)
+          results << aggregate_monorepo_github_release(aggregate_members) unless aggregate_members.empty?
           return results
         end
         return git_sync_results(workflow_members) if GIT_SYNC_COMMANDS.key?(command)
@@ -2382,6 +2383,19 @@ module Kettle
         member && member.name == (@aggregate_validation_member_name || aggregate_validation_members.first&.name)
       end
 
+      # The aggregate GitHub Release represents the shared-version cohort. An
+      # aggregate-validation exclusion retains an independently versioned
+      # member's complete release lifecycle, including its own GitHub Release.
+      def aggregate_release_members(release_members = members)
+        return Array(release_members) unless config.release_aggregate_validation? && config.shared_changelog?
+
+        aggregate_validation_members(release_members)
+      end
+
+      def aggregate_release_member?(member)
+        member && aggregate_release_members.include?(member)
+      end
+
       def fast_recovery_for?(member)
         return false unless fast_recovery
         return false unless member
@@ -2506,7 +2520,7 @@ module Kettle
           # after their member gems. A standalone gem uses the default
           # monorepo mode too, but must let kettle-release create its own
           # GitHub Release.
-          env["KETTLE_RELEASE_SKIP_GITHUB_RELEASE"] = "true" if aggregate_monorepo_github_release?
+          env["KETTLE_RELEASE_SKIP_GITHUB_RELEASE"] = "true" if aggregate_monorepo_github_release? && aggregate_release_member?(member)
         end
         if aggregate_validation_member?(member)
           env["KETTLE_RELEASE_FAMILY_CI_MODE"] = aggregate_validation_member_name?(member) ? "validation" : "member"
