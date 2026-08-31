@@ -702,9 +702,7 @@ module Kettle
         )
         selected = Selection.new(
           members: ordered,
-          release_state_results: release_state_results,
-          shared_version: config.shared_changelog?,
-          shared_bump_member_names: shared_bump_member_names(config: config, members: ordered)
+          release_state_results: release_state_results
         ).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
         result_members = selected
         display_members = display_members_for(command: command, config: config, members: ordered, selected_members: selected)

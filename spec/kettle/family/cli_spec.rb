@@ -823,7 +823,7 @@ RSpec.describe Kettle::Family::CLI do
     YAML
     results = [
       release_state_result("alpha", "version" => "1.0.0", "latest_released" => "1.0.0", "unreleased_entries" => true, "bump_release_pending" => true),
-      release_state_result("beta", "version" => "1.0.0", "latest_released" => "1.0.0", "unreleased_entries" => true, "bump_release_pending" => false),
+      release_state_result("beta", "version" => "1.0.0", "latest_released" => "1.0.0", "unreleased_entries" => true, "bump_release_pending" => true),
       release_state_result("local", "version" => "1.1.0", "latest_released" => "1.0.0", "unreleased_entries" => true, "bump_release_pending" => false)
     ]
     checker = instance_double(Kettle::Family::ReleaseStateCheck, results: results)

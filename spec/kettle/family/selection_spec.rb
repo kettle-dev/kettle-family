@@ -56,7 +56,7 @@ RSpec.describe Kettle::Family::Selection do
     expect(selected.map(&:name)).to eq(["alpha"])
   end
 
-  it "selects the complete shared-version family when any member needs a bump" do
+  it "keeps bump selection exact even when a family shares a version" do
     members = [member("alpha"), member("beta"), member("gamma")]
     results = [
       release_state("alpha", "bump_release_pending" => true),
@@ -66,29 +66,26 @@ RSpec.describe Kettle::Family::Selection do
 
     selected = described_class.new(
       members: members,
-      release_state_results: results,
-      shared_version: true
+      release_state_results: results
     ).apply(only: "bump")
 
-    expect(selected).to eq(members)
+    expect(selected.map(&:name)).to eq(["alpha"])
   end
 
-  it "keeps already-bumped local-changelog members out of a shared-version bump" do
+  it "keeps pending selection exact" do
     members = [member("alpha"), member("beta"), member("local")]
     results = [
-      release_state("alpha", "bump_release_pending" => true),
-      release_state("beta", "bump_release_pending" => false),
-      release_state("local", "bump_release_pending" => false)
+      release_state("alpha", "pending_release" => true),
+      release_state("beta", "pending_release" => false),
+      release_state("local", "pending_release" => false)
     ]
 
     selected = described_class.new(
       members: members,
-      release_state_results: results,
-      shared_version: true,
-      shared_bump_member_names: %w[alpha beta]
-    ).apply(only: "bump")
+      release_state_results: results
+    ).apply(only: "pending")
 
-    expect(selected.map(&:name)).to eq(%w[alpha beta])
+    expect(selected.map(&:name)).to eq(["alpha"])
   end
 
   it "ANDs multiple release-state tokens" do
