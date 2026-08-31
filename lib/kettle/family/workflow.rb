@@ -3373,7 +3373,7 @@ module Kettle
           next false unless event
 
           if event["type"] == "command_step" && event["phase"] == "release" && event["status"] == "failed"
-            state[:failed_step] = event["index"].to_i if state && event["index"].to_s.match?(/\A\d+\z/)
+            state[:failed_step] = event["resume_step"].to_i if state && event["resume_step"].to_s.match?(/\A\d+\z/)
           end
 
           if progress_io

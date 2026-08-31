@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Generate release resume hints only from explicit child release-step metadata.
+
 ### Security
 
 ## [1.2.72] - 2026-08-30

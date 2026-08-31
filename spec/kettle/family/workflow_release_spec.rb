@@ -682,14 +682,24 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command.join(" ")).to include("--skip-appraisals")
   end
 
-  it "records the failed child release step for a member-scoped retry" do
+  it "records an explicit failed child release step for a member-scoped retry" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], publish: true)
     state = {}
     handler = workflow.send(:release_event_line_handler, ready_member("alpha"), state: state)
 
-    expect(handler.call(JSON.generate(type: "command_step", event_version: 1, phase: "release", index: 15, status: "failed"))).to be(true)
+    expect(handler.call(JSON.generate(type: "command_step", event_version: 1, phase: "release", index: 17, resume_step: 15, status: "failed"))).to be(true)
     expect(state).to eq(failed_step: 15)
+  end
+
+  it "does not treat a child command event index as a kettle-release resume step" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], publish: true)
+    state = {}
+    handler = workflow.send(:release_event_line_handler, ready_member("alpha"), state: state)
+
+    expect(handler.call(JSON.generate(type: "command_step", event_version: 1, phase: "release", index: 17, status: "failed"))).to be(true)
+    expect(state).to be_empty
   end
 
   it "lets kettle-release own release lockfile normalization" do
