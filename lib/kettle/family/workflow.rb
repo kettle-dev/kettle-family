@@ -2302,7 +2302,8 @@ module Kettle
         command = replace_kettle_release_provider(command) if @release_secrets_broker
         args = []
         effective_start_step = release_start_step_for(member)
-        effective_skip_steps = release_skip_steps_for(member)
+        command, configured_skip_steps = extract_kettle_release_skip_steps(command)
+        effective_skip_steps = (configured_skip_steps + release_skip_steps_for(member).split(",")).uniq.join(",")
         args << "start_step=#{effective_start_step}" if effective_start_step
         args << "skip_steps=#{effective_skip_steps}" unless effective_skip_steps.empty?
         args << "--skip-changelog" if skip_changelog || aggregate_validation_member?(member)
@@ -2321,6 +2322,27 @@ module Kettle
         return command if args.empty?
 
         command.is_a?(Array) ? [*command, *args] : "#{command} #{args.join(" ")}"
+      end
+
+      def extract_kettle_release_skip_steps(command)
+        configured_steps = []
+        case command
+        when Array
+          filtered_command = command.reject do |argument|
+            match = argument.to_s.match(/\A(?:skip_steps|--skip-steps)=(.+)\z/)
+            configured_steps.concat(match[1].split(",")) if match
+            match
+          end
+          [filtered_command, configured_steps.map(&:strip).reject(&:empty?)]
+        when String
+          filtered_command = command.gsub(/(?:\A|\s)(?:skip_steps|--skip-steps)=([^\s]+)/) do
+            configured_steps.concat(Regexp.last_match(1).split(","))
+            ""
+          end
+          [filtered_command.strip, configured_steps.map(&:strip).reject(&:empty?)]
+        else
+          [command, configured_steps]
+        end
       end
 
       def release_start_step_for(member)

@@ -912,6 +912,20 @@ RSpec.describe Kettle::Family::Workflow do
     expect(command.to_s).not_to include("start_step=")
   end
 
+  it "merges configured and generated child release skip steps" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release skip_steps=1"
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [alpha], publish: true, skip_ci: true)
+
+    command = workflow.send(:release_command_for, alpha).to_s
+
+    expect(command.scan(/skip_steps=/).length).to eq(1)
+    expect(command).to include("skip_steps=1,10")
+  end
+
   it "runs one aggregate validation release while preserving excluded members' independent release checks" do
     write_release_config(
       publish_command: "bundle exec kettle-release",

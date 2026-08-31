@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Merge configured and generated child release skip steps.
+
 ### Security
 
 ## [1.2.73] - 2026-08-31
