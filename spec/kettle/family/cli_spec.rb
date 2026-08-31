@@ -803,6 +803,40 @@ RSpec.describe Kettle::Family::CLI do
     expect(File.read(File.join(beta_root, "lib", "beta", "version.rb"))).to include('VERSION = "1.1.1"')
   end
 
+  it "excludes an already-bumped local-changelog member when shared members need a bump", :prism do
+    write_gem("alpha")
+    write_gem("beta")
+    write_gem("local")
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(@tmpdir, "local", "CHANGELOG.md"), "## [Unreleased]\n")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        mode: monorepo
+      members:
+        roots:
+          - alpha
+          - beta
+          - local
+      changelog:
+        mode: root
+        version_file: alpha/lib/alpha/version.rb
+    YAML
+    results = [
+      release_state_result("alpha", "version" => "1.0.0", "latest_released" => "1.0.0", "unreleased_entries" => true, "bump_release_pending" => true),
+      release_state_result("beta", "version" => "1.0.0", "latest_released" => "1.0.0", "unreleased_entries" => true, "bump_release_pending" => false),
+      release_state_result("local", "version" => "1.1.0", "latest_released" => "1.0.0", "unreleased_entries" => true, "bump_release_pending" => false)
+    ]
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: results)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "bump", "--check"], out: out, err: StringIO.new)
+
+    expect(status).to eq(1)
+    expect(out.string).to include("failed alpha bump", "failed beta bump")
+    expect(out.string).not_to include("local bump")
+  end
+
   it "keeps bump-version as a deprecated alias", :prism do
     write_gem("alpha")
     out = StringIO.new
