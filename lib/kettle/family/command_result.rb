@@ -17,7 +17,8 @@ module Kettle
       :branch,
       :output_streamed,
       :log_path,
-      :resume_step
+      :resume_step,
+      :resume_command
     ) do
       def to_h
         {
@@ -35,7 +36,8 @@ module Kettle
           "reason" => reason,
           "output_streamed" => output_streamed?,
           "log_path" => log_path,
-          "resume_step" => resume_step
+          "resume_step" => resume_step,
+          "resume_command" => resume_command
         }
       end
 

@@ -657,6 +657,41 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("resume_hint")).to eq("kettle-family release --execute --publish --secrets-provider op --skip-ci --env RELEASE_CHANNEL=stable --only alpha --start-step 15")
   end
 
+  it "does not generate member selectors for synthetic aggregate release failures" do
+    aggregate_failure = result("structuredmerge-ruby", phase: "aggregate_github_release", success: false, reason: "mixed versions")
+    report = described_class.new(
+      family_name: "structuredmerge-ruby",
+      order_mode: "dependency",
+      members: [member("alpha")],
+      selected_members: [member("alpha")],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [result("alpha"), aggregate_failure]
+    )
+
+    expect(report.to_h.fetch("resume_hints")).to be_empty
+    expect(report.to_text).not_to include("--only structuredmerge-ruby")
+  end
+
+  it "uses an aggregate release's explicit direct recovery command" do
+    aggregate_failure = result("structuredmerge-ruby", phase: "aggregate_github_release", success: false, reason: "GitHub API failed")
+    aggregate_failure.resume_command = "env K_CHANGELOG_GEM_NAME=structuredmerge-ruby bundle exec kettle-gh-release --release-version 7.1.6"
+    report = described_class.new(
+      family_name: "structuredmerge-ruby",
+      order_mode: "dependency",
+      members: [member("alpha")],
+      selected_members: [member("alpha")],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [result("alpha"), aggregate_failure]
+    )
+
+    expect(report.to_h.fetch("resume_hints")).to eq([aggregate_failure.resume_command])
+    expect(report.to_text).to include("resume: #{aggregate_failure.resume_command}")
+  end
+
   it "renders a final summary for successful commands" do
     report = described_class.new(
       family_name: "rubocop-lts",

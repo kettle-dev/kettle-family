@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Avoid invalid member-scoped resume hints for synthetic aggregate GitHub Release failures.
+
 ### Security
 
 ## [1.2.75] - 2026-08-31

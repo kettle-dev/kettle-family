@@ -122,7 +122,8 @@ module Kettle
           lines << "  #{result_state(result)} #{result.member_name} #{result.phase} #{result.reason || ""}".rstrip
           append_result_stdout(lines, result)
           append_indented_output(lines, result.stderr) if !result.ok? && !result.stderr.to_s.empty?
-          lines << "    resume: #{resume_hint_for(result)}" unless result.ok?
+          resume_hint = resume_hint_for(result)
+          lines << "    resume: #{resume_hint}" if !result.ok? && resume_hint
         end
         append_template_summary(lines) if command == "template"
       end
@@ -687,7 +688,7 @@ module Kettle
       end
 
       def release_resume_hints
-        failed_hints = visible_results.reject(&:ok?).map { |result| resume_hint_for(result) }.uniq
+        failed_hints = visible_results.reject(&:ok?).filter_map { |result| resume_hint_for(result) }.uniq
         pending_names = summary_pending.map { |entry| entry.fetch("member") }
         return failed_hints if pending_names.empty?
 
@@ -701,6 +702,9 @@ module Kettle
       end
 
       def release_resume_hint(result)
+        return result.resume_command if result.respond_to?(:resume_command) && !result.resume_command.to_s.empty?
+        return nil if result.phase == "aggregate_github_release"
+
         hint = release_resume_base
         hint = "#{hint} --only #{result.member_name}" if result.member_name
         hint = "#{hint} --start-step #{result.resume_step}" if result.respond_to?(:resume_step) && result.resume_step

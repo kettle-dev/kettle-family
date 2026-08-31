@@ -2627,7 +2627,7 @@ module Kettle
         env["KETTLE_DEV_DEV"] = local_kettle_dev if local_path_env_value?(local_kettle_dev)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         stdout, stderr, status = Open3.capture3(env, *command, chdir: config.root)
-        CommandResult.new(
+        result = CommandResult.new(
           member_name: config.family_name,
           phase: "aggregate_github_release",
           command: command,
@@ -2640,6 +2640,8 @@ module Kettle
           skipped: false,
           reason: status.success? ? nil : "aggregate GitHub release failed"
         )
+        result.resume_command = aggregate_github_release_resume_command(env, command) unless result.ok?
+        result
       rescue => error
         aggregate_release_result("#{error.class}: #{error.message}")
       end
@@ -2650,6 +2652,13 @@ module Kettle
 
       def aggregate_monorepo_github_release?
         explicit_monorepo_mode? && family_members.length > 1
+      end
+
+      def aggregate_github_release_resume_command(env, command)
+        assignments = env.sort_by { |key, _value| key }.filter_map do |key, value|
+          "#{key}=#{Shellwords.escape(value.to_s)}" unless value.nil?
+        end
+        (["env", *assignments].join(" ") + " " + Shellwords.join(command)).strip
       end
       # simplecov:enable
 
