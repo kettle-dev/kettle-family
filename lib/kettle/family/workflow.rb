@@ -520,8 +520,8 @@ module Kettle
           results.concat(release_member_results(workflow_members, include_family_changelog: !skip_changelog))
           return results unless explicit_monorepo_mode? && results.all?(&:ok?)
 
-          aggregate_members = aggregate_release_members(workflow_members)
-          results << aggregate_monorepo_github_release(aggregate_members) unless aggregate_members.empty?
+          selected_aggregate_members = aggregate_release_members(workflow_members)
+          results << aggregate_monorepo_github_release(aggregate_github_release_members) unless selected_aggregate_members.empty?
           return results
         end
         return git_sync_results(workflow_members) if GIT_SYNC_COMMANDS.key?(command)
@@ -2394,6 +2394,13 @@ module Kettle
 
       def aggregate_release_member?(member)
         member && aggregate_release_members.include?(member)
+      end
+
+      # A resumed release may select only the members that remain unpublished.
+      # The repository-level release still needs every shared-version artifact,
+      # including members published by an earlier interrupted wave.
+      def aggregate_github_release_members
+        aggregate_release_members(family_members)
       end
 
       def fast_recovery_for?(member)

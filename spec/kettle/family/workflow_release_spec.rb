@@ -964,6 +964,28 @@ RSpec.describe Kettle::Family::Workflow do
     expect(aggregate_result.command).to include("--release-version", "7.1.6")
   end
 
+  it "collects aggregate assets from the full shared cohort during a partial release resume" do
+    write_release_config(
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      aggregate_validation: {"enabled" => true, "exclude_members" => ["kettle-jem"]},
+      changelog: {"mode" => "root", "path" => "CHANGELOG.md", "version_file" => "alpha/lib/alpha/version.rb"}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha", version: "7.1.6")
+    beta = ready_member("beta", version: "7.1.6")
+    kettle_jem = ready_member("kettle-jem", version: "7.1.13")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [beta, kettle_jem],
+      family_members: [alpha, beta, kettle_jem],
+      publish: true
+    )
+
+    expect(workflow.send(:aggregate_release_members)).to eq([beta])
+    expect(workflow.send(:aggregate_github_release_members)).to eq([alpha, beta])
+  end
+
   it "rejects fast recovery members that are not selected" do
     write_release_config(publish_command: "bundle exec kettle-release")
     config = Kettle::Family::Config.load(root: @tmpdir)

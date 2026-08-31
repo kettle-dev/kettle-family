@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Avoid invalid member-scoped resume hints for synthetic aggregate GitHub Release failures.
 
+- Include all shared-family artifacts when recovering an interrupted aggregate GitHub Release.
+
 ### Security
 
 ## [1.2.75] - 2026-08-31
