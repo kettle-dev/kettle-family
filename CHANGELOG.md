@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Retry dependency floor lockfile refreshes only while a newly released family gem is unavailable from the registry.
-
 ### Security
+
+## [1.2.78] - 2026-09-01
+
+- TAG: [v1.2.78][1.2.78t]
+- COVERAGE: 93.34% -- 5575/5973 lines in 33 files
+- BRANCH COVERAGE: 76.66% -- 2292/2990 branches in 33 files
+- 30.69% documented
+
+### Fixed
+
+- Retry dependency floor lockfile refreshes only while a newly released family gem is unavailable from the registry.
 
 ## [1.2.77] - 2026-08-31
 
@@ -2429,7 +2438,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.77...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.78...HEAD
+[1.2.78]: https://github.com/kettle-dev/kettle-family/compare/v1.2.77...v1.2.78
+[1.2.78t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.78
 [1.2.77]: https://github.com/kettle-dev/kettle-family/compare/v1.2.76...v1.2.77
 [1.2.77t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.77
 [1.2.76]: https://github.com/kettle-dev/kettle-family/compare/v1.2.75...v1.2.76
