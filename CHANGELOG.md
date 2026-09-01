@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Keep the configured family local dependency graph active throughout template bootstrap and preparation; release-only lockfile cleanup remains isolated to release commands.
-
 ### Security
+
+## [1.2.82] - 2026-09-01
+
+- TAG: [v1.2.82][1.2.82t]
+- COVERAGE: 93.26% -- 5655/6064 lines in 33 files
+- BRANCH COVERAGE: 76.34% -- 2310/3026 branches in 33 files
+- 30.69% documented
+
+### Fixed
+
+- Keep the configured family local dependency graph active throughout template bootstrap and preparation; release-only lockfile cleanup remains isolated to release commands.
 
 ## [1.2.81] - 2026-09-01
 
@@ -2479,7 +2488,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.81...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.82...HEAD
+[1.2.82]: https://github.com/kettle-dev/kettle-family/compare/v1.2.81...v1.2.82
+[1.2.82t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.82
 [1.2.81]: https://github.com/kettle-dev/kettle-family/compare/v1.2.80...v1.2.81
 [1.2.81t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.81
 [1.2.80]: https://github.com/kettle-dev/kettle-family/compare/v1.2.79...v1.2.80
