@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Retry dependency floor lockfile refreshes only while a newly released family gem is unavailable from the registry.
+
 ### Security
 
 ## [1.2.77] - 2026-08-31
