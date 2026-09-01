@@ -1485,6 +1485,10 @@ module Kettle
 
       def release_dependency_floor_reconciliation_results(release_members)
         return [] unless execute && auto_dependency_floors
+        # Monorepo members intentionally keep their family dependencies as
+        # paths in the canonical development lockfile. Registry reconciliation
+        # is for sibling repositories resuming after an earlier wave published.
+        return [] if config.configured_monorepo_release?
 
         published_members = published_family_dependencies_for(release_members)
         return [] if published_members.empty?

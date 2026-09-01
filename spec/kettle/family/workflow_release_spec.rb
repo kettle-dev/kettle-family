@@ -2227,6 +2227,23 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).not_to have_received(:sleep)
   end
 
+  it "does not reconcile published family dependencies for monorepo releases" do
+    write_release_config
+    File.write(
+      File.join(@tmpdir, ".kettle-family.yml"),
+      YAML.dump(
+        "family" => {"name" => "example", "mode" => "monorepo", "members_root" => "gems"}
+      )
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.2.3"]})
+    workflow = described_class.new(command: "release", config: config, members: [beta], family_members: [alpha, beta], execute: true, publish: true, commit: false)
+
+    expect(workflow).not_to receive(:released_version?)
+    expect(workflow.send(:release_dependency_floor_reconciliation_results, [beta])).to be_empty
+  end
+
   it "excludes inactive conditional Gemfile dependencies from release lockfile refreshes" do
     write_release_config(release_env: {"KETTLE_DEV_DEV" => "false"})
     config = Kettle::Family::Config.load(root: @tmpdir)
