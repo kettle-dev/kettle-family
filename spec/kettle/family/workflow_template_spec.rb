@@ -198,6 +198,50 @@ RSpec.describe Kettle::Family::Workflow do
     expect(waves.map { |wave| wave.map(&:name) }).to eq([["alpha", "independent"], ["beta"]])
   end
 
+  it "keeps ordinary template members in one scheduler batch when another member has release target branches" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    target = member_at("alpha")
+    beta = member_at("beta")
+    gamma = member_at("gamma")
+    workflow = described_class.new(command: "template", config: config, members: [target, beta, gamma], execute: true)
+    result = Kettle::Family::CommandResult.new("beta", "template", [], beta.root, 0, true, "", "", 0.0, false, nil)
+    branch_config = instance_double(Kettle::Family::Config)
+    child = instance_double(described_class, results: [result])
+    batches = []
+
+    allow(workflow).to receive(:member_local_release_config) do |member|
+      if member == target
+        branch_config
+      end
+    end
+    allow(workflow).to receive(:current_branch_results) do |members|
+      batches << members
+      [result]
+    end
+    allow(workflow).to receive(:member_local_workflow).with(member: target, member_config: branch_config).and_return(child)
+
+    expect(workflow.send(:member_local_branch_target_results)).to all(be_ok)
+    expect(batches).to eq([[beta, gamma]])
+  end
+
+  it "does not start an empty scheduler batch when only a branch-target template member is selected" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    target = member_at("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [target], execute: true)
+    result = Kettle::Family::CommandResult.new("alpha", "template", [], target.root, 0, true, "", "", 0.0, false, nil)
+    branch_config = instance_double(Kettle::Family::Config)
+    child = instance_double(described_class, results: [result])
+
+    allow(workflow).to receive(:member_local_release_config).with(target).and_return(branch_config)
+    allow(workflow).to receive(:current_branch_results)
+    allow(workflow).to receive(:member_local_workflow).with(member: target, member_config: branch_config).and_return(child)
+
+    expect(workflow.send(:member_local_branch_target_results)).to eq([result])
+    expect(workflow).not_to have_received(:current_branch_results)
+  end
+
   it "initializes the template commit mutex before worker threads can race" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)

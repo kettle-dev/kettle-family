@@ -925,15 +925,19 @@ module Kettle
       def member_local_branch_target_results
         return release_member_local_branch_target_results if command == "release"
 
-        members.each_with_object([]) do |member, memo|
-          member_config = member_local_release_config(member)
-          if member_config
-            memo.concat(member_local_workflow(member: member, member_config: member_config).results)
-          else
-            memo.concat(current_branch_results([member]))
-          end
-          break memo unless memo.last&.ok?
+        target_members, current_branch_members = members.partition do |member|
+          member_local_release_config(member)
         end
+        results = []
+        results = current_branch_results(current_branch_members) unless current_branch_members.empty?
+        return results unless results.all?(&:ok?)
+
+        target_members.each do |member|
+          member_config = member_local_release_config(member)
+          results.concat(member_local_workflow(member: member, member_config: member_config).results)
+          break unless results.last&.ok?
+        end
+        results
       end
 
       def branch_generated_lockfile_cleanup_required?
