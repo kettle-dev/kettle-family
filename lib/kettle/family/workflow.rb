@@ -822,32 +822,11 @@ module Kettle
         versions.max
       end
 
-      def template_bootstrap_dependency_env(member)
-        env = release_lockfile_local_path_env_overrides(member).merge(workflow_env)
-        env.each_key do |key|
-          env[key] = "false" if key.end_with?("_DEV") && !local_path_env_requested?(key)
-        end
+      def template_bootstrap_dependency_env(_member)
+        env = template_prepare_env
         env["K_JEM_TEMPLATING"] = "false"
         env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
-        family_env_name = config.family_local_path_env_name
-        env[family_env_name] = "false" if family_env_name && !local_path_env_requested?(family_env_name)
-        env.merge!(template_bootstrap_direct_sibling_env(member))
         env
-      end
-
-      # The bootstrap refreshes nomono before the template bundle is available,
-      # but a sibling member can itself require an unreleased family gem. Keep
-      # that direct dependency local without enabling the full template context.
-      def template_bootstrap_direct_sibling_env(member)
-        return {} unless config.family_mode == "sibling_repos"
-
-        direct_sibling_env = "#{config.family_name.gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV"
-        return {} if local_path_env_requested?(direct_sibling_env)
-
-        family_names = family_members.map(&:name)
-        return {} if (Array(member.dependencies) & family_names).empty?
-
-        {direct_sibling_env => config.family_local_path_root}
       end
 
       def template_results_for_member(member, progress: nil)
@@ -4377,10 +4356,10 @@ module Kettle
       end
 
       def template_prepare_env
-        env = workflow_env
-        family_env_name = config.family_local_path_env_name
-        env[family_env_name] = "false" if family_env_name && !local_path_env_requested?(family_env_name)
-        env
+        # Templating is development work.  It must resolve the configured
+        # family graph exactly as template application does; release-only
+        # lockfile cleanup owns disabling local path sources.
+        workflow_env
       end
 
       def local_path_env_requested?(name)

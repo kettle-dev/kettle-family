@@ -29,7 +29,7 @@ RSpec.describe Kettle::Family::BranchTargetConfig do
       family:
         name: rubocop-lts
         mode: sibling_repos
-        local_path_env: RUBOCOP_LTS_LOCAL
+        local_path_env: RUBOCOP_LTS_DEV
       members:
         roots:
           - rubocop-lts
@@ -44,7 +44,7 @@ RSpec.describe Kettle::Family::BranchTargetConfig do
     derived = described_class.member_release_config(member: member, config: config)
 
     expect(derived.root).to eq(member_root)
-    expect(derived.family_local_path_env).to eq("RUBOCOP_LTS_LOCAL" => @family_root)
+    expect(derived.family_local_path_env).to eq("RUBOCOP_LTS_DEV" => @family_root)
     expect(derived.release_target_branches).to eq(["r3_2-even-v24"])
   end
 end

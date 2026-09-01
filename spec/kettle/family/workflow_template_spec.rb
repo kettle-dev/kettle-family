@@ -620,7 +620,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command.join(" ")).to include("--events")
   end
 
-  it "disables the implicit family local path env during template prepare" do
+  it "preserves the configured family local path env during template prepare" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
@@ -631,7 +631,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member]).results
 
     expect(results.fetch(0).phase).to eq("prepare_template_dependencies")
-    expect(results.fetch(0).command).to include("#{family_local_env_name}=false")
+    expect(results.fetch(0).command).to include("#{family_local_env_name}=#{@tmpdir}")
   end
 
   it "preserves an explicit family local path env during template prepare" do
@@ -678,7 +678,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
-  it "aligns stale nomono bootstrap dependencies before member template preparation runs" do
+  it "aligns stale nomono bootstrap dependencies in the configured family environment" do
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],
       normalize_lockfiles: false,
@@ -708,11 +708,11 @@ RSpec.describe Kettle::Family::Workflow do
       call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == %w[bundle update nomono --bundler]
     end
     expect(bundle_update).not_to be_nil
-    expect(bundle_update.fetch(:env)).to include(family_local_env_name => "false")
+    expect(bundle_update.fetch(:env)).to include(family_local_env_name => @tmpdir)
     expect(File.read(File.join(alpha.root, "Gemfile"))).to include('gem "nomono", "~> 1.1", ">= 1.1.1", require: false')
   end
 
-  it "disables implicit local dependency switches during nomono bootstrap" do
+  it "preserves local dependency switches during nomono bootstrap" do
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],
       normalize_lockfiles: false,
@@ -742,14 +742,14 @@ RSpec.describe Kettle::Family::Workflow do
     expect(bundle_update.fetch(:env)).to include("BUNDLE_DISABLE_CHECKSUM_VALIDATION" => "true")
   end
 
-  it "keeps declared sibling dependencies local during nomono bootstrap" do
+  it "uses the configured family selector for declared sibling dependencies during nomono bootstrap" do
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],
       normalize_lockfiles: false,
       family_mode: "sibling_repos"
     )
     config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
-    config_hash.fetch("family").merge!("name" => "example-family", "local_path_env" => "EXAMPLE_FAMILY_LOCAL")
+    config_hash.fetch("family").merge!("name" => "example-family", "local_path_env" => "EXAMPLE_FAMILY_DEV")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = member_at("alpha")
@@ -773,19 +773,18 @@ RSpec.describe Kettle::Family::Workflow do
     end
     expect(bundle_update.fetch(:env)).to include(
       "EXAMPLE_FAMILY_DEV" => @tmpdir,
-      "EXAMPLE_FAMILY_LOCAL" => "false",
       "K_JEM_TEMPLATING" => "false"
     )
   end
 
-  it "honors an explicit direct sibling dependency override during nomono bootstrap" do
+  it "honors an explicit configured family selector override during nomono bootstrap" do
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],
       normalize_lockfiles: false,
       family_mode: "sibling_repos"
     )
     config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
-    config_hash.fetch("family").merge!("name" => "example-family", "local_path_env" => "EXAMPLE_FAMILY_LOCAL")
+    config_hash.fetch("family").merge!("name" => "example-family", "local_path_env" => "EXAMPLE_FAMILY_DEV")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = member_at("alpha")

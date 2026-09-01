@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Keep the configured family local dependency graph active throughout template bootstrap and preparation; release-only lockfile cleanup remains isolated to release commands.
+
 ### Security
 
 ## [1.2.81] - 2026-09-01
