@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Skip sibling-repository dependency-floor reconciliation for configured monorepo releases, which intentionally retain family path dependencies.
-
 ### Security
+
+## [1.2.79] - 2026-09-01
+
+- TAG: [v1.2.79][1.2.79t]
+- COVERAGE: 93.34% -- 5576/5974 lines in 33 files
+- BRANCH COVERAGE: 76.67% -- 2294/2992 branches in 33 files
+- 30.69% documented
+
+### Fixed
+
+- Skip sibling-repository dependency-floor reconciliation for configured monorepo releases, which intentionally retain family path dependencies.
 
 ## [1.2.78] - 2026-09-01
 
@@ -2440,7 +2449,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.78...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.79...HEAD
+[1.2.79]: https://github.com/kettle-dev/kettle-family/compare/v1.2.78...v1.2.79
+[1.2.79t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.79
 [1.2.78]: https://github.com/kettle-dev/kettle-family/compare/v1.2.77...v1.2.78
 [1.2.78t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.78
 [1.2.77]: https://github.com/kettle-dev/kettle-family/compare/v1.2.76...v1.2.77
