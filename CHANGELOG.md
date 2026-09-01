@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Skip sibling-repository dependency-floor reconciliation for configured monorepo releases, which intentionally retain family path dependencies.
+
 ### Security
 
 ## [1.2.78] - 2026-09-01
