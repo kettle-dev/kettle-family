@@ -1723,6 +1723,7 @@ module Kettle
           validate_dependency_floor_lockfile_result(result: result, member: member, released_members: released_members) if result.ok?
           annotate_dependency_floor_lockfile_result(result, attempts)
           break if result.ok?
+          break unless dependency_floor_registry_retryable?(result: result, released_members: released_members)
 
           sleep(REGISTRY_WAIT_INTERVAL_SECONDS) if index + 1 < REGISTRY_WAIT_ATTEMPTS
         end
@@ -2031,6 +2032,20 @@ module Kettle
           result.stdout = [result.stdout, message].reject(&:empty?).join("\n")
         else
           result.reason = "dependency floor CI bundle validation failed for #{relative} after #{attempts} attempt(s)"
+        end
+      end
+
+      # Registry propagation is the only condition that merits waiting here.
+      # Solver conflicts and missing local paths are deterministic until the
+      # project configuration changes, so retrying them only hides the error.
+      def dependency_floor_registry_retryable?(result:, released_members:)
+        return false if released_members.empty?
+
+        output = [result.stdout, result.stderr].compact.join("\n")
+        released_members.any? do |member|
+          name = Regexp.escape(member.name)
+          output.match?(/Could not find gem ["']#{name}(?:[ "']|$)/) ||
+            output.match?(/CHECKSUMS .*#{name}/)
         end
       end
 

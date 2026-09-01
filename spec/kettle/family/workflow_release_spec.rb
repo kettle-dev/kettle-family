@@ -2281,6 +2281,7 @@ RSpec.describe Kettle::Family::Workflow do
         fi
         attempts="$((attempts + 1))"
         printf '%s' "$attempts" > "$attempts_file"
+        printf "Could not find gem 'alpha'.\\n" >&2
         printf 'bundle attempt %s: %s\\n' "$attempts" "$*"
         if [ "$attempts" -lt 3 ]; then
           exit 1
@@ -2846,7 +2847,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).to have_received(:sleep).with(15).twice
   end
 
-  it "exhausts dependent bundle refresh retries before continuing release" do
+  it "fails a non-registry dependent lockfile error without retrying" do
     write_release_config(
       release_env: fake_bundle_env("exit 1"),
       template: {
@@ -2872,8 +2873,8 @@ RSpec.describe Kettle::Family::Workflow do
     refresh = results.last
     expect(refresh.phase).to eq("dependency_floor_lockfiles")
     expect(refresh).not_to be_ok
-    expect(refresh.reason).to eq("dependency floor lockfile refresh failed after 15 attempt(s)")
-    expect(workflow).to have_received(:sleep).with(15).exactly(14).times
+    expect(refresh.reason).to eq("dependency floor lockfile refresh failed after 1 attempt(s)")
+    expect(workflow).not_to have_received(:sleep)
   end
 
   it "skips family dependency floor updates when disabled" do
