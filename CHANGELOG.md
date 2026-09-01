@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Keep declared sibling dependencies available while bootstrapping template bundles.
-
 ### Security
+
+## [1.2.81] - 2026-09-01
+
+- TAG: [v1.2.81][1.2.81t]
+- COVERAGE: 93.27% -- 5670/6079 lines in 33 files
+- BRANCH COVERAGE: 76.40% -- 2321/3038 branches in 33 files
+- 30.69% documented
+
+### Fixed
+
+- Keep declared sibling dependencies available while bootstrapping template bundles.
 
 ## [1.2.80] - 2026-09-01
 
@@ -2468,7 +2477,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.80...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.81...HEAD
+[1.2.81]: https://github.com/kettle-dev/kettle-family/compare/v1.2.80...v1.2.81
+[1.2.81t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.81
 [1.2.80]: https://github.com/kettle-dev/kettle-family/compare/v1.2.79...v1.2.80
 [1.2.80t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.80
 [1.2.79]: https://github.com/kettle-dev/kettle-family/compare/v1.2.78...v1.2.79
