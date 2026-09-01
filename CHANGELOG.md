@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Template member target branches concurrently in isolated Git worktrees, while retaining the primary checkout for its current branch.
+
 ### Changed
 
 ### Deprecated

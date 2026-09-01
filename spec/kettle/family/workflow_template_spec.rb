@@ -206,8 +206,7 @@ RSpec.describe Kettle::Family::Workflow do
     gamma = member_at("gamma")
     workflow = described_class.new(command: "template", config: config, members: [target, beta, gamma], execute: true)
     result = Kettle::Family::CommandResult.new("beta", "template", [], beta.root, 0, true, "", "", 0.0, false, nil)
-    branch_config = instance_double(Kettle::Family::Config)
-    child = instance_double(described_class, results: [result])
+    branch_config = instance_double(Kettle::Family::Config, release_target_branches: ["r1"])
     batches = []
 
     allow(workflow).to receive(:member_local_release_config) do |member|
@@ -219,7 +218,7 @@ RSpec.describe Kettle::Family::Workflow do
       batches << members
       [result]
     end
-    allow(workflow).to receive(:member_local_workflow).with(member: target, member_config: branch_config).and_return(child)
+    allow(workflow).to receive(:template_branch_worktree_results).with(member: target, member_config: branch_config).and_return([result])
 
     expect(workflow.send(:member_local_branch_target_results)).to all(be_ok)
     expect(batches).to eq([[beta, gamma]])
@@ -231,15 +230,50 @@ RSpec.describe Kettle::Family::Workflow do
     target = member_at("alpha")
     workflow = described_class.new(command: "template", config: config, members: [target], execute: true)
     result = Kettle::Family::CommandResult.new("alpha", "template", [], target.root, 0, true, "", "", 0.0, false, nil)
-    branch_config = instance_double(Kettle::Family::Config)
-    child = instance_double(described_class, results: [result])
+    branch_config = instance_double(Kettle::Family::Config, release_target_branches: ["r1"])
 
     allow(workflow).to receive(:member_local_release_config).with(target).and_return(branch_config)
     allow(workflow).to receive(:current_branch_results)
-    allow(workflow).to receive(:member_local_workflow).with(member: target, member_config: branch_config).and_return(child)
+    allow(workflow).to receive(:template_branch_worktree_results).with(member: target, member_config: branch_config).and_return([result])
 
     expect(workflow.send(:member_local_branch_target_results)).to eq([result])
     expect(workflow).not_to have_received(:current_branch_results)
+  end
+
+  it "uses the requested worker budget for independent template branch worktrees" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [], execute: true, jobs: 2)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    entries = [
+      {branch: "r1", member: alpha, worktree_root: File.join(@tmpdir, "r1")},
+      {branch: "r2", member: beta, worktree_root: File.join(@tmpdir, "r2")}
+    ]
+    started = Queue.new
+    release = Queue.new
+    active = 0
+    max_active = 0
+    mutex = Mutex.new
+    result = Kettle::Family::CommandResult.new("alpha", "template", [], alpha.root, 0, true, "", "", 0.0, false, nil)
+
+    allow(workflow).to receive(:template_branch_worktree_entry_results) do |_entry|
+      mutex.synchronize do
+        active += 1
+        max_active = [max_active, active].max
+      end
+      started << true
+      release.pop
+      mutex.synchronize { active -= 1 }
+      [result]
+    end
+
+    worker = Thread.new { workflow.send(:template_branch_worktree_entries_results, entries) } # rubocop:disable ThreadSafety/NewThread -- asserts branch worktree parallelism.
+    started.pop
+    started.pop
+    2.times { release << true }
+    expect(worker.value).to eq([result, result])
+    expect(max_active).to eq(2)
   end
 
   it "initializes the template commit mutex before worker threads can race" do
@@ -1201,7 +1235,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.stderr).to include("scratch.txt")
   end
 
-  it "resets a sole local-path Gemfile.lock before branch target checkout" do
+  it "resets a sole local-path Gemfile.lock before template branch worktree setup" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -1221,14 +1255,14 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = workflow.results
 
-    expect(results.map(&:phase)).to include("template_lockfile_recovery", "release_checkout")
+    expect(results.map(&:phase)).to include("template_lockfile_recovery", "template_branch_fetch")
     expect(calls.find { |call| call[:phase] == "template_lockfile_recovery" }.fetch(:env)).to include(
       "BUNDLE_GEMFILE" => nil,
       "K_JEM_TEMPLATING" => "false"
     )
   end
 
-  it "commits a sole released-dependency Gemfile.lock before branch target checkout" do
+  it "commits a sole released-dependency Gemfile.lock before template branch worktree setup" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -1245,7 +1279,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
-    expect(results.map(&:phase)).to include("commit_normalized_lockfiles", "release_checkout")
+    expect(results.map(&:phase)).to include("commit_normalized_lockfiles", "template_branch_fetch")
     commit_command = calls.find { |call| call[:phase] == "commit_normalized_lockfiles" }.fetch(:command).join(" ")
     expect(commit_command).to include("Normalize\\ lockfiles\\ after\\ templating")
     expect(calls.map { |call| call[:phase] }).not_to include("template_lockfile_recovery")
@@ -1411,7 +1445,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(calls.fetch(2).fetch(:command)).to eq("bundle update nomono kettle-dev --bundler && bundle lock")
   end
 
-  it "autostashes permitted changes before member target branch checkout" do
+  it "autostashes permitted changes before member target branch worktree setup" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -1427,7 +1461,7 @@ RSpec.describe Kettle::Family::Workflow do
       execute: true
     ).results
 
-    expect(results.map(&:phase)).to include("release_checkout")
+    expect(results.map(&:phase)).to include("template_branch_fetch", "template_worktree_add")
     expect(results.map(&:phase)).not_to include("release_checkout_preflight")
     expect(results).to all(be_ok)
   end

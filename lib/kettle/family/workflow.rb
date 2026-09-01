@@ -934,10 +934,162 @@ module Kettle
 
         target_members.each do |member|
           member_config = member_local_release_config(member)
-          results.concat(member_local_workflow(member: member, member_config: member_config).results)
+          if template_branch_worktrees?(member_config)
+            results.concat(template_branch_worktree_results(member: member, member_config: member_config))
+          else
+            results.concat(member_local_workflow(member: member, member_config: member_config).results)
+          end
           break unless results.last&.ok?
         end
         results
+      end
+
+      # Release target branches are independent checkouts. Templating them in
+      # linked worktrees avoids repeatedly switching the primary checkout and
+      # allows the branch stack to use the requested template worker budget.
+      def template_branch_worktree_results(member:, member_config:)
+        branches = BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches)
+        return [] if branches.empty?
+
+        entries = []
+        outcomes = []
+        runner = command_runner
+        fetch = runner.call(member: member, phase: "template_branch_fetch", command: %w[git fetch --all --prune])
+        outcomes << fetch
+        if fetch.ok?
+          current_branch = template_current_branch(member)
+          if current_branch.is_a?(CommandResult)
+            outcomes << current_branch
+          else
+            branches.each do |branch|
+              if branch == current_branch
+                entries << {branch: branch, member: member, worktree_root: nil}
+                next
+              end
+
+              worktree_root = template_branch_worktree_path(member, branch)
+              add = runner.call(
+                member: member,
+                phase: "template_worktree_add",
+                command: ["git", "worktree", "add", worktree_root, branch]
+              )
+              add.branch = branch
+              outcomes << add
+              break unless add.ok?
+
+              entries << {branch: branch, member: relocate_member_to_worktree(member, worktree_root), worktree_root: worktree_root}
+            end
+
+            if outcomes.all?(&:ok?)
+              emit_template_event_line(member, ">", "branch worktrees #{entries.length} branches, #{template_jobs(entries)} jobs")
+              outcomes.concat(template_branch_worktree_entries_results(entries))
+            end
+          end
+        end
+        outcomes
+      ensure
+        outcomes&.concat(template_branch_worktree_cleanup_results(entries, runner: runner, control_member: member))
+      end
+
+      def template_branch_worktrees?(member_config)
+        command == "template" && execute && !member_config&.release_target_branches.to_a.empty?
+      end
+
+      def template_current_branch(member)
+        stdout, stderr, status = Open3.capture3("git", "branch", "--show-current", chdir: member.root)
+        branch = stdout.strip
+        return branch if status.success? && !branch.empty?
+
+        template_branch_failure_result(member, "could not determine current branch: #{stderr}")
+      end
+
+      def template_branch_worktree_path(member, branch)
+        safe_member = member.name.to_s.gsub(/[^A-Za-z0-9_.-]+/, "_")
+        safe_branch = branch.to_s.gsub(/[^A-Za-z0-9_.-]+/, "_")
+        File.join(config.root, "tmp", "kettle-family", "template-worktrees", safe_member, "#{Process.pid}-#{safe_branch}")
+      end
+
+      def relocate_member_to_worktree(member, worktree_root)
+        relocate = lambda do |path|
+          next unless path
+
+          relative = Pathname.new(path).relative_path_from(Pathname.new(member.root))
+          File.join(worktree_root, relative)
+        end
+        member.dup.tap do |worktree_member|
+          worktree_member.root = worktree_root
+          worktree_member.gemspec_path = relocate.call(member.gemspec_path)
+          worktree_member.version_file = relocate.call(member.version_file)
+        end
+      end
+
+      def template_branch_worktree_entries_results(entries)
+        queue = Queue.new
+        entries.each_with_index { |entry, index| queue << [index, entry] }
+        ordered_results = Array.new(entries.length)
+        mutex = Mutex.new
+        stop = false
+        Array.new(template_jobs(entries)) do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- independent branch worktrees are safe to template concurrently.
+            loop do
+              break if mutex.synchronize { stop }
+              index, entry = queue.pop(true)
+              branch_results = template_branch_worktree_entry_results(entry)
+              mutex.synchronize do
+                ordered_results[index] = branch_results
+                stop = true unless branch_results.all?(&:ok?)
+              end
+            rescue ThreadError
+              break
+            end
+          end
+        end.each(&:join)
+        ordered_results.compact.flatten
+      end
+
+      def template_branch_worktree_entry_results(entry)
+        member = entry.fetch(:member)
+        branch = entry.fetch(:branch)
+        runner = command_runner
+        results = []
+        if git_upstream_for(member)
+          results << runner.call(member: member, phase: "template_branch_sync", command: ["git", "rebase", "@{upstream}"])
+        end
+        results.concat(template_results_for_member(member)) if results.all?(&:ok?)
+        tag_branch_results(results, branch)
+        emit_template_event_line(member, results.all?(&:ok?) ? "." : "F", "branch #{branch}")
+        results
+      end
+
+      def template_branch_worktree_cleanup_results(entries, runner:, control_member:)
+        entries.filter_map do |entry|
+          worktree_root = entry[:worktree_root]
+          next unless worktree_root && Dir.exist?(worktree_root)
+
+          result = runner.call(
+            member: control_member,
+            phase: "template_worktree_remove",
+            command: ["git", "worktree", "remove", "--force", worktree_root]
+          )
+          result.branch = entry.fetch(:branch)
+          result
+        end
+      end
+
+      def template_branch_failure_result(member, message)
+        CommandResult.new(
+          member_name: member.name,
+          phase: "template_worktree",
+          command: ["internal", "template-worktree"],
+          workdir: member.root,
+          status: 1,
+          success: false,
+          stdout: "",
+          stderr: message,
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: "template branch worktree failed"
+        )
       end
 
       def branch_generated_lockfile_cleanup_required?
@@ -3797,7 +3949,7 @@ module Kettle
       end
 
       def emit_template_event_line(member, mark, label)
-        return if label.to_s.empty?
+        return if label.to_s.empty? || !progress_io
 
         synchronize_template_progress do
           progress_io.puts("[#{member.name}] #{mark} #{label}")
