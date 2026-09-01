@@ -457,7 +457,7 @@ module Kettle
       end
 
       def template_sync_members_for(candidates)
-        candidates.each_with_object([]) do |member, unique_members|
+        candidates.reject { |member| template_worktree_only_member?(member) }.each_with_object([]) do |member, unique_members|
           unique_members << member unless unique_members.any? { |candidate| git_root_for(candidate) == git_root_for(member) }
         end
       end
@@ -995,6 +995,16 @@ module Kettle
         command == "template" && execute && !member_config&.release_target_branches.to_a.empty?
       end
 
+      def template_worktree_only_member?(member)
+        member_config = member_local_release_config(member)
+        return false unless template_branch_worktrees?(member_config)
+
+        current_branch = template_current_branch(member)
+        return false if current_branch.is_a?(CommandResult)
+
+        !member_config.release_target_branches.include?(current_branch)
+      end
+
       def template_current_branch(member)
         stdout, stderr, status = Open3.capture3("git", "branch", "--show-current", chdir: member.root)
         branch = stdout.strip
@@ -1306,7 +1316,9 @@ module Kettle
       end
 
       def branch_checkout_preflight_members
-        members_with_targets = members.select { |member| member_local_release_config(member) }
+        members_with_targets = members.select do |member|
+          member_local_release_config(member) && !template_worktree_only_member?(member)
+        end
         members_with_targets = [family_member] if !config.release_target_branches.empty?
         members_with_targets
       end

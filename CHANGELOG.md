@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep non-targeted members in the dependency-aware parallel template scheduler when another family member has release target branches.
 
+- Leave an unrelated primary checkout untouched while templating configured target branches in worktrees.
+
 ### Security
 
 ## [1.2.79] - 2026-09-01

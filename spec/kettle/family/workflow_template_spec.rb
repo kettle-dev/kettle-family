@@ -276,6 +276,20 @@ RSpec.describe Kettle::Family::Workflow do
     expect(max_active).to eq(2)
   end
 
+  it "does not sync or dirty-check an unrelated primary checkout before templating configured branch worktrees" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    target = member_at("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [target], execute: true)
+    branch_config = instance_double(Kettle::Family::Config, release_target_branches: %w[r1 r2])
+
+    allow(workflow).to receive(:member_local_release_config).with(target).and_return(branch_config)
+    allow(workflow).to receive(:template_current_branch).with(target).and_return("feature/unrelated")
+
+    expect(workflow.send(:template_sync_members)).to be_empty
+    expect(workflow.send(:branch_checkout_preflight_members)).to be_empty
+  end
+
   it "initializes the template commit mutex before worker threads can race" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -1218,7 +1232,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(recovery.fetch(:command).last).to include("git restore --source=HEAD --staged --worktree -- Gemfile.lock")
   end
 
-  it "fails before templating when member target branch checkout would be blocked by local changes" do
+  it "templates target branches without touching an unrelated dirty primary checkout" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -1228,11 +1242,9 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true, autostash: false).results
 
-    expect(results.map(&:phase)).to eq(["release_checkout_preflight"])
-    expect(results.first).not_to be_ok
-    expect(results.first.member_name).to eq("alpha")
-    expect(results.first.stderr).to include("local changes would block release target branch checkout")
-    expect(results.first.stderr).to include("scratch.txt")
+    expect(results).to all(be_ok)
+    expect(results.map(&:phase)).not_to include("release_checkout_preflight")
+    expect(File.read(File.join(member.root, "scratch.txt"))).to eq("dirty\n")
   end
 
   it "resets a sole local-path Gemfile.lock before template branch worktree setup" do
