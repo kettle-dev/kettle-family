@@ -742,6 +742,73 @@ RSpec.describe Kettle::Family::Workflow do
     expect(bundle_update.fetch(:env)).to include("BUNDLE_DISABLE_CHECKSUM_VALIDATION" => "true")
   end
 
+  it "keeps declared sibling dependencies local during nomono bootstrap" do
+    write_template_config(
+      command: ["bundle", "exec", "kettle-jem", "install"],
+      normalize_lockfiles: false,
+      family_mode: "sibling_repos"
+    )
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("family").merge!("name" => "example-family", "local_path_env" => "EXAMPLE_FAMILY_LOCAL")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    alpha.dependencies = ["beta"]
+    write_nomono_bundle(alpha, floor: "1.1.0", locked: "1.1.0")
+    captured_calls = []
+    stub_latest_nomono("1.1.1")
+    stub_successful_runner(captured_calls)
+
+    described_class.new(
+      command: "template",
+      config: config,
+      members: [alpha],
+      family_members: [alpha, beta],
+      execute: true
+    ).results
+
+    bundle_update = captured_calls.find do |call|
+      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == %w[bundle update nomono --bundler]
+    end
+    expect(bundle_update.fetch(:env)).to include(
+      "EXAMPLE_FAMILY_DEV" => @tmpdir,
+      "EXAMPLE_FAMILY_LOCAL" => "false",
+      "K_JEM_TEMPLATING" => "false"
+    )
+  end
+
+  it "honors an explicit direct sibling dependency override during nomono bootstrap" do
+    write_template_config(
+      command: ["bundle", "exec", "kettle-jem", "install"],
+      normalize_lockfiles: false,
+      family_mode: "sibling_repos"
+    )
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("family").merge!("name" => "example-family", "local_path_env" => "EXAMPLE_FAMILY_LOCAL")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    alpha.dependencies = ["beta"]
+    write_nomono_bundle(alpha, floor: "1.1.0", locked: "1.1.0")
+    captured_calls = []
+    stub_latest_nomono("1.1.1")
+    stub_successful_runner(captured_calls)
+
+    described_class.new(
+      command: "template",
+      config: config,
+      members: [alpha],
+      family_members: [alpha, beta],
+      execute: true,
+      env_overrides: {"EXAMPLE_FAMILY_DEV" => "false"}
+    ).results
+
+    bundle_update = captured_calls.find { |call| call.fetch(:phase) == "template_bootstrap_dependencies" }
+    expect(bundle_update.fetch(:env)).to include("EXAMPLE_FAMILY_DEV" => "false")
+  end
+
   it "fails before member bundles run when an already activated nomono is stale" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)

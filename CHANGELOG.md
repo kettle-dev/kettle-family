@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Keep declared sibling dependencies available while bootstrapping template bundles.
+
 ### Security
 
 ## [1.2.80] - 2026-09-01

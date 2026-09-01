@@ -831,7 +831,23 @@ module Kettle
         env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
         family_env_name = config.family_local_path_env_name
         env[family_env_name] = "false" if family_env_name && !local_path_env_requested?(family_env_name)
+        env.merge!(template_bootstrap_direct_sibling_env(member))
         env
+      end
+
+      # The bootstrap refreshes nomono before the template bundle is available,
+      # but a sibling member can itself require an unreleased family gem. Keep
+      # that direct dependency local without enabling the full template context.
+      def template_bootstrap_direct_sibling_env(member)
+        return {} unless config.family_mode == "sibling_repos"
+
+        direct_sibling_env = "#{config.family_name.gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV"
+        return {} if local_path_env_requested?(direct_sibling_env)
+
+        family_names = family_members.map(&:name)
+        return {} if (Array(member.dependencies) & family_names).empty?
+
+        {direct_sibling_env => config.family_local_path_root}
       end
 
       def template_results_for_member(member, progress: nil)
