@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Template member target branches concurrently in isolated Git worktrees, while retaining the primary checkout for its current branch.
-
 ### Changed
 
 ### Deprecated
@@ -30,11 +28,24 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.80] - 2026-09-01
+
+- TAG: [v1.2.80][1.2.80t]
+- COVERAGE: 93.26% -- 5662/6071 lines in 33 files
+- BRANCH COVERAGE: 76.39% -- 2316/3032 branches in 33 files
+- 30.69% documented
+
+### Added
+
+- Template member target branches concurrently in isolated Git worktrees, while retaining the primary checkout for its current branch.
+
+### Fixed
+
 - Keep non-targeted members in the dependency-aware parallel template scheduler when another family member has release target branches.
 
 - Leave an unrelated primary checkout untouched while templating configured target branches in worktrees.
-
-### Security
 
 ## [1.2.79] - 2026-09-01
 
@@ -2455,7 +2466,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.79...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.80...HEAD
+[1.2.80]: https://github.com/kettle-dev/kettle-family/compare/v1.2.79...v1.2.80
+[1.2.80t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.80
 [1.2.79]: https://github.com/kettle-dev/kettle-family/compare/v1.2.78...v1.2.79
 [1.2.79t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.79
 [1.2.78]: https://github.com/kettle-dev/kettle-family/compare/v1.2.77...v1.2.78
