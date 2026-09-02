@@ -132,6 +132,187 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "runs aggregate monorepo waves through workers then serial finalization" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"},
+      release_waves: [["alpha", "beta"]]
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], family_members: [alpha, beta], execute: true, publish: true, jobs: 2)
+    result = ->(member, phase = "release_publish") { Kettle::Family::CommandResult.new(member.name, phase, ["internal"], member.root, 0, true, "", "", 0.0, false, nil) }
+
+    allow(workflow).to receive(:start_release_progress).and_return(nil)
+    allow(workflow).to receive(:run_monorepo_release_wave).with([alpha, beta]).and_return([[result.call(alpha)], [result.call(beta)]])
+    allow(workflow).to receive(:finalize_monorepo_release_wave).with([alpha, beta]).and_return([result.call(alpha, "release_finalize"), result.call(beta, "release_finalize")])
+    allow(workflow).to receive(:append_dependency_floor_results)
+
+    results = workflow.send(:parallel_monorepo_release_member_results, [alpha, beta], [])
+
+    expect(results.map(&:phase)).to include("release_wave", "release_publish", "release_finalize")
+  end
+
+  it "materializes successful worker artifacts and always cleans up their worktrees" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", version: "1.2.3")
+    worktree_root = File.join(@tmpdir, "worker")
+    worktree_member = member.dup.tap { |entry| entry.root = worktree_root }
+    FileUtils.mkdir_p(File.join(worktree_root, "pkg"))
+    File.write(File.join(worktree_root, "pkg", "alpha-1.2.3.gem"), "artifact")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    success = Kettle::Family::CommandResult.new(member.name, "release_publish", ["internal"], member.root, 0, true, "", "", 0.0, false, nil)
+    entry = {member: worktree_member, original_member: member, worktree_root: worktree_root}
+
+    allow(workflow).to receive_messages(
+      monorepo_release_worktree_entries: [[entry], [success]],
+      run_monorepo_release_worktree_entries: [[success]]
+    )
+    expect(workflow).to receive(:cleanup_monorepo_release_worktrees).with([entry])
+
+    results = workflow.send(:run_monorepo_release_wave, [member]).flatten
+
+    expect(results.map(&:phase)).to include("release_artifact_materialize")
+    expect(File.read(File.join(member.root, "pkg", "alpha-1.2.3.gem"))).to eq("artifact")
+  end
+
+  it "creates and cleans isolated worktrees while preserving monorepo member paths" do
+    write_release_config(family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    member.root = File.join(@tmpdir, "gems", "alpha")
+    FileUtils.mkdir_p(member.root)
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    success = Kettle::Family::CommandResult.new("example", "release_worktree_add", ["git"], @tmpdir, 0, true, "", "", 0.0, false, nil)
+    runner = double
+    allow(runner).to receive(:call).and_return(success)
+    allow(workflow).to receive(:command_runner).and_return(runner)
+
+    entries, results = workflow.send(:monorepo_release_worktree_entries, [member])
+
+    expect(results).to all(be_ok)
+    expect(entries.first.fetch(:member).root).to end_with("gems/alpha")
+    allow(Dir).to receive(:exist?).with(entries.first.fetch(:worktree_root)).and_return(true)
+    workflow.send(:cleanup_monorepo_release_worktrees, entries)
+    expect(runner).to have_received(:call).at_least(:twice)
+  end
+
+  it "records worker failures and missing artifacts without continuing the wave" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", version: "1.2.3")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    entry = {member: member, original_member: member, worktree_root: File.join(@tmpdir, "missing-worker")}
+    failure = Kettle::Family::CommandResult.new(member.name, "release_publish", ["internal"], member.root, 1, false, "", "failed", 0.0, false, "failed")
+
+    allow(workflow).to receive(:release_results_for_monorepo_worktree).and_return([failure])
+    results = workflow.send(:run_monorepo_release_worktree_entries, [entry])
+
+    expect(results.flatten).to contain_exactly(failure)
+    missing = workflow.send(:copy_monorepo_release_artifact, entry)
+    expect(missing).not_to be_ok
+    expect(missing.stderr).to include("worker did not produce")
+  end
+
+  it "serializes finalization and stops before the shared push after a failure" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha", version: "1.2.3")
+    beta = ready_member("beta", version: "1.2.3")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true)
+    success = Kettle::Family::CommandResult.new(alpha.name, "release_shared_tag", ["internal"], alpha.root, 0, true, "", "", 0.0, false, nil)
+    failure = Kettle::Family::CommandResult.new(alpha.name, "release_finalize", ["internal"], alpha.root, 1, false, "", "failed", 0.0, false, "failed")
+    runner = double
+    allow(runner).to receive(:call).and_return(failure)
+    allow(workflow).to receive(:release_command_runner).and_return(runner)
+    allow(workflow).to receive(:ensure_monorepo_release_tag).with(alpha, runner: runner).and_return(success)
+
+    results = workflow.send(:finalize_monorepo_release_wave, [alpha, beta])
+
+    expect(results).to eq([success, failure])
+    expect(runner).to have_received(:call).once
+  end
+
+  it "only enables monorepo workers for executable aggregate publish releases" do
+    write_release_config(publish_command: "bundle exec kettle-release", family: {"name" => "example", "mode" => "monorepo"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+
+    expect(described_class.new(command: "release", config: config, members: [alpha, beta], family_members: [alpha, beta], publish: true).send(:monorepo_release_workers?)).to be(false)
+    expect(described_class.new(command: "release", config: config, members: [alpha, beta], family_members: [alpha, beta], execute: true).send(:monorepo_release_workers?)).to be(false)
+    expect(described_class.new(command: "release", config: config, members: [alpha], family_members: [alpha], execute: true, publish: true).send(:monorepo_release_workers?)).to be(false)
+  end
+
+  it "pushes once after successful serial member finalization" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", version: "1.2.3")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    tag = Kettle::Family::CommandResult.new(member.name, "release_shared_tag", ["internal"], member.root, 0, true, "", "", 0.0, false, nil)
+    finalized = Kettle::Family::CommandResult.new(member.name, "release_finalize", ["internal"], member.root, 0, true, "", "", 0.0, false, nil)
+    pushed = Kettle::Family::CommandResult.new(member.name, "release_shared_push", ["internal"], member.root, 0, true, "", "", 0.0, false, nil)
+    runner = double
+    allow(runner).to receive(:call).and_return(finalized, pushed)
+    allow(workflow).to receive(:release_command_runner).and_return(runner)
+    allow(workflow).to receive(:ensure_monorepo_release_tag).with(member, runner: runner).and_return(tag)
+
+    results = workflow.send(:finalize_monorepo_release_wave, [member])
+
+    expect(results).to eq([tag, finalized, pushed])
+    expect(runner).to have_received(:call).twice
+  end
+
+  it "returns setup failures without starting workers and tolerates an already removed worktree" do
+    write_release_config(family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    failure = Kettle::Family::CommandResult.new(member.name, "release_worktree_add", ["git"], @tmpdir, 1, false, "", "failed", 0.0, false, "failed")
+    runner = double
+    allow(runner).to receive(:call).and_return(failure)
+    allow(workflow).to receive_messages(command_runner: runner, monorepo_release_worktree_entries: [[], [failure]])
+
+    entries, results = workflow.send(:monorepo_release_worktree_entries, [member])
+    expect(entries).to be_empty
+    expect(results).to eq([failure])
+
+    expect(workflow).not_to receive(:run_monorepo_release_worktree_entries)
+    expect(workflow).to receive(:cleanup_monorepo_release_worktrees).with([])
+    expect(workflow.send(:run_monorepo_release_wave, [member])).to eq([[failure]])
+  end
+
+  it "skips an already published member before starting a worktree release command" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    entry = {member: member, original_member: member, worktree_root: File.join(@tmpdir, "worker")}
+    skipped = Kettle::Family::CommandResult.new(member.name, "release_publish", ["internal"], member.root, nil, true, "published", "", 0.0, true, "already released")
+
+    allow(workflow).to receive(:skip_already_released?).with(member).and_return(true)
+    allow(workflow).to receive(:already_released_result).with(member).and_return(skipped)
+    expect(workflow).not_to receive(:release_command_runner)
+
+    expect(workflow.send(:release_results_for_monorepo_worktree, entry)).to eq([skipped])
+  end
+
+  it "does not invoke git worktree removal when cleanup has already occurred" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
+    runner = double
+    expect(runner).not_to receive(:call)
+    allow(workflow).to receive(:command_runner).and_return(runner)
+    absent_root = File.join(@tmpdir, "absent-worker")
+    allow(Dir).to receive(:exist?).with(absent_root).and_return(false)
+
+    workflow.send(:cleanup_monorepo_release_worktrees, [{worktree_root: absent_root}])
+  end
+
   it "skips family and member changelog commands when requested" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
