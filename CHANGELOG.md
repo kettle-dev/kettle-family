@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Run aggregate monorepo release members in isolated worktrees and serialize shared release finalization.
-
 ### Security
+
+## [1.2.83] - 2026-09-02
+
+- TAG: [v1.2.83][1.2.83t]
+- COVERAGE: 93.08% -- 5782/6212 lines in 33 files
+- BRANCH COVERAGE: 76.04% -- 2345/3084 branches in 33 files
+- 30.69% documented
+
+### Fixed
+
+- Run aggregate monorepo release members in isolated worktrees and serialize shared release finalization.
 
 ## [1.2.82] - 2026-09-01
 
@@ -2490,7 +2499,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.82...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.83...HEAD
+[1.2.83]: https://github.com/kettle-dev/kettle-family/compare/v1.2.82...v1.2.83
+[1.2.83t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.83
 [1.2.82]: https://github.com/kettle-dev/kettle-family/compare/v1.2.81...v1.2.82
 [1.2.82t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.82
 [1.2.81]: https://github.com/kettle-dev/kettle-family/compare/v1.2.80...v1.2.81
