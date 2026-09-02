@@ -1014,15 +1014,15 @@ module Kettle
         File.join(config.root, "tmp", "kettle-family", "template-worktrees", safe_member, "#{Process.pid}-#{safe_branch}")
       end
 
-      def relocate_member_to_worktree(member, worktree_root)
+      def relocate_member_to_worktree(member, worktree_root, source_root: member.root)
         relocate = lambda do |path|
           next unless path
 
-          relative = Pathname.new(path).relative_path_from(Pathname.new(member.root))
+          relative = Pathname.new(path).relative_path_from(Pathname.new(source_root))
           File.join(worktree_root, relative)
         end
         member.dup.tap do |worktree_member|
-          worktree_member.root = worktree_root
+          worktree_member.root = relocate.call(member.root)
           worktree_member.gemspec_path = relocate.call(member.gemspec_path)
           worktree_member.version_file = relocate.call(member.version_file)
         end
@@ -1443,6 +1443,8 @@ module Kettle
       end
 
       def parallel_release_member_results(release_members, initial_results)
+        return parallel_monorepo_release_member_results(release_members, initial_results) if monorepo_release_workers?
+
         results = initial_results.dup
         waves = release_waves(release_members)
         completed_members = []
@@ -1500,6 +1502,248 @@ module Kettle
           end
         end.each(&:join)
         ordered_results.compact
+      end
+
+      def parallel_monorepo_release_member_results(release_members, initial_results)
+        results = initial_results.dup
+        completed_members = []
+        @release_completed_member_names = []
+        release_progress = start_release_progress(release_members)
+        @release_progress = release_progress
+        begin
+          release_waves(release_members).each_with_index do |wave, index|
+            results << release_wave_result(wave, index: index, total: release_waves(release_members).length)
+            aggregate_members, independent_members = wave.partition { |member| aggregate_release_member?(member) }
+
+            unless aggregate_members.empty?
+              worker_results = run_monorepo_release_wave(aggregate_members)
+              results.concat(worker_results.flatten)
+              break unless worker_results.all? { |member_results| member_results.all?(&:ok?) }
+
+              finalization_results = finalize_monorepo_release_wave(aggregate_members)
+              results.concat(finalization_results)
+              break unless finalization_results.all?(&:ok?)
+            end
+
+            independent_members.each do |member|
+              results.concat(release_results_for_member(member, runner: release_command_runner))
+              break unless results.last.ok?
+            end
+            break unless results.last&.ok?
+
+            completed_members.concat(wave)
+            @release_completed_member_names.concat(wave.map(&:name))
+            remaining_members = release_members - completed_members
+            append_dependency_floor_results(released_members: wave, dependent_members: remaining_members, runner: release_command_runner, memo: results)
+            break unless results.last&.ok?
+          end
+        ensure
+          emit_release_progress_summary(results, progress: release_progress)
+          @release_progress = nil
+        end
+        results
+      end
+
+      def run_monorepo_release_wave(members)
+        entries, setup_results = monorepo_release_worktree_entries(members)
+        unless setup_results.all?(&:ok?)
+          return setup_results.zip
+        end
+
+        worker_results = run_monorepo_release_worktree_entries(entries)
+        materialization_results = materialize_monorepo_release_artifacts(entries, worker_results)
+        worker_results.each_with_index.map do |member_results, index|
+          artifact_result = materialization_results[index]
+          artifact_result ? [*member_results, artifact_result] : member_results
+        end
+      ensure
+        cleanup_monorepo_release_worktrees(entries || [])
+      end
+
+      def monorepo_release_worktree_entries(members)
+        runner = command_runner
+        control_member = monorepo_release_control_member
+        entries = []
+        results = []
+        members.each do |member|
+          root = monorepo_release_worktree_path(member)
+          result = runner.call(
+            member: control_member,
+            phase: "release_worktree_add",
+            command: ["git", "worktree", "add", "--detach", root, "HEAD"]
+          )
+          results << result
+          break unless result.ok?
+
+          entries << {member: relocate_member_to_worktree(member, root, source_root: config.root), original_member: member, worktree_root: root}
+        end
+        [entries, results]
+      end
+
+      def monorepo_release_worktree_path(member)
+        safe_member = member.name.to_s.gsub(/[^A-Za-z0-9_.-]+/, "_")
+        File.join(config.root, "tmp", "kettle-family", "release-worktrees", safe_member, "#{Process.pid}-#{Time.now.to_i}")
+      end
+
+      def monorepo_release_control_member
+        family_member.dup.tap { |member| member.root = config.root }
+      end
+
+      def run_monorepo_release_worktree_entries(entries)
+        queue = Queue.new
+        entries.each_with_index { |entry, index| queue << [index, entry] }
+        ordered_results = Array.new(entries.length)
+        mutex = Mutex.new
+        stop = false
+        Array.new(release_jobs(entries)) do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- each member has an isolated detached monorepo worktree.
+            loop do
+              break if mutex.synchronize { stop }
+
+              index, entry = queue.pop(true)
+              member_results = release_results_for_monorepo_worktree(entry)
+              mutex.synchronize do
+                ordered_results[index] = member_results
+                stop = true unless member_results.all?(&:ok?)
+              end
+            rescue ThreadError
+              break
+            rescue => error
+              mutex.synchronize do
+                ordered_results[index] = [release_worker_error_result(entry.fetch(:original_member), error)]
+                stop = true
+              end
+              break
+            end
+          end
+        end.each(&:join)
+        ordered_results.compact
+      end
+
+      def release_results_for_monorepo_worktree(entry)
+        member = entry.fetch(:member)
+        original_member = entry.fetch(:original_member)
+        progress = @release_progress
+        progress&.start_member(original_member, total: release_phase_total(original_member), status: "check")
+        [].tap do |memo|
+          if skip_already_released?(original_member)
+            memo << already_released_result(original_member)
+            emit_member_result_progress(original_member, memo.last, progress: progress)
+            return memo
+          end
+
+          append_release_internal_checks(member: member, memo: memo)
+          memo.last(2).each { |result| emit_member_result_progress(original_member, result, progress: progress) }
+          return memo unless memo.last(2).all?(&:ok?)
+
+          release_event_state = {}
+          result = release_command_runner.call(
+            member: member,
+            phase: release_phase,
+            command: release_command_for(member),
+            env: release_env_for_member(member, family_root: entry.fetch(:worktree_root)).merge("KETTLE_RELEASE_FAMILY_MEMBER_PUBLISH" => "true"),
+            interactive: release_command_interactive?,
+            stdout_line_handler: release_event_line_handler(original_member, progress: progress, state: release_event_state),
+            log_path: release_command_log_path(original_member, release_phase),
+            passthrough_output: release_command_passthrough_output?
+          )
+          result.member_name = original_member.name
+          result.resume_step = release_event_state[:failed_step] unless result.ok?
+          memo << result
+          emit_member_result_progress(original_member, result, progress: progress)
+        ensure
+          finished_result = memo.find { |result| result.phase == release_phase } || memo.last
+          progress&.finish_member(original_member, success: memo.all?(&:ok?), status: release_member_finish_status(finished_result)) if finished_result
+        end
+      end
+
+      def materialize_monorepo_release_artifacts(entries, worker_results)
+        entries.each_with_index.map do |entry, index|
+          next unless worker_results[index]&.all?(&:ok?)
+
+          copy_monorepo_release_artifact(entry)
+        end
+      end
+
+      def copy_monorepo_release_artifact(entry)
+        member = entry.fetch(:member)
+        original_member = entry.fetch(:original_member)
+        version = original_member.version.to_s
+        source = Dir[File.join(member.root, "pkg", "#{original_member.name}-#{version}.gem")].first
+        destination = File.join(original_member.root, "pkg", "#{original_member.name}-#{version}.gem")
+        unless source && File.file?(source)
+          return release_worker_error_result(original_member, Error.new("worker did not produce #{File.basename(destination)}"))
+        end
+
+        FileUtils.mkdir_p(File.dirname(destination))
+        FileUtils.cp(source, destination)
+        CommandResult.new(
+          member_name: original_member.name,
+          phase: "release_artifact_materialize",
+          command: ["internal", "copy-release-artifact"],
+          workdir: original_member.root,
+          status: 0,
+          success: true,
+          stdout: File.basename(destination),
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: "copied from isolated release worktree"
+        )
+      rescue => error
+        release_worker_error_result(original_member, error)
+      end
+
+      def cleanup_monorepo_release_worktrees(entries)
+        runner = command_runner
+        control_member = monorepo_release_control_member
+        entries.each do |entry|
+          root = entry.fetch(:worktree_root)
+          next unless Dir.exist?(root)
+
+          runner.call(member: control_member, phase: "release_worktree_remove", command: ["git", "worktree", "remove", "--force", root])
+        end
+      end
+
+      def finalize_monorepo_release_wave(members)
+        runner = release_command_runner
+        results = []
+        members.each do |member|
+          results << ensure_monorepo_release_tag(member, runner: runner)
+          break unless results.last.ok?
+
+          results << runner.call(
+            member: member,
+            phase: "release_finalize",
+            command: release_command_for(member),
+            env: release_env_for_member(member).merge("KETTLE_RELEASE_FAMILY_MEMBER_FINALIZE" => "true"),
+            interactive: release_command_interactive?,
+            stdout_line_handler: release_event_line_handler(member, progress: @release_progress, state: {}),
+            log_path: release_command_log_path(member, "release_finalize"),
+            passthrough_output: release_command_passthrough_output?
+          )
+          break unless results.last.ok?
+        end
+        return results unless results.all?(&:ok?)
+
+        results << runner.call(
+          member: monorepo_release_control_member,
+          phase: "release_shared_push",
+          command: config.release_push_command
+        )
+        results
+      end
+
+      def ensure_monorepo_release_tag(member, runner:)
+        version = member.version.to_s
+        tag = release_tag_name(version)
+        escaped_tag = Shellwords.escape(tag)
+        runner.call(
+          member: monorepo_release_control_member,
+          phase: "release_shared_tag",
+          command: ["sh", "-lc", "git rev-parse -q --verify refs/tags/#{escaped_tag} >/dev/null || git tag -a #{escaped_tag} -m #{escaped_tag}"],
+          env: release_env
+        )
       end
 
       def release_wave_result(wave, index:, total:, jobs: nil)
@@ -1626,7 +1870,19 @@ module Kettle
         execute &&
           release_jobs(release_members) > 1 &&
           release_members.length > 1 &&
-          distinct_git_roots?(release_members)
+          (distinct_git_roots?(release_members) || monorepo_release_workers?)
+      end
+
+      # Aggregate monorepo members share one Git checkout, so their complete
+      # kettle-release workflows cannot safely run concurrently. They are
+      # instead published from disposable worktrees using the explicit
+      # member-only contract, then finalized serially in the primary checkout.
+      def monorepo_release_workers?
+        execute &&
+          publish &&
+          config.configured_monorepo_release? &&
+          aggregate_monorepo_github_release? &&
+          kettle_release_command?(raw_release_command)
       end
 
       def release_jobs(release_members)
@@ -2680,10 +2936,10 @@ module Kettle
       # A monorepo member runs kettle-release from its own checkout, while its
       # changelog may live at the family root. Pass the shared paths to the
       # member release phase as well as to the separate family phase.
-      def release_env_for_member(member)
+      def release_env_for_member(member, family_root: config.root)
         env = release_env
-        env.merge!(release_wave_local_path_env_for(member))
-        env.merge!(release_local_path_policy_env)
+        env.merge!(release_wave_local_path_env_for(member, family_root: family_root))
+        env.merge!(release_local_path_policy_env(family_root: family_root))
         # Family release performs one live pin review before member releases.
         # Child kettle-release must consume that reviewed cache instead of
         # repeating the GitHub API lookup for every member.
@@ -2703,7 +2959,7 @@ module Kettle
         if config.family_mode == "monorepo"
           # Monorepo members release from subdirectories, while CI workflows
           # live at the shared repository root.
-          env["K_RELEASE_CI_ROOT"] = config.root
+          env["K_RELEASE_CI_ROOT"] = family_root
           env["K_RELEASE_CI_WORKFLOWS"] ||= "current.yml"
           # Explicit multi-gem monorepos publish one aggregate GitHub Release
           # after their member gems. A standalone gem uses the default
@@ -2763,13 +3019,13 @@ module Kettle
       # release for the next member. Dependencies outside the selected set are
       # already treated as registry dependencies; this is what makes resume
       # runs work after an earlier wave has been published.
-      def release_wave_local_path_env_for(member)
+      def release_wave_local_path_env_for(member, family_root: config.root)
         # Monorepo members and their sibling dependencies share the same CI
         # checkout, so their canonical development lockfile may keep those
         # paths throughout every release wave.
         if config.configured_monorepo_release?
           env_name = config.family_local_path_env_name
-          return env_name ? {env_name => config.family_local_path_root} : {}
+          return env_name ? {env_name => family_local_path_root_for(family_root)} : {}
         end
 
         return {} unless config.release_local_path_strategy == "waves"
@@ -4430,14 +4686,28 @@ module Kettle
         config.release_allowed_local_path_roots
       end
 
+      def family_local_path_root_for(family_root)
+        return config.family_local_path_root if File.expand_path(family_root) == File.expand_path(config.root)
+
+        relative = Pathname.new(config.family_local_path_root).relative_path_from(Pathname.new(config.root))
+        File.expand_path(relative, family_root)
+      end
+
       def release_allowed_local_path_env_names
         names = config.release_allowed_local_path_env_names
         names << "K_JEM_TEMPLATING" if preserve_monorepo_template_context?
         names.uniq
       end
 
-      def release_local_path_policy_env
-        roots = release_allowed_local_path_roots
+      def release_local_path_policy_env(family_root: config.root)
+        roots = release_allowed_local_path_roots.map do |root|
+          if File.expand_path(family_root) == File.expand_path(config.root)
+            root
+          else
+            relative = Pathname.new(root).relative_path_from(Pathname.new(config.root))
+            File.expand_path(relative, family_root)
+          end
+        end
         env_names = release_allowed_local_path_env_names
         return {} if roots.empty? && env_names.empty?
 

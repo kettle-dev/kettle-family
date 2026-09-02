@@ -88,6 +88,50 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_env_for_member, alpha)).to include("KETTLE_RELEASE_SKIP_GITHUB_RELEASE" => "true")
   end
 
+  it "uses isolated workers for an aggregate monorepo despite its shared Git root" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [alpha, beta],
+      family_members: [alpha, beta],
+      execute: true,
+      publish: true,
+      jobs: 2
+    )
+
+    allow(workflow).to receive(:truffleruby?).and_return(false)
+    allow(workflow).to receive(:distinct_git_roots?).with([alpha, beta]).and_return(false)
+
+    expect(workflow.send(:monorepo_release_workers?)).to be(true)
+    expect(workflow.send(:parallel_release_members?, [alpha, beta])).to be(true)
+  end
+
+  it "remaps monorepo local paths and release policy roots into a release worktree" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    worktree_root = File.join(@tmpdir, "tmp", "release-worktree")
+    workflow = described_class.new(command: "release", config: config, members: [member], family_members: [member], publish: true)
+
+    env = workflow.send(:release_env_for_member, member, family_root: worktree_root)
+
+    expect(env).to include(
+      "EXAMPLE_DEV" => File.join(worktree_root, "gems"),
+      "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ROOTS" => File.join(worktree_root, "gems"),
+      "K_RELEASE_CI_ROOT" => worktree_root
+    )
+  end
+
   it "skips family and member changelog commands when requested" do
     write_release_config(
       publish_command: "bundle exec kettle-release",

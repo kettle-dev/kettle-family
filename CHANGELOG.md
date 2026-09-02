@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Run aggregate monorepo release members in isolated worktrees and serialize shared release finalization.
+
 ### Security
 
 ## [1.2.82] - 2026-09-01
