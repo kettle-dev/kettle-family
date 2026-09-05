@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Keep changelog tooling out of nomono-only template bootstrap resolution.
+
 ### Security
 
 ## [1.2.83] - 2026-09-02

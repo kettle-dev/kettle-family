@@ -712,7 +712,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(File.join(alpha.root, "Gemfile"))).to include('gem "nomono", "~> 1.1", ">= 1.1.1", require: false')
   end
 
-  it "preserves local dependency switches during nomono bootstrap" do
+  it "preserves local dependency switches while excluding changelog tooling during nomono bootstrap" do
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],
       normalize_lockfiles: false,
@@ -738,6 +738,7 @@ RSpec.describe Kettle::Family::Workflow do
       call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == %w[bundle update nomono --bundler]
     end
     expect(bundle_update.fetch(:env)).to include(family_local_env_name => "/workspace/family")
+    expect(bundle_update.fetch(:env)).to include("KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY" => "true")
     expect(bundle_update.fetch(:env)).to include("K_JEM_TEMPLATING" => "false")
     expect(bundle_update.fetch(:env)).to include("BUNDLE_DISABLE_CHECKSUM_VALIDATION" => "true")
   end
