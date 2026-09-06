@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.247-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.494-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -477,6 +477,36 @@ its configured member-root path available throughout its waves, because its<br>
 canonical development lockfile and CI checkout share that path graph. In both<br>
 cases, release normalization rejects every path outside the configured allow<br>
 list.</p>
+
+<h3 id="test-concurrency">Test concurrency</h3>
+
+<p><code>kettle-family test --execute</code> runs independent sibling repositories in<br>
+parallel. Its default outer width is half of the CPUs detected on the current<br>
+machine, capped by the number of selected members; <code>--jobs</code> and <code>test.jobs</code><br>
+override that width. The same budget is passed to member <code>kettle-release</code><br>
+commands, because their local test phase uses the same process pool.</p>
+
+<p>Family sets <code>TURBO_TESTS2_MAX_PROCESSES</code> for each active wave. This is an<br>
+inclusive ceiling for TurboTests2: it includes the member’s primary test<br>
+process, not merely additional workers. Given <code>C</code> detected CPUs and <code>W</code> active<br>
+Family wave slots, the ceiling is <code>min(floor(C / 2), 1 + floor((C - W) / W))</code>.<br>
+An explicit <code>turbo_tests2 --count</code>/<code>--workers</code> value, or an explicitly supplied<br>
+<code>TURBO_TESTS2_MAX_PROCESSES</code>, takes precedence.</p>
+
+<p>Monorepos default to <code>test.monorepo_mode: aggregate</code>: one selected member runs<br>
+the shared root suite and the remaining selected subgems are reported as<br>
+skipped. Set <code>test.aggregate_member</code> to choose that owner when it is selected.<br>
+For monorepos with genuinely member-scoped suites, opt in to disposable<br>
+worktrees instead:</p>
+
+<pre class="code language-yaml"><code class="language-yaml">test:
+  monorepo_mode: worktrees
+  jobs: 4
+</code></pre>
+
+<p>Those worktrees isolate coverage, temporary files, and Bundler state. Their<br>
+changes are always discarded; test execution never materializes or commits<br>
+worktree artifacts.</p>
 
 <h3 id="release-waves-and-dependency-refresh">Release waves and dependency refresh</h3>
 
@@ -845,9 +875,9 @@ stops before family changelog generation or coverage and reports the members<br>
 that need a version bump. Run <code>kettle-family bump --execute patch</code> first, then<br>
 rerun the release.</p>
 
-<p>State checks run concurrently by default, using up to four jobs or the number<br>
-of available CPU cores, whichever is lower. Use <code>--jobs N</code> to set an explicit<br>
-limit; results remain in family order.</p>
+<p>State checks run concurrently by default, using up to half of the available CPU<br>
+cores and no more than the selected member count. Use <code>--jobs N</code> to set an<br>
+explicit limit; results remain in family order.</p>
 
 <p>Most commands accept <code>--json</code> to print a machine-readable report instead of the<br>
 text report, and <code>--report PATH</code> to write that JSON report while still printing<br>
@@ -1028,9 +1058,15 @@ kettle-family bump --execute --only unreleased minor
 </code></pre>
 
 <p>Run <code>kettle-jem</code> templating across the selected family members. Planning shows<br>
-the commands that would run; <code>--execute</code> runs them. Executed templating defaults<br>
-to a parallel job count based on CPU cores, capped for readability, and can be<br>
-overridden with <code>--jobs</code>.</p>
+the commands that would run; <code>--execute</code> runs them. Executed templating uses a<br>
+rolling outer wave of up to half the available CPU cores, bounded by ready<br>
+members; <code>--jobs</code> overrides that width.</p>
+
+<p>For a Kettle Jem member command, Family exports the active outer width as<br>
+<code>KETTLE_FAMILY_WAVE_JOBS</code>. Kettle Jem retains the member’s base process and<br>
+uses an equal share of CPUs left by that wave for its recipe and file worker<br>
+pools, capped at half the available CPUs. Explicit <code>KETTLE_JEM_*_WORKERS</code><br>
+settings take precedence over this derived budget.</p>
 
 <pre class="code language-console"><code class="language-console">kettle-family template
 kettle-family template --execute --jobs 4

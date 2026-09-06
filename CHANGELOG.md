@@ -20,10 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Run sibling test workflows concurrently with dynamic TurboTests2 process budgets.
-
-- Support aggregate and disposable-worktree monorepo test execution modes.
-
 ### Changed
 
 ### Deprecated
@@ -32,11 +28,26 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.90] - 2026-09-06
+
+- TAG: [v1.2.90][1.2.90t]
+- COVERAGE: 93.13% -- 6048/6494 lines in 35 files
+- BRANCH COVERAGE: 76.05% -- 2407/3165 branches in 35 files
+- 32.41% documented
+
+### Added
+
+- Run sibling test workflows concurrently with dynamic TurboTests2 process budgets.
+
+- Support aggregate and disposable-worktree monorepo test execution modes.
+
+### Fixed
+
 - Template ready monorepo sibling gems concurrently in isolated worktrees while materializing only member-scoped changes.
 
 - Derive family command concurrency from the executing CPU count and pass template wave width to nested tools.
-
-### Security
 
 ## [1.2.89] - 2026-09-06
 
@@ -2581,7 +2592,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.89...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.90...HEAD
+[1.2.90]: https://github.com/kettle-dev/kettle-family/compare/v1.2.89...v1.2.90
+[1.2.90t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.90
 [1.2.89]: https://github.com/kettle-dev/kettle-family/compare/v1.2.88...v1.2.89
 [1.2.89t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.89
 [1.2.88]: https://github.com/kettle-dev/kettle-family/compare/v1.2.87...v1.2.88
