@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Use the complete template dependency graph when bootstrapping nomono; reserve the changelog dependency opt-out for explicit constraint conflicts.
+
 ### Security
 
 ## [1.2.85] - 2026-09-06

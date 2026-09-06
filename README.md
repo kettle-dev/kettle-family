@@ -797,6 +797,29 @@ kettle-family template --execute \
   --env STRUCTUREDMERGE_DEV=/home/me/src/structuredmerge/ruby/gems
 ```
 
+### Template Bootstrap Environment
+
+Before invoking `kettle-jem`, `kettle-family template` may refresh `nomono` so
+the member Gemfile can activate its generated local dependency wiring. That
+bootstrap uses the same development dependency graph as template preparation:
+
+- `K_JEM_TEMPLATING=true` is enforced. It selects the templating Gemfile graph
+  and activates generated local sibling closures. It is not a release-lockfile
+  normalization setting.
+- The configured family `*_DEV` selector is preserved or inferred from the
+  family configuration. It tells `nomono` where that sibling closure lives.
+- `BUNDLE_DISABLE_CHECKSUM_VALIDATION=true` is retained for template bootstrap
+  and template application, where a template can legitimately update a
+  lockfile before its checksums are normalized.
+- `KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY` defaults to `false`. Set it explicitly
+  only when the optional `kettle-changelog` dependency has an incompatible
+  version constraint with the graph being bootstrapped. It does not select
+  local dependencies and must not be used as a general Bundler-resolution or
+  release-lockfile workaround.
+
+Release lockfile normalization is a separate operation with its own local-path
+policy; it must not be inferred from template bootstrap settings.
+
 ## 🔐 Security
 
 See [SECURITY.md][🔐security].

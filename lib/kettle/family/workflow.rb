@@ -824,13 +824,25 @@ module Kettle
 
       def template_bootstrap_dependency_env(_member)
         env = template_prepare_env
-        # This refresh activates nomono in the same local dependency graph as
-        # template preparation. Changelog tooling is not needed and can pin a
-        # previously released monorepo dependency graph.
-        env["KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY"] = "true"
+        # Bootstrap must evaluate the same development graph as template
+        # preparation. In particular, K_JEM_TEMPLATING activates the generated
+        # local sibling closure; without it, stale generated Gemfiles can make
+        # Bundler look for an unreleased family gem in a registry.
+        #
+        # kettle-changelog is part of that normal graph. Its opt-out remains
+        # available only for an explicit, known optional-dependency constraint
+        # conflict; it is not a general solution for local-path resolution.
+        env["KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY"] = template_bootstrap_changelog_dependency_setting
         env["K_JEM_TEMPLATING"] = "true"
         env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
         env
+      end
+
+      def template_bootstrap_changelog_dependency_setting
+        env_overrides.fetch(
+          "KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY",
+          ENV.fetch("KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY", "false")
+        )
       end
 
       def template_results_for_member(member, progress: nil)
