@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Autostash managed template outputs while rebasing a template checkout.
+
 ### Security
 
 ## [1.2.87] - 2026-09-06

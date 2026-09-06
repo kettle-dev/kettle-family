@@ -1725,6 +1725,33 @@ RSpec.describe Kettle::Family::Workflow do
     expect(`git -C #{member.root} stash list`).to be_empty
   end
 
+  it "uses Git autostash while synchronizing retained managed template outputs" do
+    write_template_config(normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    File.write(File.join(member.root, "Gemfile.lock"), "recorded\n")
+    run_git(member.root, "add", "Gemfile.lock")
+    run_git(member.root, "commit", "--quiet", "-m", "Add generated lockfile")
+    File.write(File.join(member.root, "Gemfile.lock"), "local\n")
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    runner = instance_double(Kettle::Family::CommandRunner)
+    result = Kettle::Family::CommandResult.new(member.name, "template_sync", [], member.root, 0, true, "", "", 0.0, false, nil)
+    allow(workflow).to receive(:git_upstream_for).with(member).and_return("origin/main")
+    allow(runner).to receive(:call).and_return(result)
+
+    results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
+
+    expect(results).to eq([result])
+    expect(stashes).to be_empty
+    expect(runner).to have_received(:call).with(
+      member: member,
+      phase: "template_sync",
+      command: ["git", "pull", "--rebase", "--autostash"]
+    )
+  end
+
   it "rolls back failed template output before restoring an autostash" do
     write_template_config(command: [RbConfig.ruby, "-e", "File.write('templated.txt', 'partial'); exit 1"], normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)

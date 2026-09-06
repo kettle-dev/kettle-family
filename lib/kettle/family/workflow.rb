@@ -289,7 +289,7 @@ module Kettle
           upstream = git_upstream_for(member)
           next unless upstream
 
-          results << runner.call(member: member, phase: "template_sync", command: ["git", "pull", "--rebase"])
+          results << runner.call(member: member, phase: "template_sync", command: ["git", "pull", "--rebase", "--autostash"])
           break unless results.last.ok?
         end
         [results, stashes]
