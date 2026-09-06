@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Keep local template dependency activation enabled while bootstrapping nomono.
-
 ### Security
+
+## [1.2.85] - 2026-09-06
+
+- TAG: [v1.2.85][1.2.85t]
+- COVERAGE: 93.08% -- 5783/6213 lines in 33 files
+- BRANCH COVERAGE: 76.04% -- 2345/3084 branches in 33 files
+- 30.69% documented
+
+### Fixed
+
+- Keep local template dependency activation enabled while bootstrapping nomono.
 
 ## [1.2.84] - 2026-09-05
 
@@ -2512,7 +2521,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.84...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.85...HEAD
+[1.2.85]: https://github.com/kettle-dev/kettle-family/compare/v1.2.84...v1.2.85
+[1.2.85t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.85
 [1.2.84]: https://github.com/kettle-dev/kettle-family/compare/v1.2.83...v1.2.84
 [1.2.84t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.84
 [1.2.83]: https://github.com/kettle-dev/kettle-family/compare/v1.2.82...v1.2.83
