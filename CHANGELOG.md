@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Recover template lockfiles in the configured local dependency graph instead of release normalization mode.
 
+- Use the templating dependency graph during initial template lockfile preparation.
+
 ### Security
 
 ## [1.2.85] - 2026-09-06

@@ -800,8 +800,8 @@ kettle-family template --execute \
 ### Template Bootstrap Environment
 
 Before invoking `kettle-jem`, `kettle-family template` may refresh `nomono` so
-the member Gemfile can activate its generated local dependency wiring. That
-bootstrap uses the same development dependency graph as template preparation:
+the member Gemfile can activate its generated local dependency wiring. Both
+bootstrap and lockfile preparation use the same development dependency graph:
 
 - `K_JEM_TEMPLATING=true` is enforced. It selects the templating Gemfile graph
   and activates generated local sibling closures. It is not a release-lockfile

@@ -667,7 +667,10 @@ RSpec.describe Kettle::Family::Workflow do
     member = member_at("alpha")
     workflow = described_class.new(command: "template", config: config, members: [member])
 
-    expect(workflow.send(:template_prepare_env)).to include(family_local_env_name => "/workspace/family")
+    expect(workflow.send(:template_prepare_env)).to include(
+      family_local_env_name => "/workspace/family",
+      "K_JEM_TEMPLATING" => "true"
+    )
     expect(workflow.send(:template_lockfile_recovery_env, member)).to include(
       family_local_env_name => "/workspace/family",
       "K_JEM_TEMPLATING" => "true"

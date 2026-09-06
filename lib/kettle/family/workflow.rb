@@ -4630,7 +4630,7 @@ module Kettle
         # Templating is development work.  It must resolve the configured
         # family graph exactly as template application does; release-only
         # lockfile cleanup owns disabling local path sources.
-        workflow_env
+        workflow_env.merge("K_JEM_TEMPLATING" => "true")
       end
 
       def local_path_env_requested?(name)
