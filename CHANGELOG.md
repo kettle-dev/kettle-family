@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Autostash managed template outputs while rebasing a template checkout.
-
 ### Security
+
+## [1.2.88] - 2026-09-06
+
+- TAG: [v1.2.88][1.2.88t]
+- COVERAGE: 93.10% -- 5813/6244 lines in 34 files
+- BRANCH COVERAGE: 76.17% -- 2356/3093 branches in 34 files
+- 31.79% documented
+
+### Fixed
+
+- Autostash managed template outputs while rebasing a template checkout.
 
 ## [1.2.87] - 2026-09-06
 
@@ -2551,7 +2560,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.87...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.88...HEAD
+[1.2.88]: https://github.com/kettle-dev/kettle-family/compare/v1.2.87...v1.2.88
+[1.2.88t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.88
 [1.2.87]: https://github.com/kettle-dev/kettle-family/compare/v1.2.86...v1.2.87
 [1.2.87t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.87
 [1.2.86]: https://github.com/kettle-dev/kettle-family/compare/v1.2.85...v1.2.86
