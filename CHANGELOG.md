@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Apply the template-local execution profile consistently to lockfile preparation, template application, child setup commands, and final lockfile normalization.
 
+- Isolate member commands from outer Bundler activation so nested release and coverage processes cannot redirect member lockfile operations.
+
 ### Security
 
 ## [1.2.88] - 2026-09-06

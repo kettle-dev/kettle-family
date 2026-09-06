@@ -239,6 +239,31 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.stdout).to eq("false\n")
   end
 
+  it "does not inherit an outer bundle activation from a nested command" do
+    member = member_at("alpha")
+    runner = described_class.new(execute: true)
+    allow(Bundler).to receive_messages(
+      original_env: {
+        "BUNDLE_GEMFILE" => "/workspace/outer/Gemfile",
+        "BUNDLE_LOCKFILE" => "/workspace/outer/Gemfile.lock"
+      },
+      unbundled_env: {"PATH" => ENV.fetch("PATH")}
+    )
+
+    result = runner.call(
+      member: member,
+      phase: "test",
+      command: [
+        RbConfig.ruby,
+        "-e",
+        "puts [ENV['BUNDLE_GEMFILE'], ENV['BUNDLE_LOCKFILE']].inspect"
+      ]
+    )
+
+    expect(result).to be_ok
+    expect(result.stdout).to eq("[nil, nil]\n")
+  end
+
   it "captures failing commands" do
     member = member_at("alpha")
 

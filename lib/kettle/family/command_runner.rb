@@ -648,8 +648,8 @@ module Kettle
       end
 
       def unbundled_process_env
-        return Bundler.original_env if defined?(Bundler) && Bundler.respond_to?(:original_env)
         return Bundler.unbundled_env if defined?(Bundler) && Bundler.respond_to?(:unbundled_env)
+        return Bundler.original_env if defined?(Bundler) && Bundler.respond_to?(:original_env)
 
         {}
       end
