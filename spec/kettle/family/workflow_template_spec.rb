@@ -669,9 +669,8 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(workflow.send(:template_prepare_env)).to include(family_local_env_name => "/workspace/family")
     expect(workflow.send(:template_lockfile_recovery_env, member)).to include(
-      "BUNDLE_GEMFILE" => nil,
       family_local_env_name => "/workspace/family",
-      "K_JEM_TEMPLATING" => "false"
+      "K_JEM_TEMPLATING" => "true"
     )
     expect(workflow.send(:template_lockfile_recovery_env, member)).not_to include(
       family_local_env_name => "false"
@@ -1365,8 +1364,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to include("template_lockfile_recovery", "template_branch_fetch")
     expect(calls.find { |call| call[:phase] == "template_lockfile_recovery" }.fetch(:env)).to include(
-      "BUNDLE_GEMFILE" => nil,
-      "K_JEM_TEMPLATING" => "false"
+      "K_JEM_TEMPLATING" => "true"
     )
   end
 
@@ -1471,9 +1469,39 @@ RSpec.describe Kettle::Family::Workflow do
     )
     expect(calls.count { |call| call[:phase] == "prepare_lockfiles" }).to eq(2)
     expect(calls.find { |call| call[:phase] == "prepare_lockfiles_recovery" }.fetch(:env)).to include(
-      "BUNDLE_GEMFILE" => nil,
-      "K_JEM_TEMPLATING" => "false"
+      "K_JEM_TEMPLATING" => "true"
     )
+  end
+
+  it "stops template lockfile recovery when the template graph cannot resolve" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    calls = []
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      calls << {phase: phase, command: command, env: env}
+      failure = %w[prepare_lockfiles prepare_lockfiles_recovery].include?(phase)
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        failure ? 1 : 0,
+        !failure,
+        "",
+        failure ? "Bundler::VersionConflict: Could not resolve local family gem" : "",
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results.last).to have_attributes(phase: "prepare_lockfiles_recovery", ok?: false)
+    expect(calls.map { |call| call[:phase] }).to eq(%w[prepare_lockfiles prepare_lockfiles_recovery])
   end
 
   it "updates Bundler and retries checksum-aware template normalization when required" do

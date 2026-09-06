@@ -820,6 +820,11 @@ bootstrap uses the same development dependency graph as template preparation:
 Release lockfile normalization is a separate operation with its own local-path
 policy; it must not be inferred from template bootstrap settings.
 
+If template lockfile preparation needs a recovery update, that retry also uses
+the template dependency graph. It must not invoke release-lockfile reset logic:
+release normalization intentionally disables local paths, while template
+recovery needs configured sibling paths to resolve unreleased family versions.
+
 ## 🔐 Security
 
 See [SECURITY.md][🔐security].

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Recover template lockfiles in the configured local dependency graph instead of release normalization mode.
+
 ### Security
 
 ## [1.2.85] - 2026-09-06

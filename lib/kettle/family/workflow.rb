@@ -4386,13 +4386,13 @@ module Kettle
       end
 
       def recover_template_lockfiles(member:, runner:, memo:, phase:)
-        reset_gemfile_lock(
+        result = runner.call(
           member: member,
-          runner: runner,
-          memo: memo,
           phase: phase,
-          env: template_lockfile_recovery_env(member)
+          command: normalize_lockfiles_command(member: member, phase: "prepare_lockfiles"),
+          env: template_lockfile_recovery_env
         )
+        memo << result
         return unless memo.last&.ok?
 
         commit_normalized_lockfiles(
@@ -4417,13 +4417,12 @@ module Kettle
         [result.stdout, result.stderr].join("\n").match?(/Unknown switches? .*--add-checksums/)
       end
 
-      def template_lockfile_recovery_env(member)
-        env = release_lockfile_env(member).merge(workflow_env)
-        ENV.each do |key, value|
-          env[key] = value if key.end_with?("_DEV", "_LOCAL") && local_path_env_requested?(key)
-        end
-        env.merge!(env_overrides)
-        env["K_JEM_TEMPLATING"] = "false"
+      def template_lockfile_recovery_env(_member = nil)
+        env = template_prepare_env
+        # A failed template preparation can be caused by an unreleased sibling
+        # version. Recover in the template graph, not the release graph, so
+        # Bundler uses the configured monorepo paths.
+        env["K_JEM_TEMPLATING"] = "true"
         env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
         env
       end
