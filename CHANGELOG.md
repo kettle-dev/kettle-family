@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Keep local template dependency activation enabled while bootstrapping nomono.
+
 ### Security
 
 ## [1.2.84] - 2026-09-05

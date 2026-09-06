@@ -824,10 +824,11 @@ module Kettle
 
       def template_bootstrap_dependency_env(_member)
         env = template_prepare_env
-        # This refresh only activates nomono. Changelog tooling is not needed
-        # and can pin a previously released monorepo dependency graph.
+        # This refresh activates nomono in the same local dependency graph as
+        # template preparation. Changelog tooling is not needed and can pin a
+        # previously released monorepo dependency graph.
         env["KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY"] = "true"
-        env["K_JEM_TEMPLATING"] = "false"
+        env["K_JEM_TEMPLATING"] = "true"
         env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
         env
       end
