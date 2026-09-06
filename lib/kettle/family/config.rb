@@ -208,6 +208,24 @@ module Kettle
         fetch_path("template", "jobs")
       end
 
+      # A monorepo commonly has one root suite that covers every subgem. The
+      # configured owner is optional; an --only invocation never expands its
+      # own selection solely to reach that owner.
+      def test_aggregate_member
+        fetch_path("test", "aggregate_member")
+      end
+
+      def test_monorepo_mode
+        mode = (fetch_path("test", "monorepo_mode") || "aggregate").to_s
+        return mode if %w[aggregate worktrees].include?(mode)
+
+        raise Error, "test.monorepo_mode must be aggregate or worktrees"
+      end
+
+      def test_jobs
+        fetch_path("test", "jobs")
+      end
+
       def readme_corporate_sponsors
         raw = fetch_path("readme", "corporate_sponsors") ||
           fetch_path("sponsorships", "corporate") ||

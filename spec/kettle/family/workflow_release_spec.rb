@@ -74,6 +74,28 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_env_for_member, member)).not_to have_key("KETTLE_RELEASE_SKIP_GITHUB_RELEASE")
   end
 
+  it "budgets the complete TurboTests2 process pool for the active release wave" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    env = workflow.send(:release_env_for_member, member, wave_jobs: 6)
+
+    expect(env.fetch("TURBO_TESTS2_MAX_PROCESSES")).to eq(
+      Kettle::Family::Concurrency.test_process_ceiling(wave_jobs: 6).to_s
+    )
+  end
+
+  it "preserves an explicit TurboTests2 release process ceiling" do
+    write_release_config(release_env: {"TURBO_TESTS2_MAX_PROCESSES" => "2"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:release_env_for_member, member, wave_jobs: 6)).to include("TURBO_TESTS2_MAX_PROCESSES" => "2")
+  end
+
   it "defers GitHub Release creation for selected members of an explicit multi-gem monorepo" do
     write_release_config
     File.write(
@@ -145,7 +167,7 @@ RSpec.describe Kettle::Family::Workflow do
     result = ->(member, phase = "release_publish") { Kettle::Family::CommandResult.new(member.name, phase, ["internal"], member.root, 0, true, "", "", 0.0, false, nil) }
 
     allow(workflow).to receive(:start_release_progress).and_return(nil)
-    allow(workflow).to receive(:run_monorepo_release_wave).with([alpha, beta]).and_return([[result.call(alpha)], [result.call(beta)]])
+    allow(workflow).to receive(:run_monorepo_release_wave).with([alpha, beta], wave_jobs: 2).and_return([[result.call(alpha)], [result.call(beta)]])
     allow(workflow).to receive(:finalize_monorepo_release_wave).with([alpha, beta]).and_return([result.call(alpha, "release_finalize"), result.call(beta, "release_finalize")])
     allow(workflow).to receive(:append_dependency_floor_results)
 
@@ -2349,7 +2371,7 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta, gamma], execute: true, jobs: 3)
 
     allow(workflow).to receive(:truffleruby?).and_return(false)
-    allow(workflow).to receive(:release_results_for_member) do |member, runner:|
+    allow(workflow).to receive(:release_results_for_member) do |member, runner:, **_options|
       [
         Kettle::Family::CommandResult.new(
           member_name: member.name,
@@ -2394,7 +2416,7 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, jobs: 2)
     released = []
 
-    allow(workflow).to receive(:release_results_for_member) do |member, runner:|
+    allow(workflow).to receive(:release_results_for_member) do |member, runner:, **_options|
       released << member.name
       [
         Kettle::Family::CommandResult.new(
@@ -3145,7 +3167,7 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "release", config: config, members: members, execute: true, jobs: 1)
     released = []
 
-    allow(workflow).to receive(:release_results_for_member) do |member, runner:|
+    allow(workflow).to receive(:release_results_for_member) do |member, runner:, **_options|
       released << member.name
       [
         Kettle::Family::CommandResult.new(

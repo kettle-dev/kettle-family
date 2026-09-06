@@ -281,6 +281,37 @@ canonical development lockfile and CI checkout share that path graph. In both
 cases, release normalization rejects every path outside the configured allow
 list.
 
+### Test concurrency
+
+`kettle-family test --execute` runs independent sibling repositories in
+parallel. Its default outer width is half of the CPUs detected on the current
+machine, capped by the number of selected members; `--jobs` and `test.jobs`
+override that width. The same budget is passed to member `kettle-release`
+commands, because their local test phase uses the same process pool.
+
+Family sets `TURBO_TESTS2_MAX_PROCESSES` for each active wave. This is an
+inclusive ceiling for TurboTests2: it includes the member's primary test
+process, not merely additional workers. Given `C` detected CPUs and `W` active
+Family wave slots, the ceiling is `min(floor(C / 2), 1 + floor((C - W) / W))`.
+An explicit `turbo_tests2 --count`/`--workers` value, or an explicitly supplied
+`TURBO_TESTS2_MAX_PROCESSES`, takes precedence.
+
+Monorepos default to `test.monorepo_mode: aggregate`: one selected member runs
+the shared root suite and the remaining selected subgems are reported as
+skipped. Set `test.aggregate_member` to choose that owner when it is selected.
+For monorepos with genuinely member-scoped suites, opt in to disposable
+worktrees instead:
+
+```yaml
+test:
+  monorepo_mode: worktrees
+  jobs: 4
+```
+
+Those worktrees isolate coverage, temporary files, and Bundler state. Their
+changes are always discarded; test execution never materializes or commits
+worktree artifacts.
+
 ### Release waves and dependency refresh
 
 Release waves are both a sequencing mechanism and a dependency propagation

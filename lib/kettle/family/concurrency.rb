@@ -26,7 +26,15 @@ module Kettle
 
         half_cores = default_wave_jobs(cpu_count: cpu_count)
         available_per_member = (cpu_count - wave_jobs.to_i) / wave_jobs.to_i
-        [half_cores, [available_per_member, 1].max].min
+        available_per_member.clamp(1, half_cores)
+      end
+
+      # Test runners count their primary worker as part of the requested
+      # process pool. Reserve one process for each wave member, then divide
+      # the remaining capacity across them. No member receives more than half
+      # of the detected CPUs, including that primary process.
+      def test_process_ceiling(wave_jobs:, cpu_count: Etc.nprocessors)
+        [default_wave_jobs(cpu_count: cpu_count), 1 + internal_worker_limit(wave_jobs: wave_jobs, cpu_count: cpu_count)].min
       end
     end
   end

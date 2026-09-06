@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Run sibling test workflows concurrently with dynamic TurboTests2 process budgets.
+
+- Support aggregate and disposable-worktree monorepo test execution modes.
+
 ### Changed
 
 ### Deprecated

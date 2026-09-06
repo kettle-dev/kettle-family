@@ -570,6 +570,7 @@ module Kettle
 
       def member_workflow_results(workflow_members)
         return template_member_workflow_results(workflow_members) if command == "template" && execute
+        return test_member_workflow_results(workflow_members) if command == "test" && execute
 
         runner = CommandRunner.new(execute: execute, accept: accept)
         results = []
@@ -613,6 +614,215 @@ module Kettle
         end
         gha_progress&.finish
         results
+      end
+
+      # Sibling repositories have isolated working trees and can run their
+      # tests concurrently. A monorepo's default kettle-test command normally
+      # executes the shared root suite, so it is represented by one selected
+      # owner instead of repeating that suite per subgem.
+      def test_member_workflow_results(workflow_members)
+        test_members, skipped_members = test_members_for(workflow_members)
+        return [] if test_members.empty?
+
+        return monorepo_test_worktree_results(test_members) if monorepo_test_worktrees?(test_members)
+
+        wave_jobs = test_jobs(test_members)
+        queue = Queue.new
+        test_members.each_with_index { |member, index| queue << [index, member] }
+        ordered_results = Array.new(test_members.length)
+        mutex = Mutex.new
+        stop = false
+
+        Array.new(wave_jobs) do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- sibling test suites run in isolated project roots.
+            runner = CommandRunner.new(execute: execute, accept: accept)
+            loop do
+              break if mutex.synchronize { stop }
+
+              index, member = queue.pop(true)
+              result = runner.call(
+                member: member,
+                phase: command,
+                command: workflow_command(member),
+                env: test_command_env(wave_jobs: wave_jobs)
+              )
+              mutex.synchronize do
+                ordered_results[index] = result
+                stop = true unless result.ok?
+              end
+            rescue ThreadError
+              break
+            rescue => error
+              mutex.synchronize do
+                ordered_results[index] = test_worker_error_result(member, error)
+                stop = true
+              end
+              break
+            end
+          end
+        end.each(&:join)
+
+        results = ordered_results.compact
+        return results unless results.all?(&:ok?)
+
+        results + skipped_members.map { |member| aggregate_test_skip_result(member, owner: test_members.first) }
+      end
+
+      def test_members_for(workflow_members)
+        return [workflow_members, []] unless aggregate_monorepo_test?(workflow_members)
+
+        owner_name = config.test_aggregate_member.to_s.strip
+        owner = workflow_members.find { |member| member.name == owner_name } || workflow_members.first
+        [[owner], workflow_members - [owner]]
+      end
+
+      def aggregate_monorepo_test?(workflow_members)
+        config.family_mode == "monorepo" &&
+          config.test_monorepo_mode == "aggregate" &&
+          workflow_members.length > 1
+      end
+
+      def monorepo_test_worktrees?(test_members)
+        config.family_mode == "monorepo" &&
+          config.test_monorepo_mode == "worktrees" &&
+          test_members.length > 1 &&
+          test_jobs(test_members) > 1
+      end
+
+      # Member-scoped monorepo suites cannot share the primary checkout: test
+      # coverage, temporary files, and Bundler state are all mutable. Unlike
+      # template worktrees, test worktrees intentionally discard every change.
+      def monorepo_test_worktree_results(test_members)
+        entries, setup_results = monorepo_test_worktree_entries(test_members)
+        return setup_results unless setup_results.all?(&:ok?)
+
+        run_monorepo_test_worktree_entries(entries).flatten
+      ensure
+        cleanup_monorepo_test_worktrees(entries || [])
+      end
+
+      def monorepo_test_worktree_entries(test_members)
+        runner = command_runner
+        control_member = monorepo_template_control_member
+        entries = []
+        results = []
+        test_members.each do |member|
+          worktree_root = monorepo_test_worktree_path(member)
+          result = runner.call(
+            member: control_member,
+            phase: "test_member_worktree_add",
+            command: ["git", "worktree", "add", "--detach", worktree_root, "HEAD"]
+          )
+          result.member_name = member.name
+          results << result
+          break unless result.ok?
+
+          entries << {
+            member: relocate_member_to_worktree(member, worktree_root, source_root: config.root),
+            original_member: member,
+            worktree_root: worktree_root
+          }
+        end
+        [entries, results]
+      end
+
+      def monorepo_test_worktree_path(member)
+        safe_member = member.name.to_s.gsub(/[^A-Za-z0-9_.-]+/, "_")
+        File.join(config.root, "tmp", "kettle-family", "test-member-worktrees", safe_member, "#{Process.pid}-#{Time.now.to_i}")
+      end
+
+      def run_monorepo_test_worktree_entries(entries)
+        wave_jobs = test_jobs(entries)
+        queue = Queue.new
+        entries.each_with_index { |entry, index| queue << [index, entry] }
+        ordered_results = Array.new(entries.length)
+        mutex = Mutex.new
+        stop = false
+
+        Array.new(wave_jobs) do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- detached worktrees isolate concurrent monorepo test suites.
+            loop do
+              break if mutex.synchronize { stop }
+
+              index, entry = queue.pop(true)
+              member = entry.fetch(:member)
+              result = CommandRunner.new(execute: execute, accept: accept).call(
+                member: member,
+                phase: command,
+                command: workflow_command(member),
+                env: test_command_env(wave_jobs: wave_jobs)
+              )
+              result.member_name = entry.fetch(:original_member).name
+              mutex.synchronize do
+                ordered_results[index] = [result]
+                stop = true unless result.ok?
+              end
+            rescue ThreadError
+              break
+            rescue => error
+              mutex.synchronize do
+                ordered_results[index] = [test_worker_error_result(entry.fetch(:original_member), error)]
+                stop = true
+              end
+              break
+            end
+          end
+        end.each(&:join)
+        ordered_results.compact
+      end
+
+      def cleanup_monorepo_test_worktrees(entries)
+        runner = command_runner
+        control_member = monorepo_template_control_member
+        entries.each do |entry|
+          root = entry.fetch(:worktree_root)
+          next unless Dir.exist?(root)
+
+          runner.call(member: control_member, phase: "test_member_worktree_remove", command: ["git", "worktree", "remove", "--force", root])
+        end
+      end
+
+      def aggregate_test_skip_result(member, owner:)
+        CommandResult.new(
+          member_name: member.name,
+          phase: command,
+          command: workflow_command(member),
+          workdir: member.root,
+          status: 0,
+          success: true,
+          stdout: "",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: true,
+          reason: "shared monorepo suite owned by #{owner.name}"
+        )
+      end
+
+      def test_worker_error_result(member, error)
+        CommandResult.new(
+          member_name: member.name,
+          phase: command,
+          command: ["internal", "test-worker"],
+          workdir: member.root,
+          status: 1,
+          success: false,
+          stdout: "",
+          stderr: "#{error.class}: #{error.message}\n",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: error.message
+        )
+      end
+
+      def test_jobs(workflow_members)
+        requested = jobs || config.test_jobs
+        Concurrency.wave_jobs(requested: requested, item_count: workflow_members.length)
+      end
+
+      def test_command_env(wave_jobs:)
+        env = command_env
+        env["TURBO_TESTS2_MAX_PROCESSES"] ||= Concurrency.test_process_ceiling(wave_jobs: wave_jobs).to_s
+        env
       end
 
       def review_gha_sha_pins(workflow_members, runner:, memo:, env: command_env)
@@ -1679,7 +1889,7 @@ module Kettle
           waves.each_with_index do |wave, index|
             results << release_wave_result(wave, index: index, total: waves.length, jobs: 1) if show_wave_markers
             wave.each do |member|
-              results.concat(release_results_for_member(member, runner: runner))
+              results.concat(release_results_for_member(member, runner: runner, wave_jobs: 1))
               break unless results.last.ok?
 
               remaining_members = ordered_members.drop(ordered_members.index(member) + 1)
@@ -1708,7 +1918,7 @@ module Kettle
         begin
           waves.each_with_index do |wave, index|
             results << release_wave_result(wave, index: index, total: waves.length)
-            wave_results = run_release_wave(wave)
+            wave_results = run_release_wave(wave, wave_jobs: release_jobs(wave))
             results.concat(wave_results.flatten)
             break unless wave_results.all? { |member_results| member_results.all?(&:ok?) }
 
@@ -1725,11 +1935,10 @@ module Kettle
         results
       end
 
-      def run_release_wave(wave)
+      def run_release_wave(wave, wave_jobs: release_jobs(wave))
         queue = Queue.new
         wave.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(wave.length)
-        wave_jobs = release_jobs(wave)
         mutex = Mutex.new
         stop = false
         Array.new(wave_jobs) do
@@ -1739,7 +1948,7 @@ module Kettle
               break if mutex.synchronize { stop }
 
               index, member = queue.pop(true)
-              member_results = release_results_for_member(member, runner: runner)
+              member_results = release_results_for_member(member, runner: runner, wave_jobs: wave_jobs)
               mutex.synchronize do
                 ordered_results[index] = member_results
                 stop = true unless member_results.all?(&:ok?)
@@ -1770,7 +1979,7 @@ module Kettle
             aggregate_members, independent_members = wave.partition { |member| aggregate_release_member?(member) }
 
             unless aggregate_members.empty?
-              worker_results = run_monorepo_release_wave(aggregate_members)
+              worker_results = run_monorepo_release_wave(aggregate_members, wave_jobs: release_jobs(aggregate_members))
               results.concat(worker_results.flatten)
               break unless worker_results.all? { |member_results| member_results.all?(&:ok?) }
 
@@ -1780,7 +1989,7 @@ module Kettle
             end
 
             independent_members.each do |member|
-              results.concat(release_results_for_member(member, runner: release_command_runner))
+              results.concat(release_results_for_member(member, runner: release_command_runner, wave_jobs: 1))
               break unless results.last.ok?
             end
             break unless results.last&.ok?
@@ -1798,13 +2007,13 @@ module Kettle
         results
       end
 
-      def run_monorepo_release_wave(members)
+      def run_monorepo_release_wave(members, wave_jobs: release_jobs(members))
         entries, setup_results = monorepo_release_worktree_entries(members)
         unless setup_results.all?(&:ok?)
           return setup_results.zip
         end
 
-        worker_results = run_monorepo_release_worktree_entries(entries)
+        worker_results = run_monorepo_release_worktree_entries(entries, wave_jobs: wave_jobs)
         materialization_results = materialize_monorepo_release_artifacts(entries, worker_results)
         worker_results.each_with_index.map do |member_results, index|
           artifact_result = materialization_results[index]
@@ -1843,19 +2052,19 @@ module Kettle
         family_member.dup.tap { |member| member.root = config.root }
       end
 
-      def run_monorepo_release_worktree_entries(entries)
+      def run_monorepo_release_worktree_entries(entries, wave_jobs: release_jobs(entries))
         queue = Queue.new
         entries.each_with_index { |entry, index| queue << [index, entry] }
         ordered_results = Array.new(entries.length)
         mutex = Mutex.new
         stop = false
-        Array.new(release_jobs(entries)) do
+        Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- each member has an isolated detached monorepo worktree.
             loop do
               break if mutex.synchronize { stop }
 
               index, entry = queue.pop(true)
-              member_results = release_results_for_monorepo_worktree(entry)
+              member_results = release_results_for_monorepo_worktree(entry, wave_jobs: wave_jobs)
               mutex.synchronize do
                 ordered_results[index] = member_results
                 stop = true unless member_results.all?(&:ok?)
@@ -1874,7 +2083,7 @@ module Kettle
         ordered_results.compact
       end
 
-      def release_results_for_monorepo_worktree(entry)
+      def release_results_for_monorepo_worktree(entry, wave_jobs: 1)
         member = entry.fetch(:member)
         original_member = entry.fetch(:original_member)
         progress = @release_progress
@@ -1895,7 +2104,7 @@ module Kettle
             member: member,
             phase: release_phase,
             command: release_command_for(member),
-            env: release_env_for_member(member, family_root: entry.fetch(:worktree_root)).merge("KETTLE_RELEASE_FAMILY_MEMBER_PUBLISH" => "true"),
+            env: release_env_for_member(member, family_root: entry.fetch(:worktree_root), wave_jobs: wave_jobs).merge("KETTLE_RELEASE_FAMILY_MEMBER_PUBLISH" => "true"),
             interactive: release_command_interactive?,
             stdout_line_handler: release_event_line_handler(original_member, progress: progress, state: release_event_state),
             log_path: release_command_log_path(original_member, release_phase),
@@ -2032,7 +2241,7 @@ module Kettle
         )
       end
 
-      def release_results_for_member(member, runner:)
+      def release_results_for_member(member, runner:, wave_jobs: 1)
         progress = @release_progress
         progress&.start_member(member, total: release_phase_total(member), status: "check")
         [].tap do |memo|
@@ -2067,7 +2276,7 @@ module Kettle
             member: member,
             phase: release_phase,
             command: release_command_for(member),
-            env: release_env_for_member(member),
+            env: release_env_for_member(member, wave_jobs: wave_jobs),
             interactive: release_command_interactive?,
             stdout_line_handler: release_event_line_handler(member, progress: progress, state: release_event_state),
             log_path: release_command_log_path(member, release_phase),
@@ -3189,7 +3398,7 @@ module Kettle
       # A monorepo member runs kettle-release from its own checkout, while its
       # changelog may live at the family root. Pass the shared paths to the
       # member release phase as well as to the separate family phase.
-      def release_env_for_member(member, family_root: config.root)
+      def release_env_for_member(member, family_root: config.root, wave_jobs: 1)
         env = release_env
         env.merge!(release_wave_local_path_env_for(member, family_root: family_root))
         env.merge!(release_local_path_policy_env(family_root: family_root))
@@ -3223,6 +3432,10 @@ module Kettle
         if aggregate_validation_member?(member)
           env["KETTLE_RELEASE_FAMILY_CI_MODE"] = aggregate_validation_member_name?(member) ? "validation" : "member"
         end
+        # kettle-release invokes kettle-test as part of its member lifecycle.
+        # Preserve an operator-supplied ceiling, otherwise budget the complete
+        # TurboTests2 process pool for this active Family wave.
+        env["TURBO_TESTS2_MAX_PROCESSES"] ||= Concurrency.test_process_ceiling(wave_jobs: wave_jobs).to_s
         return env unless config.shared_changelog?
         if config.member_local_changelog?(member)
           return env.merge(

@@ -34,4 +34,16 @@ RSpec.describe Kettle::Family::Concurrency do
       end.to raise_error(ArgumentError, /positive/)
     end
   end
+
+  describe ".test_process_ceiling" do
+    it "includes the member's primary process when sharing remaining CPUs" do
+      expect(described_class.test_process_ceiling(wave_jobs: 6, cpu_count: 22)).to eq(3)
+      expect(described_class.test_process_ceiling(wave_jobs: 4, cpu_count: 8)).to eq(2)
+    end
+
+    it "caps a single member test run at half the detected CPUs" do
+      expect(described_class.test_process_ceiling(wave_jobs: 1, cpu_count: 22)).to eq(11)
+      expect(described_class.test_process_ceiling(wave_jobs: 1, cpu_count: 8)).to eq(4)
+    end
+  end
 end

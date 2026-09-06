@@ -25,6 +25,144 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.status).to eq(3)
   end
 
+  it "runs sibling repository test commands concurrently with a shared inclusive process ceiling" do
+    barrier = File.join(@tmpdir, "test-barrier")
+    command = [
+      RbConfig.ruby,
+      "-e",
+      <<~RUBY
+        require "fileutils"
+        barrier = ENV.fetch("KETTLE_FAMILY_TEST_BARRIER")
+        FileUtils.mkdir_p(barrier)
+        File.write(File.join(barrier, Process.pid.to_s), ENV.fetch("TURBO_TESTS2_MAX_PROCESSES"))
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+        until Dir.children(barrier).length >= 2
+          abort "test workers did not overlap" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+          sleep 0.01
+        end
+      RUBY
+    ]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({
+      "family" => {"mode" => "sibling_repos"},
+      "commands" => {"test" => command}
+    }))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+
+    results = described_class.new(
+      command: "test",
+      config: config,
+      members: [alpha, beta],
+      execute: true,
+      jobs: 2,
+      env_overrides: {"KETTLE_FAMILY_TEST_BARRIER" => barrier}
+    ).results
+
+    expect(results.map(&:stderr)).to all(eq(""))
+    expect(results).to all(be_ok)
+    expect(Dir.children(barrier)).to have_attributes(length: 2)
+    expect(Dir.children(barrier).map { |name| File.read(File.join(barrier, name)) }.uniq).to eq([
+      Kettle::Family::Concurrency.test_process_ceiling(wave_jobs: 2).to_s
+    ])
+  end
+
+  it "runs an aggregate monorepo test suite once and reports remaining selected members as skipped" do
+    command = [RbConfig.ruby, "-e", "File.write('test-ran', 'yes')"]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({
+      "family" => {"mode" => "monorepo"},
+      "test" => {"aggregate_member" => "beta"},
+      "commands" => {"test" => command}
+    }))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+
+    results = described_class.new(command: "test", config: config, members: [alpha, beta], execute: true).results
+
+    expect(File).not_to exist(File.join(alpha.root, "test-ran"))
+    expect(File).to exist(File.join(beta.root, "test-ran"))
+    expect(results.map(&:member_name)).to eq(%w[beta alpha])
+    expect(results.last.skipped).to be(true)
+    expect(results.last.reason).to eq("shared monorepo suite owned by beta")
+  end
+
+  it "uses disposable worktrees for configured member-scoped monorepo tests" do
+    barrier = File.join(@tmpdir, "worktree-test-barrier")
+    command = [
+      RbConfig.ruby,
+      "-e",
+      <<~RUBY
+        require "fileutils"
+        barrier = ENV.fetch("KETTLE_FAMILY_TEST_BARRIER")
+        FileUtils.mkdir_p(barrier)
+        File.write(File.join(barrier, Process.pid.to_s), Dir.pwd)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+        until Dir.children(barrier).length >= 2
+          abort "test worktrees did not overlap" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+          sleep 0.01
+        end
+        File.write("test-artifact", "discard me")
+      RUBY
+    ]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({
+      "family" => {"mode" => "monorepo", "members_root" => "."},
+      "test" => {"monorepo_mode" => "worktrees"},
+      "commands" => {"test" => command}
+    }))
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    File.write(File.join(alpha.root, "member.txt"), "alpha\n")
+    File.write(File.join(beta.root, "member.txt"), "beta\n")
+    [["init"], ["config", "user.email", "kettle-family@example.test"], ["config", "user.name", "Kettle Family"], ["add", "."], ["commit", "-m", "initial"]].each do |arguments|
+      expect(system("git", "-C", @tmpdir, *arguments, out: File::NULL, err: File::NULL)).to be(true)
+    end
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    results = described_class.new(
+      command: "test",
+      config: config,
+      members: [alpha, beta],
+      execute: true,
+      jobs: 2,
+      env_overrides: {"KETTLE_FAMILY_TEST_BARRIER" => barrier}
+    ).results
+
+    expect(results.map(&:stderr)).to all(eq(""))
+    expect(results).to all(be_ok)
+    expect(Dir.children(barrier).map { |name| File.read(File.join(barrier, name)) }).to all(include("test-member-worktrees"))
+    expect(File).not_to exist(File.join(alpha.root, "test-artifact"))
+    expect(File).not_to exist(File.join(beta.root, "test-artifact"))
+  end
+
+  it "rejects an unknown monorepo test execution mode" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({
+      "test" => {"monorepo_mode" => "shared-checkout"}
+    }))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    expect { config.test_monorepo_mode }.to raise_error(Kettle::Family::Error, /aggregate or worktrees/)
+  end
+
+  it "does not allocate test workers when no members are selected" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "test", config: config, members: [], execute: true)
+
+    expect(workflow.send(:test_member_workflow_results, [])).to be_empty
+  end
+
+  it "preserves an explicit TurboTests2 ceiling for a direct family test run" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(
+      command: "test",
+      config: config,
+      members: [],
+      env_overrides: {"TURBO_TESTS2_MAX_PROCESSES" => "2"}
+    )
+
+    expect(workflow.send(:test_command_env, wave_jobs: 6)).to include("TURBO_TESTS2_MAX_PROCESSES" => "2")
+  end
+
   it "plans default commands without executing them" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
