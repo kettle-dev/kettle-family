@@ -799,6 +799,10 @@ kettle-family template --execute \
 
 ### Template Bootstrap Environment
 
+The complete path-gem, lockfile, install, platform, and mutation policy is
+defined in [Execution Profiles](EXECUTION_PROFILES.md). The rules below are
+the template-local portion of that policy.
+
 Before invoking `kettle-jem`, `kettle-family template` may refresh `nomono` so
 the member Gemfile can activate its generated local dependency wiring. Both
 bootstrap and lockfile preparation use the same development dependency graph:

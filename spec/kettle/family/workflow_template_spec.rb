@@ -678,6 +678,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:template_lockfile_recovery_env, member)).not_to include(
       family_local_env_name => "false"
     )
+    expect(workflow.send(:template_execution_profile).name).to eq(:template_local)
   end
 
   it "aligns stale nomono bootstrap dependencies in the configured family environment" do

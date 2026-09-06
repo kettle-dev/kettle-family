@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Use the templating dependency graph during initial template lockfile preparation.
 
+- Define execution profiles and add real Bundler compatibility scenarios for template and release lockfile isolation.
+
 ### Security
 
 ## [1.2.85] - 2026-09-06

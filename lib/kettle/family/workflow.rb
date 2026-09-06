@@ -833,8 +833,6 @@ module Kettle
         # available only for an explicit, known optional-dependency constraint
         # conflict; it is not a general solution for local-path resolution.
         env["KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY"] = template_bootstrap_changelog_dependency_setting
-        env["K_JEM_TEMPLATING"] = "true"
-        env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
         env
       end
 
@@ -4418,13 +4416,10 @@ module Kettle
       end
 
       def template_lockfile_recovery_env(_member = nil)
-        env = template_prepare_env
         # A failed template preparation can be caused by an unreleased sibling
         # version. Recover in the template graph, not the release graph, so
         # Bundler uses the configured monorepo paths.
-        env["K_JEM_TEMPLATING"] = "true"
-        env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
-        env
+        execution_profile(template_execution_profile, workflow_env)
       end
 
       def normalize_lockfiles_command(member:, phase:, skip_checksum_option: false)
@@ -4630,7 +4625,37 @@ module Kettle
         # Templating is development work.  It must resolve the configured
         # family graph exactly as template application does; release-only
         # lockfile cleanup owns disabling local path sources.
-        workflow_env.merge("K_JEM_TEMPLATING" => "true")
+        execution_profile(template_execution_profile, workflow_env)
+      end
+
+      def template_execution_profile
+        ExecutionProfile.fetch(:template_local)
+      end
+
+      def release_lockfile_execution_profile
+        return ExecutionProfile.fetch(:release_recovery) if release_recovery?
+        return ExecutionProfile.fetch(:release_monorepo) if preserve_monorepo_template_context?
+
+        ExecutionProfile.fetch(:release_registry)
+      end
+
+      def release_recovery?
+        !start_step.nil? || !skip_steps.to_s.empty? || fast_recovery || skip_ci
+      end
+
+      def execution_profile(profile, env)
+        profile = ExecutionProfile.fetch(profile) unless profile.is_a?(ExecutionProfile::Definition)
+        env = env.dup
+        case profile.name
+        when :template_local
+          env["K_JEM_TEMPLATING"] = "true"
+          env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
+        when :release_registry, :release_monorepo, :release_recovery
+          # Release profiles deliberately leave Bundler mutation decisions to
+          # kettle-dev. The profile selection controls which local-path
+          # overrides this workflow contributes below.
+        end
+        env
       end
 
       def local_path_env_requested?(name)
@@ -4684,10 +4709,13 @@ module Kettle
       end
 
       def release_lockfile_env(member = nil)
-        base_release_env
+        execution_profile(
+          release_lockfile_execution_profile,
+          base_release_env
           .merge(release_lockfile_bundler_env_resets)
           .merge(env_overrides)
           .merge(release_lockfile_local_path_env_overrides(member))
+        )
       end
 
       def release_lockfile_bundler_env_resets

@@ -570,6 +570,15 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_lockfile_env)).to include("K_JEM_TEMPLATING" => "true")
     expect(workflow.send(:release_local_path_policy_env).fetch("KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ENVS"))
       .to eq("STRUCTUREDMERGE_DEV,K_JEM_TEMPLATING")
+    expect(workflow.send(:release_lockfile_execution_profile).name).to eq(:release_monorepo)
+  end
+
+  it "selects the recovery profile when resuming a release" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], start_step: 10)
+
+    expect(workflow.send(:release_lockfile_execution_profile).name).to eq(:release_recovery)
   end
 
   it "accepts allowed monorepo path specs during dependency-floor validation" do
