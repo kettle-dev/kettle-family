@@ -681,6 +681,45 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:template_execution_profile).name).to eq(:template_local)
   end
 
+  it "uses the template profile for real Bundler preparation, application, and normalization" do
+    write_template_config
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = %w[bundle lock --local]
+    member = member_at("alpha")
+    fixture_root = File.join(member.root, "template-fixture")
+    FileUtils.mkdir_p(fixture_root)
+    File.write(File.join(fixture_root, "template-fixture.gemspec"), <<~RUBY)
+      Gem::Specification.new do |spec|
+        spec.name = "template-fixture"
+        spec.version = "1.0.0"
+        spec.summary = "template profile fixture"
+        spec.authors = ["Kettle"]
+        spec.files = []
+      end
+    RUBY
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      source "https://rubygems.org"
+      if ENV.fetch("K_JEM_TEMPLATING", "false") == "true"
+        gem "template-fixture", path: "template-fixture"
+      else
+        gem "template-fixture", "= 9.9.9"
+      end
+    RUBY
+    config_hash.fetch("template")["command"] = [
+      RbConfig.ruby,
+      "-e",
+      'abort "template profile missing" unless ENV.fetch("K_JEM_TEMPLATING", "false") == "true"'
+    ]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results).to all(be_ok)
+    expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles])
+    expect(File.read(File.join(member.root, "Gemfile.lock"))).to include("remote: template-fixture")
+  end
+
   it "aligns stale nomono bootstrap dependencies in the configured family environment" do
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],
@@ -1472,6 +1511,9 @@ RSpec.describe Kettle::Family::Workflow do
       "prepare_lockfiles"
     )
     expect(calls.count { |call| call[:phase] == "prepare_lockfiles" }).to eq(2)
+    expect(calls.select { |call| call[:phase] == "prepare_lockfiles" }).to all(
+      satisfy { |call| call.fetch(:env).fetch("K_JEM_TEMPLATING") == "true" }
+    )
     expect(calls.find { |call| call[:phase] == "prepare_lockfiles_recovery" }.fetch(:env)).to include(
       "K_JEM_TEMPLATING" => "true"
     )

@@ -804,8 +804,11 @@ defined in [Execution Profiles](EXECUTION_PROFILES.md). The rules below are
 the template-local portion of that policy.
 
 Before invoking `kettle-jem`, `kettle-family template` may refresh `nomono` so
-the member Gemfile can activate its generated local dependency wiring. Both
-bootstrap and lockfile preparation use the same development dependency graph:
+the member Gemfile can activate its generated local dependency wiring. The
+template-local profile applies to every member phase: initial lockfile
+preparation, bootstrap recovery, dependency preparation, template application
+and its child processes, and final lockfile normalization. They all use the
+same development dependency graph:
 
 - `K_JEM_TEMPLATING=true` is enforced. It selects the templating Gemfile graph
   and activates generated local sibling closures. It is not a release-lockfile

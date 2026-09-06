@@ -593,7 +593,7 @@ module Kettle
             member: member,
             phase: command,
             command: command_text,
-            env: command_env,
+            env: template_command_env,
             stdout_line_handler: (command == "gha-sha-pins") ? gha_sha_pins_event_line_handler(member) : nil
           )
           memo << result
@@ -874,7 +874,7 @@ module Kettle
             member: member,
             phase: command,
             command: workflow_command(member),
-            env: workflow_env,
+            env: template_command_env,
             stdout_line_handler: template_event_line_handler(member, progress: progress)
           )
           emit_member_result_progress(member, memo.last, progress: progress)
@@ -4351,18 +4351,19 @@ module Kettle
       def normalize_lockfiles(member:, runner:, memo:, phase:)
         return unless config.normalize_lockfiles?
 
+        env = template_lockfile_phase?(phase) ? template_prepare_env : workflow_env
         result = runner.call(
           member: member,
           phase: phase,
           command: normalize_lockfiles_command(member: member, phase: phase),
-          env: workflow_env
+          env: env
         )
         if template_prepare_lockfiles_phase?(phase) && repair_checksum_mismatches(member, result)
           result = runner.call(
             member: member,
             phase: phase,
             command: normalize_lockfiles_command(member: member, phase: phase),
-            env: workflow_env
+            env: env
           )
         end
         if checksum_option_unsupported?(result)
@@ -4370,7 +4371,7 @@ module Kettle
             member: member,
             phase: "#{phase}_bundler_recovery",
             command: %w[bundle update --bundler],
-            env: workflow_env
+            env: env
           )
           memo << recovery
           return unless recovery.ok?
@@ -4379,7 +4380,7 @@ module Kettle
             member: member,
             phase: phase,
             command: normalize_lockfiles_command(member: member, phase: phase, skip_checksum_option: true),
-            env: workflow_env
+            env: env
           )
         end
         if template_lockfile_phase?(phase) && recoverable_bundle_failure?(result)
@@ -4390,7 +4391,7 @@ module Kettle
             member: member,
             phase: phase,
             command: normalize_lockfiles_command(member: member, phase: phase),
-            env: workflow_env
+            env: env
           )
         end
         memo << result
@@ -4639,6 +4640,10 @@ module Kettle
         # family graph exactly as template application does; release-only
         # lockfile cleanup owns disabling local path sources.
         execution_profile(template_execution_profile, workflow_env)
+      end
+
+      def template_command_env
+        (command == "template") ? template_prepare_env : command_env
       end
 
       def template_execution_profile
