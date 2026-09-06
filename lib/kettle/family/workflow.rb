@@ -60,6 +60,7 @@ module Kettle
         "bupb" => %w[bundle update --bundler]
       }.freeze
       TEMPLATE_AUTOSTASH_ALLOWED_DIRECTORIES = %w[lib spec test].freeze
+      TEMPLATE_MANAGED_DIRTY_PATH_PATTERN = %r{(?:\A|/)(?:Gemfile\.lock|Appraisal\.root\.gemfile\.lock|\.structuredmerge/kettle-jem\.lock|gemfiles/modular/[^/]+_local\.gemfile)\z}
       PRE_TEMPLATE_BOOTSTRAP_GEMS = %w[nomono kettle-dev].freeze
       GIT_SYNC_COMMANDS = {
         "push" => [["push", %w[git push]]],
@@ -266,20 +267,23 @@ module Kettle
               break
             end
 
-            stash_result = runner.call(
-              member: member,
-              phase: "template_autostash",
-              command: ["sh", "-lc", template_autostash_command(member)]
-            )
-            results << stash_result
-            break unless stash_result.ok?
+            stashable_paths = template_autostashable_dirty_paths(dirty_paths)
+            if stashable_paths.any?
+              stash_result = runner.call(
+                member: member,
+                phase: "template_autostash",
+                command: ["sh", "-lc", template_autostash_command(member, stashable_paths)]
+              )
+              results << stash_result
+              break unless stash_result.ok?
 
-            stash_ref = stash_result.stdout.to_s.lines.last.to_s.strip
-            if stash_ref.empty?
-              results << template_sync_failure_result(member, "could not determine the temporary template autostash reference")
-              break
+              stash_ref = stash_result.stdout.to_s.lines.last.to_s.strip
+              if stash_ref.empty?
+                results << template_sync_failure_result(member, "could not determine the temporary template autostash reference")
+                break
+              end
+              stashes << {member: member, ref: stash_ref}
             end
-            stashes << {member: member, ref: stash_ref}
           end
 
           upstream = git_upstream_for(member)
@@ -304,12 +308,20 @@ module Kettle
       def template_blocking_dirty_paths(dirty_paths)
         return dirty_paths unless autostash
 
-        dirty_paths.reject { |path| template_autostash_allowed_path?(path) }
+        dirty_paths.reject { |path| template_autostash_allowed_path?(path) || template_managed_dirty_path?(path) }
+      end
+
+      def template_autostashable_dirty_paths(dirty_paths)
+        dirty_paths.select { |path| template_autostash_allowed_path?(path) }
       end
 
       def template_autostash_allowed_path?(status_line)
         path = GitStatus.path_from_status_line(status_line)
         TEMPLATE_AUTOSTASH_ALLOWED_DIRECTORIES.include?(path.split("/", 2).first)
+      end
+
+      def template_managed_dirty_path?(status_line)
+        GitStatus.path_from_status_line(status_line).match?(TEMPLATE_MANAGED_DIRTY_PATH_PATTERN)
       end
 
       def restore_template_autostashes(stashes, runner:, preserve_members: [])
@@ -467,9 +479,10 @@ module Kettle
         status.success? ? stdout.strip : nil
       end
 
-      def template_autostash_command(member)
+      def template_autostash_command(member, paths)
         label = "kettle-family-template-#{member.name}-#{Process.pid}-#{Time.now.to_i}"
-        "git stash push --include-untracked --message #{Shellwords.escape(label)} && " \
+        pathspecs = paths.map { |path| Shellwords.escape(GitStatus.path_from_status_line(path)) }.join(" ")
+        "git stash push --include-untracked --message #{Shellwords.escape(label)} -- #{pathspecs} && " \
           "ref=$(git stash list -1 --format=%gd) && " \
           "git checkout \"$ref\" -- .tool-versions 2>/dev/null || true; " \
           "for path in mise.toml .mise.toml; do " \
@@ -479,7 +492,7 @@ module Kettle
 
       def template_dirty_worktree_result(member, dirty_paths)
         stash_guidance = if autostash
-          "automatic template autostash is limited to lib/, spec/, and test/ files"
+          "automatic template autostash is limited to lib/, spec/, and test/ files; generated lockfiles and modular *_local.gemfile files are left in place"
         else
           "automatic template autostash is disabled"
         end

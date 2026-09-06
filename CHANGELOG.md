@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Allow template-managed local lockfiles and modular Gemfiles to continue a template run without autostashing.
+
 ### Security
 
 ## [1.2.86] - 2026-09-06

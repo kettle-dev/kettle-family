@@ -1701,17 +1701,27 @@ RSpec.describe Kettle::Family::Workflow do
     end
   end
 
-  it "rejects dirty lockfiles before creating an autostash" do
+  it "allows generated lockfiles and modular local Gemfiles to remain in place" do
     write_template_config(normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     initialize_git_repo(member.root, branches: [])
+    FileUtils.mkdir_p(File.join(member.root, "gemfiles", "modular"))
+    File.write(File.join(member.root, "Gemfile.lock"), "recorded\n")
+    File.write(File.join(member.root, "gemfiles", "modular", "templating_local.gemfile"), "recorded\n")
+    run_git(member.root, "add", "Gemfile.lock", "gemfiles/modular/templating_local.gemfile")
+    run_git(member.root, "commit", "--quiet", "-m", "Add generated template outputs")
     File.write(File.join(member.root, "Gemfile.lock"), "local\n")
+    File.write(File.join(member.root, "gemfiles", "modular", "templating_local.gemfile"), "local\n")
 
-    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
+    results, stashes = workflow.send(:template_worktree_sync_results, runner: runner)
 
-    expect(results).to contain_exactly(have_attributes(phase: "template_sync_preflight", success: false))
-    expect(results.first.stderr).to include("Gemfile.lock")
+    expect(workflow.send(:template_blocking_dirty_paths, Kettle::Family::GitStatus.dirty_paths(member.root))).to be_empty
+    expect(workflow.send(:template_blocking_dirty_paths, [" M ../beta/Gemfile.lock", " M ../beta/gemfiles/modular/style_local.gemfile"])).to be_empty
+    expect(results).to all(be_ok)
+    expect(stashes).to be_empty
     expect(`git -C #{member.root} stash list`).to be_empty
   end
 
