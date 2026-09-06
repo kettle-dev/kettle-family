@@ -230,8 +230,8 @@ module Kettle
         @otp_coordinator = otp_coordinator
       end
 
-      def call(member:, phase:, command:, env: {}, interactive: false, stdout_line_handler: nil, log_path: nil, passthrough_output: true)
-        argv = command_argv(member: member, command: command, env: env)
+      def call(member:, phase:, command:, env: {}, interactive: false, raw: false, stdout_line_handler: nil, log_path: nil, passthrough_output: true)
+        argv = command_argv(member: member, command: command, env: env, raw: raw)
         process_env = process_env(member: member, env: env)
         spawn_options = process_options
         return skipped_result(member: member, phase: phase, argv: argv) unless execute
@@ -598,9 +598,9 @@ module Kettle
         nil
       end
 
-      def command_argv(member:, command:, env: {})
+      def command_argv(member:, command:, env: {}, raw: false)
         argv = normalize_command(command)
-        return argv unless mise_configured?(member)
+        return argv if raw || !mise_configured?(member)
 
         command_env = nonsensitive_env(env)
         unset_env, set_env = command_env.partition { |_key, value| value.nil? }

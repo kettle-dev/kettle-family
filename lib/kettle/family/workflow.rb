@@ -717,11 +717,14 @@ module Kettle
           results << result
           break unless result.ok?
 
-          entries << {
+          entry = {
             member: relocate_member_to_worktree(member, worktree_root, source_root: config.root),
             original_member: member,
             worktree_root: worktree_root
           }
+          entries << entry
+          results.concat(worktree_mise_trust_results(entry, runner: runner, phase: "test_member_worktree_mise_trust"))
+          break unless results.last.ok?
         end
         [entries, results]
       end
@@ -1038,11 +1041,14 @@ module Kettle
           results << result
           break unless result.ok?
 
-          entries << {
+          entry = {
             member: relocate_member_to_worktree(member, worktree_root, source_root: config.root),
             original_member: member,
             worktree_root: worktree_root
           }
+          entries << entry
+          results.concat(worktree_mise_trust_results(entry, runner: runner, phase: "template_member_worktree_mise_trust"))
+          break unless results.last.ok?
         end
         [entries, results]
       end
@@ -1435,7 +1441,11 @@ module Kettle
               outcomes << add
               break unless add.ok?
 
-              entries << {branch: branch, member: relocate_member_to_worktree(member, worktree_root), worktree_root: worktree_root}
+              entry = {branch: branch, member: relocate_member_to_worktree(member, worktree_root), worktree_root: worktree_root}
+              entries << entry
+              trust_results = worktree_mise_trust_results(entry.merge(original_member: member), runner: runner, phase: "template_worktree_mise_trust")
+              outcomes.concat(trust_results)
+              break unless trust_results.all?(&:ok?)
             end
 
             if outcomes.all?(&:ok?)
@@ -1489,6 +1499,45 @@ module Kettle
           worktree_member.gemspec_path = relocate.call(member.gemspec_path)
           worktree_member.version_file = relocate.call(member.version_file)
         end
+      end
+
+      # A git worktree has a distinct absolute path, and Mise deliberately
+      # tracks trust by config path. Trust every active config between the
+      # worktree root and the member command directory before invoking a
+      # command there. This bootstrap must run raw: wrapping it in `mise exec`
+      # would require the trust it is establishing.
+      def worktree_mise_trust_results(entry, runner:, phase:)
+        member = entry.fetch(:member)
+        original_member = entry.fetch(:original_member, member)
+        worktree_root = entry.fetch(:worktree_root)
+        mise_config_roots_in_worktree(worktree_root, member.root).map do |root|
+          result = runner.call(
+            member: member,
+            phase: phase,
+            command: ["mise", "trust", "-C", root],
+            raw: true
+          )
+          result.member_name = original_member.name
+          result
+        end
+      end
+
+      def mise_config_roots_in_worktree(worktree_root, member_root)
+        root_path = Pathname.new(worktree_root).realpath
+        member_path = Pathname.new(member_root).realpath
+        return [] unless member_path.to_s.start_with?("#{root_path}#{File::SEPARATOR}") || member_path == root_path
+
+        current = member_path
+        roots = []
+        loop do
+          roots << current.to_s if %w[mise.toml .mise.toml].any? { |name| File.file?(current.join(name)) }
+          break if current == root_path
+
+          current = current.parent
+        end
+        roots.reverse
+      rescue Errno::ENOENT
+        []
       end
 
       def template_branch_worktree_entries_results(entries)
@@ -2038,7 +2087,10 @@ module Kettle
           results << result
           break unless result.ok?
 
-          entries << {member: relocate_member_to_worktree(member, root, source_root: config.root), original_member: member, worktree_root: root}
+          entry = {member: relocate_member_to_worktree(member, root, source_root: config.root), original_member: member, worktree_root: root}
+          entries << entry
+          results.concat(worktree_mise_trust_results(entry, runner: runner, phase: "release_worktree_mise_trust"))
+          break unless results.last.ok?
         end
         [entries, results]
       end

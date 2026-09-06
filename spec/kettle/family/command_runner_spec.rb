@@ -50,6 +50,28 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.command).to start_with("mise", "exec", "-C", member.root, "--")
   end
 
+  it "runs an explicit raw command without wrapping it in mise" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+
+    result = described_class.new.call(
+      member: member,
+      phase: "mise_trust",
+      command: ["mise", "trust", "-C", member.root],
+      raw: true
+    )
+
+    expect(result.command).to eq(["mise", "trust", "-C", member.root])
+  end
+
+  it "runs a non-mise member command without a mise wrapper" do
+    member = member_at("alpha")
+
+    result = described_class.new.call(member: member, phase: "test", command: ["ruby", "-v"])
+
+    expect(result.command).to eq(["ruby", "-v"])
+  end
+
   it "injects workflow env after mise so member config cannot override it" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\nK_JEM_TEMPLATING = \"false\"\n")

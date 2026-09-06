@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Trust Mise configurations in disposable worktrees before member commands run.
+
 ### Security
 
 ## [1.2.90] - 2026-09-06

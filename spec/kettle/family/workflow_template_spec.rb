@@ -236,6 +236,159 @@ RSpec.describe Kettle::Family::Workflow do
     expect(`git -C #{Shellwords.escape(@tmpdir)} status --short`).to eq("")
   end
 
+  it "trusts root and member mise configs before running a detached template worktree" do
+    alpha = member_at("alpha")
+    FileUtils.mkdir_p(alpha.root)
+    File.write(File.join(@tmpdir, "mise.toml"), "[env]\n")
+    File.write(File.join(alpha.root, "mise.toml"), "[env]\n")
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    worktree_root = File.join(@tmpdir, "tmp", "mise-worktree")
+    run_git(@tmpdir, "worktree", "add", "--detach", worktree_root, "HEAD")
+    entry = {
+      member: workflow.send(:relocate_member_to_worktree, alpha, worktree_root, source_root: @tmpdir),
+      original_member: alpha,
+      worktree_root: worktree_root
+    }
+    success = Kettle::Family::CommandResult.new(alpha.name, "mise_trust", ["mise"], alpha.root, 0, true, "", "", 0.0, false, nil)
+    runner = double
+    allow(runner).to receive(:call)
+    allow(runner).to receive(:call).and_return(success)
+
+    results = workflow.send(:worktree_mise_trust_results, entry, runner: runner, phase: "template_member_worktree_mise_trust")
+
+    expect(results).to all(be_ok)
+    expect(runner).to have_received(:call).with(
+      member: entry.fetch(:member),
+      phase: "template_member_worktree_mise_trust",
+      command: ["mise", "trust", "-C", worktree_root],
+      raw: true
+    ).ordered
+    expect(runner).to have_received(:call).with(
+      member: entry.fetch(:member),
+      phase: "template_member_worktree_mise_trust",
+      command: ["mise", "trust", "-C", entry.fetch(:member).root],
+      raw: true
+    ).ordered
+  ensure
+    run_git(@tmpdir, "worktree", "remove", "--force", worktree_root) if worktree_root && Dir.exist?(worktree_root)
+  end
+
+  it "does not invoke mise trust for a worktree without a mise configuration" do
+    alpha = member_at("alpha")
+    worktree_root = File.join(@tmpdir, "worktree")
+    FileUtils.mkdir_p(File.join(worktree_root, "alpha"))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    worktree_member = alpha.dup.tap { |member| member.root = File.join(worktree_root, "alpha") }
+    runner = double
+    allow(runner).to receive(:call)
+
+    results = workflow.send(
+      :worktree_mise_trust_results,
+      {member: worktree_member, original_member: alpha, worktree_root: worktree_root},
+      runner: runner,
+      phase: "template_member_worktree_mise_trust"
+    )
+
+    expect(results).to be_empty
+    expect(runner).not_to have_received(:call)
+  end
+
+  it "uses the worktree member as the result owner when no original member is supplied" do
+    alpha = member_at("alpha")
+    worktree_root = File.join(@tmpdir, "worktree")
+    member_root = File.join(worktree_root, "alpha")
+    FileUtils.mkdir_p(member_root)
+    File.write(File.join(member_root, "mise.toml"), "[env]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    worktree_member = alpha.dup.tap { |member| member.root = member_root }
+    success = Kettle::Family::CommandResult.new(alpha.name, "mise_trust", ["mise"], member_root, 0, true, "", "", 0.0, false, nil)
+    runner = double
+    allow(runner).to receive(:call).and_return(success)
+
+    results = workflow.send(
+      :worktree_mise_trust_results,
+      {member: worktree_member, worktree_root: worktree_root},
+      runner: runner,
+      phase: "template_member_worktree_mise_trust"
+    )
+
+    expect(results).to all(be_ok)
+    expect(results.first.member_name).to eq(alpha.name)
+  end
+
+  it "trusts a .mise.toml when the member is rooted at the disposable worktree" do
+    alpha = member_at("alpha")
+    worktree_root = File.join(@tmpdir, "worktree")
+    FileUtils.mkdir_p(worktree_root)
+    File.write(File.join(worktree_root, ".mise.toml"), "[env]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    worktree_member = alpha.dup.tap { |member| member.root = worktree_root }
+    success = Kettle::Family::CommandResult.new(alpha.name, "mise_trust", ["mise"], worktree_root, 0, true, "", "", 0.0, false, nil)
+    runner = double
+    allow(runner).to receive(:call).and_return(success)
+
+    results = workflow.send(
+      :worktree_mise_trust_results,
+      {member: worktree_member, original_member: alpha, worktree_root: worktree_root},
+      runner: runner,
+      phase: "template_member_worktree_mise_trust"
+    )
+
+    expect(results).to all(be_ok)
+    expect(runner).to have_received(:call).with(
+      member: worktree_member,
+      phase: "template_member_worktree_mise_trust",
+      command: ["mise", "trust", "-C", worktree_root],
+      raw: true
+    )
+  end
+
+  it "refuses to trust a member path outside the disposable worktree" do
+    alpha = member_at("alpha")
+    worktree_root = File.join(@tmpdir, "worktree")
+    FileUtils.mkdir_p(worktree_root)
+    File.write(File.join(@tmpdir, "mise.toml"), "[env]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    runner = double
+    allow(runner).to receive(:call)
+
+    results = workflow.send(
+      :worktree_mise_trust_results,
+      {member: alpha, original_member: alpha, worktree_root: worktree_root},
+      runner: runner,
+      phase: "template_member_worktree_mise_trust"
+    )
+
+    expect(results).to be_empty
+    expect(runner).not_to have_received(:call)
+  end
+
+  it "tolerates a worktree removed before mise trust begins" do
+    alpha = member_at("alpha")
+    worktree_root = File.join(@tmpdir, "removed-worktree")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    worktree_member = alpha.dup.tap { |member| member.root = File.join(worktree_root, "alpha") }
+    runner = double
+    allow(runner).to receive(:call)
+
+    results = workflow.send(
+      :worktree_mise_trust_results,
+      {member: worktree_member, original_member: alpha, worktree_root: worktree_root},
+      runner: runner,
+      phase: "template_member_worktree_mise_trust"
+    )
+
+    expect(results).to be_empty
+    expect(runner).not_to have_received(:call)
+  end
+
   it "refuses to materialize a monorepo template worker change outside its member root" do
     alpha = member_at("alpha")
     File.write(File.join(alpha.root, "marker"), "alpha\n")
