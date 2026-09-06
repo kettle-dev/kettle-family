@@ -719,6 +719,8 @@ module Kettle
       end
 
       def template_results_for_wave(wave, progress:)
+        return monorepo_template_worktree_wave_results(wave, progress: progress) if monorepo_template_worktrees?(wave)
+
         queue = Queue.new
         wave.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(wave.length)
@@ -751,10 +753,15 @@ module Kettle
             ready = remaining.select do |member|
               (member.dependencies & by_name.keys).all? { |name| completed.include?(name) }
             end
-            # A Git checkout is a shared mutable transaction boundary. Nested
-            # gems in one checkout must not run kettle-jem concurrently, even
-            # when their dependency graph would otherwise place them together.
-            wave = ready.group_by { |member| git_root_for(member) }.values.map(&:first)
+            # A shared checkout remains a transaction boundary unless each
+            # ready monorepo member will receive an isolated worktree.  The
+            # latter keeps the normal dependency graph intact while allowing
+            # independent sibling gems to use the requested worker budget.
+            wave = if monorepo_template_worktrees_enabled?
+              ready
+            else
+              ready.group_by { |member| git_root_for(member) }.values.map(&:first)
+            end
             raise Error, "template dependency wave could not resolve: #{remaining.map(&:name).join(", ")}" if wave.empty?
 
             waves << wave
@@ -762,6 +769,212 @@ module Kettle
             remaining -= wave
           end
         end
+      end
+
+      # A monorepo has one mutable primary checkout, but its ready sibling
+      # gems can template independently.  Run them in detached worktrees and
+      # materialize only changes beneath each member root before the existing
+      # serialized commit step runs in the primary checkout.
+      def monorepo_template_worktree_wave_results(wave, progress:)
+        entries, setup_results = monorepo_template_worktree_entries(wave)
+        return setup_results unless setup_results.all?(&:ok?)
+
+        worker_results = run_monorepo_template_worktree_entries(entries, progress: progress)
+        results = []
+        worker_results.each_with_index do |member_results, index|
+          next unless member_results
+
+          results.concat(member_results)
+          next unless member_results.all?(&:ok?)
+
+          entry = entries.fetch(index)
+          materialized = materialize_monorepo_template_changes(entry)
+          results << materialized
+          next unless materialized.ok?
+
+          commit_results = []
+          commit_template_changes(member: entry.fetch(:original_member), runner: command_runner, memo: commit_results)
+          results.concat(commit_results)
+        end
+        results
+      ensure
+        cleanup_monorepo_template_worktrees(entries || [])
+      end
+
+      def monorepo_template_worktrees?(wave)
+        monorepo_template_worktrees_enabled? && wave.length > 1
+      end
+
+      def monorepo_template_worktrees_enabled?
+        command_text = config.template_command || DEFAULT_COMMANDS.fetch("template")
+        execute && monorepo_template? && kettle_jem_template_command?(command_text) && members.length > 1 && template_jobs(members) > 1
+      end
+
+      def monorepo_template_worktree_entries(wave)
+        runner = command_runner
+        control_member = monorepo_template_control_member
+        entries = []
+        results = []
+        wave.each do |member|
+          worktree_root = monorepo_template_worktree_path(member)
+          result = runner.call(
+            member: control_member,
+            phase: "template_member_worktree_add",
+            command: ["git", "worktree", "add", "--detach", worktree_root, "HEAD"]
+          )
+          result.member_name = member.name
+          results << result
+          break unless result.ok?
+
+          entries << {
+            member: relocate_member_to_worktree(member, worktree_root, source_root: config.root),
+            original_member: member,
+            worktree_root: worktree_root
+          }
+        end
+        [entries, results]
+      end
+
+      def monorepo_template_worktree_path(member)
+        safe_member = member.name.to_s.gsub(/[^A-Za-z0-9_.-]+/, "_")
+        File.join(config.root, "tmp", "kettle-family", "template-member-worktrees", safe_member, "#{Process.pid}-#{Time.now.to_i}")
+      end
+
+      def monorepo_template_control_member
+        family_member.dup.tap { |member| member.root = config.root }
+      end
+
+      def run_monorepo_template_worktree_entries(entries, progress:)
+        queue = Queue.new
+        entries.each_with_index { |entry, index| queue << [index, entry] }
+        ordered_results = Array.new(entries.length)
+        mutex = Mutex.new
+        stop = false
+        Array.new(template_jobs(entries)) do
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- detached worktrees isolate concurrent monorepo template members.
+            loop do
+              break if mutex.synchronize { stop }
+
+              index, entry = queue.pop(true)
+              member_results = template_results_for_member(entry.fetch(:member), progress: progress, commit_changes: false)
+              mutex.synchronize do
+                ordered_results[index] = member_results
+                stop = true unless member_results.all?(&:ok?)
+              end
+            rescue ThreadError
+              break
+            rescue => error
+              mutex.synchronize do
+                ordered_results[index] = [template_worktree_failure_result(entry.fetch(:original_member), error)]
+                stop = true
+              end
+              break
+            end
+          end
+        end.each(&:join)
+        ordered_results
+      end
+
+      def materialize_monorepo_template_changes(entry)
+        original_member = entry.fetch(:original_member)
+        worktree_root = entry.fetch(:worktree_root)
+        relative_root = Pathname.new(original_member.root).relative_path_from(Pathname.new(config.root)).to_s
+        paths = monorepo_template_worktree_changed_paths(worktree_root)
+        return template_worktree_failure_result(original_member, paths) if paths.is_a?(String)
+
+        invalid_paths = paths.reject { |path| path == relative_root || path.start_with?("#{relative_root}/") }
+        unless invalid_paths.empty?
+          return template_worktree_failure_result(
+            original_member,
+            "isolated template worker modified shared path(s): #{invalid_paths.sort.join(", ")}; only #{relative_root}/ may be materialized"
+          )
+        end
+
+        tracked_paths = monorepo_template_worktree_tracked_paths(worktree_root)
+        return template_worktree_failure_result(original_member, tracked_paths) if tracked_paths.is_a?(String)
+
+        runner = command_runner
+        control_member = monorepo_template_control_member.dup
+        control_member.name = original_member.name
+        command = if tracked_paths.empty?
+          ["true"]
+        else
+          source = Shellwords.escape(worktree_root)
+          scope = Shellwords.escape(relative_root)
+          ["sh", "-lc", "git -C #{source} diff --binary HEAD -- #{scope} | git apply --whitespace=nowarn"]
+        end
+        result = runner.call(member: control_member, phase: "template_worktree_materialize", command: command)
+        return result unless result.ok?
+
+        copy_monorepo_template_untracked_paths(worktree_root, config.root, relative_root)
+        result.stdout = "#{paths.length} path(s) materialized from isolated worktree"
+        result
+      rescue => error
+        template_worktree_failure_result(original_member, error)
+      end
+
+      def monorepo_template_worktree_changed_paths(worktree_root)
+        tracked_paths = monorepo_template_worktree_tracked_paths(worktree_root)
+        return tracked_paths if tracked_paths.is_a?(String)
+
+        untracked_paths = monorepo_template_worktree_untracked_paths(worktree_root)
+        return untracked_paths if untracked_paths.is_a?(String)
+
+        (tracked_paths + untracked_paths).uniq
+      end
+
+      def monorepo_template_worktree_tracked_paths(worktree_root)
+        git_worktree_paths(worktree_root, %w[diff --name-only -z HEAD])
+      end
+
+      def monorepo_template_worktree_untracked_paths(worktree_root)
+        git_worktree_paths(worktree_root, %w[ls-files --others --exclude-standard -z])
+      end
+
+      def git_worktree_paths(worktree_root, arguments)
+        stdout, stderr, status = Open3.capture3("git", *arguments, chdir: worktree_root)
+        return stdout.split("\0").reject(&:empty?) if status.success?
+
+        "git #{arguments.join(" ")} failed in #{worktree_root}: #{stderr.strip}"
+      end
+
+      def copy_monorepo_template_untracked_paths(worktree_root, primary_root, relative_root)
+        monorepo_template_worktree_untracked_paths(worktree_root).each do |path|
+          next unless path == relative_root || path.start_with?("#{relative_root}/")
+
+          source = File.join(worktree_root, path)
+          destination = File.join(primary_root, path)
+          FileUtils.mkdir_p(File.dirname(destination))
+          FileUtils.cp_r(source, destination, preserve: true)
+        end
+      end
+
+      def cleanup_monorepo_template_worktrees(entries)
+        runner = command_runner
+        control_member = monorepo_template_control_member
+        entries.each do |entry|
+          root = entry.fetch(:worktree_root)
+          next unless Dir.exist?(root)
+
+          runner.call(member: control_member, phase: "template_member_worktree_remove", command: ["git", "worktree", "remove", "--force", root])
+        end
+      end
+
+      def template_worktree_failure_result(member, error)
+        message = error.is_a?(Exception) ? "#{error.class}: #{error.message}" : error.to_s
+        CommandResult.new(
+          member_name: member.name,
+          phase: "template_member_worktree",
+          command: ["internal", "template-member-worktree"],
+          workdir: member.root,
+          status: 1,
+          success: false,
+          stdout: "",
+          stderr: message,
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: "template member worktree failed"
+        )
       end
 
       def template_bootstrap_dependency_results(workflow_members)
@@ -856,17 +1069,17 @@ module Kettle
         )
       end
 
-      def template_results_for_member(member, progress: nil)
+      def template_results_for_member(member, progress: nil, commit_changes: true)
         progress&.start_member(member, total: template_phase_total(member), status: template_initial_status(member))
         runner = CommandRunner.new(execute: execute, accept: accept)
         [].tap do |memo|
           if config.normalize_lockfiles?
-            normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
+            normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles", commit_changes: commit_changes)
             emit_member_result_progress(member, memo.last, progress: progress)
             return memo unless memo.last.ok?
           end
 
-          prepared = prepare_template_dependencies(member: member, runner: runner, memo: memo)
+          prepared = prepare_template_dependencies(member: member, runner: runner, memo: memo, commit_changes: commit_changes)
           emit_member_result_progress(member, memo.last, progress: progress) if memo.last&.phase == "prepare_template_dependencies"
           return memo if prepared == false
 
@@ -880,9 +1093,9 @@ module Kettle
           emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
 
-          normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles")
+          normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles", commit_changes: commit_changes)
           emit_member_result_progress(member, memo.last, progress: progress)
-          commit_template_changes(member: member, runner: runner, memo: memo)
+          commit_template_changes(member: member, runner: runner, memo: memo) if commit_changes
           emit_member_result_progress(member, memo.last, progress: progress) if memo.last&.phase == "commit_template"
         ensure
           template_result = memo.find { |result| result.phase == "template" } || memo.last
@@ -4348,7 +4561,7 @@ module Kettle
         "#{outcomes.fetch(:checksum_hits)} checksum hits#{protected_label}, #{outcomes.fetch(:unchanged)} unchanged, #{changed_label}"
       end
 
-      def normalize_lockfiles(member:, runner:, memo:, phase:)
+      def normalize_lockfiles(member:, runner:, memo:, phase:, commit_changes: true)
         return unless config.normalize_lockfiles?
 
         env = template_lockfile_phase?(phase) ? template_prepare_env : workflow_env
@@ -4384,7 +4597,7 @@ module Kettle
           )
         end
         if template_lockfile_phase?(phase) && recoverable_bundle_failure?(result)
-          recover_template_lockfiles(member: member, runner: runner, memo: memo, phase: "#{phase}_recovery")
+          recover_template_lockfiles(member: member, runner: runner, memo: memo, phase: "#{phase}_recovery", commit_changes: commit_changes)
           return unless memo.last&.ok?
 
           result = runner.call(
@@ -4397,7 +4610,7 @@ module Kettle
         memo << result
       end
 
-      def recover_template_lockfiles(member:, runner:, memo:, phase:)
+      def recover_template_lockfiles(member:, runner:, memo:, phase:, commit_changes: true)
         result = runner.call(
           member: member,
           phase: phase,
@@ -4407,13 +4620,9 @@ module Kettle
         memo << result
         return unless memo.last&.ok?
 
-        commit_normalized_lockfiles(
-          branch_members: [member],
-          runner: runner,
-          memo: memo,
-          reason: "reset",
-          force: true
-        )
+        return unless commit_changes
+
+        commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "reset", force: true)
       end
 
       def recoverable_bundle_failure?(result)
@@ -4555,7 +4764,7 @@ module Kettle
         output.to_s.scan(/from the lockfile CHECKSUMS at Gemfile\.lock:(\d+):\d+/).flatten.map(&:to_i).uniq
       end
 
-      def prepare_template_dependencies(member:, runner:, memo:)
+      def prepare_template_dependencies(member:, runner:, memo:, commit_changes: true)
         command_text = config.template_command || default_template_command(member)
         return true unless kettle_jem_template_command?(command_text)
 
@@ -4570,7 +4779,8 @@ module Kettle
             member: member,
             runner: runner,
             memo: memo,
-            phase: "prepare_template_dependencies_recovery"
+            phase: "prepare_template_dependencies_recovery",
+            commit_changes: commit_changes
           )
           if no_release_lockfiles_failure?(memo.last)
             memo.pop

@@ -163,7 +163,7 @@ RSpec.describe Kettle::Family::Workflow do
       )
     end
 
-    results = described_class.new(command: "template", config: config, members: [alpha, beta], execute: true, jobs: 2).results
+    results = described_class.new(command: "template", config: config, members: [alpha, beta], execute: true, jobs: 1).results
 
     expect(results).to all(be_ok)
     expect(results.map(&:phase)).to eq(%w[prepare_template_dependencies template commit_template prepare_template_dependencies template commit_template])
@@ -181,6 +181,137 @@ RSpec.describe Kettle::Family::Workflow do
     expect(log).to include("🎨 Template beta by kettle-family")
   end
 
+  it "templates ready monorepo siblings in detached worktrees and materializes member-scoped changes" do
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    File.write(File.join(alpha.root, "marker"), "alpha\n")
+    File.write(File.join(beta.root, "marker"), "beta\n")
+    barrier = File.join(@tmpdir, "template-barrier")
+    executable = File.join(@tmpdir, "bin", "kettle-jem")
+    FileUtils.mkdir_p(File.dirname(executable))
+    File.write(executable, <<~RUBY)
+      require "fileutils"
+
+      case ARGV.first
+      when "prepare"
+        exit 0
+      when "install"
+        barrier = ENV.fetch("KETTLE_FAMILY_TEMPLATE_BARRIER")
+        FileUtils.mkdir_p(barrier)
+        File.write(File.join(barrier, Process.pid.to_s), "started\n")
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+        until Dir.children(barrier).length >= 2
+          abort "template workers did not overlap" if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+
+          sleep 0.01
+        end
+        File.write("templated.txt", Dir.pwd)
+        exit 0
+      end
+      abort "unexpected command: \#{ARGV.inspect}"
+    RUBY
+    write_template_config(command: [RbConfig.ruby, executable, "install"], normalize_lockfiles: false)
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    workflow = described_class.new(
+      command: "template",
+      config: config,
+      members: [alpha, beta],
+      execute: true,
+      jobs: 2,
+      env_overrides: {"KETTLE_FAMILY_TEMPLATE_BARRIER" => barrier}
+    )
+    expect(workflow.send(:template_dependency_waves, [alpha, beta])).to eq([[alpha, beta]])
+
+    results = workflow.results
+
+    expect(results).to all(be_ok)
+    expect(results.count { |result| result.phase == "template" }).to eq(2)
+    expect(results.count { |result| result.phase == "template_worktree_materialize" }).to eq(2)
+    expect(results.count { |result| result.phase == "commit_template" }).to eq(2)
+    expect(File.read(File.join(alpha.root, "templated.txt"))).to include("template-member-worktrees/alpha")
+    expect(File.read(File.join(beta.root, "templated.txt"))).to include("template-member-worktrees/beta")
+    FileUtils.rm_rf(barrier)
+    expect(`git -C #{Shellwords.escape(@tmpdir)} status --short`).to eq("")
+  end
+
+  it "refuses to materialize a monorepo template worker change outside its member root" do
+    alpha = member_at("alpha")
+    File.write(File.join(alpha.root, "marker"), "alpha\n")
+    write_template_config(normalize_lockfiles: false)
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    worktree_root = File.join(@tmpdir, "tmp", "template-scope-refusal")
+    run_git(@tmpdir, "worktree", "add", "--detach", worktree_root, "HEAD")
+    entry = {
+      member: workflow.send(:relocate_member_to_worktree, alpha, worktree_root, source_root: @tmpdir),
+      original_member: alpha,
+      worktree_root: worktree_root
+    }
+    File.write(File.join(worktree_root, "shared.txt"), "must not escape alpha\n")
+
+    result = workflow.send(:materialize_monorepo_template_changes, entry)
+
+    expect(result).not_to be_ok
+    expect(result.stderr).to include("shared.txt")
+    expect(File.exist?(File.join(@tmpdir, "shared.txt"))).to be(false)
+  ensure
+    run_git(@tmpdir, "worktree", "remove", "--force", worktree_root) if worktree_root && Dir.exist?(worktree_root)
+  end
+
+  it "materializes tracked monorepo template worker changes into the primary checkout" do
+    alpha = member_at("alpha")
+    marker = File.join(alpha.root, "marker")
+    File.write(marker, "before\n")
+    write_template_config(normalize_lockfiles: false)
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    worktree_root = File.join(@tmpdir, "tmp", "template-tracked-materialization")
+    run_git(@tmpdir, "worktree", "add", "--detach", worktree_root, "HEAD")
+    entry = {
+      member: workflow.send(:relocate_member_to_worktree, alpha, worktree_root, source_root: @tmpdir),
+      original_member: alpha,
+      worktree_root: worktree_root
+    }
+    File.write(File.join(worktree_root, "alpha", "marker"), "after\n")
+
+    result = workflow.send(:materialize_monorepo_template_changes, entry)
+
+    expect(result).to be_ok
+    expect(File.read(marker)).to eq("after\n")
+  ensure
+    run_git(@tmpdir, "worktree", "remove", "--force", worktree_root) if worktree_root && Dir.exist?(worktree_root)
+  end
+
+  it "keeps the primary checkout unchanged when tracked worktree materialization cannot apply" do
+    alpha = member_at("alpha")
+    marker = File.join(alpha.root, "marker")
+    File.write(marker, "before\n")
+    write_template_config(normalize_lockfiles: false)
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+    worktree_root = File.join(@tmpdir, "tmp", "template-materialization-conflict")
+    run_git(@tmpdir, "worktree", "add", "--detach", worktree_root, "HEAD")
+    entry = {
+      member: workflow.send(:relocate_member_to_worktree, alpha, worktree_root, source_root: @tmpdir),
+      original_member: alpha,
+      worktree_root: worktree_root
+    }
+    File.write(File.join(worktree_root, "alpha", "marker"), "worker\n")
+    File.write(marker, "primary\n")
+
+    result = workflow.send(:materialize_monorepo_template_changes, entry)
+
+    expect(result).not_to be_ok
+    expect(File.read(marker)).to eq("primary\n")
+  ensure
+    run_git(@tmpdir, "worktree", "remove", "--force", worktree_root) if worktree_root && Dir.exist?(worktree_root)
+  end
+
   it "serializes template waves for members sharing a git checkout" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -196,6 +327,26 @@ RSpec.describe Kettle::Family::Workflow do
     waves = workflow.send(:template_dependency_waves, [alpha, beta, independent])
 
     expect(waves.map { |wave| wave.map(&:name) }).to eq([["alpha", "independent"], ["beta"]])
+  end
+
+  it "keeps shared-checkout template scheduling serial when only one worker is requested" do
+    write_template_config(command: "kettle-jem install", normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    workflow = described_class.new(command: "template", config: config, members: [alpha, beta], execute: true, jobs: 1)
+
+    expect(workflow.send(:monorepo_template_worktrees_enabled?)).to be(false)
+  end
+
+  it "does not create a worktree for a singleton ready monorepo wave" do
+    write_template_config(command: "kettle-jem install", normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    workflow = described_class.new(command: "template", config: config, members: [alpha, beta], execute: true, jobs: 2)
+
+    expect(workflow.send(:monorepo_template_worktrees?, [alpha])).to be(false)
   end
 
   it "keeps ordinary template members in one scheduler batch when another member has release target branches" do
