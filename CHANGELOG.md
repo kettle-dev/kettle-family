@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Trust Mise configurations in disposable worktrees before member commands run.
-
 ### Security
+
+## [1.2.91] - 2026-09-06
+
+- TAG: [v1.2.91][1.2.91t]
+- COVERAGE: 93.17% -- 6081/6527 lines in 35 files
+- BRANCH COVERAGE: 76.03% -- 2417/3179 branches in 35 files
+- 32.41% documented
+
+### Fixed
+
+- Trust Mise configurations in disposable worktrees before member commands run.
 
 ## [1.2.90] - 2026-09-06
 
@@ -2594,7 +2603,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.90...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.91...HEAD
+[1.2.91]: https://github.com/kettle-dev/kettle-family/compare/v1.2.90...v1.2.91
+[1.2.91t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.91
 [1.2.90]: https://github.com/kettle-dev/kettle-family/compare/v1.2.89...v1.2.90
 [1.2.90t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.90
 [1.2.89]: https://github.com/kettle-dev/kettle-family/compare/v1.2.88...v1.2.89
