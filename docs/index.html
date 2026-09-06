@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.213-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.215-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -1115,6 +1115,34 @@ kettle-family template --execute \
   --env K_JEM_TEMPLATING=true \
   --env STRUCTUREDMERGE_DEV=/home/me/src/structuredmerge/ruby/gems
 </code></pre>
+
+<h3 id="template-bootstrap-environment">Template Bootstrap Environment</h3>
+
+<p>Before invoking <code>kettle-jem</code>, <code>kettle-family template</code> may refresh <code>nomono</code> so<br>
+the member Gemfile can activate its generated local dependency wiring. That<br>
+bootstrap uses the same development dependency graph as template preparation:</p>
+
+<ul>
+  <li>
+<code>K_JEM_TEMPLATING=true</code> is enforced. It selects the templating Gemfile graph<br>
+and activates generated local sibling closures. It is not a release-lockfile<br>
+normalization setting.</li>
+  <li>The configured family <code>*_DEV</code> selector is preserved or inferred from the<br>
+family configuration. It tells <code>nomono</code> where that sibling closure lives.</li>
+  <li>
+<code>BUNDLE_DISABLE_CHECKSUM_VALIDATION=true</code> is retained for template bootstrap<br>
+and template application, where a template can legitimately update a<br>
+lockfile before its checksums are normalized.</li>
+  <li>
+<code>KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY</code> defaults to <code>false</code>. Set it explicitly<br>
+only when the optional <code>kettle-changelog</code> dependency has an incompatible<br>
+version constraint with the graph being bootstrapped. It does not select<br>
+local dependencies and must not be used as a general Bundler-resolution or<br>
+release-lockfile workaround.</li>
+</ul>
+
+<p>Release lockfile normalization is a separate operation with its own local-path<br>
+policy; it must not be inferred from template bootstrap settings.</p>
 
 <h2 id="-security">🔐 Security</h2>
 

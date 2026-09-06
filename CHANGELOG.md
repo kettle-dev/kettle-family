@@ -28,20 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Use the complete template dependency graph when bootstrapping nomono; reserve the changelog dependency opt-out for explicit constraint conflicts.
-
 ### Security
 
 ## [1.2.85] - 2026-09-06
 
 - TAG: [v1.2.85][1.2.85t]
-- COVERAGE: 93.08% -- 5783/6213 lines in 33 files
+- COVERAGE: 93.08% -- 5785/6215 lines in 33 files
 - BRANCH COVERAGE: 76.04% -- 2345/3084 branches in 33 files
 - 30.69% documented
 
 ### Fixed
 
 - Keep local template dependency activation enabled while bootstrapping nomono.
+
+- Use the complete template dependency graph when bootstrapping nomono; reserve the changelog dependency opt-out for explicit constraint conflicts.
 
 ## [1.2.84] - 2026-09-05
 
