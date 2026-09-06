@@ -910,7 +910,7 @@ module Kettle
           io: stdout,
           label: "release state",
           total: members.length,
-          jobs: [options[:jobs].to_i, 1].max,
+          jobs: Concurrency.wave_jobs(requested: options[:jobs], item_count: members.length),
           members: members,
           heading: "release state #{members.length} member#{"s" unless members.length == 1}:"
         )

@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Template ready monorepo sibling gems concurrently in isolated worktrees while materializing only member-scoped changes.
 
+- Derive family command concurrency from the executing CPU count and pass template wave width to nested tools.
+
 ### Security
 
 ## [1.2.89] - 2026-09-06

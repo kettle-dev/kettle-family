@@ -9,6 +9,8 @@ require "rubygems"
 require "securerandom"
 require "yaml"
 
+require_relative "concurrency"
+
 module Kettle
   module Family
     class ReleaseStateCheck
@@ -574,10 +576,7 @@ module Kettle
       end
 
       def state_jobs(items)
-        return 1 if items.length < 2
-
-        requested = jobs || [Etc.nprocessors, 4].min
-        requested.to_i.clamp(1, items.length)
+        Concurrency.wave_jobs(requested: jobs, item_count: items.length)
       end
 
       def parallel_map(items, &block)

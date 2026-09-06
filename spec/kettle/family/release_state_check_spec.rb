@@ -90,11 +90,11 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(check.send(:github_repo_slug, @tmpdir)).to be_nil
   end
 
-  it "defaults state checks to at most four jobs" do
+  it "defaults state checks to half the available CPUs" do
     allow(Etc).to receive(:nprocessors).and_return(22)
     check = described_class.new(members: Array.new(6) { |index| member("member-#{index}") })
 
-    expect(check.send(:state_jobs, check.send(:members))).to eq(4)
+    expect(check.send(:state_jobs, check.send(:members))).to eq(6)
   end
 
   it "marks bump release pending when unreleased entries exist without a version bump" do

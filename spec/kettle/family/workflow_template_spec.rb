@@ -592,25 +592,16 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).stdout).to eq("full/standalone\n")
   end
 
-  it "budgets kettle-jem thread workers from family template concurrency" do
+  it "passes the active template wave width to member commands" do
     allow(Etc).to receive(:nprocessors).and_return(22)
     config = Kettle::Family::Config.load(root: @tmpdir)
     workflow = described_class.new(command: "template", config: config, members: [member_at("alpha"), member_at("beta")], jobs: 2)
 
-    expect(workflow.send(:workflow_env).fetch("KETTLE_JEM_THREAD_WORKERS")).to eq("10")
-    expect(workflow.send(:workflow_env).fetch("BUNDLE_DISABLE_CHECKSUM_VALIDATION")).to eq("true")
-  end
-
-  it "preserves an explicit kettle-jem thread worker override" do
-    config = Kettle::Family::Config.load(root: @tmpdir)
-    workflow = described_class.new(
-      command: "template",
-      config: config,
-      members: [member_at("alpha")],
-      env_overrides: {"KETTLE_JEM_THREAD_WORKERS" => "3"}
+    expect(workflow.send(:template_command_env, wave_jobs: 2)).to include(
+      "KETTLE_FAMILY_WAVE_JOBS" => "2",
+      "BUNDLE_DISABLE_CHECKSUM_VALIDATION" => "true"
     )
-
-    expect(workflow.send(:workflow_env).fetch("KETTLE_JEM_THREAD_WORKERS")).to eq("3")
+    expect(workflow.send(:workflow_env)).not_to have_key("KETTLE_JEM_THREAD_WORKERS")
   end
 
   it "does not inject an implicit family local path env for no-config single-member templating" do
@@ -1102,7 +1093,6 @@ RSpec.describe Kettle::Family::Workflow do
         "BUNDLE_DISABLE_CHECKSUM_VALIDATION=true",
         "KETTLE_JEM_TEMPLATE_PROFILE=full",
         "KJ_REPOSITORY_TOPOLOGY=standalone",
-        "KETTLE_JEM_THREAD_WORKERS=#{[1, Etc.nprocessors - 1].max}",
         "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
         "K_JEM_TEMPLATING=true",
@@ -1119,6 +1109,7 @@ RSpec.describe Kettle::Family::Workflow do
         "BUNDLE_SILENCE_DEPRECATIONS=true",
         "BUNDLE_SILENCE_ROOT_WARNING=true",
         "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
+        "KETTLE_FAMILY_WAVE_JOBS=1",
         "bundle",
         "exec",
         "kettle-jem",

@@ -11,6 +11,7 @@ require "shellwords"
 require "yaml"
 require "kettle/dev"
 
+require_relative "concurrency"
 require_relative "workflow_progress"
 
 module Kettle
@@ -721,17 +722,18 @@ module Kettle
       def template_results_for_wave(wave, progress:)
         return monorepo_template_worktree_wave_results(wave, progress: progress) if monorepo_template_worktrees?(wave)
 
+        wave_jobs = template_jobs(wave)
         queue = Queue.new
         wave.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(wave.length)
         mutex = Mutex.new
         stop = false
-        Array.new([template_jobs(wave), wave.length].min) do
+        Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- family templating intentionally runs independent members concurrently.
             loop do
               break if mutex.synchronize { stop }
               index, member = queue.pop(true)
-              member_results = template_results_for_member(member, progress: progress)
+              member_results = template_results_for_member(member, progress: progress, wave_jobs: wave_jobs)
               mutex.synchronize do
                 ordered_results[index] = member_results
                 stop = true unless member_results.all?(&:ok?)
@@ -845,18 +847,24 @@ module Kettle
       end
 
       def run_monorepo_template_worktree_entries(entries, progress:)
+        wave_jobs = template_jobs(entries)
         queue = Queue.new
         entries.each_with_index { |entry, index| queue << [index, entry] }
         ordered_results = Array.new(entries.length)
         mutex = Mutex.new
         stop = false
-        Array.new(template_jobs(entries)) do
+        Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- detached worktrees isolate concurrent monorepo template members.
             loop do
               break if mutex.synchronize { stop }
 
               index, entry = queue.pop(true)
-              member_results = template_results_for_member(entry.fetch(:member), progress: progress, commit_changes: false)
+              member_results = template_results_for_member(
+                entry.fetch(:member),
+                progress: progress,
+                commit_changes: false,
+                wave_jobs: wave_jobs
+              )
               mutex.synchronize do
                 ordered_results[index] = member_results
                 stop = true unless member_results.all?(&:ok?)
@@ -1069,7 +1077,7 @@ module Kettle
         )
       end
 
-      def template_results_for_member(member, progress: nil, commit_changes: true)
+      def template_results_for_member(member, progress: nil, commit_changes: true, wave_jobs: 1)
         progress&.start_member(member, total: template_phase_total(member), status: template_initial_status(member))
         runner = CommandRunner.new(execute: execute, accept: accept)
         [].tap do |memo|
@@ -1079,7 +1087,13 @@ module Kettle
             return memo unless memo.last.ok?
           end
 
-          prepared = prepare_template_dependencies(member: member, runner: runner, memo: memo, commit_changes: commit_changes)
+          prepared = prepare_template_dependencies(
+            member: member,
+            runner: runner,
+            memo: memo,
+            commit_changes: commit_changes,
+            wave_jobs: wave_jobs
+          )
           emit_member_result_progress(member, memo.last, progress: progress) if memo.last&.phase == "prepare_template_dependencies"
           return memo if prepared == false
 
@@ -1087,7 +1101,7 @@ module Kettle
             member: member,
             phase: command,
             command: workflow_command(member),
-            env: template_command_env,
+            env: template_command_env(wave_jobs: wave_jobs),
             stdout_line_handler: template_event_line_handler(member, progress: progress)
           )
           emit_member_result_progress(member, memo.last, progress: progress)
@@ -1111,8 +1125,7 @@ module Kettle
 
       def template_jobs(workflow_members)
         requested = jobs || config.template_jobs
-        count = requested ? requested.to_i : [Etc.nprocessors, 4].min
-        count.clamp(1, workflow_members.length)
+        Concurrency.wave_jobs(requested: requested, item_count: workflow_members.length)
       end
 
       def check_results(workflow_members)
@@ -1269,17 +1282,18 @@ module Kettle
       end
 
       def template_branch_worktree_entries_results(entries)
+        wave_jobs = template_jobs(entries)
         queue = Queue.new
         entries.each_with_index { |entry, index| queue << [index, entry] }
         ordered_results = Array.new(entries.length)
         mutex = Mutex.new
         stop = false
-        Array.new(template_jobs(entries)) do
+        Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- independent branch worktrees are safe to template concurrently.
             loop do
               break if mutex.synchronize { stop }
               index, entry = queue.pop(true)
-              branch_results = template_branch_worktree_entry_results(entry)
+              branch_results = template_branch_worktree_entry_results(entry, wave_jobs: wave_jobs)
               mutex.synchronize do
                 ordered_results[index] = branch_results
                 stop = true unless branch_results.all?(&:ok?)
@@ -1292,7 +1306,7 @@ module Kettle
         ordered_results.compact.flatten
       end
 
-      def template_branch_worktree_entry_results(entry)
+      def template_branch_worktree_entry_results(entry, wave_jobs: 1)
         member = entry.fetch(:member)
         branch = entry.fetch(:branch)
         runner = command_runner
@@ -1300,7 +1314,7 @@ module Kettle
         if git_upstream_for(member)
           results << runner.call(member: member, phase: "template_branch_sync", command: ["git", "rebase", "@{upstream}"])
         end
-        results.concat(template_results_for_member(member)) if results.all?(&:ok?)
+        results.concat(template_results_for_member(member, wave_jobs: wave_jobs)) if results.all?(&:ok?)
         tag_branch_results(results, branch)
         emit_template_event_line(member, results.all?(&:ok?) ? "." : "F", "branch #{branch}")
         results
@@ -2130,8 +2144,7 @@ module Kettle
         return 1 if truffleruby?
 
         requested = jobs || config.release_jobs
-        count = requested ? requested.to_i : [Etc.nprocessors, 4].min
-        count.clamp(1, release_members.length)
+        Concurrency.wave_jobs(requested: requested, item_count: release_members.length)
       end
 
       def truffleruby?
@@ -3805,7 +3818,6 @@ module Kettle
             env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
             env["KJ_REPOSITORY_TOPOLOGY"] = config.template_repository_topology if config.template_repository_topology
-            env["KETTLE_JEM_THREAD_WORKERS"] ||= template_thread_worker_budget.to_s
             if monorepo_template?
               template_git_lock_path = template_git_commit_lock_path
               env["KETTLE_JEM_GIT_LOCK"] = template_git_lock_path
@@ -4764,7 +4776,7 @@ module Kettle
         output.to_s.scan(/from the lockfile CHECKSUMS at Gemfile\.lock:(\d+):\d+/).flatten.map(&:to_i).uniq
       end
 
-      def prepare_template_dependencies(member:, runner:, memo:, commit_changes: true)
+      def prepare_template_dependencies(member:, runner:, memo:, commit_changes: true, wave_jobs: 1)
         command_text = config.template_command || default_template_command(member)
         return true unless kettle_jem_template_command?(command_text)
 
@@ -4772,7 +4784,7 @@ module Kettle
           member: member,
           phase: "prepare_template_dependencies",
           command: template_prepare_command(member),
-          env: template_prepare_env
+          env: template_prepare_env(wave_jobs: wave_jobs)
         )
         if recoverable_bundle_failure?(result)
           recover_template_lockfiles(
@@ -4793,7 +4805,7 @@ module Kettle
             member: member,
             phase: "prepare_template_dependencies",
             command: template_prepare_command(member),
-            env: template_prepare_env
+            env: template_prepare_env(wave_jobs: wave_jobs)
           )
         end
         memo << result
@@ -4845,15 +4857,17 @@ module Kettle
         end
       end
 
-      def template_prepare_env
+      def template_prepare_env(wave_jobs: 1)
         # Templating is development work.  It must resolve the configured
         # family graph exactly as template application does; release-only
         # lockfile cleanup owns disabling local path sources.
-        execution_profile(template_execution_profile, workflow_env)
+        execution_profile(template_execution_profile, workflow_env).merge(
+          "KETTLE_FAMILY_WAVE_JOBS" => wave_jobs.to_s
+        )
       end
 
-      def template_command_env
-        (command == "template") ? template_prepare_env : command_env
+      def template_command_env(wave_jobs: 1)
+        (command == "template") ? template_prepare_env(wave_jobs: wave_jobs) : command_env
       end
 
       def template_execution_profile
@@ -4888,11 +4902,6 @@ module Kettle
 
       def local_path_env_requested?(name)
         env_overrides.key?(name) || ENV.key?(name)
-      end
-
-      def template_thread_worker_budget
-        member_jobs = template_jobs(members)
-        [1, (Etc.nprocessors / member_jobs) - 1].max
       end
 
       def normalize_release_lockfiles(member:, runner:, memo:)

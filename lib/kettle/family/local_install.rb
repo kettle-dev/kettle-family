@@ -6,6 +6,8 @@ require "json"
 require "open3"
 require "time"
 
+require_relative "concurrency"
+
 module Kettle
   module Family
     class LocalInstall
@@ -113,8 +115,7 @@ module Kettle
       end
 
       def install_jobs(candidate_members)
-        count = jobs ? jobs.to_i : [Etc.nprocessors, 4].min
-        count.clamp(1, candidate_members.length)
+        Concurrency.wave_jobs(requested: jobs, item_count: candidate_members.length)
       end
 
       def member_from_path(path)

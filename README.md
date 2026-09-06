@@ -533,9 +533,9 @@ stops before family changelog generation or coverage and reports the members
 that need a version bump. Run `kettle-family bump --execute patch` first, then
 rerun the release.
 
-State checks run concurrently by default, using up to four jobs or the number
-of available CPU cores, whichever is lower. Use `--jobs N` to set an explicit
-limit; results remain in family order.
+State checks run concurrently by default, using up to half of the available CPU
+cores and no more than the selected member count. Use `--jobs N` to set an
+explicit limit; results remain in family order.
 
 Most commands accept `--json` to print a machine-readable report instead of the
 text report, and `--report PATH` to write that JSON report while still printing
@@ -732,9 +732,15 @@ kettle-family bump --execute --only unreleased minor
 ```
 
 Run `kettle-jem` templating across the selected family members. Planning shows
-the commands that would run; `--execute` runs them. Executed templating defaults
-to a parallel job count based on CPU cores, capped for readability, and can be
-overridden with `--jobs`.
+the commands that would run; `--execute` runs them. Executed templating uses a
+rolling outer wave of up to half the available CPU cores, bounded by ready
+members; `--jobs` overrides that width.
+
+For a Kettle Jem member command, Family exports the active outer width as
+`KETTLE_FAMILY_WAVE_JOBS`. Kettle Jem retains the member's base process and
+uses an equal share of CPUs left by that wave for its recipe and file worker
+pools, capped at half the available CPUs. Explicit `KETTLE_JEM_*_WORKERS`
+settings take precedence over this derived budget.
 
 ```console
 kettle-family template
