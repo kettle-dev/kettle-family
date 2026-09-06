@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Keep changelog tooling out of nomono-only template bootstrap resolution.
-
 ### Security
+
+## [1.2.84] - 2026-09-05
+
+- TAG: [v1.2.84][1.2.84t]
+- COVERAGE: 93.08% -- 5783/6213 lines in 33 files
+- BRANCH COVERAGE: 76.04% -- 2345/3084 branches in 33 files
+- 30.69% documented
+
+### Fixed
+
+- Keep changelog tooling out of nomono-only template bootstrap resolution.
 
 ## [1.2.83] - 2026-09-02
 
@@ -2501,7 +2510,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.83...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.84...HEAD
+[1.2.84]: https://github.com/kettle-dev/kettle-family/compare/v1.2.83...v1.2.84
+[1.2.84t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.84
 [1.2.83]: https://github.com/kettle-dev/kettle-family/compare/v1.2.82...v1.2.83
 [1.2.83t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.83
 [1.2.82]: https://github.com/kettle-dev/kettle-family/compare/v1.2.81...v1.2.82
