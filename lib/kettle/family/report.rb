@@ -332,11 +332,16 @@ module Kettle
         template_results = results.select { |result| result.phase == "template" }
         return if template_results.empty?
 
+        successful_names = summary_succeeded
+        template_results.select! do |result|
+          !result.ok? || successful_names.include?(result.member_name)
+        end
+
         changed_files = template_results.sum { |result| template_changed_file_count(result) }
         outcome_counts = template_results.map { |result| template_file_outcomes(result) }
         lines << "template summary:"
-        lines << "  #{template_results.count(&:ok?)}/#{selected_members.length} members ok"
-        if outcome_counts.all?
+        lines << "  #{successful_names.length}/#{selected_members.length} members ok"
+        if outcome_counts.any? && outcome_counts.all?
           lines << "  #{outcome_counts.sum { |outcomes| outcomes.fetch(:checksum_hits) }} checksum hits"
           protected = outcome_counts.sum { |outcomes| outcomes.fetch(:checksum_protected) }
           lines << "  #{protected} checksum-protected changes" if protected.positive?

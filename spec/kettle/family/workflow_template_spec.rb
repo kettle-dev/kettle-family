@@ -186,6 +186,8 @@ RSpec.describe Kettle::Family::Workflow do
     beta = member_at("beta")
     File.write(File.join(alpha.root, "marker"), "alpha\n")
     File.write(File.join(beta.root, "marker"), "beta\n")
+    File.write(File.join(alpha.root, "Gemfile.lock"), "alpha released dependencies\n")
+    File.write(File.join(beta.root, "Gemfile.lock"), "beta released dependencies\n")
     barrier = File.join(@tmpdir, "template-barrier")
     executable = File.join(@tmpdir, "bin", "kettle-jem")
     FileUtils.mkdir_p(File.dirname(executable))
@@ -197,6 +199,8 @@ RSpec.describe Kettle::Family::Workflow do
         exit 0
       when "install"
         barrier = ENV.fetch("KETTLE_FAMILY_TEMPLATE_BARRIER")
+        abort "dirty lockfile was not seeded" unless File.read("Gemfile.lock").include?("local dependency state")
+
         FileUtils.mkdir_p(barrier)
         File.write(File.join(barrier, Process.pid.to_s), "started\n")
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
@@ -212,6 +216,8 @@ RSpec.describe Kettle::Family::Workflow do
     RUBY
     write_template_config(command: [RbConfig.ruby, executable, "install"], normalize_lockfiles: false)
     initialize_git_repo(@tmpdir, branches: [])
+    File.write(File.join(alpha.root, "Gemfile.lock"), "alpha local dependency state\n")
+    File.write(File.join(beta.root, "Gemfile.lock"), "beta local dependency state\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
 
     workflow = described_class.new(
@@ -232,6 +238,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.count { |result| result.phase == "commit_template" }).to eq(2)
     expect(File.read(File.join(alpha.root, "templated.txt"))).to include("template-member-worktrees/alpha")
     expect(File.read(File.join(beta.root, "templated.txt"))).to include("template-member-worktrees/beta")
+    expect(File.read(File.join(alpha.root, "Gemfile.lock"))).to eq("alpha local dependency state\n")
+    expect(File.read(File.join(beta.root, "Gemfile.lock"))).to eq("beta local dependency state\n")
     FileUtils.rm_rf(barrier)
     expect(`git -C #{Shellwords.escape(@tmpdir)} status --short`).to eq("")
   end
@@ -414,12 +422,19 @@ RSpec.describe Kettle::Family::Workflow do
     run_git(@tmpdir, "worktree", "remove", "--force", worktree_root) if worktree_root && Dir.exist?(worktree_root)
   end
 
-  it "materializes tracked monorepo template worker changes into the primary checkout" do
+  it "seeds and materializes a dirty monorepo member without patch conflicts" do
     alpha = member_at("alpha")
     marker = File.join(alpha.root, "marker")
+    removed = File.join(alpha.root, "removed")
+    local = File.join(alpha.root, "local.txt")
+    generated = File.join(alpha.root, "generated.txt")
     File.write(marker, "before\n")
+    File.write(removed, "before\n")
     write_template_config(normalize_lockfiles: false)
     initialize_git_repo(@tmpdir, branches: [])
+    File.write(marker, "local dependency state\n")
+    FileUtils.rm_f(removed)
+    File.write(local, "local only\n")
     config = Kettle::Family::Config.load(root: @tmpdir)
     workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
     worktree_root = File.join(@tmpdir, "tmp", "template-tracked-materialization")
@@ -429,12 +444,23 @@ RSpec.describe Kettle::Family::Workflow do
       original_member: alpha,
       worktree_root: worktree_root
     }
+    workflow.send(:prepare_monorepo_template_worktree, entry)
+
+    expect(File.read(File.join(worktree_root, "alpha", "marker"))).to eq("local dependency state\n")
+    expect(File.exist?(File.join(worktree_root, "alpha", "removed"))).to be(false)
+    expect(File.read(File.join(worktree_root, "alpha", "local.txt"))).to eq("local only\n")
+
     File.write(File.join(worktree_root, "alpha", "marker"), "after\n")
+    FileUtils.rm_f(File.join(worktree_root, "alpha", "local.txt"))
+    File.write(File.join(worktree_root, "alpha", "generated.txt"), "generated\n")
 
     result = workflow.send(:materialize_monorepo_template_changes, entry)
 
     expect(result).to be_ok
     expect(File.read(marker)).to eq("after\n")
+    expect(File.exist?(removed)).to be(false)
+    expect(File.exist?(local)).to be(false)
+    expect(File.read(generated)).to eq("generated\n")
   ensure
     run_git(@tmpdir, "worktree", "remove", "--force", worktree_root) if worktree_root && Dir.exist?(worktree_root)
   end
@@ -454,12 +480,14 @@ RSpec.describe Kettle::Family::Workflow do
       original_member: alpha,
       worktree_root: worktree_root
     }
+    workflow.send(:prepare_monorepo_template_worktree, entry)
     File.write(File.join(worktree_root, "alpha", "marker"), "worker\n")
     File.write(marker, "primary\n")
 
     result = workflow.send(:materialize_monorepo_template_changes, entry)
 
     expect(result).not_to be_ok
+    expect(result.stderr).to include("primary member changed while isolated template worker ran")
     expect(File.read(marker)).to eq("primary\n")
   ensure
     run_git(@tmpdir, "worktree", "remove", "--force", worktree_root) if worktree_root && Dir.exist?(worktree_root)
@@ -1413,6 +1441,46 @@ RSpec.describe Kettle::Family::Workflow do
     workflow.send(:emit_template_progress_summary, [result], progress: progress)
 
     expect(summary).to eq(["template summary: 1/3 members ok, 1 file changed"])
+  end
+
+  it "does not count an inner template success when worktree materialization fails" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = [member_at("alpha"), member_at("beta")]
+    progress = instance_double(Kettle::Family::WorkflowProgress)
+    summary = []
+    allow(progress).to receive(:stop)
+    allow(progress).to receive(:summary) { |label| summary << label }
+    template = Kettle::Family::CommandResult.new(
+      "alpha",
+      "template",
+      ["kettle-jem", "install"],
+      members.first.root,
+      0,
+      true,
+      JSON.generate(changed_files: ["Gemfile.lock"]),
+      "",
+      1.0,
+      false,
+      nil
+    )
+    materialize = Kettle::Family::CommandResult.new(
+      "alpha",
+      "template_worktree_materialize",
+      ["internal", "template-worktree-materialize"],
+      members.first.root,
+      1,
+      false,
+      "",
+      "patch does not apply",
+      0.0,
+      false,
+      "template member worktree failed"
+    )
+    workflow = described_class.new(command: "template", config: config, members: members, execute: true)
+
+    workflow.send(:emit_template_progress_summary, [template, materialize], progress: progress)
+
+    expect(summary).to eq(["template summary: 0/2 members ok, 0 files changed"])
   end
 
   it "keeps kettle-jem NDJSON template events summarized by default" do

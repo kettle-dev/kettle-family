@@ -857,6 +857,35 @@ RSpec.describe Kettle::Family::Report do
     expect(text).to include("pending: gamma template (not run after earlier failure)")
   end
 
+  it "does not report a member as succeeded when template materialization fails" do
+    report = described_class.new(
+      family_name: "structuredmerge-ruby",
+      order_mode: "dependency",
+      members: [member("alpha"), member("beta")],
+      selected_members: [member("alpha"), member("beta")],
+      config_path: nil,
+      command: "template",
+      results: [
+        result("alpha", phase: "template"),
+        result("alpha", phase: "template_worktree_materialize", success: false, reason: "template member worktree failed")
+      ]
+    )
+
+    summary = report.to_h.fetch("summary")
+    text = report.to_text
+
+    expect(summary.fetch("succeeded")).to be_empty
+    expect(summary.fetch("failed")).to eq([
+      {"member" => "alpha", "phase" => "template_worktree_materialize", "reason" => "template member worktree failed"}
+    ])
+    expect(summary.fetch("pending")).to eq([
+      {"member" => "beta", "phase" => "template", "reason" => "not run after earlier failure"}
+    ])
+    expect(summary.fetch("resume_hints")).to eq(["kettle-family template --start-at alpha"])
+    expect(text).to include("  0/2 members ok")
+    expect(text).to include("  0 files changed")
+  end
+
   it "does not count dependency floor-only members as released in release summaries" do
     report = described_class.new(
       family_name: "galtzo-floss",

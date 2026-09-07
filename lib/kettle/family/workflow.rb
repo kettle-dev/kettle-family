@@ -2,6 +2,7 @@
 
 require "io/console"
 require "fileutils"
+require "digest"
 require "json"
 require "etc"
 require "open3"
@@ -1047,8 +1048,12 @@ module Kettle
             worktree_root: worktree_root
           }
           entries << entry
+          prepare_monorepo_template_worktree(entry)
           results.concat(worktree_mise_trust_results(entry, runner: runner, phase: "template_member_worktree_mise_trust"))
           break unless results.last.ok?
+        rescue => error
+          results << template_worktree_failure_result(member, error, phase: "template_member_worktree_seed")
+          break
         end
         [entries, results]
       end
@@ -1102,39 +1107,64 @@ module Kettle
       def materialize_monorepo_template_changes(entry)
         original_member = entry.fetch(:original_member)
         worktree_root = entry.fetch(:worktree_root)
-        relative_root = Pathname.new(original_member.root).relative_path_from(Pathname.new(config.root)).to_s
+        relative_root = monorepo_template_relative_root(original_member)
         paths = monorepo_template_worktree_changed_paths(worktree_root)
-        return template_worktree_failure_result(original_member, paths) if paths.is_a?(String)
+        return template_worktree_failure_result(original_member, paths, phase: "template_worktree_materialize") if paths.is_a?(String)
 
         invalid_paths = paths.reject { |path| path == relative_root || path.start_with?("#{relative_root}/") }
         unless invalid_paths.empty?
           return template_worktree_failure_result(
             original_member,
-            "isolated template worker modified shared path(s): #{invalid_paths.sort.join(", ")}; only #{relative_root}/ may be materialized"
+            "isolated template worker modified shared path(s): #{invalid_paths.sort.join(", ")}; only #{relative_root}/ may be materialized",
+            phase: "template_worktree_materialize"
           )
         end
 
-        tracked_paths = monorepo_template_worktree_tracked_paths(worktree_root)
-        return template_worktree_failure_result(original_member, tracked_paths) if tracked_paths.is_a?(String)
-
-        runner = command_runner
-        control_member = monorepo_template_control_member.dup
-        control_member.name = original_member.name
-        command = if tracked_paths.empty?
-          ["true"]
-        else
-          source = Shellwords.escape(worktree_root)
-          scope = Shellwords.escape(relative_root)
-          ["sh", "-lc", "git -C #{source} diff --binary HEAD -- #{scope} | git apply --whitespace=nowarn"]
+        initial_state = entry.fetch(:primary_member_state)
+        current_state = monorepo_template_member_state(config.root, relative_root)
+        changed_primary_paths = changed_monorepo_template_state_paths(initial_state, current_state)
+        unless changed_primary_paths.empty?
+          return template_worktree_failure_result(
+            original_member,
+            "primary member changed while isolated template worker ran: #{changed_primary_paths.join(", ")}",
+            phase: "template_worktree_materialize"
+          )
         end
-        result = runner.call(member: control_member, phase: "template_worktree_materialize", command: command)
-        return result unless result.ok?
 
-        copy_monorepo_template_untracked_paths(worktree_root, config.root, relative_root)
-        result.stdout = "#{paths.length} path(s) materialized from isolated worktree"
-        result
+        materialized_paths = (entry.fetch(:primary_changed_paths) + paths).uniq.sort
+        sync_monorepo_template_paths(worktree_root, config.root, materialized_paths)
+        template_worktree_success_result(
+          original_member,
+          phase: "template_worktree_materialize",
+          stdout: "#{materialized_paths.length} path(s) materialized from isolated worktree"
+        )
       rescue => error
-        template_worktree_failure_result(original_member, error)
+        template_worktree_failure_result(original_member, error, phase: "template_worktree_materialize")
+      end
+
+      def prepare_monorepo_template_worktree(entry)
+        original_member = entry.fetch(:original_member)
+        relative_root = monorepo_template_relative_root(original_member)
+        changed_paths = monorepo_template_worktree_changed_paths(config.root)
+        raise Error, changed_paths if changed_paths.is_a?(String)
+
+        member_changed_paths = changed_paths.select do |path|
+          path == relative_root || path.start_with?("#{relative_root}/")
+        end
+        sync_monorepo_template_paths(config.root, entry.fetch(:worktree_root), member_changed_paths)
+        primary_state = monorepo_template_member_state(config.root, relative_root)
+        worktree_state = monorepo_template_member_state(entry.fetch(:worktree_root), relative_root)
+        unless primary_state == worktree_state
+          changed = changed_monorepo_template_state_paths(primary_state, worktree_state)
+          raise Error, "isolated template worker seed differs from primary member: #{changed.join(", ")}"
+        end
+
+        entry[:primary_changed_paths] = member_changed_paths
+        entry[:primary_member_state] = primary_state
+      end
+
+      def monorepo_template_relative_root(member)
+        Pathname.new(member.root).relative_path_from(Pathname.new(config.root)).to_s
       end
 
       def monorepo_template_worktree_changed_paths(worktree_root)
@@ -1155,6 +1185,28 @@ module Kettle
         git_worktree_paths(worktree_root, %w[ls-files --others --exclude-standard -z])
       end
 
+      def monorepo_template_member_state(root, relative_root)
+        paths = git_worktree_paths(root, ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", relative_root])
+        raise Error, paths if paths.is_a?(String)
+
+        paths.to_h { |path| [path, monorepo_template_path_signature(root, path)] }
+      end
+
+      def monorepo_template_path_signature(root, path)
+        full_path = File.join(root, path)
+        stat = File.lstat(full_path)
+        return ["symlink", File.readlink(full_path)] if stat.symlink?
+        return ["file", stat.mode & 0o777, Digest::SHA256.file(full_path).hexdigest] if stat.file?
+
+        [stat.ftype, stat.mode & 0o777]
+      rescue Errno::ENOENT
+        ["missing"]
+      end
+
+      def changed_monorepo_template_state_paths(before, after)
+        (before.keys | after.keys).select { |path| before[path] != after[path] }.sort
+      end
+
       def git_worktree_paths(worktree_root, arguments)
         stdout, stderr, status = Open3.capture3("git", *arguments, chdir: worktree_root)
         return stdout.split("\0").reject(&:empty?) if status.success?
@@ -1162,14 +1214,19 @@ module Kettle
         "git #{arguments.join(" ")} failed in #{worktree_root}: #{stderr.strip}"
       end
 
-      def copy_monorepo_template_untracked_paths(worktree_root, primary_root, relative_root)
-        monorepo_template_worktree_untracked_paths(worktree_root).each do |path|
-          next unless path == relative_root || path.start_with?("#{relative_root}/")
+      def sync_monorepo_template_paths(source_root, destination_root, paths)
+        paths.each do |path|
+          source = File.join(source_root, path)
+          destination = File.join(destination_root, path)
+          FileUtils.rm_rf(destination)
+          next unless File.exist?(source) || File.symlink?(source)
 
-          source = File.join(worktree_root, path)
-          destination = File.join(primary_root, path)
           FileUtils.mkdir_p(File.dirname(destination))
-          FileUtils.cp_r(source, destination, preserve: true)
+          if File.symlink?(source)
+            File.symlink(File.readlink(source), destination)
+          else
+            FileUtils.cp_r(source, destination, preserve: true)
+          end
         end
       end
 
@@ -1184,12 +1241,28 @@ module Kettle
         end
       end
 
-      def template_worktree_failure_result(member, error)
+      def template_worktree_success_result(member, phase:, stdout:)
+        CommandResult.new(
+          member_name: member.name,
+          phase: phase,
+          command: ["internal", phase.tr("_", "-")],
+          workdir: member.root,
+          status: 0,
+          success: true,
+          stdout: stdout,
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: nil
+        )
+      end
+
+      def template_worktree_failure_result(member, error, phase: "template_member_worktree")
         message = error.is_a?(Exception) ? "#{error.class}: #{error.message}" : error.to_s
         CommandResult.new(
           member_name: member.name,
-          phase: "template_member_worktree",
-          command: ["internal", "template-member-worktree"],
+          phase: phase,
+          command: ["internal", phase.tr("_", "-")],
           workdir: member.root,
           status: 1,
           success: false,
@@ -4348,11 +4421,23 @@ module Kettle
       def emit_template_progress_summary(results, progress:)
         return unless progress
 
-        template_results = results.select { |result| result.phase == "template" }
+        successful_names = successful_template_member_names(results)
+        template_results = results.select do |result|
+          result.phase == "template" && (!result.ok? || successful_names.include?(result.member_name))
+        end
         changed_files = template_results.sum { |result| template_changed_file_count(result) }
         outcome_counts = template_results.map { |result| template_file_outcomes(result) }
         progress.stop
         progress.summary(template_progress_summary_label(template_results, changed_files, outcome_counts))
+      end
+
+      def successful_template_member_names(results)
+        results.group_by(&:member_name).filter_map do |member_name, member_results|
+          next unless member_results.any? { |result| result.phase == "template" }
+          next unless member_results.all?(&:ok?)
+
+          member_name
+        end
       end
 
       def emit_release_progress_summary(results, progress:)
@@ -4815,7 +4900,7 @@ module Kettle
 
       def template_progress_summary_label(template_results, changed_files, outcome_counts)
         label = "template summary: #{template_results.count(&:ok?)}/#{members.length} members ok"
-        return "#{label}, #{template_summary_label(changed_files)}" unless outcome_counts.all?
+        return "#{label}, #{template_summary_label(changed_files)}" if outcome_counts.empty? || !outcome_counts.all?
 
         totals = outcome_counts.each_with_object({checksum_hits: 0, checksum_protected: 0, unchanged: 0}) do |outcomes, memo|
           memo[:checksum_hits] += outcomes.fetch(:checksum_hits)

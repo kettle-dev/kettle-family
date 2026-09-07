@@ -281,6 +281,22 @@ canonical development lockfile and CI checkout share that path graph. In both
 cases, release normalization rejects every path outside the configured allow
 list.
 
+### Template concurrency
+
+Executed `kettle-jem` templating for monorepo members uses detached worktrees
+when a dependency wave contains multiple ready members and the worker budget is
+greater than one. Before a worker starts, Family copies that member's current
+tracked and untracked state into its worktree. This preserves development
+lockfile changes produced by local dependency updates instead of assuming that
+the primary checkout matches `HEAD`.
+
+After the worker succeeds, Family verifies that the same member in the primary
+checkout has not changed since the snapshot. It then materializes the worker's
+final member-scoped state and serializes the normal template commit. Changes
+outside the member root are rejected, as are concurrent edits to that member;
+in either case the primary member is left untouched. Template summaries count
+a member only after worktree materialization and any required commit succeed.
+
 ### Test concurrency
 
 `kettle-family test --execute` runs independent sibling repositories in

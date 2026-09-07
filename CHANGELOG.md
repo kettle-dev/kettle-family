@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Preserve pre-existing monorepo member changes while templating in parallel worktrees, reject concurrent member edits without overwriting them, and count only fully materialized members as successful.
+
 ### Security
 
 ## [1.2.91] - 2026-09-06
