@@ -28,20 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Remove retired appraisal declarations cleanly from files without a trailing newline during template bootstrap.
-
 ### Security
 
 ## [1.2.91] - 2026-09-06
 
 - TAG: [v1.2.91][1.2.91t]
-- COVERAGE: 93.17% -- 6081/6527 lines in 35 files
-- BRANCH COVERAGE: 76.03% -- 2417/3179 branches in 35 files
+- COVERAGE: 93.58% -- 6109/6528 lines in 35 files
+- BRANCH COVERAGE: 78.06% -- 2483/3181 branches in 35 files
 - 32.41% documented
 
 ### Fixed
 
 - Trust Mise configurations in disposable worktrees before member commands run.
+
+- Remove retired appraisal declarations cleanly from files without a trailing newline during template bootstrap.
 
 ## [1.2.90] - 2026-09-06
 
