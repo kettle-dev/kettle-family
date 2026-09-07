@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Preserve pre-existing monorepo member changes while templating in parallel worktrees, reject concurrent member edits without overwriting them, and count only fully materialized members as successful.
-
 ### Security
+
+## [1.2.92] - 2026-09-07
+
+- TAG: [v1.2.92][1.2.92t]
+- COVERAGE: 93.52% -- 6144/6570 lines in 35 files
+- BRANCH COVERAGE: 77.98% -- 2490/3193 branches in 35 files
+- 32.41% documented
+
+### Fixed
+
+- Preserve pre-existing monorepo member changes while templating in parallel worktrees, reject concurrent member edits without overwriting them, and count only fully materialized members as successful.
 
 ## [1.2.91] - 2026-09-06
 
@@ -2607,7 +2616,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.91...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.92...HEAD
+[1.2.92]: https://github.com/kettle-dev/kettle-family/compare/v1.2.91...v1.2.92
+[1.2.92t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.92
 [1.2.91]: https://github.com/kettle-dev/kettle-family/compare/v1.2.90...v1.2.91
 [1.2.91t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.91
 [1.2.90]: https://github.com/kettle-dev/kettle-family/compare/v1.2.89...v1.2.90

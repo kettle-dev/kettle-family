@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.528-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.570-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -477,6 +477,22 @@ its configured member-root path available throughout its waves, because its<br>
 canonical development lockfile and CI checkout share that path graph. In both<br>
 cases, release normalization rejects every path outside the configured allow<br>
 list.</p>
+
+<h3 id="template-concurrency">Template concurrency</h3>
+
+<p>Executed <code>kettle-jem</code> templating for monorepo members uses detached worktrees<br>
+when a dependency wave contains multiple ready members and the worker budget is<br>
+greater than one. Before a worker starts, Family copies that member’s current<br>
+tracked and untracked state into its worktree. This preserves development<br>
+lockfile changes produced by local dependency updates instead of assuming that<br>
+the primary checkout matches <code>HEAD</code>.</p>
+
+<p>After the worker succeeds, Family verifies that the same member in the primary<br>
+checkout has not changed since the snapshot. It then materializes the worker’s<br>
+final member-scoped state and serializes the normal template commit. Changes<br>
+outside the member root are rejected, as are concurrent edits to that member;<br>
+in either case the primary member is left untouched. Template summaries count<br>
+a member only after worktree materialization and any required commit succeed.</p>
 
 <h3 id="test-concurrency">Test concurrency</h3>
 
