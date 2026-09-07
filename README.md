@@ -902,6 +902,23 @@ the template dependency graph. It must not invoke release-lockfile reset logic:
 release normalization intentionally disables local paths, while template
 recovery needs configured sibling paths to resolve unreleased family versions.
 
+### Branch Worktree Equivalence
+
+A release-target branch worktree is a separate checkout of the same template
+member, not a reduced template workflow. Before its member template body runs,
+it executes the same debugger, Appraisal, and Nomono bootstrap boundary as an
+ordinary member. It then executes the same lockfile preparation, dependency
+preparation and recovery, `kettle-jem` invocation, lockfile normalization, and
+template commit path with the same `template_local` environment.
+
+Only checkout mechanics differ: Family creates and trusts the linked worktree,
+rebases that target branch on its own upstream when one exists, attaches the
+branch name to the results, and removes the worktree after completion. These
+steps are necessary because each target has a distinct Git ref and an absolute
+`mise` configuration path. They do not change the dependency graph or omit a
+template phase. Regression specs assert that branch worktrees call the shared
+bootstrap boundary and cannot start a member template body when it fails.
+
 ## 🔐 Security
 
 See [SECURITY.md][🔐security].

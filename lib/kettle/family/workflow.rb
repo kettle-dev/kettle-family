@@ -932,14 +932,8 @@ module Kettle
       end
 
       def template_member_workflow_results(workflow_members)
-        debugger_results = template_debugger_bootstrap_results(workflow_members)
-        return debugger_results unless debugger_results.all?(&:ok?)
-
-        appraisal_results = template_appraisal_bootstrap_results(workflow_members)
-        return debugger_results + appraisal_results unless appraisal_results.all?(&:ok?)
-
-        bootstrap_results = template_bootstrap_dependency_results(workflow_members)
-        return debugger_results + appraisal_results + bootstrap_results unless bootstrap_results.all?(&:ok?)
+        bootstrap_results = template_member_bootstrap_results(workflow_members)
+        return bootstrap_results unless bootstrap_results.all?(&:ok?)
 
         template_progress = start_template_progress(workflow_members)
         results = template_dependency_waves(workflow_members).each_with_object([]) do |wave, memo|
@@ -948,7 +942,22 @@ module Kettle
           break memo unless wave_results.all?(&:ok?)
         end
         emit_template_progress_summary(results, progress: template_progress)
-        debugger_results + appraisal_results + bootstrap_results + results
+        bootstrap_results + results
+      end
+
+      # This is the common preparation boundary for every template member,
+      # regardless of whether it runs in its primary checkout, a monorepo
+      # worktree, or a release-target branch worktree. Keep branch mechanics
+      # outside this method so they cannot silently omit a bootstrap phase.
+      def template_member_bootstrap_results(workflow_members)
+        debugger_results = template_debugger_bootstrap_results(workflow_members)
+        return debugger_results unless debugger_results.all?(&:ok?)
+
+        appraisal_results = template_appraisal_bootstrap_results(workflow_members)
+        return debugger_results + appraisal_results unless appraisal_results.all?(&:ok?)
+
+        bootstrap_results = template_bootstrap_dependency_results(workflow_members)
+        debugger_results + appraisal_results + bootstrap_results
       end
 
       def template_debugger_bootstrap_results(workflow_members)
@@ -1650,6 +1659,17 @@ module Kettle
       end
 
       def template_branch_worktree_entries_results(entries)
+        results = template_branch_worktree_sync_results(entries)
+        return results unless results.all?(&:ok?)
+
+        # A branch worktree is a different checkout, not a different template
+        # profile. Run the exact same member bootstrap boundary used by normal
+        # members before any branch begins its member template body.
+        bootstrap_results = template_member_bootstrap_results(entries.map { |entry| entry.fetch(:member) })
+        tag_template_worktree_results(bootstrap_results, entries)
+        results.concat(bootstrap_results)
+        return results unless bootstrap_results.all?(&:ok?)
+
         wave_jobs = template_jobs(entries)
         queue = Queue.new
         entries.each_with_index { |entry, index| queue << [index, entry] }
@@ -1671,21 +1691,39 @@ module Kettle
             end
           end
         end.each(&:join)
-        ordered_results.compact.flatten
+        results + ordered_results.compact.flatten
       end
 
       def template_branch_worktree_entry_results(entry, wave_jobs: 1)
         member = entry.fetch(:member)
         branch = entry.fetch(:branch)
-        runner = command_runner
-        results = []
-        if git_upstream_for(member)
-          results << runner.call(member: member, phase: "template_branch_sync", command: ["git", "rebase", "@{upstream}"])
-        end
-        results.concat(template_results_for_member(member, wave_jobs: wave_jobs)) if results.all?(&:ok?)
+        # Bootstrap and upstream synchronization are deliberately performed
+        # for the complete branch set before workers start. The member body is
+        # the same method normal template waves invoke.
+        results = template_results_for_member(member, wave_jobs: wave_jobs)
         tag_branch_results(results, branch)
         emit_template_event_line(member, results.all?(&:ok?) ? "." : "F", "branch #{branch}")
         results
+      end
+
+      def template_branch_worktree_sync_results(entries)
+        runner = command_runner
+        entries.filter_map do |entry|
+          member = entry.fetch(:member)
+          upstream = git_upstream_for(member)
+          next unless upstream
+
+          result = runner.call(member: member, phase: "template_branch_sync", command: ["git", "rebase", "@{upstream}"])
+          result.branch = entry.fetch(:branch)
+          result
+        end
+      end
+
+      def tag_template_worktree_results(results, entries)
+        branches_by_root = entries.to_h { |entry| [File.expand_path(entry.fetch(:member).root), entry.fetch(:branch)] }
+        results.each do |result|
+          result.branch = branches_by_root[File.expand_path(result.workdir)] if result.workdir
+        end
       end
 
       def template_branch_worktree_cleanup_results(entries, runner:, control_member:)

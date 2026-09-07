@@ -608,6 +608,55 @@ RSpec.describe Kettle::Family::Workflow do
     expect(max_active).to eq(2)
   end
 
+  it "runs branch worktrees through the same bootstrap boundary as regular template members" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    workflow = described_class.new(command: "template", config: config, members: [], execute: true, jobs: 2)
+    entries = [
+      {branch: "r1", member: alpha, worktree_root: File.join(@tmpdir, "r1")},
+      {branch: "r2", member: beta, worktree_root: File.join(@tmpdir, "r2")}
+    ]
+    alpha_bootstrap = Kettle::Family::CommandResult.new("alpha", "template_bootstrap_dependencies", [], alpha.root, 0, true, "", "", 0.0, false, nil)
+    beta_bootstrap = Kettle::Family::CommandResult.new("beta", "template_bootstrap_dependencies", [], beta.root, 0, true, "", "", 0.0, false, nil)
+    alpha_template = Kettle::Family::CommandResult.new("alpha", "template", [], alpha.root, 0, true, "", "", 0.0, false, nil)
+    beta_template = Kettle::Family::CommandResult.new("beta", "template", [], beta.root, 0, true, "", "", 0.0, false, nil)
+
+    allow(workflow).to receive(:git_upstream_for).and_return(nil)
+    allow(workflow).to receive(:template_member_bootstrap_results).with([alpha, beta]).and_return([alpha_bootstrap, beta_bootstrap])
+    allow(workflow).to receive(:template_results_for_member) do |member, wave_jobs:|
+      expect(wave_jobs).to eq(2)
+      (member == alpha) ? [alpha_template] : [beta_template]
+    end
+
+    results = workflow.send(:template_branch_worktree_entries_results, entries)
+
+    expect(workflow).to have_received(:template_member_bootstrap_results).with([alpha, beta]).once
+    expect(results).to eq([alpha_bootstrap, beta_bootstrap, alpha_template, beta_template])
+    expect(alpha_bootstrap.branch).to eq("r1")
+    expect(beta_bootstrap.branch).to eq("r2")
+    expect(alpha_template.branch).to eq("r1")
+    expect(beta_template.branch).to eq("r2")
+  end
+
+  it "does not enter branch member bodies when the shared bootstrap boundary fails" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [], execute: true)
+    entry = {branch: "r1", member: alpha, worktree_root: File.join(@tmpdir, "r1")}
+    failure = Kettle::Family::CommandResult.new("alpha", "template_bootstrap_dependencies", [], alpha.root, 1, false, "", "bootstrap failed", 0.0, false, "bootstrap failed")
+
+    allow(workflow).to receive(:git_upstream_for).with(alpha).and_return(nil)
+    allow(workflow).to receive(:template_member_bootstrap_results).with([alpha]).and_return([failure])
+    allow(workflow).to receive(:template_results_for_member)
+
+    expect(workflow.send(:template_branch_worktree_entries_results, [entry])).to eq([failure])
+    expect(failure.branch).to eq("r1")
+    expect(workflow).not_to have_received(:template_results_for_member)
+  end
+
   it "does not sync or dirty-check an unrelated primary checkout before templating configured branch worktrees" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)
