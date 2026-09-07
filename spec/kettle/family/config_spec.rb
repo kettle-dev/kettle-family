@@ -123,6 +123,24 @@ RSpec.describe Kettle::Family::Config do
     expect(config.members_root).to eq(File.join(@tmpdir, "components"))
   end
 
+  it "does not infer an external monorepo path as release-safe" do
+    external_root = File.join(File.dirname(@tmpdir), "ur_brain")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        name: ur-brain-adapters-ruby
+        mode: monorepo
+        local_path_env: UR_BRAIN_DEV
+        local_path_root: ../ur_brain
+        members_root: gems
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.family_local_path_env).to eq("UR_BRAIN_DEV" => external_root)
+    expect(config.release_allowed_local_path_roots).to be_empty
+    expect(config.release_allowed_local_path_env_names).to be_empty
+  end
+
   it "loads release target branches from release config" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       release:

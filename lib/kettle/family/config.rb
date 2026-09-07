@@ -285,18 +285,29 @@ module Kettle
       end
 
       def release_allowed_local_path_roots
-        inferred = configured_monorepo_release? ? [family_local_path_root] : []
+        inferred = ci_resident_monorepo_local_path_graph? ? [family_local_path_root] : []
         configured = Array(fetch_path("release", "allowed_local_path_roots"))
           .map { |path| expand_config_relative_path(path) }
         (inferred + configured).uniq
       end
 
       def release_allowed_local_path_env_names
-        inferred = configured_monorepo_release? ? [family_local_path_env_name] : []
+        inferred = ci_resident_monorepo_local_path_graph? ? [family_local_path_env_name] : []
         configured = Array(fetch_path("release", "allowed_local_path_env"))
         (inferred + configured).compact.map(&:to_s).reject(&:empty?).uniq
       end
 
+      # A monorepo may still use an environment switch to reach a separate
+      # sibling checkout. Only a path contained by this repository can be
+      # inferred as CI-resident and retained in release lockfiles.
+      def ci_resident_monorepo_local_path_graph?
+        return false unless fetch_path("family", "mode") == "monorepo"
+
+        path_within_root?(family_local_path_root)
+      end
+
+      # This remains the repository-topology predicate used by release
+      # scheduling. CI-safe local path inference is deliberately narrower.
       def configured_monorepo_release?
         fetch_path("family", "mode") == "monorepo"
       end
@@ -370,6 +381,12 @@ module Kettle
       end
 
       private
+
+      def path_within_root?(path)
+        expanded_path = File.expand_path(path)
+        expanded_root = File.expand_path(root)
+        expanded_path == expanded_root || expanded_path.start_with?("#{expanded_root}/")
+      end
 
       def expand_config_relative_path(value)
         text = value.to_s

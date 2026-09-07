@@ -255,13 +255,19 @@ release:
       - kettle-jem
 ```
 
-`family.local_path_env` names the environment variable that activates local
-path dependencies for this family. For an explicitly configured
-`family.mode: monorepo`, `kettle-family` derives a release-lock policy that
-allows only `family.members_root` (or the configured member root) and passes
-that policy to each `kettle-release` child. Those paths are valid because the
-same monorepo checkout exists in CI. The tracked `Gemfile.lock` remains a
-development lockfile and may retain those member `PATH` sources.
+`family.local_path_env` names the environment variable that activates the
+family's development path graph. It does not, by itself, make a path valid in
+CI or safe to retain in a release lockfile. For an explicitly configured
+`family.mode: monorepo`, `kettle-family` derives a release-lock policy only
+when that path is contained by the family repository; this is the case when
+the CI checkout contains the same member graph. The tracked `Gemfile.lock`
+may then retain those member `PATH` sources.
+
+A monorepo can also reference a separate checkout, for example a shared base
+gem in its parent workspace. That is an external development override, not an
+internal monorepo path: it is removed for release unless
+`release.allowed_local_path_roots` and `release.allowed_local_path_env`
+explicitly describe matching CI checkout provisioning.
 
 Sibling-repository families do not receive this exception. Their canonical
 lockfiles must use released dependencies: a local Kettle Dev workspace, or
@@ -609,7 +615,9 @@ updated for its orchestration bundle but is not included in any member commit.
 Use `--no-commit` for a working-tree-only refresh, or `--commit` to state the
 default explicitly. Local dependency environment variables are preserved when
 explicitly supplied, so use the family's local or released dependency mode
-deliberately before running it.
+deliberately before running it. A normal family-local graph and an unreleased
+external Kettle toolchain are separate choices; project task wrappers should
+not silently enable the latter for ordinary `bup` or `bupb` runs.
 
 Plan or update GitHub Actions workflow SHA pins across the selected family
 members:

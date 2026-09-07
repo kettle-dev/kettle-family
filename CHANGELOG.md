@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Restrict inferred monorepo release path allowances to CI-resident paths, preserving external development overrides for local-only dependency work.
+
 ### Security
 
 ## [1.2.93] - 2026-09-07
