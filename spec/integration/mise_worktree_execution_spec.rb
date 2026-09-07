@@ -11,19 +11,40 @@ RSpec.describe "Mise execution across family checkout shapes" do
   let(:mise_config_names) { %w[mise.toml .mise.toml] }
 
   around do |example|
+    env_keys = %w[
+      HOME
+      MISE_CACHE_DIR
+      MISE_CEILING_PATHS
+      MISE_CONFIG_DIR
+      MISE_DATA_DIR
+      MISE_GLOBAL_CONFIG_FILE
+      MISE_PARANOID
+      MISE_STATE_DIR
+      PATH
+      XDG_CONFIG_HOME
+    ]
+    original_env = env_keys.to_h { |key| [key, [ENV.key?(key), ENV[key]]] }
     FileUtils.mkdir_p(project_tmp)
     Dir.mktmpdir("mise-family-shapes-", project_tmp) do |dir|
       @tmpdir = dir
+      ENV["HOME"] = File.join(@tmpdir, "home")
+      ENV["MISE_CACHE_DIR"] = File.join(@tmpdir, "mise-cache")
+      ENV["MISE_CEILING_PATHS"] = @tmpdir
+      ENV["MISE_CONFIG_DIR"] = File.join(@tmpdir, "mise-config")
+      ENV["MISE_DATA_DIR"] = File.join(@tmpdir, "mise-data")
+      ENV["MISE_GLOBAL_CONFIG_FILE"] = File.join(@tmpdir, "mise-config", "config.toml")
+      ENV["MISE_PARANOID"] = "1"
+      ENV["MISE_STATE_DIR"] = File.join(@tmpdir, "mise-state")
+      ENV["XDG_CONFIG_HOME"] = File.join(@tmpdir, "xdg-config")
       example.run
+    end
+  ensure
+    original_env&.each do |key, (present, value)|
+      present ? ENV[key] = value : ENV.delete(key)
     end
   end
 
   before do
-    stub_env(
-      "MISE_PARANOID" => "1",
-      "MISE_STATE_DIR" => File.join(@tmpdir, "mise-state"),
-      "MISE_YES" => "1"
-    )
     install_fixture_mise if ENV["KETTLE_FAMILY_FORCE_FIXTURE_MISE"] == "true" || !executable_on_path?("mise")
   end
 
@@ -34,7 +55,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
 
     result = mise_probe(member)
 
-    expect(result).to be_ok
+    expect(result).to be_ok, result.stderr
     expect(result.stdout).to eq("family-root:alpha")
   end
 
@@ -50,20 +71,23 @@ RSpec.describe "Mise execution across family checkout shapes" do
       worktree_root,
       source_root: @tmpdir
     )
+    File.open(File.join(worktree_member.root, "mise.toml"), "a") do |file|
+      file.puts('KETTLE_FAMILY_WORKTREE_MISE_PROBE = "changed"')
+    end
 
     before_trust = mise_probe(worktree_member)
     trust_results = workflow.send(
       :worktree_mise_trust_results,
       {member: worktree_member, original_member: original_member, worktree_root: worktree_root},
-      runner: Kettle::Family::CommandRunner.new(execute: true, accept: true),
+      runner: test_command_runner,
       phase: "worktree_mise_trust"
     )
     after_trust = mise_probe(worktree_member)
 
     expect(before_trust).not_to be_ok
     expect(before_trust.stderr).to include("not trusted")
-    expect(trust_results).to all(be_ok)
-    expect(after_trust).to be_ok
+    expect(trust_results).to all(be_ok), command_failures(trust_results)
+    expect(after_trust).to be_ok, after_trust.stderr
     expect(after_trust.stdout).to eq("family-root:alpha")
   ensure
     run_git(@tmpdir, "worktree", "remove", "--force", worktree_root) if worktree_root && Dir.exist?(worktree_root)
@@ -94,7 +118,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
       entries, setup_results = workflow.send(scenario.fetch(:setup), members)
       probe_results = entries.map { |entry| mise_probe(entry.fetch(:member)) }
 
-      expect(setup_results).to all(be_ok)
+      expect(setup_results).to all(be_ok), command_failures(setup_results)
       expect(setup_results.count { |result| result.phase == scenario.fetch(:trust_phase) }).to eq(4)
       expect(probe_results).to all(be_ok)
       expect(probe_results.map(&:stdout)).to contain_exactly("family-root:alpha", "family-root:beta")
@@ -123,7 +147,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
 
     results = workflow.send(:template_branch_worktree_results, member: member, member_config: member_config)
 
-    expect(results).to all(be_ok)
+    expect(results).to all(be_ok), command_failures(results)
     expect(results.count { |result| result.phase == "template_worktree_mise_trust" }).to eq(1)
     expect(probe_results).to all(be_ok)
     expect(probe_results.map(&:branch)).to contain_exactly("main", "legacy")
@@ -165,7 +189,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
   end
 
   def described_workflow(config:, members:)
-    Kettle::Family::Workflow.new(
+    workflow = Kettle::Family::Workflow.new(
       command: "template",
       config: config,
       members: members,
@@ -173,6 +197,8 @@ RSpec.describe "Mise execution across family checkout shapes" do
       execute: true,
       jobs: members.length
     )
+    allow(workflow).to receive(:command_runner) { test_command_runner }
+    workflow
   end
 
   def write_family_config(mode:, members_root: nil)
@@ -198,7 +224,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
 
   def trust_primary_checkout(path)
     mise_configs_between_filesystem_root_and(path).each do |config_path|
-      _stdout, stderr, status = Open3.capture3("mise", "trust", "--yes", config_path)
+      _stdout, stderr, status = Open3.capture3(ENV.to_h, "mise", "trust", "--yes", config_path)
       raise "mise trust failed for #{config_path}: #{stderr}" unless status.success?
     end
   end
@@ -213,7 +239,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
   end
 
   def mise_probe(target_member)
-    Kettle::Family::CommandRunner.new(execute: true, accept: true).call(
+    test_command_runner.call(
       member: target_member,
       phase: "mise_probe",
       command: [
@@ -222,6 +248,29 @@ RSpec.describe "Mise execution across family checkout shapes" do
         "print [ENV.fetch('KETTLE_FAMILY_ROOT_MISE_PROBE'), ENV.fetch('KETTLE_FAMILY_MEMBER_MISE_PROBE')].join(':')"
       ]
     )
+  end
+
+  def test_command_runner
+    runner = Kettle::Family::CommandRunner.new(execute: true, accept: true)
+    process_env = %w[
+      HOME
+      MISE_CACHE_DIR
+      MISE_CEILING_PATHS
+      MISE_CONFIG_DIR
+      MISE_DATA_DIR
+      MISE_GLOBAL_CONFIG_FILE
+      MISE_PARANOID
+      MISE_STATE_DIR
+      XDG_CONFIG_HOME
+    ].to_h { |key| [key, ENV.fetch(key)] }
+    allow(runner).to receive(:unbundled_process_env).and_wrap_original do |original|
+      original.call.merge(process_env)
+    end
+    runner
+  end
+
+  def command_failures(results)
+    results.reject(&:ok?).map { |result| "#{result.command.join(" ")}: #{result.stderr}" }.join("\n")
   end
 
   def executable_on_path?(name)
@@ -246,7 +295,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
 
       args = ARGV.dup
       command = args.shift
-      state_dir = ENV.fetch("MISE_STATE_DIR")
+      state_dir = ENV.fetch("MISE_STATE_DIR", File.expand_path("../mise-state", __dir__))
       trust_dir = File.join(state_dir, "fixture-trusted-configs")
       FileUtils.mkdir_p(trust_dir)
 
@@ -311,7 +360,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
       end
     RUBY
     FileUtils.chmod("u+x", executable)
-    stub_env("PATH" => "#{bin_dir}#{File::PATH_SEPARATOR}#{ENV.fetch("PATH", "")}")
+    ENV["PATH"] = "#{bin_dir}#{File::PATH_SEPARATOR}#{ENV.fetch("PATH", "")}"
   end
 
   def run_git(root, *arguments)

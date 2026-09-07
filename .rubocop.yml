@@ -48,3 +48,9 @@ Gemspec/RequiredRubyVersion:
 Naming/FileName:
   Exclude:
     - '**/vHEAD.gemfile'
+
+# This integration scenario must alter the real process environment because
+# Open3 children do not inherit RSpec's mocked ENV values.
+Env/Assign:
+  Exclude:
+    - spec/integration/mise_worktree_execution_spec.rb
