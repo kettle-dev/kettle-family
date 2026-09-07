@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Restrict inferred monorepo release path allowances to CI-resident paths, preserving external development overrides for local-only dependency work.
 
+- Allow bup and bupb to commit explicitly selected development path graphs while continuing to reject unrequested local lockfile paths.
+
 ### Security
 
 ## [1.2.93] - 2026-09-07

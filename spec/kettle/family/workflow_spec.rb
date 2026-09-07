@@ -643,7 +643,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[family_root_bup family_root_bundle_update_readiness])
     expect(results.last).not_to be_ok
-    expect(results.last.stdout).to include("release lockfile has local path remote")
+    expect(results.last.stdout).to include("bundle update lockfile has local path remote")
   end
 
   it "preserves explicitly requested local path environments for bundle updates" do
@@ -702,7 +702,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:bundle_update_env).fetch("KETTLE_DEV_DEV")).to eq("yes")
   end
 
-  it "does not commit bundle updates that produce local path lockfile remotes" do
+  it "does not commit bundle updates that produce unrequested local path lockfile remotes" do
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
     File.write(File.join(fake_bin, "bundle"), <<~RUBY)
@@ -724,8 +724,36 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[bup bundle_update_readiness])
     expect(results.last).not_to be_ok
-    expect(results.last.reason).to eq("bundle update produced release-invalid lockfile")
-    expect(results.last.stdout).to include("release lockfile has local path remote")
+    expect(results.last.reason).to eq("bundle update produced an unexpected local-path lockfile")
+    expect(results.last.stdout).to include("bundle update lockfile has local path remote")
+  end
+
+  it "commits sibling bundle updates that retain the explicitly selected development graph" do
+    local_root = File.join(@tmpdir, "rubocop-lts")
+    FileUtils.mkdir_p(File.join(local_root, "standard-rubocop-lts"))
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        mode: sibling_repos
+        local_path_env: RUBOCOP_LTS_DEV
+        local_path_root: rubocop-lts
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    write_lockfile(member.root, <<~LOCK)
+      PATH
+        remote: #{local_root}/standard-rubocop-lts
+        specs:
+          standard-rubocop-lts (1.0.0)
+    LOCK
+    workflow = described_class.new(
+      command: "bup",
+      config: config,
+      members: [member],
+      execute: true,
+      env_overrides: {"RUBOCOP_LTS_DEV" => local_root}
+    )
+
+    expect(workflow.send(:bundle_update_lockfile_diagnostics, member)).to be_empty
   end
 
   it "commits monorepo bundle updates that retain paths inside the configured family root" do

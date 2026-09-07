@@ -613,11 +613,13 @@ family-root lockfile is also validated and committed for monorepos, where the
 root and members share one Git repository. A sibling-repository family root is
 updated for its orchestration bundle but is not included in any member commit.
 Use `--no-commit` for a working-tree-only refresh, or `--commit` to state the
-default explicitly. Local dependency environment variables are preserved when
-explicitly supplied, so use the family's local or released dependency mode
-deliberately before running it. A normal family-local graph and an unreleased
-external Kettle toolchain are separate choices; project task wrappers should
-not silently enable the latter for ordinary `bup` or `bupb` runs.
+default explicitly. `bup` and `bupb` validate the development graph selected
+by their explicit local-path environment and commit it by default; this keeps
+template synchronization from being blocked by expected local-path lockfile
+changes. Release workflows separately normalize and validate their
+CI/release graph. A normal family-local graph and an unreleased external
+Kettle toolchain are separate choices; project task wrappers should not
+silently enable the latter for ordinary `bup` or `bupb` runs.
 
 Plan or update GitHub Actions workflow SHA pins across the selected family
 members:

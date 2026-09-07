@@ -5580,7 +5580,7 @@ module Kettle
           "",
           0.0,
           false,
-          diagnostics.empty? ? nil : "bundle update produced release-invalid lockfile"
+          diagnostics.empty? ? nil : "bundle update produced an unexpected local-path lockfile"
         )
         memo << result
         result.ok?
@@ -5606,8 +5606,35 @@ module Kettle
         ReadinessCheck.call(
           member: member,
           config: config,
-          allowed_local_path_roots: release_allowed_local_path_roots
-        ).stdout.lines.grep(/^release lockfile has local path remote at /).map(&:chomp)
+          allowed_local_path_roots: bundle_update_allowed_local_path_roots
+        ).stdout.lines.grep(/^release lockfile has local path remote at /).map do |line|
+          line.sub("release lockfile", "bundle update lockfile").chomp
+        end
+      end
+
+      # Bundle updates record the graph intentionally selected by the caller.
+      # Release validation remains stricter: it accepts only CI-resident paths.
+      def bundle_update_allowed_local_path_roots
+        explicit = explicit_local_path_env_overrides
+        roots = release_allowed_local_path_roots.dup
+        family_env_name = config.family_local_path_env_name
+
+        explicit.each do |name, value|
+          next unless local_path_env_value?(value)
+
+          if name == family_env_name
+            roots << config.family_local_path_root
+          elsif explicit_local_path_root?(value)
+            roots << File.expand_path(value, config.root)
+          end
+        end
+
+        roots.uniq
+      end
+
+      def explicit_local_path_root?(value)
+        text = value.to_s.strip
+        !%w[true yes 1 on enabled].include?(text.downcase)
       end
 
       def commit_bex_changes(member:, runner:, memo:)
