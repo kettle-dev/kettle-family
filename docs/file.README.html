@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.570-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.591-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -745,11 +745,11 @@ publish command explicitly includes <code>--secrets-provider</code>.</p>
     </tr>
     <tr>
       <td><code>bup</code></td>
-      <td>Run <code>bundle update --all</code>, or update a named dependency, per member.</td>
+      <td>Run <code>bundle update --all</code>, or update a named dependency, at the family root and per member.</td>
     </tr>
     <tr>
       <td><code>bupb</code></td>
-      <td>Run <code>bundle update --bundler</code> per member.</td>
+      <td>Run <code>bundle update --bundler</code> at the family root and per member.</td>
     </tr>
     <tr>
       <td><code>bex</code></td>
@@ -906,10 +906,17 @@ be validated against the latest compatible releases:</p>
 kettle-family template --execute
 </code></pre>
 
-<p><code>bup</code> runs <code>bundle update --all</code> for every selected member. A gem name may be<br>
-passed to update only that dependency, for example <code>kettle-family bup --execute
-kettle-test</code>. Executed updates commit successful lockfile changes by default;<br>
-use <code>--no-commit</code> for a working-tree-only refresh, or <code>--commit</code> to state the<br>
+<p><code>bup</code> first runs <code>bundle update --all</code> at the family root when that root has a<br>
+<code>Gemfile</code>, then runs it for every selected member. <code>bupb</code> follows the same<br>
+root-first order with <code>bundle update --bundler</code>. A root that is itself a member<br>
+is updated only once. A gem name may be passed to <code>bup</code> to update only that<br>
+dependency, for example <code>kettle-family bup --execute kettle-test</code>.</p>
+
+<p>Executed member updates commit successful lockfile changes by default. The<br>
+family-root lockfile is also validated and committed for monorepos, where the<br>
+root and members share one Git repository. A sibling-repository family root is<br>
+updated for its orchestration bundle but is not included in any member commit.<br>
+Use <code>--no-commit</code> for a working-tree-only refresh, or <code>--commit</code> to state the<br>
 default explicitly. Local dependency environment variables are preserved when<br>
 explicitly supplied, so use the family’s local or released dependency mode<br>
 deliberately before running it.</p>

@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Update family-root bundles before member bundles for bup and bupb, committing the root lockfile only when the family is a monorepo.
-
 ### Security
+
+## [1.2.93] - 2026-09-07
+
+- TAG: [v1.2.93][1.2.93t]
+- COVERAGE: 93.54% -- 6165/6591 lines in 35 files
+- BRANCH COVERAGE: 78.08% -- 2507/3211 branches in 35 files
+- 32.41% documented
+
+### Fixed
+
+- Update family-root bundles before member bundles for bup and bupb, committing the root lockfile only when the family is a monorepo.
 
 ## [1.2.92] - 2026-09-07
 
@@ -2618,7 +2627,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.92...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.93...HEAD
+[1.2.93]: https://github.com/kettle-dev/kettle-family/compare/v1.2.92...v1.2.93
+[1.2.93t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.93
 [1.2.92]: https://github.com/kettle-dev/kettle-family/compare/v1.2.91...v1.2.92
 [1.2.92t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.92
 [1.2.91]: https://github.com/kettle-dev/kettle-family/compare/v1.2.90...v1.2.91
