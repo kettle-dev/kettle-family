@@ -42,6 +42,9 @@ commands:
 The scenarios use an isolated Mise state directory and `MISE_PARANOID=1`.
 Paranoid mode is required because normal Mise trust may be shared between a
 primary checkout and linked worktrees, which would let a missing Family trust
-bootstrap pass accidentally. The release scenario only creates and probes a
-disposable worktree; it never runs publishing, tagging, registry, or network
-steps.
+bootstrap pass accidentally. Local and release runs use the real Mise binary.
+Environments without Mise use a process-level fixture that enforces the same
+path-specific trust boundary, so CI still exercises every Family orchestration
+path instead of skipping this suite. The release scenario only creates and
+probes a disposable worktree; it never runs publishing, tagging, registry, or
+network steps.

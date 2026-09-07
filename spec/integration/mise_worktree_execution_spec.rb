@@ -24,7 +24,7 @@ RSpec.describe "Mise execution across family checkout shapes" do
       "MISE_STATE_DIR" => File.join(@tmpdir, "mise-state"),
       "MISE_YES" => "1"
     )
-    skip "mise is required for worktree trust integration scenarios" unless executable_on_path?("mise")
+    install_fixture_mise if ENV["KETTLE_FAMILY_FORCE_FIXTURE_MISE"] == "true" || !executable_on_path?("mise")
   end
 
   it "executes an ordinary sibling repository through its trusted Mise config" do
@@ -228,6 +228,90 @@ RSpec.describe "Mise execution across family checkout shapes" do
     ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |directory|
       File.executable?(File.join(directory, name))
     end
+  end
+
+  def install_fixture_mise
+    bin_dir = File.join(@tmpdir, "fixture-bin")
+    executable = File.join(bin_dir, "mise")
+    FileUtils.mkdir_p(bin_dir)
+    File.write(executable, <<~'RUBY')
+      #!/usr/bin/env ruby
+      # This process substitute models only the trust and exec contract used by
+      # these fixtures. Local development and release runs exercise real Mise.
+      require "digest"
+      require "fileutils"
+      require "json"
+      require "open3"
+      require "pathname"
+
+      args = ARGV.dup
+      command = args.shift
+      state_dir = ENV.fetch("MISE_STATE_DIR")
+      trust_dir = File.join(state_dir, "fixture-trusted-configs")
+      FileUtils.mkdir_p(trust_dir)
+
+      config_names = %w[mise.toml .mise.toml]
+      config_for = lambda do |directory|
+        config_names.map { |name| File.join(directory, name) }.find { |path| File.file?(path) }
+      end
+      trust_marker = lambda do |config_path|
+        File.join(trust_dir, Digest::SHA256.hexdigest(File.expand_path(config_path)))
+      end
+
+      case command
+      when "trust"
+        change_dir_index = args.index("-C")
+        directory = change_dir_index ? args.fetch(change_dir_index + 1) : Dir.pwd
+        explicit_config = args.reverse.find { |argument| !argument.start_with?("-") && File.file?(argument) }
+        config_path = explicit_config || config_for.call(directory)
+        abort "mise fixture: no config found in #{directory}" unless config_path
+
+        File.write(trust_marker.call(config_path), "trusted\n")
+      when "exec"
+        change_dir_index = args.index("-C")
+        directory = change_dir_index ? File.expand_path(args.fetch(change_dir_index + 1)) : Dir.pwd
+        separator_index = args.index("--")
+        child_command = separator_index ? args[(separator_index + 1)..] : []
+        abort "mise fixture: missing exec command" if child_command.empty?
+
+        stdout, stderr, status = Open3.capture3("git", "-C", directory, "rev-parse", "--show-toplevel")
+        abort "mise fixture: #{stderr}" unless status.success?
+
+        git_root = Pathname.new(stdout.strip).expand_path
+        member_root = Pathname.new(directory).expand_path
+        configs = member_root.ascend.each_with_object([]) do |path, found|
+          config_path = config_for.call(path.to_s)
+          found << config_path if config_path
+          break found if path == git_root
+        end.reverse
+        configs.each do |config_path|
+          next if File.file?(trust_marker.call(config_path))
+
+          warn "mise ERROR Config file #{config_path} is not trusted."
+          exit 1
+        end
+
+        child_env = configs.each_with_object({}) do |config_path, env|
+          in_env = false
+          File.foreach(config_path) do |line|
+            stripped = line.strip
+            if stripped.start_with?("[")
+              in_env = stripped == "[env]"
+              next
+            end
+            next unless in_env && stripped.include?(" = ")
+
+            name, encoded_value = stripped.split(" = ", 2)
+            env[name] = JSON.parse(encoded_value)
+          end
+        end
+        exec(child_env, *child_command, chdir: directory)
+      else
+        abort "mise fixture: unsupported command #{command.inspect}"
+      end
+    RUBY
+    FileUtils.chmod("u+x", executable)
+    stub_env("PATH" => "#{bin_dir}#{File::PATH_SEPARATOR}#{ENV.fetch("PATH", "")}")
   end
 
   def run_git(root, *arguments)
