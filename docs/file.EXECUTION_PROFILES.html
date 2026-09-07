@@ -141,6 +141,16 @@ monorepo release wave uses <code>release_monorepo</code>. <code>kettle-changelog
 general exemption: excluding it is valid only for a demonstrated optional<br>
 dependency constraint conflict.</p>
 
+<h3 id="branch-worktree-template-equivalence">Branch worktree template equivalence</h3>
+
+<p>A branch-target worktree uses <code>template_local</code> exactly as its ordinary-member<br>
+counterpart. The common template workflow includes debugger, Appraisal, and<br>
+Nomono bootstrap; lockfile preparation and recovery; dependency preparation;<br>
+template execution; normalization; and commit handling. Worktree creation,<br>
+Mise trust, target-branch upstream synchronization, result tagging, and<br>
+cleanup are checkout mechanics only. They must wrap the common workflow and<br>
+must not select a different dependency graph or bypass any common phase.</p>
+
 <h3 id="scenario-gate">Scenario gate</h3>
 
 <p>Policy changes require a real-Bundler regression scenario for the original<br>

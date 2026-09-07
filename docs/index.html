@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.613-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.631-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -1224,6 +1224,23 @@ policy; it must not be inferred from template bootstrap settings.</p>
 the template dependency graph. It must not invoke release-lockfile reset logic:<br>
 release normalization intentionally disables local paths, while template<br>
 recovery needs configured sibling paths to resolve unreleased family versions.</p>
+
+<h3 id="branch-worktree-equivalence">Branch Worktree Equivalence</h3>
+
+<p>A release-target branch worktree is a separate checkout of the same template<br>
+member, not a reduced template workflow. Before its member template body runs,<br>
+it executes the same debugger, Appraisal, and Nomono bootstrap boundary as an<br>
+ordinary member. It then executes the same lockfile preparation, dependency<br>
+preparation and recovery, <code>kettle-jem</code> invocation, lockfile normalization, and<br>
+template commit path with the same <code>template_local</code> environment.</p>
+
+<p>Only checkout mechanics differ: Family creates and trusts the linked worktree,<br>
+rebases that target branch on its own upstream when one exists, attaches the<br>
+branch name to the results, and removes the worktree after completion. These<br>
+steps are necessary because each target has a distinct Git ref and an absolute<br>
+<code>mise</code> configuration path. They do not change the dependency graph or omit a<br>
+template phase. Regression specs assert that branch worktrees call the shared<br>
+bootstrap boundary and cannot start a member template body when it fails.</p>
 
 <h2 id="-security">🔐 Security</h2>
 
