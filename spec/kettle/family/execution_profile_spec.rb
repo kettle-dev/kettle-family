@@ -23,6 +23,14 @@ RSpec.describe Kettle::Family::ExecutionProfile do
     end
   end
 
+  it "exposes path-gem and canonical-lockfile policy predicates" do
+    expect(described_class.fetch(:development_local)).to be_local_path_gems
+    expect(described_class.fetch("template_local")).to be_canonical_lockfile
+    expect(described_class.fetch(:release_monorepo)).to be_local_path_gems
+    expect(described_class.fetch(:release_registry)).not_to be_local_path_gems
+    expect(described_class.fetch(:release_registry)).to be_canonical_lockfile
+  end
+
   it "resolves configured unpublished siblings through real Bundler commands" do
     Dir.mktmpdir("kettle-family-profile-scenario", File.join(Dir.pwd, "tmp")) do |root|
       write_path_gem(root, "alpha", "Alpha")

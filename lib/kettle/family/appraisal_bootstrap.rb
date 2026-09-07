@@ -66,7 +66,8 @@ module Kettle
       def obsolete_appraisal_edit(path, source, node)
         return unless legacy_appraisal_call?(node)
 
-        line_start = source.rindex("\n", node.location.start_offset - 1).to_i + 1
+        preceding_newline = source.rindex("\n", node.location.start_offset - 1)
+        line_start = preceding_newline ? preceding_newline + 1 : 0
         line_end = source.index("\n", node.location.end_offset) || source.length
         line_end += 1 if line_end < source.length
         if final_standalone_call?(source, node, line_start, line_end)

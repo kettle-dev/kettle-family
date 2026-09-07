@@ -61,6 +61,32 @@ RSpec.describe Kettle::Family::DependencyFloor, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0"')
   end
 
+  it "ignores dependency calls without a string family name or version requirement" do
+    alpha = write_gem("alpha", version: "1.2.3")
+    beta = write_gem("beta", version: "2.0.0")
+    File.write(beta.gemspec_path, <<~RUBY)
+      Gem::Specification.new do |spec|
+        dependency_name = "alpha"
+        spec.add_dependency
+        spec.add_dependency dependency_name, ">= 1.0.0"
+        spec.add_dependency "alpha", 1
+      end
+    RUBY
+
+    results = described_class.new(released_members: [alpha], dependent_members: [beta], mode: :execute).results
+
+    expect(results).to be_empty
+  end
+
+  it "treats malformed lower-bound versions as ineligible for updates" do
+    alpha = write_gem("alpha", version: "1.2.3")
+    beta = write_gem("beta", version: "2.0.0", dependencies: {"alpha" => [">= definitely-not-a-version"]})
+
+    results = described_class.new(released_members: [alpha], dependent_members: [beta], mode: :execute).results
+
+    expect(results).to be_empty
+  end
+
   def write_gem(name, version:, dependencies: {}, dependency_method: "add_dependency")
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)

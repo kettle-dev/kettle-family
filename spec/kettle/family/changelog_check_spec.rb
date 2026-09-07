@@ -46,6 +46,20 @@ RSpec.describe Kettle::Family::ChangelogCheck do
     expect(result).to be_ok
   end
 
+  it "uses the member root when a configured changelog has no separate workdir" do
+    member = member_at("alpha")
+    changelog = File.join(member.root, "changes", "CHANGELOG.md")
+    FileUtils.mkdir_p(File.dirname(changelog))
+    File.write(changelog, "# Changelog\n")
+    config = instance_double(Kettle::Family::Config)
+    allow(config).to receive(:changelog_full_path).with(member).and_return(changelog)
+    allow(config).to receive(:changelog_workdir).with(member).and_return(nil)
+
+    result = described_class.call(member: member, config: config)
+
+    expect(result.stdout).to include("changes/CHANGELOG.md missing Unreleased section")
+  end
+
   def member_at(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)

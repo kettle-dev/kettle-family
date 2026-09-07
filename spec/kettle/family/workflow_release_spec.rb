@@ -3320,6 +3320,37 @@ RSpec.describe Kettle::Family::Workflow do
     expect(waves.map { |wave| wave.map(&:name) }).to eq([["beta"], ["alpha"]])
   end
 
+  it "rejects duplicate members in configured release waves" do
+    alpha = ready_member("alpha")
+
+    expect do
+      Kettle::Family::ReleaseWaves.new(
+        members: [alpha],
+        configured_waves: [["alpha"], ["alpha"]]
+      ).waves
+    end.to raise_error(Kettle::Family::Error, /duplicate member\(s\): alpha/)
+  end
+
+  it "rejects cycles in hard runtime dependencies before considering release-only edges" do
+    alpha = ready_member("alpha", dependencies: ["beta"])
+    beta = ready_member("beta", dependencies: ["alpha"])
+
+    expect { Kettle::Family::ReleaseWaves.new(members: [alpha, beta]).waves }
+      .to raise_error(Kettle::Family::Error, /cyclic release dependency order/)
+  end
+
+  it "accepts configured runtime dependencies in earlier waves and ignores external dependencies" do
+    alpha = ready_member("alpha")
+    beta = ready_member("beta", dependencies: ["alpha", "external"])
+
+    waves = Kettle::Family::ReleaseWaves.new(
+      members: [alpha, beta],
+      configured_waves: [["alpha"], ["beta"]]
+    ).waves
+
+    expect(waves.map { |wave| wave.map(&:name) }).to eq([["alpha"], ["beta"]])
+  end
+
   it "stops before release commands when readiness fails" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

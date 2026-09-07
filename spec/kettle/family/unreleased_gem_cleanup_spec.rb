@@ -12,15 +12,15 @@ RSpec.describe Kettle::Family::UnreleasedGemCleanup do
     )
   end
 
-  def release_state(member_name, latest_released:)
+  def release_state(member_name, latest_released:, success: true, status: 0, stderr: "")
     Kettle::Family::ReleaseStateResult.new(
       member_name: member_name,
       command: %w[kettle-changelog --release-state --json],
       workdir: "/repo/#{member_name}",
-      status: 0,
-      success: true,
+      status: status,
+      success: success,
       stdout: "",
-      stderr: "",
+      stderr: stderr,
       elapsed_seconds: 0.0,
       state: {"latest_released" => latest_released}
     )
@@ -78,5 +78,55 @@ RSpec.describe Kettle::Family::UnreleasedGemCleanup do
     expect(results.first).to be_ok
     expect(results.first.stdout).to include("latest released version is unknown")
     expect(Gem::Specification).not_to have_received(:find_all_by_name)
+  end
+
+  it "reports missing and failed release state without inspecting installed gems" do
+    alpha = member("alpha")
+    beta = member("beta")
+    failed_state = release_state(
+      "beta",
+      latest_released: nil,
+      success: false,
+      status: 6,
+      stderr: "state unavailable"
+    )
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new)
+      .and_return(instance_double(Kettle::Family::ReleaseStateCheck, results: [failed_state]))
+    allow(Gem::Specification).to receive(:find_all_by_name)
+
+    results = described_class.new(config: nil, members: [alpha, beta]).results
+
+    expect(results.map(&:status)).to eq([1, 6])
+    expect(results.map(&:reason)).to all(eq("release state unavailable"))
+    expect(results.last.stderr).to eq("state unavailable")
+    expect(Gem::Specification).not_to have_received(:find_all_by_name)
+  end
+
+  it "treats unknown and malformed released versions as unavailable" do
+    members = %w[alpha beta].map { |name| member(name) }
+    states = ["unknown", "not-a-version"].each_with_index.map do |version, index|
+      release_state(members.fetch(index).name, latest_released: version)
+    end
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new)
+      .and_return(instance_double(Kettle::Family::ReleaseStateCheck, results: states))
+    allow(Gem::Specification).to receive(:find_all_by_name)
+
+    results = described_class.new(config: nil, members: members).results
+
+    expect(results.map(&:stdout)).to all(include("latest released version is unknown"))
+    expect(Gem::Specification).not_to have_received(:find_all_by_name)
+  end
+
+  it "reports when installed versions contain no unreleased candidates" do
+    alpha = member("alpha")
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new)
+      .and_return(instance_double(Kettle::Family::ReleaseStateCheck, results: [release_state("alpha", latest_released: "v1.0.0")]))
+    allow(Gem::Specification).to receive(:find_all_by_name).with("alpha")
+      .and_return([spec_version("0.9.0"), spec_version("1.0.0"), spec_version("1.0.0")])
+
+    result = described_class.new(config: nil, members: [alpha]).results.fetch(0)
+
+    expect(result).to be_ok
+    expect(result.stdout).to eq("no unreleased installed versions found")
   end
 end

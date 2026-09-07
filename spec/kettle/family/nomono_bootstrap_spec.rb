@@ -79,6 +79,64 @@ RSpec.describe Kettle::Family::NomonoBootstrap, :prism do
     expect(result.stdout).to include("gemfiles/modular/coverage_local.gemfile")
   end
 
+  it "reports a stale floor without modifying files during a dry run" do
+    member = member_at("kettle-gha-pins")
+    gemfile = File.join(member.root, "Gemfile")
+    original = <<~RUBY
+      source "https://gem.coop"
+      gem "nomono", "~> 1.1", ">= 1.1.0", require: false
+    RUBY
+    File.write(gemfile, original)
+
+    bootstrap = described_class.new(latest_version: "1.1.1")
+    result = bootstrap.bootstrap_member(member)
+
+    expect(result).to be_ok
+    expect(result.skipped).to be(true)
+    expect(result.reason).to eq("dry run")
+    expect(File.read(gemfile)).to eq(original)
+  end
+
+  it "does not bootstrap a member without nomono declarations or a lockfile" do
+    member = member_at("kettle-gha-pins")
+
+    expect(described_class.new(latest_version: "1.1.1").member_needs_bootstrap?(member)).to be(false)
+  end
+
+  it "ignores unrelated and non-versioned nomono declarations" do
+    member = member_at("kettle-gha-pins")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gem "rake", ">= 13"
+      gem "nomono", require: false
+    RUBY
+    local_gemfile = File.join(member.root, "gemfiles/modular/coverage_local.gemfile")
+    FileUtils.mkdir_p(File.dirname(local_gemfile))
+    File.write(local_gemfile, <<~RUBY)
+      unrelated_requirements = [">= 1.0"]
+      nomono_activation_requirements = ["~> 1.1"]
+    RUBY
+
+    expect(described_class.new(latest_version: "1.1.1").member_needs_bootstrap?(member)).to be(false)
+  end
+
+  it "ignores unsupported declaration shapes and current local activation floors" do
+    member = member_at("kettle-gha-pins")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      name = "nomono"
+      gem
+      gem name, ">= 1.0"
+    RUBY
+    local_gemfile = File.join(member.root, "gemfiles/modular/coverage_local.gemfile")
+    FileUtils.mkdir_p(File.dirname(local_gemfile))
+    File.write(local_gemfile, <<~RUBY)
+      nomono_activation_requirements = ">= 1.1.0"
+      nomono_activation_requirements = ["~> 1.1", ">= 1.1.1"]
+    RUBY
+
+    expect(described_class.new(latest_version: "1.1.1").member_needs_bootstrap?(member)).to be(false)
+  end
+
   def member_at(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)

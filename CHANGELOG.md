@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Remove retired appraisal declarations cleanly from files without a trailing newline during template bootstrap.
+
 ### Security
 
 ## [1.2.91] - 2026-09-06

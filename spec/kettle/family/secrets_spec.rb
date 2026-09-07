@@ -202,6 +202,61 @@ RSpec.describe Kettle::Family::Secrets do
     end
   end
 
+  it "returns a structured error for unsupported broker operations" do
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+    root = File.join(Dir.pwd, "tmp", "broker-unsupported")
+    broker = described_class::Broker.new(provider: provider, root: root)
+    broker.start
+
+    socket = UNIXSocket.new(broker.path)
+    socket.puts(JSON.generate("operation" => "delete_everything"))
+    response = JSON.parse(socket.gets)
+
+    expect(response.fetch("ok")).to be(false)
+    expect(response.fetch("error")).to include("unsupported release secrets broker operation")
+  ensure
+    socket&.close
+    broker&.close
+    FileUtils.rm_rf(root) if root
+  end
+
+  it "returns a structured error when the secrets provider fails" do
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+    allow(provider).to receive(:rubygems_otp).and_raise(Kettle::Family::Error, "provider unavailable")
+    root = File.join(Dir.pwd, "tmp", "broker-provider")
+    broker = described_class::Broker.new(provider: provider, root: root)
+    broker.start
+
+    socket = UNIXSocket.new(broker.path)
+    socket.puts(JSON.generate("operation" => "rubygems_otp"))
+    response = JSON.parse(socket.gets)
+
+    expect(response).to eq("ok" => false, "error" => "provider unavailable")
+  ensure
+    socket&.close
+    broker&.close
+    FileUtils.rm_rf(root) if root
+  end
+
+  it "rejects roots too deep for even the compact Unix socket path" do
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+    root = File.join(File::SEPARATOR, "r" * described_class::Broker::UNIX_SOCKET_PATH_MAX)
+
+    expect { described_class::Broker.new(provider: provider, root: root) }
+      .to raise_error(Kettle::Family::Error, /socket path is too long/)
+  end
+
+  it "can close before the broker has started" do
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+
+    Dir.mktmpdir("kettle-family-broker-spec") do |root|
+      broker = described_class::Broker.new(provider: provider, root: root)
+
+      expect { broker.close }.not_to raise_error
+      expect(File.exist?(broker.path)).to be(false)
+    end
+  end
+
   def status(success:, exitstatus: success ? 0 : 1)
     instance_double(Process::Status, success?: success, exitstatus: exitstatus)
   end

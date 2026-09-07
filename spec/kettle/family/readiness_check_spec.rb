@@ -91,6 +91,88 @@ RSpec.describe Kettle::Family::ReadinessCheck do
     expect(result).to be_ok
   end
 
+  it "reports missing configured root files, member directories, and README links" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      check:
+        required_files:
+          - README.md
+        required_bins: []
+        root_required_files:
+          - SECURITY.md
+        member_required_dirs:
+          - docs
+        readme_links:
+          CHANGELOG.md: CHANGELOG.md
+    YAML
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    root = File.join(@tmpdir, "alpha")
+    FileUtils.mkdir_p(root)
+    File.write(File.join(root, "README.md"), "# Alpha\n")
+    member = Kettle::Family::Member.new(name: "alpha", root: root, version: "1.0.0", dependencies: [])
+
+    result = described_class.call(member: member, config: config)
+
+    expect(result).not_to be_ok
+    expect(result.stdout).to include(
+      "missing root required file SECURITY.md",
+      "missing required directory docs",
+      "README.md missing link to root CHANGELOG.md"
+    )
+  end
+
+  it "ignores empty, false, and nonexistent allowed local-path roots" do
+    member = ready_member("alpha")
+    missing_root = File.join(@tmpdir, "missing-family")
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: ../beta\n")
+
+    result = described_class.call(
+      member: member,
+      allowed_local_path_roots: [nil, "", "false", missing_root]
+    )
+
+    expect(result).not_to be_ok
+    expect(result.stdout).to include("local path remote")
+  end
+
+  it "rejects tracked forbidden member directories but allows configured exceptions" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      check:
+        forbidden_tracked_member_dirs:
+          - generated
+        forbidden_tracked_member_dirs_except:
+          - beta
+    YAML
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    [alpha, beta].each do |member|
+      FileUtils.mkdir_p(File.join(member.root, "generated"))
+      File.write(File.join(member.root, "generated", "artifact"), "tracked\n")
+    end
+    system("git", "init", "--quiet", "--initial-branch", "main", @tmpdir, exception: true)
+    system("git", "-C", @tmpdir, "add", ".", exception: true)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    alpha_result = described_class.call(member: alpha, config: config)
+    beta_result = described_class.call(member: beta, config: config)
+
+    expect(alpha_result.stdout).to include("forbidden tracked directory generated")
+    expect(beta_result).to be_ok
+  end
+
+  it "allows an untracked forbidden member directory" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      check:
+        forbidden_tracked_member_dirs:
+          - generated
+    YAML
+    member = ready_member("alpha")
+    FileUtils.mkdir_p(File.join(member.root, "generated"))
+    system("git", "init", "--quiet", "--initial-branch", "main", @tmpdir, exception: true)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    expect(described_class.call(member: member, config: config)).to be_ok
+  end
+
   def ready_member(name)
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(File.join(root, "bin"))

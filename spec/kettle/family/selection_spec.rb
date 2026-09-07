@@ -114,6 +114,13 @@ RSpec.describe Kettle::Family::Selection do
     expect { selection.apply(only: "pending") }.to raise_error(Kettle::Family::Error, /release-state check failed for: alpha/)
   end
 
+  it "rejects release-state selection when state results were not collected" do
+    selection = described_class.new(members: [member("alpha")])
+
+    expect { selection.apply(only: "pending") }
+      .to raise_error(Kettle::Family::Error, /require release-state results/)
+  end
+
   it "excludes comma-separated members from the family order" do
     selected = described_class.new(members: [member("alpha"), member("beta"), member("gamma")]).apply(exclude: "beta, gamma")
 
