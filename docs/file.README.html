@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.591-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-6.613-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -452,13 +452,19 @@ release:
       - kettle-jem
 </code></pre>
 
-<p><code>family.local_path_env</code> names the environment variable that activates local<br>
-path dependencies for this family. For an explicitly configured<br>
-<code>family.mode: monorepo</code>, <code>kettle-family</code> derives a release-lock policy that<br>
-allows only <code>family.members_root</code> (or the configured member root) and passes<br>
-that policy to each <code>kettle-release</code> child. Those paths are valid because the<br>
-same monorepo checkout exists in CI. The tracked <code>Gemfile.lock</code> remains a<br>
-development lockfile and may retain those member <code>PATH</code> sources.</p>
+<p><code>family.local_path_env</code> names the environment variable that activates the<br>
+family’s development path graph. It does not, by itself, make a path valid in<br>
+CI or safe to retain in a release lockfile. For an explicitly configured<br>
+<code>family.mode: monorepo</code>, <code>kettle-family</code> derives a release-lock policy only<br>
+when that path is contained by the family repository; this is the case when<br>
+the CI checkout contains the same member graph. The tracked <code>Gemfile.lock</code><br>
+may then retain those member <code>PATH</code> sources.</p>
+
+<p>A monorepo can also reference a separate checkout, for example a shared base<br>
+gem in its parent workspace. That is an external development override, not an<br>
+internal monorepo path: it is removed for release unless<br>
+<code>release.allowed_local_path_roots</code> and <code>release.allowed_local_path_env</code><br>
+explicitly describe matching CI checkout provisioning.</p>
 
 <p>Sibling-repository families do not receive this exception. Their canonical<br>
 lockfiles must use released dependencies: a local Kettle Dev workspace, or<br>
@@ -917,9 +923,13 @@ family-root lockfile is also validated and committed for monorepos, where the<br
 root and members share one Git repository. A sibling-repository family root is<br>
 updated for its orchestration bundle but is not included in any member commit.<br>
 Use <code>--no-commit</code> for a working-tree-only refresh, or <code>--commit</code> to state the<br>
-default explicitly. Local dependency environment variables are preserved when<br>
-explicitly supplied, so use the family’s local or released dependency mode<br>
-deliberately before running it.</p>
+default explicitly. <code>bup</code> and <code>bupb</code> validate the development graph selected<br>
+by their explicit local-path environment and commit it by default; this keeps<br>
+template synchronization from being blocked by expected local-path lockfile<br>
+changes. Release workflows separately normalize and validate their<br>
+CI/release graph. A normal family-local graph and an unreleased external<br>
+Kettle toolchain are separate choices; project task wrappers should not<br>
+silently enable the latter for ordinary <code>bup</code> or <code>bupb</code> runs.</p>
 
 <p>Plan or update GitHub Actions workflow SHA pins across the selected family<br>
 members:</p>

@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.94] - 2026-09-07
+
+- TAG: [v1.2.94][1.2.94t]
+- COVERAGE: 93.50% -- 6183/6613 lines in 35 files
+- BRANCH COVERAGE: 78.04% -- 2512/3219 branches in 35 files
+- 32.58% documented
+
+### Fixed
+
 - Restrict inferred monorepo release path allowances to CI-resident paths, preserving external development overrides for local-only dependency work.
 
 - Allow bup and bupb to commit explicitly selected development path graphs while continuing to reject unrequested local lockfile paths.
-
-### Security
 
 ## [1.2.93] - 2026-09-07
 
@@ -2631,7 +2640,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.93...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.94...HEAD
+[1.2.94]: https://github.com/kettle-dev/kettle-family/compare/v1.2.93...v1.2.94
+[1.2.94t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.94
 [1.2.93]: https://github.com/kettle-dev/kettle-family/compare/v1.2.92...v1.2.93
 [1.2.93t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.93
 [1.2.92]: https://github.com/kettle-dev/kettle-family/compare/v1.2.91...v1.2.92
