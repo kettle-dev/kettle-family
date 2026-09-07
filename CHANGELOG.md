@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Update family-root bundles before member bundles for bup and bupb, committing the root lockfile only when the family is a monorepo.
+
 ### Security
 
 ## [1.2.92] - 2026-09-07

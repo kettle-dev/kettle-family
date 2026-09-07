@@ -506,6 +506,146 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).phase).to eq("commit_bundle_update")
   end
 
+  it "updates a sibling-family root before members without committing the root lockfile" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "sibling_repos"}}))
+    write_gemfile(@tmpdir)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "bup", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[family_root_bup bup commit_bundle_update])
+    expect(results.first).to have_attributes(member_name: config.family_name, workdir: @tmpdir)
+    expect(results.none? { |result| result.phase == "commit_family_root_bundle_update" }).to be(true)
+  end
+
+  it "executes sibling-family root and member bundle updates in root-first order" do
+    fake_bin = File.join(@tmpdir, "bin")
+    call_log = File.join(@tmpdir, "bundle-calls.log")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
+      #!/usr/bin/env ruby
+      File.open(ENV.fetch("BUNDLE_CALL_LOG"), "a") do |file|
+        file.puts([Dir.pwd, *ARGV].join("|"))
+      end
+    RUBY
+    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "sibling_repos"}}))
+    write_gemfile(@tmpdir)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(
+      command: "bup",
+      config: config,
+      members: [member],
+      execute: true,
+      commit: false,
+      env_overrides: {
+        "BUNDLE_CALL_LOG" => call_log,
+        "PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"
+      }
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[family_root_bup bup])
+    expect(File.readlines(call_log, chomp: true)).to eq([
+      "#{@tmpdir}|update|--all",
+      "#{member.root}|update|--all"
+    ])
+  end
+
+  it "updates and commits a monorepo root before member bundle updates" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "monorepo", "members_root" => "gems"}}))
+    write_gemfile(@tmpdir)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "bup", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[family_root_bup commit_family_root_bundle_update bup commit_bundle_update])
+    root_commit = results.fetch(1)
+    expect(root_commit).to have_attributes(member_name: config.family_name, workdir: @tmpdir)
+    expect(root_commit.command.join(" ")).to include("git commit --only")
+    expect(root_commit.command.join(" ")).to include("-- Gemfile.lock")
+  end
+
+  it "updates the family root with bupb before member Bundler updates" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "sibling_repos"}}))
+    write_gemfile(@tmpdir)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(command: "bupb", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[family_root_bupb bupb commit_bundle_update])
+    expect(results.first.command).to eq(%w[bundle update --bundler])
+  end
+
+  it "does not update the family root twice when it is itself a member" do
+    write_gemfile(@tmpdir)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = Kettle::Family::Member.new(
+      name: "alpha",
+      root: @tmpdir,
+      gemspec_path: File.join(@tmpdir, "alpha.gemspec"),
+      version: "1.0.0",
+      dependencies: []
+    )
+
+    results = described_class.new(command: "bup", config: config, members: [member]).results
+
+    expect(results.map(&:phase)).to eq(%w[bup commit_bundle_update])
+  end
+
+  it "stops before member updates when the family-root bundle update fails" do
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), "#!/usr/bin/env ruby\nexit 7\n")
+    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    write_gemfile(@tmpdir)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(
+      command: "bup",
+      config: config,
+      members: [member],
+      execute: true,
+      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[family_root_bup])
+    expect(results.first).not_to be_ok
+    expect(results.first.status).to eq(7)
+  end
+
+  it "validates a committed monorepo root lockfile before updating members" do
+    external_root = File.join(File.dirname(@tmpdir), "external-family")
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
+      #!/usr/bin/env ruby
+      File.write("Gemfile.lock", "PATH\\n  remote: #{external_root}\\n")
+    RUBY
+    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "monorepo", "members_root" => "gems"}}))
+    write_gemfile(@tmpdir)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+
+    results = described_class.new(
+      command: "bup",
+      config: config,
+      members: [member],
+      execute: true,
+      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+    ).results
+
+    expect(results.map(&:phase)).to eq(%w[family_root_bup family_root_bundle_update_readiness])
+    expect(results.last).not_to be_ok
+    expect(results.last.stdout).to include("release lockfile has local path remote")
+  end
+
   it "preserves explicitly requested local path environments for bundle updates" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:

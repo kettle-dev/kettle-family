@@ -621,6 +621,24 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("resume_hint")).to eq("kettle-family release --execute --publish --only rubocop-ruby3_2")
   end
 
+  it "retries family-root bundle failures without an invalid member selector" do
+    failed = result("structuredmerge-ruby", phase: "family_root_bup", success: false, reason: "bundle update failed")
+    selected_member = member("alpha")
+    report = described_class.new(
+      family_name: "structuredmerge-ruby",
+      order_mode: "dependency",
+      members: [selected_member],
+      selected_members: [selected_member],
+      config_path: nil,
+      command: "bup",
+      results: [failed]
+    )
+
+    expect(report.to_h.fetch("resume_hint")).to eq("kettle-family bup")
+    expect(report.to_text).to include("resume: kettle-family bup")
+    expect(report.to_text).not_to include("--start-at structuredmerge-ruby")
+  end
+
   it "uses the child release step for a member-scoped publish retry" do
     failed = result("alpha", success: false, reason: "OTP failed")
     failed.resume_step = 15

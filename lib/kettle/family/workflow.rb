@@ -575,6 +575,9 @@ module Kettle
 
         runner = CommandRunner.new(execute: execute, accept: accept)
         results = []
+        update_family_root_bundle(runner: runner, memo: results) if %w[bup bupb].include?(command)
+        return results unless results.all?(&:ok?)
+
         if command == "gha-sha-pins" && execute
           return results unless review_gha_sha_pins(workflow_members, runner: runner, memo: results)
         end
@@ -615,6 +618,39 @@ module Kettle
         end
         gha_progress&.finish
         results
+      end
+
+      def update_family_root_bundle(runner:, memo:)
+        return unless family_root_bundle_update_required?
+
+        root_member = family_member
+        memo << runner.call(
+          member: root_member,
+          phase: "family_root_#{command}",
+          command: workflow_command,
+          env: command_env
+        )
+        return unless memo.last.ok?
+        return unless family_root_bundle_commit?
+        return unless validate_bundle_update_lockfile(
+          member: root_member,
+          memo: memo,
+          phase: "family_root_bundle_update_readiness"
+        )
+
+        commit_family_root_bundle_update(member: root_member, runner: runner, memo: memo)
+      end
+
+      def family_root_bundle_update_required?
+        return false unless File.file?(File.join(config.root, "Gemfile"))
+
+        family_members.none? do |member|
+          File.expand_path(member.root) == File.expand_path(config.root)
+        end
+      end
+
+      def family_root_bundle_commit?
+        commit && config.family_mode == "monorepo"
       end
 
       # Sibling repositories have isolated working trees and can run their
@@ -5529,13 +5565,13 @@ module Kettle
         memo << result
       end
 
-      def validate_bundle_update_lockfile(member:, memo:)
+      def validate_bundle_update_lockfile(member:, memo:, phase: "bundle_update_readiness")
         return true unless execute && commit
 
         diagnostics = bundle_update_lockfile_diagnostics(member)
         result = CommandResult.new(
           member.name,
-          "bundle_update_readiness",
+          phase,
           ["internal", "bundle-update-readiness"],
           member.root,
           diagnostics.empty? ? 0 : 1,
@@ -5548,6 +5584,22 @@ module Kettle
         )
         memo << result
         result.ok?
+      end
+
+      def commit_family_root_bundle_update(member:, runner:, memo:)
+        return unless family_root_bundle_commit?
+
+        result = runner.call(
+          member: member,
+          phase: "commit_family_root_bundle_update",
+          command: [
+            "sh",
+            "-lc",
+            "files=$(git ls-files --modified --others --exclude-standard -- Gemfile.lock); " \
+              "if [ -n \"$files\" ]; then git add -- Gemfile.lock && git commit --only -m '🔒️ Update family root bundle' -- Gemfile.lock; fi"
+          ]
+        )
+        memo << result
       end
 
       def bundle_update_lockfile_diagnostics(member)

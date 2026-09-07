@@ -496,8 +496,8 @@ The command names below are available from `kettle-family --help`:
 | `docs` | Run the configured documentation workflow for each selected member. |
 | `template` | Apply the configured `kettle-jem` template for each selected member. |
 | `gha-sha-pins` | Inspect or update GitHub Actions SHA pins. |
-| `bup` | Run `bundle update --all`, or update a named dependency, per member. |
-| `bupb` | Run `bundle update --bundler` per member. |
+| `bup` | Run `bundle update --all`, or update a named dependency, at the family root and per member. |
+| `bupb` | Run `bundle update --bundler` at the family root and per member. |
 | `bex` | Run an arbitrary `bundle exec` command per member. |
 | `install` | Build and install selected local family gems. |
 | `bump` | Check, plan, or execute family version alignment. |
@@ -596,10 +596,17 @@ kettle-family bup --execute
 kettle-family template --execute
 ```
 
-`bup` runs `bundle update --all` for every selected member. A gem name may be
-passed to update only that dependency, for example `kettle-family bup --execute
-kettle-test`. Executed updates commit successful lockfile changes by default;
-use `--no-commit` for a working-tree-only refresh, or `--commit` to state the
+`bup` first runs `bundle update --all` at the family root when that root has a
+`Gemfile`, then runs it for every selected member. `bupb` follows the same
+root-first order with `bundle update --bundler`. A root that is itself a member
+is updated only once. A gem name may be passed to `bup` to update only that
+dependency, for example `kettle-family bup --execute kettle-test`.
+
+Executed member updates commit successful lockfile changes by default. The
+family-root lockfile is also validated and committed for monorepos, where the
+root and members share one Git repository. A sibling-repository family root is
+updated for its orchestration bundle but is not included in any member commit.
+Use `--no-commit` for a working-tree-only refresh, or `--commit` to state the
 default explicitly. Local dependency environment variables are preserved when
 explicitly supplied, so use the family's local or released dependency mode
 deliberately before running it.

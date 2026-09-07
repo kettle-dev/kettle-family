@@ -702,6 +702,7 @@ module Kettle
 
       def resume_hint_for(result)
         return release_resume_hint(result) if command == "release"
+        return "kettle-family #{command}" if result.phase.start_with?("family_root_") || result.phase == "commit_family_root_bundle_update"
 
         "kettle-family #{command} --start-at #{result.member_name}"
       end
