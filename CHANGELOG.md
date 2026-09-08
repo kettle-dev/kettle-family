@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Attribute release-preflight failures to the selected member so retry hints do not target an unselected family sibling.
-
 ### Security
+
+## [1.2.97] - 2026-09-08
+
+- TAG: [v1.2.97][1.2.97t]
+- COVERAGE: 93.49% -- 6236/6670 lines in 35 files
+- BRANCH COVERAGE: 77.99% -- 2523/3235 branches in 35 files
+- 32.75% documented
+
+### Fixed
+
+- Attribute release-preflight failures to the selected member so retry hints do not target an unselected family sibling.
 
 ## [1.2.96] - 2026-09-08
 
@@ -2670,7 +2679,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.96...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.97...HEAD
+[1.2.97]: https://github.com/kettle-dev/kettle-family/compare/v1.2.96...v1.2.97
+[1.2.97t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.97
 [1.2.96]: https://github.com/kettle-dev/kettle-family/compare/v1.2.95...v1.2.96
 [1.2.96t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.96
 [1.2.95]: https://github.com/kettle-dev/kettle-family/compare/v1.2.94...v1.2.95
