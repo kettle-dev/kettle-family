@@ -1,0 +1,8 @@
+{
+  "spec/kettle/family/discovery_spec.rb:3401410981": [
+    [31, 33, 10, "ThreadSafety/NewThread: Avoid starting new threads.", 3411682361]
+  ],
+  "spec/kettle/family/release_state_check_spec.rb:4100721992": [
+    [304, 14, 10, "ThreadSafety/NewThread: Avoid starting new threads.", 3411682361]
+  ]
+}

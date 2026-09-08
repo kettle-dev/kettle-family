@@ -1578,7 +1578,7 @@ module Kettle
               emit_template_event_line(member, ">", "branch worktrees #{entries.length} branches, #{template_jobs(entries)} jobs")
               progress = start_template_progress(
                 entries.map { |entry| template_branch_progress_member(entry) },
-                heading: "templating #{entries.length} branch worktree#{entries.length == 1 ? "" : "s"} with #{template_jobs(entries)} job#{template_jobs(entries) == 1 ? "" : "s"}:"
+                heading: "templating #{entries.length} branch worktree#{"s" unless entries.length == 1} with #{template_jobs(entries)} job#{"s" unless template_jobs(entries) == 1}:"
               )
               branch_results = template_branch_worktree_entries_results(entries, progress: progress)
               emit_template_progress_summary(branch_results, progress: progress)
@@ -4705,12 +4705,14 @@ module Kettle
           template_event_summary_label(event)
         end
         mark = template_event_status_mark(event)
-        progress&.update(
-          member,
-          status: status,
-          mark: mark,
-          **template_progress_identity_options(member, progress_key, progress_label)
-        ) if status && !status.empty?
+        if status && !status.empty?
+          progress&.update(
+            member,
+            status: status,
+            mark: mark,
+            **template_progress_identity_options(member, progress_key, progress_label)
+          )
+        end
       end
 
       def template_progress_identity_options(member, progress_key, progress_label)

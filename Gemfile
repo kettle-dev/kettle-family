@@ -8,6 +8,7 @@
 
 source "https://gem.coop"
 
+git_source(:github) { |repo_name| "git@github.com:#{repo_name}.git" }
 git_source(:codeberg) { |repo_name| "https://codeberg.org/#{repo_name}" }
 git_source(:gitlab) { |repo_name| "https://gitlab.com/#{repo_name}" }
 
@@ -19,7 +20,7 @@ git_source(:gitlab) { |repo_name| "https://gitlab.com/#{repo_name}" }
 gemspec
 
 # Local workspace dependency wiring for *_local.gemfile overrides
-gem "nomono", "~> 1.1", ">= 1.1.4", require: false # ruby >= 3.2.0
+gem "nomono", "~> 1.1", ">= 1.1.5", require: false # ruby >= 3.2.0
 
 # Direct sibling dependencies (env-switched via KETTLE_DEV_DEV)
 direct_sibling_gems = %w[
@@ -27,6 +28,8 @@ direct_sibling_gems = %w[
   kettle-dev
   kettle-gha-pins
   kettle-test
+  kettle-ndjson
+  kettle-rb
 ]
 direct_sibling_dev = ENV.fetch("KETTLE_DEV_DEV", "")
 direct_sibling_local =
