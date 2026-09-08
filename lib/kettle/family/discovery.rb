@@ -5,6 +5,11 @@ require "open3"
 module Kettle
   module Family
     class Discovery
+      # Dir.chdir changes process-global state. Legacy gemspecs require this
+      # evaluation context, so serialize only that boundary; discovery callers
+      # may still resolve separate members and worktrees concurrently.
+      GEMSPEC_EVALUATION_MUTEX = Mutex.new
+
       def initialize(config:, release_dependency_member_names: nil)
         @config = config
         @release_dependency_member_names = release_dependency_member_names&.map(&:to_s)
@@ -174,9 +179,11 @@ module Kettle
         # evaluates gemspecs relative to the current process directory.
         # Gem::Specification.load caches by path, which is wrong for branch-stack
         # workflows that checkout different contents at the same path.
-        # rubocop:disable ThreadSafety/DirChdir
-        spec = Dir.chdir(File.dirname(path)) { eval_gemspec(path) }
-        # rubocop:enable ThreadSafety/DirChdir
+        spec = GEMSPEC_EVALUATION_MUTEX.synchronize do
+          # rubocop:disable ThreadSafety/DirChdir
+          Dir.chdir(File.dirname(path)) { eval_gemspec(path) }
+          # rubocop:enable ThreadSafety/DirChdir
+        end
         raise Error, "could not load gemspec #{path}" unless spec
 
         spec

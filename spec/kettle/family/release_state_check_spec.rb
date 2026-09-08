@@ -246,7 +246,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
   it "checks each configured release target branch independently" do
     member = member("alpha")
     config = release_state_config(release_target_branches: %w[r1 r2])
-    check = described_class.new(config: config, members: [member])
+    check = described_class.new(config: config, members: [member], jobs: 1)
     branch_members = [member]
     allow(check).to receive_messages(git_root: @tmpdir, discover_branch_members: branch_members)
     allow(check).to receive(:with_branch_worktree).and_yield(@tmpdir)
@@ -263,6 +263,51 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(results.map { |result| result.state.fetch("version") }).to eq(%w[1.0.1 1.0.2])
     expect(results.map { |result| result.state.fetch("latest_released") }).to eq(%w[1.0.0 1.0.1])
     expect(results.map { |result| result.state.fetch("ahead") }).to eq([2, 3])
+  end
+
+  it "checks independent release target worktrees concurrently within the requested job budget" do
+    member = member("alpha")
+    config = release_state_config(release_target_branches: %w[r1 r2])
+    check = described_class.new(config: config, members: [member], jobs: 2)
+    started = Queue.new
+    release = Queue.new
+    active = 0
+    maximum_active = 0
+    mutex = Mutex.new
+    result_for = lambda do |branch|
+      Kettle::Family::ReleaseStateResult.new(
+        member_name: "alpha",
+        command: [],
+        workdir: @tmpdir,
+        status: 0,
+        success: true,
+        stdout: "",
+        stderr: "",
+        elapsed_seconds: 0.0,
+        state: {},
+        branch: branch
+      )
+    end
+
+    allow(check).to receive(:git_root).and_return(@tmpdir)
+    allow(check).to receive(:branch_results_for) do |branch:, **|
+      mutex.synchronize do
+        active += 1
+        maximum_active = [maximum_active, active].max
+      end
+      started << branch
+      release.pop
+      mutex.synchronize { active -= 1 }
+      [result_for.call(branch)]
+    end
+
+    worker = Thread.new { check.results }
+    2.times { started.pop }
+    2.times { release << true }
+    results = worker.value
+
+    expect(maximum_active).to eq(2)
+    expect(results.map(&:branch)).to eq(%w[r1 r2])
   end
 
   it "selects the latest release tag from the branch changelog major line" do

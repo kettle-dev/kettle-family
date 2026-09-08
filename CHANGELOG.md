@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Render branch-worktree template events in distinct live progress rows.
 
+- Run release-state branch targets concurrently and render distinct branch progress rows.
+
 ### Security
 
 ## [1.2.95] - 2026-09-07

@@ -56,20 +56,23 @@ module Kettle
       def branch_results(event_handler: nil)
         root = git_root
         selected_names = members.map(&:name)
-        release_target_branches.each_with_object([]) do |branch, memo|
-          with_branch_worktree(root: root, branch: branch) do |worktree_root|
-            branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
-            if shared_changelog?
-              results = parallel_map(branch_members) { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) }
-              memo.concat(normalize_shared_version_bump(results))
-              next
-            end
+        parallel_map(release_target_branches) do |branch|
+          branch_results_for(branch: branch, root: root, selected_names: selected_names, event_handler: event_handler)
+        end.flatten
+      end
 
-            memo.concat(parallel_map(branch_members) { |member| check_member(member, branch: branch, event_handler: event_handler) })
+      def branch_results_for(branch:, root:, selected_names:, event_handler:)
+        with_branch_worktree(root: root, branch: branch) do |worktree_root|
+          branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
+          if shared_changelog?
+            results = parallel_map(branch_members) { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) }
+            next normalize_shared_version_bump(results)
           end
-        rescue Error => error
-          memo << error_result(branch: branch, error: error)
+
+          parallel_map(branch_members) { |member| check_member(member, branch: branch, event_handler: event_handler) }
         end
+      rescue Error => error
+        [error_result(branch: branch, error: error)]
       end
 
       def check_member(member, branch: nil, event_handler: nil)

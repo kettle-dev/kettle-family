@@ -26,4 +26,18 @@ RSpec.describe Kettle::Family::ReleaseStateEventTape do
       expect(stream.string.lines.map { |line| JSON.parse(line) }).to eq(alpha_events + beta_events)
     end
   end
+
+  it "writes each branch target to a separate tape while preserving member and branch fields" do
+    Dir.mktmpdir("kettle-family-state-events") do |root|
+      tape = described_class.new(root: root)
+
+      tape.call("member" => "rubocop-lts", "branch" => "main", "action" => "member_start", "status" => "running")
+      tape.call("member" => "rubocop-lts", "branch" => "r3_2-even-v24", "action" => "member_start", "status" => "running")
+
+      main_event = JSON.parse(File.read(File.join(tape.directory, "rubocop-lts_main.ndjson")))
+      legacy_event = JSON.parse(File.read(File.join(tape.directory, "rubocop-lts_r3_2-even-v24.ndjson")))
+      expect(main_event).to include("member" => "rubocop-lts", "branch" => "main", "sequence" => 1)
+      expect(legacy_event).to include("member" => "rubocop-lts", "branch" => "r3_2-even-v24", "sequence" => 1)
+    end
+  end
 end

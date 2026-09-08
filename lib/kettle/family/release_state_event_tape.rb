@@ -27,12 +27,12 @@ module Kettle
           "timestamp" => @wall_clock.call,
           "elapsed_seconds" => @clock.call - @started_at
         )
-        member = payload.fetch("member", "family").to_s
+        target = target_key(payload)
         @mutex.synchronize do
-          @sequence_by_member[member] += 1
-          payload["sequence"] = @sequence_by_member.fetch(member)
+          @sequence_by_member[target] += 1
+          payload["sequence"] = @sequence_by_member.fetch(target)
           line = JSON.generate(payload)
-          File.open(path_for(member), "a") { |file| file.puts(line) }
+          File.open(path_for(target), "a") { |file| file.puts(line) }
           @stream&.puts(line)
           @stream.flush if @stream&.respond_to?(:flush)
         end
@@ -43,8 +43,14 @@ module Kettle
 
       private
 
-      def path_for(member)
-        filename = member.gsub(/[^A-Za-z0-9_.-]+/, "_")
+      def target_key(payload)
+        member = payload.fetch("member", "family").to_s
+        branch = payload["branch"].to_s
+        branch.empty? ? member : "#{member}@#{branch}"
+      end
+
+      def path_for(target)
+        filename = target.gsub(/[^A-Za-z0-9_.-]+/, "_")
         File.join(@directory, "#{filename}.ndjson")
       end
     end

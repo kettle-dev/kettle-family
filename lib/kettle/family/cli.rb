@@ -709,7 +709,7 @@ module Kettle
         display_selected_members = display_members_for(command: command, config: config, members: selected, selected_members: selected)
         print_execution_intent(command: command, config: config, members: display_selected_members, options: options, start_at: start_at)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        state_progress = release_state_progress(command: command, members: result_members, options: options)
+        state_progress = release_state_progress(command: command, config: config, members: result_members, options: options)
         state_progress&.start
         state_event_handler = release_state_event_handler(
           event_tape: state_event_tape,
@@ -901,19 +901,34 @@ module Kettle
         stdout
       end
 
-      def release_state_progress(command:, members:, options:)
+      def release_state_progress(command:, config:, members:, options:)
         return nil unless command == "release-state"
         return nil if options[:events] || options[:json]
         return nil unless stdout.respond_to?(:tty?) && stdout.tty?
 
+        targets = release_state_progress_targets(config: config, members: members)
+
         WorkflowProgress.new(
           io: stdout,
           label: "release state",
-          total: members.length,
-          jobs: Concurrency.wave_jobs(requested: options[:jobs], item_count: members.length),
-          members: members,
-          heading: "release state #{members.length} member#{"s" unless members.length == 1}:"
+          total: targets.length,
+          jobs: Concurrency.wave_jobs(requested: options[:jobs], item_count: targets.length),
+          members: targets.map { |target| target.fetch(:progress_member) },
+          heading: "release state #{targets.length} target#{"s" unless targets.length == 1}:"
         )
+      end
+
+      def release_state_progress_targets(config:, members:)
+        members.flat_map do |member|
+          member_config = member_release_config(member: member, config: config)
+          branches = member_config&.release_target_branches.to_a
+          next [{member: member, key: member.name, label: member.name, progress_member: member}] if branches.empty?
+
+          branches.map do |branch|
+            label = "#{member.name}@#{branch}"
+            {member: member, key: label, label: label, progress_member: member.dup.tap { |copy| copy.name = label }}
+          end
+        end
       end
 
       def release_state_event_handler(event_tape:, progress:, members:)
@@ -927,18 +942,21 @@ module Kettle
           member = members_by_name[event["member"]]
           next unless member
 
+          branch = event["branch"].to_s
+          progress_key = branch.empty? ? member.name : "#{member.name}@#{branch}"
+
           action = event["action"].to_s
           status = event["status"].to_s
           case action
           when "member_start"
-            progress.start_member(member, total: 5, status: "release_state")
+            progress.start_member(member, total: 5, status: "release_state", key: progress_key, label: progress_key)
           when "member_complete"
-            progress.finish_member(member, success: status == "ok", status: status)
+            progress.finish_member(member, success: status == "ok", status: status, key: progress_key, label: progress_key)
           when "changelog_command", "computed_booleans", "git_state", "github_release", "transfer_changelog"
             if status == "running"
-              progress.update(member, status: action)
+              progress.update(member, status: action, key: progress_key, label: progress_key)
             elsif status == "ok" || status == "failed"
-              progress.advance(member, status: action, success: status == "ok")
+              progress.advance(member, status: action, success: status == "ok", key: progress_key, label: progress_key)
             end
           end
         end

@@ -1717,9 +1717,9 @@ RSpec.describe Kettle::Family::CLI do
     status = described_class.call(["state", "--root", @tmpdir], out: out, err: StringIO.new)
 
     expect(status).to eq(0)
-    expect(out.string).to include("release state 1 member:")
+    expect(out.string).to include("release state 1 target:")
     expect(out.string).to include("alpha")
-    expect(out.string.index("release state 1 member:")).to be < out.string.index("release state:\n")
+    expect(out.string.index("release state 1 target:")).to be < out.string.index("release state:\n")
     expect(out.string).to include("\e[1G\e[s\nkettle-family:")
   end
 

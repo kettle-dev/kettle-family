@@ -22,6 +22,17 @@ RSpec.describe Kettle::Family::Discovery do
     expect(ordered.map(&:name)).to eq(%w[alpha beta])
   end
 
+  it "serializes legacy gemspec evaluation while concurrent discovery continues" do
+    root = write_gem("alpha")
+    gemspec = File.join(root, "alpha.gemspec")
+    File.write(gemspec, "sleep 0.05\n#{File.read(gemspec)}")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    discoveries = 2.times.map { Thread.new { described_class.new(config: config).members.map(&:name) } }
+
+    expect(discoveries.map(&:value)).to eq([%w[alpha], %w[alpha]])
+  end
+
   it "ignores development dependencies for family ordering" do
     write_gem("alpha")
     write_gem("beta", development_dependencies: ["alpha"])
