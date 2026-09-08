@@ -58,6 +58,61 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command).to end_with("--skip-commit")
   end
 
+  it "commits final sibling Gemfile.lock normalization after the template commit" do
+    write_template_config(
+      command: ["sh", "-lc", "printf 'local\\n' > Gemfile.lock; git add Gemfile.lock; git commit --quiet -m template"],
+      normalize_lockfiles: true
+    )
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = ["sh", "-lc", "printf 'released\\n' > Gemfile.lock"]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+
+    results = described_class.new(
+      command: "template",
+      config: Kettle::Family::Config.load(root: @tmpdir),
+      members: [member],
+      execute: true
+    ).results
+
+    expect(results).to all(be_ok)
+    expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles commit_normalized_lockfiles])
+    expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("released\n")
+    expect(`git -C #{Shellwords.escape(member.root)} status --short`).to be_empty
+    expect(`git -C #{Shellwords.escape(member.root)} show --format= --name-only HEAD`).to eq("Gemfile.lock\n")
+    expect(`git -C #{Shellwords.escape(member.root)} log -1 --format=%s`).to eq("🔒️ Normalize lockfiles after templating\n")
+  end
+
+  it "commits final lockfile normalization inside a template branch worktree" do
+    write_template_config(
+      command: ["sh", "-lc", "printf 'local\\n' > Gemfile.lock; git add Gemfile.lock; git commit --quiet -m template"],
+      normalize_lockfiles: true
+    )
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = ["sh", "-lc", "printf 'released\\n' > Gemfile.lock"]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: [])
+    workflow = described_class.new(
+      command: "template",
+      config: Kettle::Family::Config.load(root: @tmpdir),
+      members: [member],
+      execute: true
+    )
+
+    results = workflow.send(
+      :template_branch_worktree_entry_results,
+      {branch: "r1", member: member, worktree_root: member.root}
+    )
+
+    expect(results).to all(be_ok)
+    expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles commit_normalized_lockfiles])
+    expect(results).to all(have_attributes(branch: "r1"))
+    expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("released\n")
+    expect(`git -C #{Shellwords.escape(member.root)} status --short`).to be_empty
+  end
+
   it "defers kettle-jem bootstrap commits during executed monorepo templating" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -1092,7 +1147,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
     expect(results).to all(be_ok)
-    expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles])
+    expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles commit_normalized_lockfiles])
     expect(File.read(File.join(member.root, "Gemfile.lock"))).to include("remote: template-fixture")
   end
 

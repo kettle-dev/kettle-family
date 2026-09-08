@@ -1451,6 +1451,7 @@ module Kettle
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles", commit_changes: commit_changes)
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label)
           commit_template_changes(member: member, runner: runner, memo: memo) if commit_changes
+          commit_template_normalized_gemfile_lock(member: member, runner: runner, memo: memo, commit_changes: commit_changes)
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label) if memo.last&.phase == "commit_template"
         ensure
           template_result = memo.find { |result| result.phase == "template" } || memo.last
@@ -5319,6 +5320,23 @@ module Kettle
         end
       end
 
+      # Kettle Jem commits its own changes for sibling repositories. The final
+      # lockfile normalization therefore happens after that commit and needs a
+      # separate, deliberately narrow cleanup commit. Monorepos defer the
+      # template commit, which already includes the normalized lockfile.
+      def commit_template_normalized_gemfile_lock(member:, runner:, memo:, commit_changes:)
+        return unless execute && commit_changes && memo.all?
+        return if deferred_monorepo_template_commit?(member)
+
+        commit_normalized_lockfiles(
+          branch_members: [member],
+          runner: runner,
+          memo: memo,
+          reason: "template",
+          paths: ["Gemfile.lock"]
+        )
+      end
+
       def template_commit_message(member)
         "🎨 Template #{member.name} by kettle-family"
       end
@@ -5588,9 +5606,13 @@ module Kettle
         text.include?(File::SEPARATOR)
       end
 
-      def commit_normalized_lockfiles(branch_members:, runner:, memo:, reason: command, force: false)
+      def commit_normalized_lockfiles(branch_members:, runner:, memo:, reason: command, force: false, paths: nil)
         return unless commit
         return unless force || commit_normalized_lockfiles?(reason)
+
+        pathspecs = Array(paths).map { |path| Shellwords.escape(path) }
+        pathspecs = ["Gemfile.lock", "'*.lock'", "'**/*.lock'"] if pathspecs.empty?
+        pathspec = pathspecs.join(" ")
 
         branch_members.each do |member|
           result = runner.call(
@@ -5599,7 +5621,7 @@ module Kettle
             command: [
               "sh",
               "-lc",
-              "files=$(git ls-files --modified --others --exclude-standard -- Gemfile.lock '*.lock' '**/*.lock'); " \
+              "files=$(git ls-files --modified --others --exclude-standard -- #{pathspec}); " \
                 "if [ -n \"$files\" ]; then printf '%s\\n' \"$files\" | xargs git add -- && git commit -m " \
                 "#{Shellwords.escape(normalized_lockfiles_commit_message(reason))}; fi"
             ]

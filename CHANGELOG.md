@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Commit the final normalized Gemfile.lock after sibling and branch-worktree template runs.
+
 ### Security
 
 ## [1.2.97] - 2026-09-08
