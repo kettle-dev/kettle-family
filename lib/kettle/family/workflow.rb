@@ -1944,11 +1944,15 @@ module Kettle
       end
 
       def release_preflight_error_result(phase, message)
+        # A preflight failure blocks the selected release invocation. Attribute
+        # it to that invocation's first member so generated resume commands do
+        # not target the synthetic family name or an unselected sibling.
+        member = members.first || family_member
         CommandResult.new(
-          member_name: family_member.name,
+          member_name: member.name,
           phase: phase,
           command: ["internal", phase],
-          workdir: config.root,
+          workdir: member.root,
           status: 1,
           success: false,
           stdout: "",

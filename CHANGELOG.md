@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Attribute release-preflight failures to the selected member so retry hints do not target an unselected family sibling.
+
 ### Security
 
 ## [1.2.96] - 2026-09-08

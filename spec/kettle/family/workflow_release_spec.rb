@@ -1672,16 +1672,28 @@ RSpec.describe Kettle::Family::Workflow do
       }
     )
     config = Kettle::Family::Config.load(root: @tmpdir)
-    member = ready_member("alpha")
+    unselected_member = ready_member("kettle-dev")
+    member = ready_member("kettle-family")
     provider = Kettle::Family::Secrets::OnePassword.new(config.release_secrets)
     progress = StringIO.new
-    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true, secrets_provider: provider, progress_io: progress)
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      family_members: [unselected_member, member],
+      execute: true,
+      publish: true,
+      secrets_provider: provider,
+      progress_io: progress
+    )
     allow(provider).to receive(:authorize!).and_raise(Kettle::Family::Error, "not signed in")
 
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(["secrets_provider_authorization"])
     expect(results.first).not_to be_ok
+    expect(results.first.member_name).to eq("kettle-family")
+    expect(results.first.workdir).to eq(member.root)
     expect(results.first.stderr).to eq("not signed in")
     expect(progress.string).to include("[preflight]   (1/3)")
     expect(progress.string).to include("F secrets provider authorization")
