@@ -104,6 +104,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("tty-screen", "~> 0.8")                                  # ruby >= 2.0.0
   spec.add_dependency("unicode-display_width", "~> 2.6")                        # ruby >= 2.3.0
+  spec.add_dependency("version_gem", "~> 1.1", ">= 1.1.15")                     # ruby >= 2.2.0
 
   # NOTE: It is preferable to list development dependencies in the gemspec due to increased
   #       visibility and discoverability.

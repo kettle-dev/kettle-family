@@ -26,3 +26,25 @@ These helpers are available in specs after `spec/spec_helper.rb` loads:
 Prefer these helpers over ad hoc ENV mutation, direct Timecop setup, or direct
 stdout/stderr plumbing. They keep specs isolated across parallel workers and
 make local runs match CI behavior.
+
+## Worktree Integration Scenarios
+
+`spec/integration/mise_worktree_execution_spec.rb` exercises the real Git and
+Mise subprocess boundary for every checkout shape that can execute Family
+commands:
+
+- ordinary sibling repositories;
+- monorepo template member worktrees;
+- monorepo member-scoped test worktrees;
+- monorepo release worktrees; and
+- sibling-repository branch-stack template worktrees.
+
+The scenarios use an isolated Mise state directory and `MISE_PARANOID=1`.
+Paranoid mode is required because normal Mise trust may be shared between a
+primary checkout and linked worktrees, which would let a missing Family trust
+bootstrap pass accidentally. Local and release runs use the real Mise binary.
+Environments without Mise use a process-level fixture that enforces the same
+path-specific trust boundary, so CI still exercises every Family orchestration
+path instead of skipping this suite. The release scenario only creates and
+probes a disposable worktree; it never runs publishing, tagging, registry, or
+network steps.

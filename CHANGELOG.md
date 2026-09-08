@@ -22,14 +22,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- [kc] kettle-jem/prepare: updated 9 project files:
-  - dependencies (9)
-
-- [kc] kettle-jem/template: updated 7 project files:
-  - code and tests (2)
-  - dependencies (3)
-  - other (2)
-
 ### Deprecated
 
 ### Removed
@@ -41,6 +33,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Run release-state branch targets concurrently and render distinct branch progress rows.
 
 - Preserve configured release waves for ordinary sibling members when another member has release-target branches.
+
+- Restore the version_gem runtime dependency and preserve worktree integration documentation during template updates.
 
 ### Security
 
