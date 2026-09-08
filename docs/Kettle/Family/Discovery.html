@@ -113,6 +113,34 @@
   
 </p>
 
+  
+    <h2>
+      Constant Summary
+      <small><a href="#" class="constants_summary_toggle">collapse</a></small>
+    </h2>
+
+    <dl class="constants">
+      
+        <dt id="GEMSPEC_EVALUATION_MUTEX-constant" class="">GEMSPEC_EVALUATION_MUTEX =
+          <div class="docstring">
+  <div class="discussion">
+    <p>Dir.chdir changes process-global state. Legacy gemspecs require this<br />
+evaluation context, so serialize only that boundary; discovery callers<br />
+may still resolve separate members and worktrees concurrently.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
+        </dt>
+        <dd><pre class="code"><span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span></pre></dd>
+      
+    </dl>
+  
+
 
 
 
@@ -240,14 +268,14 @@
       <pre class="lines">
 
 
-8
-9
-10
-11
-12</pre>
+13
+14
+15
+16
+17</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/discovery.rb', line 8</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/discovery.rb', line 13</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>config:</span><span class='comma'>,</span> <span class='label'>release_dependency_member_names:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
@@ -291,12 +319,12 @@
       <pre class="lines">
 
 
-14
-15
-16</pre>
+19
+20
+21</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/discovery.rb', line 14</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/discovery.rb', line 19</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_warnings'>warnings</span>
   <span class='ivar'>@warnings</span>
@@ -328,12 +356,12 @@
       <pre class="lines">
 
 
-16
-17
-18</pre>
+21
+22
+23</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/discovery.rb', line 16</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/discovery.rb', line 21</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@members</span> <span class='op'>||=</span> <span class='id identifier rubyid_build_members'>build_members</span>

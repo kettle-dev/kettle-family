@@ -28,6 +28,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.96] - 2026-09-08
+
+- TAG: [v1.2.96][1.2.96t]
+- COVERAGE: 93.49% -- 6235/6669 lines in 35 files
+- BRANCH COVERAGE: 77.99% -- 2523/3235 branches in 35 files
+- 32.75% documented
+
+### Fixed
+
 - Render branch-worktree template events in distinct live progress rows.
 
 - Run release-state branch targets concurrently and render distinct branch progress rows.
@@ -35,8 +46,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Preserve configured release waves for ordinary sibling members when another member has release-target branches.
 
 - Restore the version_gem runtime dependency and preserve worktree integration documentation during template updates.
-
-### Security
 
 ## [1.2.95] - 2026-09-07
 
@@ -2659,7 +2668,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.95...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.96...HEAD
+[1.2.96]: https://github.com/kettle-dev/kettle-family/compare/v1.2.95...v1.2.96
+[1.2.96t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.96
 [1.2.95]: https://github.com/kettle-dev/kettle-family/compare/v1.2.94...v1.2.95
 [1.2.95t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.95
 [1.2.94]: https://github.com/kettle-dev/kettle-family/compare/v1.2.93...v1.2.94
