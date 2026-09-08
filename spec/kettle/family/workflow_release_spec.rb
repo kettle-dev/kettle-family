@@ -65,6 +65,32 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
+  it "keeps ordinary sibling releases in the normal scheduler when one member has release targets" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    target = ready_member("alpha")
+    beta = ready_member("beta")
+    gamma = ready_member("gamma")
+    workflow = described_class.new(command: "release", config: config, members: [target, beta, gamma], execute: true)
+    branch_config = instance_double(Kettle::Family::Config, release_target_branches: ["legacy"])
+    current_result = Kettle::Family::CommandResult.new("beta", "release_publish", [], beta.root, 0, true, "", "", 0.0, false, nil)
+    target_result = Kettle::Family::CommandResult.new("alpha", "release_publish", [], target.root, 0, true, "", "", 0.0, false, nil)
+    target_workflow = instance_double(described_class, results: [target_result])
+    scheduled_batches = []
+
+    allow(workflow).to receive(:member_local_release_config) do |member|
+      branch_config if member == target
+    end
+    allow(workflow).to receive(:current_branch_results) do |members|
+      scheduled_batches << members
+      [current_result]
+    end
+    allow(workflow).to receive(:member_local_workflow).with(member: target, member_config: branch_config).and_return(target_workflow)
+
+    expect(workflow.send(:release_member_local_branch_target_results)).to all(be_ok)
+    expect(scheduled_batches).to eq([[beta, gamma]])
+  end
+
   it "lets a standalone default-mode gem create its own GitHub Release" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

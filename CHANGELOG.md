@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Run release-state branch targets concurrently and render distinct branch progress rows.
 
+- Preserve configured release waves for ordinary sibling members when another member has release-target branches.
+
 ### Security
 
 ## [1.2.95] - 2026-09-07

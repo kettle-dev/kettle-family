@@ -2034,18 +2034,21 @@ module Kettle
       end
 
       def release_member_local_branch_target_results
-        runner = command_runner
+        target_members, current_branch_members = members.partition do |member|
+          member_local_release_config(member)
+        end
         results = []
-        append_family_changelog_result(runner: runner, memo: results) unless skip_changelog
+
+        # A member with release targets must not force unrelated sibling
+        # repositories through one-at-a-time release workflows. Run those
+        # members through the normal release scheduler first so configured
+        # waves and their worker budget remain effective.
+        results.concat(current_branch_results(current_branch_members)) unless current_branch_members.empty?
         return results unless results.all?(&:ok?)
 
-        members.each_with_object(results) do |member, memo|
+        target_members.each_with_object(results) do |member, memo|
           member_config = member_local_release_config(member)
-          if member_config
-            memo.concat(member_local_workflow(member: member, member_config: member_config).results)
-          else
-            memo.concat(release_member_results([member], include_family_changelog: false))
-          end
+          memo.concat(member_local_workflow(member: member, member_config: member_config).results)
           break memo unless memo.last&.ok?
         end
       end
