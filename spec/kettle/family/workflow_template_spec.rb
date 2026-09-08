@@ -589,7 +589,7 @@ RSpec.describe Kettle::Family::Workflow do
     mutex = Mutex.new
     result = Kettle::Family::CommandResult.new("alpha", "template", [], alpha.root, 0, true, "", "", 0.0, false, nil)
 
-    allow(workflow).to receive(:template_branch_worktree_entry_results) do |_entry|
+    allow(workflow).to receive(:template_branch_worktree_entry_results) do |_entry, **|
       mutex.synchronize do
         active += 1
         max_active = [max_active, active].max
@@ -625,12 +625,16 @@ RSpec.describe Kettle::Family::Workflow do
 
     allow(workflow).to receive(:git_upstream_for).and_return(nil)
     allow(workflow).to receive(:template_member_bootstrap_results).with([alpha, beta]).and_return([alpha_bootstrap, beta_bootstrap])
-    allow(workflow).to receive(:template_results_for_member) do |member, wave_jobs:|
+    branch_progress = instance_double(Kettle::Family::WorkflowProgress)
+    allow(workflow).to receive(:template_results_for_member) do |member, progress:, progress_key:, progress_label:, wave_jobs:|
       expect(wave_jobs).to eq(2)
+      expect(progress).to be(branch_progress)
+      expect(progress_key).to eq("#{member.name}@#{member == alpha ? "r1" : "r2"}")
+      expect(progress_label).to eq(progress_key)
       (member == alpha) ? [alpha_template] : [beta_template]
     end
 
-    results = workflow.send(:template_branch_worktree_entries_results, entries)
+    results = workflow.send(:template_branch_worktree_entries_results, entries, progress: branch_progress)
 
     expect(workflow).to have_received(:template_member_bootstrap_results).with([alpha, beta]).once
     expect(results).to eq([alpha_bootstrap, beta_bootstrap, alpha_template, beta_template])

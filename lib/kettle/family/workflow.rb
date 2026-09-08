@@ -1411,13 +1411,20 @@ module Kettle
         )
       end
 
-      def template_results_for_member(member, progress: nil, commit_changes: true, wave_jobs: 1)
-        progress&.start_member(member, total: template_phase_total(member), status: template_initial_status(member))
+      def template_results_for_member(member, progress: nil, progress_key: nil, progress_label: nil, commit_changes: true, wave_jobs: 1)
+        progress_key ||= member.name
+        progress_label ||= member.name
+        progress&.start_member(
+          member,
+          total: template_phase_total(member),
+          status: template_initial_status(member),
+          **template_progress_identity_options(member, progress_key, progress_label)
+        )
         runner = CommandRunner.new(execute: execute, accept: accept)
         [].tap do |memo|
           if config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles", commit_changes: commit_changes)
-            emit_member_result_progress(member, memo.last, progress: progress)
+            emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label)
             return memo unless memo.last.ok?
           end
 
@@ -1428,7 +1435,7 @@ module Kettle
             commit_changes: commit_changes,
             wave_jobs: wave_jobs
           )
-          emit_member_result_progress(member, memo.last, progress: progress) if memo.last&.phase == "prepare_template_dependencies"
+          emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label) if memo.last&.phase == "prepare_template_dependencies"
           return memo if prepared == false
 
           memo << runner.call(
@@ -1436,22 +1443,23 @@ module Kettle
             phase: command,
             command: workflow_command(member),
             env: template_command_env(wave_jobs: wave_jobs),
-            stdout_line_handler: template_event_line_handler(member, progress: progress)
+            stdout_line_handler: template_event_line_handler(member, progress: progress, progress_key: progress_key, progress_label: progress_label)
           )
-          emit_member_result_progress(member, memo.last, progress: progress)
+          emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label)
           return memo unless memo.last.ok?
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles", commit_changes: commit_changes)
-          emit_member_result_progress(member, memo.last, progress: progress)
+          emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label)
           commit_template_changes(member: member, runner: runner, memo: memo) if commit_changes
-          emit_member_result_progress(member, memo.last, progress: progress) if memo.last&.phase == "commit_template"
+          emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label) if memo.last&.phase == "commit_template"
         ensure
           template_result = memo.find { |result| result.phase == "template" } || memo.last
           if template_result
             progress&.finish_member(
               member,
               success: memo.all?(&:ok?),
-              status: template_member_finish_status(template_result)
+              status: template_member_finish_status(template_result),
+              **template_progress_identity_options(member, progress_key, progress_label)
             )
           end
         end
@@ -1568,7 +1576,13 @@ module Kettle
 
             if outcomes.all?(&:ok?)
               emit_template_event_line(member, ">", "branch worktrees #{entries.length} branches, #{template_jobs(entries)} jobs")
-              outcomes.concat(template_branch_worktree_entries_results(entries))
+              progress = start_template_progress(
+                entries.map { |entry| template_branch_progress_member(entry) },
+                heading: "templating #{entries.length} branch worktree#{entries.length == 1 ? "" : "s"} with #{template_jobs(entries)} job#{template_jobs(entries) == 1 ? "" : "s"}:"
+              )
+              branch_results = template_branch_worktree_entries_results(entries, progress: progress)
+              emit_template_progress_summary(branch_results, progress: progress)
+              outcomes.concat(branch_results)
             end
           end
         end
@@ -1658,7 +1672,7 @@ module Kettle
         []
       end
 
-      def template_branch_worktree_entries_results(entries)
+      def template_branch_worktree_entries_results(entries, progress: nil)
         results = template_branch_worktree_sync_results(entries)
         return results unless results.all?(&:ok?)
 
@@ -1681,7 +1695,7 @@ module Kettle
             loop do
               break if mutex.synchronize { stop }
               index, entry = queue.pop(true)
-              branch_results = template_branch_worktree_entry_results(entry, wave_jobs: wave_jobs)
+              branch_results = template_branch_worktree_entry_results(entry, progress: progress, wave_jobs: wave_jobs)
               mutex.synchronize do
                 ordered_results[index] = branch_results
                 stop = true unless branch_results.all?(&:ok?)
@@ -1694,16 +1708,34 @@ module Kettle
         results + ordered_results.compact.flatten
       end
 
-      def template_branch_worktree_entry_results(entry, wave_jobs: 1)
+      def template_branch_worktree_entry_results(entry, progress: nil, wave_jobs: 1)
         member = entry.fetch(:member)
         branch = entry.fetch(:branch)
         # Bootstrap and upstream synchronization are deliberately performed
         # for the complete branch set before workers start. The member body is
         # the same method normal template waves invoke.
-        results = template_results_for_member(member, wave_jobs: wave_jobs)
+        results = template_results_for_member(
+          member,
+          progress: progress,
+          progress_key: template_branch_progress_key(entry),
+          progress_label: template_branch_progress_label(entry),
+          wave_jobs: wave_jobs
+        )
         tag_branch_results(results, branch)
         emit_template_event_line(member, results.all?(&:ok?) ? "." : "F", "branch #{branch}")
         results
+      end
+
+      def template_branch_progress_member(entry)
+        entry.fetch(:member).dup.tap { |member| member.name = template_branch_progress_label(entry) }
+      end
+
+      def template_branch_progress_key(entry)
+        template_branch_progress_label(entry)
+      end
+
+      def template_branch_progress_label(entry)
+        "#{entry.fetch(:member).name}@#{entry.fetch(:branch)}"
       end
 
       def template_branch_worktree_sync_results(entries)
@@ -4362,13 +4394,14 @@ module Kettle
         append_command_args(command_text, args)
       end
 
-      def start_template_progress(workflow_members)
+      def start_template_progress(workflow_members, heading: nil)
         progress = WorkflowProgress.new(
           io: progress_io,
           label: "templating",
           total: workflow_members.length,
           jobs: template_jobs(workflow_members),
-          members: workflow_members
+          members: workflow_members,
+          heading: heading
         )
         progress.start
         progress
@@ -4472,10 +4505,16 @@ module Kettle
         kettle_jem_template_command?(command_text)
       end
 
-      def emit_member_result_progress(member, result, progress:)
+      def emit_member_result_progress(member, result, progress:, progress_key: member.name, progress_label: member.name)
         return unless result
 
-        progress&.advance(member, status: result.phase, success: result.ok?, mark: command_result_progress_mark(result))
+        progress&.advance(
+          member,
+          status: result.phase,
+          success: result.ok?,
+          mark: command_result_progress_mark(result),
+          **template_progress_identity_options(member, progress_key, progress_label)
+        )
       end
 
       def command_result_progress_mark(result)
@@ -4522,7 +4561,7 @@ module Kettle
         progress.summary("release summary: #{release_results.count(&:ok?)}/#{release_results.length} members ok")
       end
 
-      def template_event_line_handler(member, progress: nil)
+      def template_event_line_handler(member, progress: nil, progress_key: member.name, progress_label: member.name)
         lambda do |line|
           event = parse_template_event(line)
           next false unless event
@@ -4531,7 +4570,7 @@ module Kettle
             if verbose || debug
               emit_template_event_progress(member, event)
             elsif progress&.tty?
-              emit_template_event_status(member, event, progress: progress)
+              emit_template_event_status(member, event, progress: progress, progress_key: progress_key, progress_label: progress_label)
             end
           end
           true
@@ -4649,7 +4688,7 @@ module Kettle
         end
       end
 
-      def emit_template_event_status(member, event, progress:)
+      def emit_template_event_status(member, event, progress:, progress_key: member.name, progress_label: member.name)
         status = case event["type"]
         when "phase_start", "phase_finish"
           event["phase"].to_s
@@ -4663,7 +4702,18 @@ module Kettle
           template_event_summary_label(event)
         end
         mark = template_event_status_mark(event)
-        progress&.update(member, status: status, mark: mark) if status && !status.empty?
+        progress&.update(
+          member,
+          status: status,
+          mark: mark,
+          **template_progress_identity_options(member, progress_key, progress_label)
+        ) if status && !status.empty?
+      end
+
+      def template_progress_identity_options(member, progress_key, progress_label)
+        return {} if progress_key == member.name && progress_label == member.name
+
+        {key: progress_key, label: progress_label}
       end
 
       def emit_release_event_progress(member, event)

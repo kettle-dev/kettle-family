@@ -56,6 +56,23 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     expect(output.string).to include("01:05")
   end
 
+  it "keeps concurrent branch executions of one member on distinct progress rows" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    member = instance_double(Kettle::Family::Member, name: "rubocop-lts")
+    progress = described_class.new(io: output, label: "templating", total: 2, jobs: 2)
+
+    progress.start_member(member, total: 4, status: "template", key: "rubocop-lts@main", label: "rubocop-lts@main")
+    progress.start_member(member, total: 4, status: "template", key: "rubocop-lts@r3_2-even-v24", label: "rubocop-lts@r3_2-even-v24")
+    progress.update(member, status: "recipe", mark: "*", key: "rubocop-lts@main", label: "rubocop-lts@main")
+    progress.update(member, status: "summary", mark: ".", key: "rubocop-lts@r3_2-even-v24", label: "rubocop-lts@r3_2-even-v24")
+
+    expect(output.string).to include("rubocop-lts@main")
+    expect(output.string).to include("rubocop-lts@r3_2-even-v2")
+    expect(output.string).to include("* recipe")
+    expect(output.string).to include(". summary")
+  end
+
   it "preallocates TTY progress rows in member order" do
     output = StringIO.new
     allow(output).to receive(:tty?).and_return(true)

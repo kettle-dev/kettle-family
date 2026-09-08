@@ -27,6 +27,7 @@ module Kettle
         @started = false
         @stopped = false
         @member_totals = {}
+        @member_labels = @line_order.to_h { |member_name| [member_name, member_name] }
         @member_counts = Hash.new(0)
         @member_started_at = {}
         @member_finished_elapsed = {}
@@ -55,62 +56,66 @@ module Kettle
         end
       end
 
-      def start_member(member, total:, status:)
+      def start_member(member, total:, status:, key: member.name, label: member.name)
         return unless @enabled
 
         synchronize do
-          @member_totals[member.name] = total.to_i
-          @member_counts[member.name] = 0
-          @member_started_at[member.name] ||= monotonic_now
-          @member_finished_elapsed.delete(member.name)
+          @member_labels[key] = label
+          @member_totals[key] = total.to_i
+          @member_counts[key] = 0
+          @member_started_at[key] ||= monotonic_now
+          @member_finished_elapsed.delete(key)
           if @tty
-            render(member, status: status)
+            render(key, status: status)
           else
-            write_line(non_tty_line(member, mark: ">", status: status))
+            write_line(non_tty_line(key, mark: ">", status: status))
           end
         end
       end
 
-      def advance(member, status:, success: true, mark: nil)
+      def advance(member, status:, success: true, mark: nil, key: member.name, label: member.name)
         return unless @enabled
 
         synchronize do
+          @member_labels[key] = label
           event_mark = mark || (success ? "." : "F")
-          increment_member_count(member)
+          increment_member_count(key)
           if @tty
-            append_event(member, event_mark)
-            render(member, status: status)
+            append_event(key, event_mark)
+            render(key, status: status)
           else
-            write_line(non_tty_line(member, mark: event_mark, status: status))
+            write_line(non_tty_line(key, mark: event_mark, status: status))
           end
         end
       end
 
-      def update(member, status:, mark: nil)
+      def update(member, status:, mark: nil, key: member.name, label: member.name)
         return unless @enabled
         return if status.to_s.empty?
 
         synchronize do
+          @member_labels[key] = label
           if @tty
-            append_event(member, mark) if mark
-            render(member, status: status)
+            append_event(key, mark) if mark
+            render(key, status: status)
           else
-            write_line(non_tty_line(member, mark: mark || ">", status: status))
+            write_line(non_tty_line(key, mark: mark || ">", status: status))
           end
         end
       end
 
-      def finish_member(member, success:, status:)
+      def finish_member(member, success:, status:, key: member.name, label: member.name)
         return unless @enabled
 
         synchronize do
-          total = @member_totals[member.name].to_i
-          @member_counts[member.name] = total if total.positive?
-          @member_finished_elapsed[member.name] = elapsed_seconds(member)
+          @member_labels[key] = label
+          total = @member_totals[key].to_i
+          @member_counts[key] = total if total.positive?
+          @member_finished_elapsed[key] = elapsed_seconds_by_name(key)
           if @tty
-            render(member, status: status)
+            render(key, status: status)
           else
-            write_line(non_tty_line(member, mark: success ? "done" : "failed", status: status))
+            write_line(non_tty_line(key, mark: success ? "done" : "failed", status: status))
           end
         end
       end
@@ -168,15 +173,15 @@ module Kettle
 
       private
 
-      def render(member, status:)
-        render_name(member.name, status: status)
+      def render(member_key, status:)
+        render_name(member_key, status: status)
         render_tty_block if @tty
       end
 
-      def append_event(member, mark)
+      def append_event(member_key, mark)
         return if mark.to_s.empty?
 
-        @member_events[member.name] = (@member_events[member.name] + mark.to_s).chars.last(EVENT_WIDTH).join
+        @member_events[member_key] = (@member_events[member_key] + mark.to_s).chars.last(EVENT_WIDTH).join
       end
 
       def render_name(member_name, status:)
@@ -222,7 +227,7 @@ module Kettle
       def tty_line(member_name)
         Kernel.format(
           FORMAT,
-          member: member_name,
+          member: @member_labels.fetch(member_name, member_name),
           progress: progress_text(member_name),
           duration: elapsed_text(member_name),
           events: @member_events[member_name].rjust(EVENT_WIDTH),
@@ -234,15 +239,15 @@ module Kettle
         "s" unless count == 1
       end
 
-      def non_tty_line(member, mark:, status:)
-        "[#{member.name}] #{progress_text(member.name)} #{elapsed_text(member.name)} #{mark} #{status}"
+      def non_tty_line(member_key, mark:, status:)
+        label = @member_labels.fetch(member_key, member_key)
+        "[#{label}] #{progress_text(member_key)} #{elapsed_text(member_key)} #{mark} #{status}"
       end
 
-      def increment_member_count(member)
-        member_name = member.name
-        total = @member_totals[member_name].to_i
-        @member_counts[member_name] += 1
-        @member_counts[member_name] = total if total.positive? && @member_counts[member_name] > total
+      def increment_member_count(member_key)
+        total = @member_totals[member_key].to_i
+        @member_counts[member_key] += 1
+        @member_counts[member_key] = total if total.positive? && @member_counts[member_key] > total
       end
 
       def progress_text(member_name)
@@ -254,10 +259,6 @@ module Kettle
 
       def elapsed_text(member_name)
         format_elapsed(elapsed_seconds_by_name(member_name)).rjust(ELAPSED_WIDTH)
-      end
-
-      def elapsed_seconds(member)
-        elapsed_seconds_by_name(member.name)
       end
 
       def elapsed_seconds_by_name(member_name)

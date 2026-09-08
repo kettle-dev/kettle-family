@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Render branch-worktree template events in distinct live progress rows.
+
 ### Security
 
 ## [1.2.95] - 2026-09-07
