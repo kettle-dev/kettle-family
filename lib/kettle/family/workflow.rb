@@ -2723,13 +2723,16 @@ module Kettle
         end
       end
 
-      # A release-valid lockfile must resolve every selected sibling dependency
-      # from the registry. Defer refreshes for dependents that still require a
-      # selected sibling from a later release wave; their gemspec floors can be
-      # updated now, but Bundler cannot resolve the future sibling remotely yet.
+      # A release-valid lockfile must resolve every selected sibling whose
+      # gemspec floor can be rewritten by DependencyFloor. Release ordering
+      # deliberately also includes Gemfile-only tooling dependencies, but
+      # those do not have a floor to reconcile and must not delay a runtime
+      # dependency's lockfile refresh until a later wave.
       def dependency_floor_refresh_ready?(member, released_members:)
         selected_names = members.map(&:name)
-        selected_dependencies = release_dependency_names(member).select { |dependency| selected_names.include?(dependency) }
+        selected_dependencies = DependencyFloor.gemspec_dependency_names(member).select do |dependency|
+          selected_names.include?(dependency)
+        end
         completed_names = Array(@release_completed_member_names) + released_members.map(&:name)
         selected_dependencies.all? { |dependency| completed_names.include?(dependency) }
       end

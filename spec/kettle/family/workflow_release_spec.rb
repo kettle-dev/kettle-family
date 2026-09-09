@@ -3104,6 +3104,44 @@ RSpec.describe Kettle::Family::Workflow do
     expect(memo.map(&:phase)).to eq(["dependency_floor"])
   end
 
+  it "refreshes a raised runtime floor without waiting for a later Gemfile-only tool dependency" do
+    write_release_config(release_env: fake_bundle_env)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    gamma = ready_member_with_gemspec("gamma", version: "4.5.6")
+    beta.release_dependencies = %w[alpha gamma]
+    File.write(File.join(beta.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gemspec
+      gem "gamma", ">= 4.0"
+    RUBY
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [alpha, beta, gamma],
+      execute: true,
+      publish: true,
+      commit: false,
+      jobs: 1
+    )
+    workflow.instance_variable_set(:@release_completed_member_names, ["alpha"])
+    memo = []
+
+    workflow.send(
+      :append_dependency_floor_results,
+      released_members: [alpha],
+      dependent_members: [beta],
+      runner: workflow.send(:release_command_runner),
+      memo: memo
+    )
+
+    expect(memo.map(&:phase)).to eq(%w[dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install])
+    expect(memo.find { |result| result.phase == "dependency_floor_lockfiles" }.command).to eq(
+      %w[bundle lock --update alpha --add-checksums]
+    )
+  end
+
   it "uses a checksum-aware dependent lockfile refresh command" do
     write_release_config(
       release_env: fake_bundle_env(<<~BASH)

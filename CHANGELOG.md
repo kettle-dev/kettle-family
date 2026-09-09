@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Run each family member through its own mise runtime instead of inheriting the orchestrator runtime.
 
+- Refresh dependent release lockfiles after a runtime sibling publishes without waiting for later Gemfile-only tooling dependencies.
+
 ### Security
 
 ## [1.2.99] - 2026-09-09

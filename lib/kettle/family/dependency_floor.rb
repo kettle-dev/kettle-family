@@ -7,6 +7,24 @@ module Kettle
     class DependencyFloor
       DEPENDENCY_METHODS = %i[add_dependency add_runtime_dependency add_development_dependency].freeze
 
+      # Return only dependencies declared by the gemspec itself. Release
+      # ordering also observes Gemfile-only tooling dependencies, but those
+      # cannot have their published floor rewritten by this class.
+      def self.gemspec_dependency_names(member)
+        return [] unless member.gemspec_path && File.file?(member.gemspec_path)
+
+        source = File.read(member.gemspec_path)
+        parse_result = Kettle::Dev::VersionBump.parse_source(source, member.gemspec_path)
+        Kettle::Dev::VersionBump.each_node(parse_result.value).filter_map do |node|
+          next unless node.is_a?(Prism::CallNode) && DEPENDENCY_METHODS.include?(node.name)
+
+          name_node = node.arguments&.arguments&.first
+          name_node.unescaped if name_node.is_a?(Prism::StringNode)
+        end.uniq
+      rescue Kettle::Dev::Error => error
+        raise Error, error.message
+      end
+
       def initialize(released_members:, dependent_members:, mode: :dry_run)
         @released_members = released_members
         @dependent_members = dependent_members
