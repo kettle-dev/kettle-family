@@ -662,6 +662,15 @@ and leaves RubyGems MFA prompts interactive by default:
 kettle-family release --publish --execute
 ```
 
+Release uses two explicitly separate execution contexts. `release_bootstrap`
+starts `kettle-release` from the family-root tool bundle, so a family can retain
+its configured local sibling graph while it prepares a release wave. It never
+uses a member's development Gemfile to boot the release tool. `release_registry`
+then resets each tracked release lockfile against registry dependencies and is
+also used by every project release child command. Local sibling paths therefore
+remain available only before that transition; they cannot enter the canonical
+lockfile, the release-preparation commit, or CI-facing project commands.
+
 Use named recovery modes when a publish wave has already prepared a member:
 
 ```console

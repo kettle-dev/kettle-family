@@ -1500,6 +1500,19 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "launches sibling member releases from the family tool bundle" do
+    File.write(File.join(@tmpdir, "Gemfile"), "source 'https://gem.coop'\n")
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+
+    expect(workflow.send(:release_env_for_member, member)).to include(
+      "BUNDLE_GEMFILE" => File.join(@tmpdir, "Gemfile")
+    )
+    expect(workflow.send(:release_bootstrap_execution_profile).name).to eq(:release_bootstrap)
+  end
+
   it "shrinks the family-local release environment after selected dependencies complete" do
     write_release_config(
       release_env: {family_local_env_name => @tmpdir}

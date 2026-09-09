@@ -3638,7 +3638,7 @@ module Kettle
       # changelog may live at the family root. Pass the shared paths to the
       # member release phase as well as to the separate family phase.
       def release_env_for_member(member, family_root: config.root, wave_jobs: 1)
-        env = release_env
+        env = execution_profile(release_bootstrap_execution_profile, release_env)
         env.merge!(release_wave_local_path_env_for(member, family_root: family_root))
         env.merge!(release_local_path_policy_env(family_root: family_root))
         # Family release performs one live pin review before member releases.
@@ -3704,15 +3704,15 @@ module Kettle
         candidates.find { |path| File.file?(path) }
       end
 
-      # A member's development lockfile can pin an older kettle-dev than the
-      # family runner. That older release tool may not understand the current
-      # family policy, notably configured monorepo PATH dependencies. Launch
-      # kettle-release from the family bundle instead; the release tool still
-      # runs member project commands from the member checkout.
+      # A member's development Gemfile can contain a deliberately local family
+      # graph that is not independently bootable after an earlier release wave
+      # changes a sibling's dependency floor. Launch kettle-release from the
+      # family tool bundle instead. The release tool still runs project commands
+      # from the member checkout, where it first normalizes canonical lockfiles
+      # with local paths disabled.
       def release_tool_gemfile_path(local_kettle_dev)
         local_kettle_dev_gemfile = local_kettle_dev_gemfile_path(local_kettle_dev)
         return local_kettle_dev_gemfile if local_kettle_dev_gemfile
-        return unless config.configured_monorepo_release?
 
         family_gemfile = File.join(config.root, "Gemfile")
         family_gemfile if File.file?(family_gemfile)
@@ -5375,6 +5375,10 @@ module Kettle
         ExecutionProfile.fetch(:template_local)
       end
 
+      def release_bootstrap_execution_profile
+        ExecutionProfile.fetch(:release_bootstrap)
+      end
+
       def release_lockfile_execution_profile
         return ExecutionProfile.fetch(:release_recovery) if release_recovery?
         return ExecutionProfile.fetch(:release_monorepo) if preserve_monorepo_template_context?
@@ -5393,7 +5397,7 @@ module Kettle
         when :template_local
           env["K_JEM_TEMPLATING"] = "true"
           env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
-        when :release_registry, :release_monorepo, :release_recovery
+        when :release_bootstrap, :release_registry, :release_monorepo, :release_recovery
           # Release profiles deliberately leave Bundler mutation decisions to
           # kettle-dev. The profile selection controls which local-path
           # overrides this workflow contributes below.

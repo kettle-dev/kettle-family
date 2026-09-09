@@ -40,6 +40,18 @@ module Kettle
           host_platform_policy: :active_platform_must_resolve,
           allowed_mutations: %i[template development_lockfiles generated]
         ),
+        # This profile only starts the release implementation from the family
+        # tool bundle. It is intentionally distinct from release_registry:
+        # canonical lockfile reset and all project release children use that
+        # registry-only profile after the tool has booted.
+        release_bootstrap: Definition.new(
+          name: :release_bootstrap,
+          path_gem_policy: :configured_siblings,
+          lockfile_role: :tool,
+          install_location: :family,
+          host_platform_policy: :active_platform_must_resolve,
+          allowed_mutations: %i[release_tool_bootstrap]
+        ),
         release_registry: Definition.new(
           name: :release_registry,
           path_gem_policy: :registry_only,

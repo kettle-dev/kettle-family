@@ -10,6 +10,7 @@ RSpec.describe Kettle::Family::ExecutionProfile do
     expect(described_class::DEFINITIONS.keys).to contain_exactly(
       :development_local,
       :template_local,
+      :release_bootstrap,
       :release_registry,
       :release_monorepo,
       :release_recovery
@@ -26,6 +27,8 @@ RSpec.describe Kettle::Family::ExecutionProfile do
   it "exposes path-gem and canonical-lockfile policy predicates" do
     expect(described_class.fetch(:development_local)).to be_local_path_gems
     expect(described_class.fetch("template_local")).to be_canonical_lockfile
+    expect(described_class.fetch(:release_bootstrap)).to be_local_path_gems
+    expect(described_class.fetch(:release_bootstrap).lockfile_role).to eq(:tool)
     expect(described_class.fetch(:release_monorepo)).to be_local_path_gems
     expect(described_class.fetch(:release_registry)).not_to be_local_path_gems
     expect(described_class.fetch(:release_registry)).to be_canonical_lockfile
