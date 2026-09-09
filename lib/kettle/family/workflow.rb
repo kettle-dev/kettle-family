@@ -2604,6 +2604,10 @@ module Kettle
       end
 
       def release_dependency_floor_reconciliation_results(release_members)
+        # A step resume must continue the already-prepared release commit.
+        # Reconciliation can rewrite lockfiles and create a new commit, which
+        # invalidates the CI SHA selected by the caller's --start-step.
+        return [] if release_step_resume?
         return [] unless execute && auto_dependency_floors
         # Monorepo members intentionally keep their family dependencies as
         # paths in the canonical development lockfile. Registry reconciliation
@@ -2671,6 +2675,7 @@ module Kettle
       end
 
       def append_dependency_floor_results(released_members:, dependent_members:, runner:, memo:)
+        return if release_step_resume?
         return unless auto_dependency_floors
         return if dependent_members.empty?
 
@@ -3641,6 +3646,13 @@ module Kettle
         env = execution_profile(release_bootstrap_execution_profile, release_env)
         env.merge!(release_wave_local_path_env_for(member, family_root: family_root))
         env.merge!(release_local_path_policy_env(family_root: family_root))
+        # A resumed child kettle-release starts in the member's mise
+        # environment after the release candidate was already prepared.
+        # Disable sibling paths so mise cannot reactivate them before the
+        # resumed release validates that immutable lockfile. A new release
+        # retains the staged local-graph policy until kettle-release reaches
+        # its own release-lockfile boundary.
+        env.merge!(release_lockfile_local_path_env_overrides(member)) if release_step_resume?
         # Family release performs one live pin review before member releases.
         # Child kettle-release must consume that reviewed cache instead of
         # repeating the GitHub API lookup for every member.
@@ -5388,6 +5400,10 @@ module Kettle
 
       def release_recovery?
         !start_step.nil? || !skip_steps.to_s.empty? || fast_recovery || skip_ci
+      end
+
+      def release_step_resume?
+        !start_step.nil? || !skip_steps.to_s.empty?
       end
 
       def execution_profile(profile, env)

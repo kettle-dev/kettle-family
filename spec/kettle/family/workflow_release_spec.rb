@@ -122,6 +122,67 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:release_env_for_member, member, wave_jobs: 6)).to include("TURBO_TESTS2_MAX_PROCESSES" => "2")
   end
 
+  it "disables a selected sibling development graph for child kettle-release" do
+    write_release_config(
+      family: {
+        "mode" => "sibling_repos",
+        "local_path_env" => "RUBOCOP_LTS_DEV",
+        "local_path_root" => "rubocop-lts"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      start_step: 10,
+      env_overrides: {"RUBOCOP_LTS_DEV" => File.join(@tmpdir, "rubocop-lts")}
+    )
+
+    expect(workflow.send(:release_env_for_member, member)).to include("RUBOCOP_LTS_DEV" => "false")
+  end
+
+  it "does not reconcile dependency floors during a step resume" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      execute: true,
+      start_step: 10
+    )
+
+    expect(workflow).not_to receive(:published_family_dependencies_for)
+    expect(workflow.send(:release_dependency_floor_reconciliation_results, [member])).to be_empty
+  end
+
+  it "does not reconcile a later wave during a step resume" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      execute: true,
+      start_step: 10
+    )
+
+    expect(workflow).not_to receive(:dependency_floor_refresh_ready?)
+    memo = []
+    workflow.send(
+      :append_dependency_floor_results,
+      released_members: [member],
+      dependent_members: [member],
+      runner: instance_double(Kettle::Family::CommandRunner),
+      memo: memo
+    )
+    expect(memo).to be_empty
+  end
+
   it "defers GitHub Release creation for selected members of an explicit multi-gem monorepo" do
     write_release_config
     File.write(

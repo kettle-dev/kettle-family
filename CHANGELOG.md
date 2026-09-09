@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Keep resumed family releases on the prepared CI commit by skipping dependency-floor reconciliation and disabling sibling paths for child release validation.
+
 ### Security
 
 ## [1.2.98] - 2026-09-09
