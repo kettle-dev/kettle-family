@@ -153,6 +153,18 @@ path-gem, lockfile, install, and mutation rules remain reviewable.</p>
     <span class='label'>host_platform_policy:</span> <span class='symbol'>:active_platform_must_resolve</span><span class='comma'>,</span>
     <span class='label'>allowed_mutations:</span> <span class='qsymbols_beg'>%i[</span><span class='tstring_content'>template</span><span class='words_sep'> </span><span class='tstring_content'>development_lockfiles</span><span class='words_sep'> </span><span class='tstring_content'>generated</span><span class='tstring_end'>]</span></span>
   <span class='rparen'>)</span><span class='comma'>,</span>
+  <span class='comment'># This profile only starts the release implementation from the family
+</span>  <span class='comment'># tool bundle. It is intentionally distinct from release_registry:
+</span>  <span class='comment'># canonical lockfile reset and all project release children use that
+</span>  <span class='comment'># registry-only profile after the tool has booted.
+</span>  <span class='label'>release_bootstrap:</span> <span class='const'><span class='object_link'><a href="ExecutionProfile/Definition.html" title="Kettle::Family::ExecutionProfile::Definition (class)">Definition</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+    <span class='label'>name:</span> <span class='symbol'>:release_bootstrap</span><span class='comma'>,</span>
+    <span class='label'>path_gem_policy:</span> <span class='symbol'>:configured_siblings</span><span class='comma'>,</span>
+    <span class='label'>lockfile_role:</span> <span class='symbol'>:tool</span><span class='comma'>,</span>
+    <span class='label'>install_location:</span> <span class='symbol'>:family</span><span class='comma'>,</span>
+    <span class='label'>host_platform_policy:</span> <span class='symbol'>:active_platform_must_resolve</span><span class='comma'>,</span>
+    <span class='label'>allowed_mutations:</span> <span class='qsymbols_beg'>%i[</span><span class='tstring_content'>release_tool_bootstrap</span><span class='tstring_end'>]</span></span>
+  <span class='rparen'>)</span><span class='comma'>,</span>
   <span class='label'>release_registry:</span> <span class='const'><span class='object_link'><a href="ExecutionProfile/Definition.html" title="Kettle::Family::ExecutionProfile::Definition (class)">Definition</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
     <span class='label'>name:</span> <span class='symbol'>:release_registry</span><span class='comma'>,</span>
     <span class='label'>path_gem_policy:</span> <span class='symbol'>:registry_only</span><span class='comma'>,</span>
@@ -244,14 +256,14 @@ path-gem, lockfile, install, and mutation rules remain reviewable.</p>
       <pre class="lines">
 
 
-69
-70
-71
-72
-73</pre>
+81
+82
+83
+84
+85</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/execution_profile.rb', line 69</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/execution_profile.rb', line 81</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="#DEFINITIONS-constant" title="Kettle::Family::ExecutionProfile::DEFINITIONS (constant)">DEFINITIONS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_to_sym'>to_sym</span><span class='rparen'>)</span>

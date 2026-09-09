@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.98] - 2026-09-09
+
+- TAG: [v1.2.98][1.2.98t]
+- COVERAGE: 93.50% -- 6245/6679 lines in 35 files
+- BRANCH COVERAGE: 78.08% -- 2529/3239 branches in 35 files
+- 32.75% documented
+
+### Fixed
+
 - Commit the final normalized Gemfile.lock after sibling and branch-worktree template runs.
 
 - Bootstrap member releases from the family tool bundle before registry lockfile normalization.
-
-### Security
 
 ## [1.2.97] - 2026-09-08
 
@@ -2683,7 +2692,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.97...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.98...HEAD
+[1.2.98]: https://github.com/kettle-dev/kettle-family/compare/v1.2.97...v1.2.98
+[1.2.98t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.98
 [1.2.97]: https://github.com/kettle-dev/kettle-family/compare/v1.2.96...v1.2.97
 [1.2.97t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.97
 [1.2.96]: https://github.com/kettle-dev/kettle-family/compare/v1.2.95...v1.2.96
