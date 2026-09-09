@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Keep resumed family releases on the prepared CI commit by skipping dependency-floor reconciliation and disabling sibling paths for child release validation.
 
+- Scope branch-stack release resumes to the prepared branch so later targets run their complete release lifecycle before CI monitoring.
+
 ### Security
 
 ## [1.2.98] - 2026-09-09

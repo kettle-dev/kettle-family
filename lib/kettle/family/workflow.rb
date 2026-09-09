@@ -1492,7 +1492,7 @@ module Kettle
             memo.concat(template_branch_sync_results(branch_members, runner: runner))
             break memo unless memo.last&.ok?
           end
-          branch_results = current_branch_results(branch_members)
+          branch_results = with_release_branch_resume_scope { current_branch_results(branch_members) }
           tag_branch_results(branch_results, branch)
           memo.concat(branch_results)
 
@@ -3491,9 +3491,31 @@ module Kettle
       end
 
       def release_start_step_for(member)
+        return nil if release_branch_resume_scoped? && !@release_branch_resume_active
         return start_step unless fast_recovery_for?(member)
 
         (fast_recovery == "retry-ci") ? 10 : 11
+      end
+
+      # A release resume identifies one already-prepared branch commit. Later
+      # branches in the same stack still need their complete lifecycle: build,
+      # commit, push, and only then CI monitoring. Do not carry start_step (or
+      # named CI recovery) beyond that first branch.
+      def with_release_branch_resume_scope
+        return yield unless release_branch_resume_scoped?
+
+        previous = @release_branch_resume_active
+        @release_branch_resume_active = !@release_branch_resume_consumed
+        yield
+      ensure
+        @release_branch_resume_consumed = true if @release_branch_resume_active
+        @release_branch_resume_active = previous
+      end
+
+      def release_branch_resume_scoped?
+        command == "release" &&
+          !config.release_target_branches.empty? &&
+          (!start_step.nil? || !fast_recovery.nil?)
       end
 
       def release_skip_steps_for(member)

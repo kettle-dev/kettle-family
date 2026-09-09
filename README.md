@@ -435,6 +435,12 @@ metadata fix requires a new full release run from step 0:
 kettle-family release --publish --start-step 10 --local-ci
 ```
 
+For `release.target_branches`, a resume position applies only to the first
+selected branch, which is the one whose already-pushed release commit is being
+resumed. Each later branch starts from step 0 so it creates, commits, and pushes
+its own release candidate before `kettle-release` begins remote CI monitoring.
+Use `--start-at member@branch` when the resumed branch is not the first target.
+
 `--skip-changelog` skips only `kettle-changelog`; `--skip-appraisals` skips
 only the Appraisal generation portion of release step 5 and still runs
 `bin/rake yard`; and `--skip-ci` skips only remote CI monitoring. The generic

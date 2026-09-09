@@ -989,6 +989,28 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
+  it "applies a release resume step only to the first configured target branch" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      target_branches: %w[r1_8-even-v0 r1_9-even-v2]
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true,
+      start_step: 10
+    )
+    allow(workflow).to receive(:rediscovered_selected_members).and_return([member])
+
+    commands = workflow.results.select { |result| result.phase == "release_publish" }.map(&:command)
+
+    expect(commands.first.to_s).to include("start_step=10")
+    expect(commands.last.to_s).not_to include("start_step=")
+  end
+
   it "uses a member-local changelog inside a shared-changelog monorepo" do
     write_release_config(
       changelog: {
@@ -2244,6 +2266,30 @@ RSpec.describe Kettle::Family::Workflow do
       ["git", "checkout", "r1"],
       ["git", "checkout", "r2"]
     ])
+  end
+
+  it "applies a release resume step only to the first member-local target branch" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, ".kettle-family.yml"), <<~YAML)
+      release:
+        publish_command: bundle exec kettle-release
+        target_branches:
+          - r1
+          - r2
+    YAML
+
+    commands = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      publish: true,
+      start_step: 10
+    ).results.select { |result| result.phase == "release_publish" }.map(&:command)
+
+    expect(commands.first.to_s).to include("start_step=10")
+    expect(commands.last.to_s).not_to include("start_step=")
   end
 
   it "lets root member target branches override member-local target branches" do
