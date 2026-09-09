@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.99] - 2026-09-09
+
+- TAG: [v1.2.99][1.2.99t]
+- COVERAGE: 93.52% -- 6261/6695 lines in 35 files
+- BRANCH COVERAGE: 78.19% -- 2542/3251 branches in 35 files
+- 32.75% documented
+
+### Fixed
+
 - Keep resumed family releases on the prepared CI commit by skipping dependency-floor reconciliation and disabling sibling paths for child release validation.
 
 - Scope branch-stack release resumes to the prepared branch so later targets run their complete release lifecycle before CI monitoring.
-
-### Security
 
 ## [1.2.98] - 2026-09-09
 
@@ -2696,7 +2705,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.98...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.99...HEAD
+[1.2.99]: https://github.com/kettle-dev/kettle-family/compare/v1.2.98...v1.2.99
+[1.2.99t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.99
 [1.2.98]: https://github.com/kettle-dev/kettle-family/compare/v1.2.97...v1.2.98
 [1.2.98t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.98
 [1.2.97]: https://github.com/kettle-dev/kettle-family/compare/v1.2.96...v1.2.97
