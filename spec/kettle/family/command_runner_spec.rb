@@ -181,7 +181,42 @@ RSpec.describe Kettle::Family::CommandRunner do
 
     allow(runner).to receive(:unbundled_process_env).and_return({})
 
-    expect(runner.send(:process_env, member: member, env: {})).to include("PATH" => ENV.fetch("PATH"))
+    path = runner.send(:process_env, member: member, env: {}).fetch("PATH")
+
+    expect(path).not_to include(Gem.bindir)
+    expect(path).not_to include(File.dirname(RbConfig.ruby))
+    expect(path).not_to be_empty
+  end
+
+  it "removes the outer runtime from a Bundler-provided PATH before mise runs a member command" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    runner = described_class.new
+    outer_paths = [Gem.bindir, File.realpath(File.dirname(RbConfig.ruby))]
+    allow(runner).to receive(:unbundled_process_env).and_return(
+      "PATH" => [outer_paths.first, "/opt/member-tools", outer_paths.last].join(File::PATH_SEPARATOR)
+    )
+
+    path = runner.send(:process_env, member: member, env: {}).fetch("PATH")
+
+    expect(path.split(File::PATH_SEPARATOR)).to eq(["/opt/member-tools"])
+  end
+
+  it "clears the outer mise session before entering a member mise environment" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    runner = described_class.new
+    allow(runner).to receive(:unbundled_process_env).and_return(
+      "PATH" => "/opt/member-tools",
+      "__MISE_DIFF" => "outer-config",
+      "__MISE_SESSION" => "outer-session",
+      "MISE_SHELL" => "bash"
+    )
+
+    env = runner.send(:process_env, member: member, env: {})
+
+    expect(env).not_to include("__MISE_DIFF", "__MISE_SESSION")
+    expect(env).to include("MISE_SHELL" => "bash")
   end
 
   it "wraps commands with mise when a member has .tool-versions" do

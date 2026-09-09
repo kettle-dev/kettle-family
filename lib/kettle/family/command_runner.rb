@@ -10,6 +10,7 @@ module Kettle
       SENSITIVE_ENV_KEYS = [
         "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE"
       ].freeze
+      MISE_SESSION_ENV_PREFIX = "__MISE_"
 
       class OtpCoordinator
         def initialize(input: $stdin, output: $stdout, queue_total: nil, secrets_provider: nil, event_handler: nil)
@@ -616,11 +617,14 @@ module Kettle
 
       def process_env(member:, env:)
         base_env = unbundled_process_env
+        clear_outer_mise_session!(base_env) if mise_configured?(member)
         # Bundler's unbundled environment intentionally omits activation
         # variables, but it may also omit PATH. When `unsetenv_others` is used
         # for mise-managed members, dropping PATH makes nested commands such
         # as `bundle` unresolvable inside kettle-jem.
-        base_env["PATH"] = if base_env.key?("PATH")
+        base_env["PATH"] = if mise_configured?(member)
+          mise_member_path(base_env["PATH"] || ENV["PATH"])
+        elsif base_env.key?("PATH")
           executable_path(base_env["PATH"])
         else
           ENV["PATH"]
@@ -645,6 +649,33 @@ module Kettle
       def executable_path(path)
         paths = [Gem.bindir, File.dirname(RbConfig.ruby), path, ENV["PATH"]]
         paths.compact.map(&:to_s).flat_map { |value| value.split(File::PATH_SEPARATOR) }.reject(&:empty?).uniq.join(File::PATH_SEPARATOR)
+      end
+
+      # `mise exec` selects a member's declared runtime. Do not let the
+      # orchestrator's Ruby or gem bin directory precede it on PATH: Bundler
+      # otherwise executes the outer runtime after `mise` has entered the
+      # member directory, and can rewrite that member's lockfile with the
+      # wrong Bundler version.
+      def mise_member_path(path)
+        outer_runtime_paths = [Gem.bindir, File.dirname(RbConfig.ruby)].filter_map do |entry|
+          canonical_path(entry) unless entry.to_s.empty?
+        end
+        path.to_s.split(File::PATH_SEPARATOR).reject(&:empty?).reject do |entry|
+          outer_runtime_paths.include?(canonical_path(entry))
+        end.uniq.join(File::PATH_SEPARATOR)
+      end
+
+      # Mise records its active configuration in private `__MISE_*` variables.
+      # Retaining them across a nested `mise exec -C member` makes Mise reuse
+      # the orchestrator's tool set instead of loading the member's mise.toml.
+      def clear_outer_mise_session!(env)
+        env.delete_if { |key, _value| key.start_with?(MISE_SESSION_ENV_PREFIX) }
+      end
+
+      def canonical_path(path)
+        File.realpath(path)
+      rescue Errno::ENOENT, Errno::ENOTDIR
+        File.expand_path(path)
       end
 
       def unbundled_process_env

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Run each family member through its own mise runtime instead of inheriting the orchestrator runtime.
+
 ### Security
 
 ## [1.2.99] - 2026-09-09
