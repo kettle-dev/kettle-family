@@ -623,7 +623,7 @@ module Kettle
         # for mise-managed members, dropping PATH makes nested commands such
         # as `bundle` unresolvable inside kettle-jem.
         base_env["PATH"] = if mise_configured?(member)
-          mise_member_path(base_env["PATH"] || ENV["PATH"])
+          mise_member_path(base_env["PATH"], ENV["PATH"])
         elsif base_env.key?("PATH")
           executable_path(base_env["PATH"])
         else
@@ -656,11 +656,11 @@ module Kettle
       # otherwise executes the outer runtime after `mise` has entered the
       # member directory, and can rewrite that member's lockfile with the
       # wrong Bundler version.
-      def mise_member_path(path)
+      def mise_member_path(*paths)
         outer_runtime_paths = [Gem.bindir, File.dirname(RbConfig.ruby)].filter_map do |entry|
           canonical_path(entry) unless entry.to_s.empty?
         end
-        path.to_s.split(File::PATH_SEPARATOR).reject(&:empty?).reject do |entry|
+        paths.flat_map { |path| path.to_s.split(File::PATH_SEPARATOR) }.reject(&:empty?).reject do |entry|
           outer_runtime_paths.include?(canonical_path(entry))
         end.uniq.join(File::PATH_SEPARATOR)
       end

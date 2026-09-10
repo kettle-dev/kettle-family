@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Preserve the Mise launcher path when running commands in member worktrees from a Bundler environment.
+
 ### Security
 
 ## [1.2.100] - 2026-09-09

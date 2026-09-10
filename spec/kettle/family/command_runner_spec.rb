@@ -188,18 +188,23 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(path).not_to be_empty
   end
 
-  it "removes the outer runtime from a Bundler-provided PATH before mise runs a member command" do
+  it "retains the caller Mise launcher while removing the outer runtime before a member command" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
     runner = described_class.new
+    launcher_dir = File.join(@tmpdir, "mise-launcher")
+    FileUtils.mkdir_p(launcher_dir)
+    File.write(File.join(launcher_dir, "mise"), "#!/bin/sh\n")
+    FileUtils.chmod("u+x", File.join(launcher_dir, "mise"))
     outer_paths = [Gem.bindir, File.realpath(File.dirname(RbConfig.ruby))]
     allow(runner).to receive(:unbundled_process_env).and_return(
       "PATH" => [outer_paths.first, "/opt/member-tools", outer_paths.last].join(File::PATH_SEPARATOR)
     )
+    allow(ENV).to receive(:[]).with("PATH").and_return(launcher_dir)
 
     path = runner.send(:process_env, member: member, env: {}).fetch("PATH")
 
-    expect(path.split(File::PATH_SEPARATOR)).to eq(["/opt/member-tools"])
+    expect(path.split(File::PATH_SEPARATOR)).to eq(["/opt/member-tools", launcher_dir])
   end
 
   it "clears the outer mise session before entering a member mise environment" do
