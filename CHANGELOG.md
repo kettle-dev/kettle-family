@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.2.100] - 2026-09-09
+
+- TAG: [v1.2.100][1.2.100t]
+- COVERAGE: 93.51% -- 6283/6719 lines in 35 files
+- BRANCH COVERAGE: 78.15% -- 2553/3267 branches in 35 files
+- 32.84% documented
+
+### Fixed
+
 - Run each family member through its own mise runtime instead of inheriting the orchestrator runtime.
 
 - Refresh dependent release lockfiles after a runtime sibling publishes without waiting for later Gemfile-only tooling dependencies.
-
-### Security
 
 ## [1.2.99] - 2026-09-09
 
@@ -2709,7 +2718,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.99...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.100...HEAD
+[1.2.100]: https://github.com/kettle-dev/kettle-family/compare/v1.2.99...v1.2.100
+[1.2.100t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.100
 [1.2.99]: https://github.com/kettle-dev/kettle-family/compare/v1.2.98...v1.2.99
 [1.2.99t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.99
 [1.2.98]: https://github.com/kettle-dev/kettle-family/compare/v1.2.97...v1.2.98
