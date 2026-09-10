@@ -3668,16 +3668,16 @@ module Kettle
       # changelog may live at the family root. Pass the shared paths to the
       # member release phase as well as to the separate family phase.
       def release_env_for_member(member, family_root: config.root, wave_jobs: 1)
+        graph = release_graph_for(member, family_root: family_root)
         env = execution_profile(release_bootstrap_execution_profile, release_env)
-        env.merge!(release_wave_local_path_env_for(member, family_root: family_root))
-        env.merge!(release_local_path_policy_env(family_root: family_root))
+        env.merge!(release_lockfile_local_path_env_overrides(member, graph: graph))
+        env.merge!(graph.environment)
         # A resumed child kettle-release starts in the member's mise
         # environment after the release candidate was already prepared.
         # Disable sibling paths so mise cannot reactivate them before the
         # resumed release validates that immutable lockfile. A new release
         # retains the staged local-graph policy until kettle-release reaches
         # its own release-lockfile boundary.
-        env.merge!(release_lockfile_local_path_env_overrides(member)) if release_step_resume?
         # Family release performs one live pin review before member releases.
         # Child kettle-release must consume that reviewed cache instead of
         # repeating the GitHub API lookup for every member.
@@ -3753,37 +3753,6 @@ module Kettle
 
         family_gemfile = File.join(config.root, "Gemfile")
         family_gemfile if File.file?(family_gemfile)
-      end
-
-      # A release task may start with local sibling paths so a member can
-      # consume a selected dependency that has not been published yet. Once
-      # that dependency is complete in an earlier wave, use its registry
-      # release for the next member. Dependencies outside the selected set are
-      # already treated as registry dependencies; this is what makes resume
-      # runs work after an earlier wave has been published.
-      def release_wave_local_path_env_for(member, family_root: config.root)
-        # Monorepo members and their sibling dependencies share the same CI
-        # checkout, so their canonical development lockfile may keep those
-        # paths throughout every release wave.
-        if config.configured_monorepo_release?
-          env_name = config.family_local_path_env_name
-          return env_name ? {env_name => family_local_path_root_for(family_root)} : {}
-        end
-
-        return {} unless config.release_local_path_strategy == "waves"
-
-        env_name = config.family_local_path_env_name
-        return {} if env_name.to_s.empty?
-
-        local_value = release_env[env_name]
-        return {} unless local_path_env_value?(local_value)
-
-        selected_names = members.map(&:name)
-        completed_names = Array(@release_completed_member_names)
-        unresolved_selected_dependency = release_dependency_names(member).any? do |dependency|
-          selected_names.include?(dependency) && !completed_names.include?(dependency)
-        end
-        {env_name => unresolved_selected_dependency ? local_value : "false"}
       end
 
       # simplecov:disable Covered by monorepo release integration, not sibling-repository suite.
@@ -5417,14 +5386,61 @@ module Kettle
       end
 
       def release_lockfile_execution_profile
-        return ExecutionProfile.fetch(:release_recovery) if release_recovery?
-        return ExecutionProfile.fetch(:release_monorepo) if preserve_monorepo_template_context?
-
-        ExecutionProfile.fetch(:release_registry)
+        release_graph_execution_profile(release_graph_for(family_member))
       end
 
-      def release_recovery?
-        !start_step.nil? || !skip_steps.to_s.empty? || fast_recovery || skip_ci
+      def release_graph_execution_profile(graph)
+        case graph.name
+        when "monorepo_ci_local"
+          ExecutionProfile.fetch(:release_monorepo)
+        when "wave_transition"
+          ExecutionProfile.fetch(:release_wave_transition)
+        when "branch_terminal", "registry_only"
+          ExecutionProfile.fetch(:release_registry)
+        else
+          raise Error, "unknown release graph contract #{graph.name.inspect}"
+        end
+      end
+
+      def release_graph_for(member, family_root: config.root)
+        name = if config.release_target_branches.any?
+          config.release_branch_target_graph_contract
+        else
+          config.release_graph_contract
+        end
+
+        case name
+        when "registry_only", "branch_terminal"
+          ReleaseGraph.new(name: name, ci_root: family_root)
+        when "monorepo_ci_local"
+          unless config.ci_resident_local_release_graph?
+            raise Error, "monorepo_ci_local requires family.local_path_root to be contained by the family repository"
+          end
+
+          env_name = config.family_local_path_env_name
+          raise Error, "monorepo_ci_local requires family.local_path_env" if env_name.to_s.empty?
+
+          root = family_local_path_root_for(family_root)
+          ReleaseGraph.new(name: name, ci_root: family_root, local_path_roots: [root], selector_env: {env_name => root})
+        when "wave_transition"
+          env_name = config.family_local_path_env_name
+          raise Error, "wave_transition requires family.local_path_env" if env_name.to_s.empty?
+
+          local_value = release_local_path_env_sources[env_name]
+          return ReleaseGraph.new(name: "registry_only", ci_root: family_root) unless local_path_env_value?(local_value)
+
+          selected_names = members.map(&:name)
+          completed_names = Array(@release_completed_member_names)
+          unresolved_selected_dependency = release_dependency_names(member).any? do |dependency|
+            selected_names.include?(dependency) && !completed_names.include?(dependency)
+          end
+          return ReleaseGraph.new(name: "registry_only", ci_root: family_root) unless unresolved_selected_dependency
+
+          root = File.expand_path(local_value)
+          ReleaseGraph.new(name: name, ci_root: family_root, local_path_roots: [root], selector_env: {env_name => root})
+        else
+          raise Error, "unknown release graph contract #{name.inspect}"
+        end
       end
 
       def release_step_resume?
@@ -5438,7 +5454,7 @@ module Kettle
         when :template_local
           env["K_JEM_TEMPLATING"] = "true"
           env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
-        when :release_bootstrap, :release_registry, :release_monorepo, :release_recovery
+        when :release_bootstrap, :release_registry, :release_monorepo, :release_wave_transition
           # Release profiles deliberately leave Bundler mutation decisions to
           # kettle-dev. The profile selection controls which local-path
           # overrides this workflow contributes below.
@@ -5492,12 +5508,14 @@ module Kettle
       end
 
       def release_lockfile_env(member = nil)
+        graph = release_graph_for(member || family_member)
         execution_profile(
-          release_lockfile_execution_profile,
+          release_graph_execution_profile(graph),
           base_release_env
           .merge(release_lockfile_bundler_env_resets)
           .merge(env_overrides)
-          .merge(release_lockfile_local_path_env_overrides(member))
+          .merge(release_lockfile_local_path_env_overrides(member, graph: graph))
+          .merge(graph.environment)
         )
       end
 
@@ -5508,8 +5526,8 @@ module Kettle
         }
       end
 
-      def release_allowed_local_path_roots
-        config.release_allowed_local_path_roots
+      def release_allowed_local_path_roots(member = family_member)
+        release_graph_for(member).local_path_roots
       end
 
       def family_local_path_root_for(family_root)
@@ -5519,38 +5537,13 @@ module Kettle
         File.expand_path(relative, family_root)
       end
 
-      def release_allowed_local_path_env_names
-        names = config.release_allowed_local_path_env_names
-        names << "K_JEM_TEMPLATING" if preserve_monorepo_template_context?
-        names.uniq
-      end
-
-      def release_local_path_policy_env(family_root: config.root)
-        roots = release_allowed_local_path_roots.map do |root|
-          if File.expand_path(family_root) == File.expand_path(config.root)
-            root
-          else
-            relative = Pathname.new(root).relative_path_from(Pathname.new(config.root))
-            File.expand_path(relative, family_root)
-          end
-        end
-        env_names = release_allowed_local_path_env_names
-        return {} if roots.empty? && env_names.empty?
-
-        {
-          "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ROOTS" => roots.join(File::PATH_SEPARATOR),
-          "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ENVS" => env_names.join(",")
-        }
-      end
-
-      def release_lockfile_local_path_env_overrides(member = nil)
+      def release_lockfile_local_path_env_overrides(member = nil, graph: release_graph_for(member || family_member))
         explicit = config.release_disable_local_path_env.to_h { |key| [key.to_s, "false"] }
-        explicit.delete("K_JEM_TEMPLATING") if preserve_monorepo_template_context?
         derived = release_local_path_env_detection_sources.each_with_object({}) do |(key, value), memo|
           key = key.to_s
           next unless key.end_with?("_LOCAL", "_DEV")
           next unless local_path_env_value?(value)
-          next if release_allowed_local_path_env_names.include?(key)
+          next if graph.selector_env.key?(key)
 
           memo[key] = "false"
         end
@@ -5558,24 +5551,7 @@ module Kettle
         explicit
           .merge(derived)
           .merge(inferred)
-          .merge(release_member_local_path_env(member))
-          .merge(preserve_monorepo_template_context? ? {"K_JEM_TEMPLATING" => "true"} : {})
-      end
-
-      # K_JEM_TEMPLATING activates the generated monorepo dependency closure;
-      # it is not an unrelated local checkout switch. Preserve it only when
-      # the caller explicitly enabled it for a configured monorepo release.
-      def preserve_monorepo_template_context?
-        return false unless config.configured_monorepo_release?
-
-        value = release_local_path_env_sources["K_JEM_TEMPLATING"].to_s.strip.downcase
-        %w[true yes 1 on].include?(value)
-      end
-
-      def release_member_local_path_env(member)
-        return {} unless config.configured_monorepo_release?
-
-        release_wave_local_path_env_for(member)
+          .merge(graph.selector_env)
       end
 
       def release_lockfile_inferred_local_path_env(member)

@@ -68,8 +68,8 @@ module Kettle
           host_platform_policy: :active_platform_must_resolve,
           allowed_mutations: %i[canonical_release_lockfiles configured_wave_paths]
         ),
-        release_recovery: Definition.new(
-          name: :release_recovery,
+        release_wave_transition: Definition.new(
+          name: :release_wave_transition,
           path_gem_policy: :configured_release_wave,
           lockfile_role: :canonical,
           install_location: :disposable,

@@ -13,7 +13,7 @@ RSpec.describe Kettle::Family::ExecutionProfile do
       :release_bootstrap,
       :release_registry,
       :release_monorepo,
-      :release_recovery
+      :release_wave_transition
     )
     expect { described_class.fetch(:unknown) }.to raise_error(ArgumentError, /unknown execution profile/)
   end

@@ -284,6 +284,23 @@ module Kettle
         fetch_path("release", "local_path_strategy").to_s
       end
 
+      def release_graph_contract
+        configured = fetch_path("release", "graph_contract").to_s.strip
+        return configured unless configured.empty?
+
+        return "monorepo_ci_local" if ci_resident_local_release_graph?
+        return "wave_transition" if release_local_path_strategy == "waves"
+
+        "registry_only"
+      end
+
+      def release_branch_target_graph_contract
+        configured = fetch_path("release", "branch_target_graph_contract").to_s.strip
+        return configured unless configured.empty?
+
+        "branch_terminal"
+      end
+
       def release_allowed_local_path_roots
         inferred = ci_resident_monorepo_local_path_graph? ? [family_local_path_root] : []
         configured = Array(fetch_path("release", "allowed_local_path_roots"))
@@ -305,6 +322,8 @@ module Kettle
 
         path_within_root?(family_local_path_root)
       end
+
+      alias_method :ci_resident_local_release_graph?, :ci_resident_monorepo_local_path_graph?
 
       # This remains the repository-topology predicate used by release
       # scheduling. CI-safe local path inference is deliberately narrower.

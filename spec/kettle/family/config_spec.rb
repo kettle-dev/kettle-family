@@ -167,6 +167,19 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_waves).to eq([%w[alpha beta], ["gamma"]])
   end
 
+  it "loads named release graph contracts" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        graph_contract: monorepo_ci_local
+        branch_target_graph_contract: branch_terminal
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_graph_contract).to eq("monorepo_ci_local")
+    expect(config.release_branch_target_graph_contract).to eq("branch_terminal")
+  end
+
   it "loads release secrets provider config" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       release:

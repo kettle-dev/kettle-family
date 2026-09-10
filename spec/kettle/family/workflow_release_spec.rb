@@ -222,7 +222,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:parallel_release_members?, [alpha, beta])).to be(true)
   end
 
-  it "remaps monorepo local paths and release policy roots into a release worktree" do
+  it "remaps the monorepo release graph into a release worktree" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
       family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"}
@@ -234,11 +234,9 @@ RSpec.describe Kettle::Family::Workflow do
 
     env = workflow.send(:release_env_for_member, member, family_root: worktree_root)
 
-    expect(env).to include(
-      "EXAMPLE_DEV" => File.join(worktree_root, "gems"),
-      "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ROOTS" => File.join(worktree_root, "gems"),
-      "K_RELEASE_CI_ROOT" => worktree_root
-    )
+    worktree_gems = File.join(worktree_root, "gems")
+    expect(env).to include("EXAMPLE_DEV" => worktree_gems, "K_RELEASE_CI_ROOT" => worktree_root)
+    expect(JSON.parse(env.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON")).fetch("local_path_roots")).to eq([worktree_gems])
   end
 
   it "runs aggregate monorepo waves through workers then serial finalization" do
@@ -627,7 +625,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
-  it "derives a monorepo-only local path policy for member releases" do
+  it "derives a structured CI-resident monorepo graph for member releases" do
     monorepo_gems = File.join(@tmpdir, "gems")
     FileUtils.mkdir_p(monorepo_gems)
     File.write(
@@ -645,15 +643,19 @@ RSpec.describe Kettle::Family::Workflow do
     member = ready_member("alpha")
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
 
-    expect(workflow.send(:release_env_for_member, member)).to include(
-      "STRUCTUREDMERGE_DEV" => monorepo_gems,
-      "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ROOTS" => monorepo_gems,
-      "KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ENVS" => "STRUCTUREDMERGE_DEV"
+    environment = workflow.send(:release_env_for_member, member)
+
+    expect(environment).to include("STRUCTUREDMERGE_DEV" => monorepo_gems)
+    expect(JSON.parse(environment.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON"))).to eq(
+      "name" => "monorepo_ci_local",
+      "ci_root" => @tmpdir,
+      "local_path_roots" => [monorepo_gems],
+      "selector_env" => {"STRUCTUREDMERGE_DEV" => monorepo_gems}
     )
     expect(workflow.send(:release_allowed_local_path_roots)).to eq([monorepo_gems])
   end
 
-  it "preserves an explicitly enabled template source graph for monorepo release lockfiles" do
+  it "disables template mode while retaining the declared monorepo release graph" do
     monorepo_gems = File.join(@tmpdir, "gems")
     FileUtils.mkdir_p(monorepo_gems)
     File.write(
@@ -676,18 +678,46 @@ RSpec.describe Kettle::Family::Workflow do
       env_overrides: {"K_JEM_TEMPLATING" => "true"}
     )
 
-    expect(workflow.send(:release_lockfile_env)).to include("K_JEM_TEMPLATING" => "true")
-    expect(workflow.send(:release_local_path_policy_env).fetch("KETTLE_RELEASE_ALLOWED_LOCAL_PATH_ENVS"))
-      .to eq("STRUCTUREDMERGE_DEV,K_JEM_TEMPLATING")
+    environment = workflow.send(:release_lockfile_env)
+    expect(environment).to include("K_JEM_TEMPLATING" => "false")
+    expect(JSON.parse(environment.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON")).fetch("selector_env"))
+      .to eq("STRUCTUREDMERGE_DEV" => monorepo_gems)
     expect(workflow.send(:release_lockfile_execution_profile).name).to eq(:release_monorepo)
   end
 
-  it "selects the recovery profile when resuming a release" do
+  it "uses a terminal registry graph for branch targets rather than the family graph" do
+    local_root = File.join(@tmpdir, "siblings")
+    FileUtils.mkdir_p(local_root)
+    write_release_config(release_env: {family_local_env_name => local_root})
+    config_data = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_data["release"].merge!(
+      "graph_contract" => "wave_transition",
+      "branch_target_graph_contract" => "branch_terminal",
+      "target_branches" => ["legacy"]
+    )
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_data))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", dependencies: ["beta"])
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [member],
+      env_overrides: {family_local_env_name => local_root}
+    )
+
+    graph = workflow.send(:release_graph_for, member)
+
+    expect(graph.name).to eq("branch_terminal")
+    expect(graph.local_path_roots).to be_empty
+    expect(workflow.send(:release_env_for_member, member)).to include(family_local_env_name => "false")
+  end
+
+  it "retains the selected graph profile when resuming a release" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
     workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], start_step: 10)
 
-    expect(workflow.send(:release_lockfile_execution_profile).name).to eq(:release_recovery)
+    expect(workflow.send(:release_lockfile_execution_profile).name).to eq(:release_registry)
   end
 
   it "accepts allowed monorepo path specs during dependency-floor validation" do
@@ -1140,7 +1170,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).to be_ok
   end
 
-  it "allows active family roots through readiness when release env disables them" do
+  it "does not elevate an ambient family root into a release graph" do
     local_root = File.join(@tmpdir, "gems")
     FileUtils.mkdir_p(File.join(local_root, "beta"))
     write_release_config(
@@ -1166,7 +1196,7 @@ RSpec.describe Kettle::Family::Workflow do
       }
     )
 
-    expect(workflow.send(:release_allowed_local_path_roots)).to include(local_root)
+    expect(workflow.send(:release_allowed_local_path_roots)).to be_empty
     expect(workflow.send(:normalize_release_lockfiles?, member)).to be(false)
     memo = []
     workflow.send(:append_release_internal_checks, member: member, memo: memo)
@@ -1552,7 +1582,7 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
-  it "allows explicitly configured family-local environment for release commands" do
+  it "does not allow a sibling local environment without a release graph contract" do
     write_release_config(release_env: {family_local_env_name => @tmpdir})
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
@@ -1561,7 +1591,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "release", config: config, members: [member]).results
 
     release_command = results.find { |result| result.phase == "release_build" }.command
-    expect(release_command).to include("#{family_local_env_name}=#{@tmpdir}")
+    expect(release_command).to include("#{family_local_env_name}=false")
   end
 
   it "keeps local kettle-dev tooling available to member release commands" do
@@ -2100,7 +2130,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(lockfile_env).to include("RUBY_OAUTH_DEV" => "false")
   end
 
-  it "allows release readiness to use explicitly configured local source roots" do
+  it "does not treat legacy allowed local roots as a release graph contract" do
     local_root = File.join(@tmpdir, "rubocop-lts")
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],
@@ -2111,17 +2141,18 @@ RSpec.describe Kettle::Family::Workflow do
     FileUtils.mkdir_p(File.join(local_root, "rubocop-ruby3_2"))
     File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(local_root, "rubocop-ruby3_2")}\n")
 
-    results = described_class.new(
+    workflow = described_class.new(
       command: "release",
       config: config,
       members: [member],
       env_overrides: {"RUBOCOP_LTS_LOCAL" => local_root}
-    ).results
+    )
 
-    expect(results.find { |result| result.phase == "check" }).to be_ok
+    expect(workflow.send(:release_graph_for, member).name).to eq("registry_only")
+    expect(workflow.send(:release_allowed_local_path_roots, member)).to be_empty
   end
 
-  it "allows configured family-local lockfile paths during release readiness" do
+  it "does not treat a legacy family-local lockfile exception as a contract" do
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],
       release_allowed_local_path_roots: [@tmpdir]
@@ -2130,10 +2161,10 @@ RSpec.describe Kettle::Family::Workflow do
     member = ready_member("alpha")
     File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: #{File.join(@tmpdir, "beta")}\n")
 
-    results = described_class.new(command: "release", config: config, members: [member]).results
+    workflow = described_class.new(command: "release", config: config, members: [member])
 
-    check_result = results.find { |result| result.phase == "check" }
-    expect(check_result).to be_ok
+    expect(workflow.send(:release_graph_for, member).name).to eq("registry_only")
+    expect(workflow.send(:release_allowed_local_path_roots, member)).to be_empty
   end
 
   it "skips already published versions during executed publish releases" do

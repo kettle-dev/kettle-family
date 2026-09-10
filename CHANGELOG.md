@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Serialize explicit release dependency graph contracts so CI-resident monorepo paths are preserved while sibling and branch-target releases reject ambient local paths.
+
 ### Security
 
 ## [1.2.100] - 2026-09-09
