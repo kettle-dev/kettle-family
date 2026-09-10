@@ -32,4 +32,13 @@ RSpec.describe Kettle::Family::Orderer do
 
     expect { orderer.ordered }.to raise_error(Kettle::Family::Error, /dependency cycle detected/)
   end
+
+  it "retains configured hints when read-only inspection permits cycles" do
+    orderer = described_class.new(
+      members: [member("alpha", dependencies: ["beta"]), member("beta", dependencies: ["alpha"])],
+      hints: ["beta"]
+    )
+
+    expect(orderer.ordered(allow_cycles: true).map(&:name)).to eq(%w[beta alpha])
+  end
 end

@@ -34,6 +34,14 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_text.lines.first).to eq("kettle-family: #{Kettle::Family::VERSION}\n")
   end
 
+  it "distinguishes missing GitHub releases from failed and unavailable lookups" do
+    report = described_class.new(family_name: "test", order_mode: "dependency", members: [], selected_members: [], config_path: nil, command: "release-state")
+
+    expect(report.send(:release_state_github_release, {"github_release_status" => "missing"})).to eq("missing")
+    expect(report.send(:release_state_github_release, {"github_release_status" => "error"})).to eq("error")
+    expect(report.send(:release_state_github_release, {})).to eq("unknown")
+  end
+
   it "tracks every command that reports selected member results" do
     expected = (
       Kettle::Family::CLI::WORKFLOW_COMMANDS +

@@ -615,6 +615,9 @@ module Kettle
       end
 
       def release_state_github_release(state)
+        lookup_status = state["github_release_status"]
+        return lookup_status if %w[missing error].include?(lookup_status)
+
         github_release = state.fetch("github_latest_release", nil).to_s
         return "unknown" if github_release.empty?
 

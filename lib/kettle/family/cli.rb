@@ -684,10 +684,10 @@ module Kettle
         members = discovery.members
         ordered = if command == "install"
           install_order(members, config)
-        elsif %w[metadata release-state].include?(command)
+        elsif command == "metadata"
           members.sort_by(&:name)
         else
-          Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered
+          Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered(allow_cycles: command == "release-state")
         end
         state_event_tape = release_state_event_tape(command: command, config: config, options: options)
         Selection.validate_release_state_only_filter!(effective_only)

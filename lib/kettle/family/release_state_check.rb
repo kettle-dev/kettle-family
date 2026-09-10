@@ -152,8 +152,10 @@ module Kettle
         success = status.success?
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
         state = success ? JSON.parse(stdout) : {}
+        emit_event(event_handler, member: member, branch: branch, action: "computed_booleans", status: "running") if success
         state = state_with_computed_booleans(state) if success
         state = branch_filtered_state(member, state, branch) if success && branch
+        emit_event(event_handler, member: member, branch: branch, action: "computed_booleans", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "running") if success
         state = enrich_git_state(member.root, state, branch: branch) if success
         emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "ok") if success
@@ -391,11 +393,10 @@ module Kettle
       end
 
       def enrich_github_release(root, state, branch: nil, member: nil)
-        tag = if branch || shared_root_member?(member)
-          github_release_for_version(root, state["latest_released"])
-        else
-          github_latest_release(root)
+        if branch || shared_root_member?(member)
+          return state.merge(github_release_for_version(root, state["latest_released"]))
         end
+        tag = github_latest_release(root)
         return state unless tag
 
         state.merge("github_latest_release" => tag)
@@ -406,16 +407,24 @@ module Kettle
       end
 
       def github_release_for_version(root, version)
-        return nil if version.to_s.empty?
+        return {} if version.to_s.empty?
 
         repo = github_repo_slug(root)
-        return nil unless repo
+        return {} unless repo
 
         tag = "v#{version.to_s.delete_prefix("v")}"
-        stdout, _stderr, status = Open3.capture3("gh", "release", "view", tag, "--repo", repo, "--json", "tagName", "--jq", ".tagName")
-        status.success? ? normalize_github_release_tag(stdout) : nil
-      rescue SystemCallError
-        nil
+        stdout, stderr, status = Open3.capture3("gh", "release", "view", tag, "--repo", repo, "--json", "tagName", "--jq", ".tagName")
+        return {"github_latest_release" => normalize_github_release_tag(stdout)} if status.success?
+
+        # A missing exact release is not a failed lookup, nor permission to
+        # substitute an independently versioned member's latest release.
+        {
+          "github_release_status" => (stderr.strip == "release not found") ? "missing" : "error",
+          "github_expected_release" => tag,
+          "github_release_error" => stderr.strip
+        }
+      rescue SystemCallError => error
+        {"github_release_status" => "error", "github_release_error" => error.message}
       end
 
       def enrich_transfer_changelog_lag(root, state)

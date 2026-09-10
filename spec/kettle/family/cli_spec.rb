@@ -1755,6 +1755,19 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
   end
 
+  it "honors dependency ordering for state when the graph is acyclic" do
+    write_gem("alpha", dependencies: ["zeta"])
+    write_gem("zeta")
+    checker = instance_double(Kettle::Family::ReleaseStateCheck, results: [])
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(checker)
+    out = StringIO.new
+
+    status = described_class.call(["state", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(JSON.parse(out.string).fetch("selected_members")).to eq(%w[zeta alpha])
+  end
+
   def write_gem(name, dependencies: [], license: nil, authors: [], required_ruby_version: nil)
     root = File.join(@tmpdir, name)
     write_gem_at(root, name, dependencies: dependencies, license: license, authors: authors, required_ruby_version: required_ruby_version)

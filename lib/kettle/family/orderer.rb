@@ -14,7 +14,7 @@ module Kettle
         @by_name = members.to_h { |member| [member.name, member] }
       end
 
-      def ordered
+      def ordered(allow_cycles: false)
         case mode
         when "dependency"
           tsort
@@ -24,6 +24,9 @@ module Kettle
           raise Error, "unknown order mode #{mode.inspect}"
         end
       rescue TSort::Cyclic => error
+        # Read-only state inspection must remain available to diagnose cycles.
+        return hinted_members if allow_cycles
+
         raise Error, "dependency cycle detected: #{error.message}"
       end
 

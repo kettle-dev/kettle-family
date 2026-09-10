@@ -487,6 +487,21 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(check.send(:normalize_github_release_tag, "v1.1.7\n")).to eq("v1.1.7")
   end
 
+  {"release not found\n" => "missing", "HTTP 403: rate limit exceeded" => "error"}.each do |message, expected|
+    it "reports #{expected} for an exact GitHub release lookup without substituting another release" do
+      check = described_class.new(members: [])
+      allow(check).to receive(:github_repo_slug).and_return("structuredmerge/structuredmerge-ruby")
+      allow(Open3).to receive(:capture3).with(
+        "gh", "release", "view", "v7.1.9", "--repo", "structuredmerge/structuredmerge-ruby", "--json", "tagName", "--jq", ".tagName"
+      ).and_return(["", message, status(1, false)])
+
+      state = check.send(:enrich_github_release, @tmpdir, {"latest_released" => "7.1.9"}, branch: "main")
+
+      expect(state).to include("github_release_status" => expected, "github_expected_release" => "v7.1.9")
+      expect(state).not_to have_key("github_latest_release")
+    end
+  end
+
   it "enriches release state with kettle-jem transfer changelog lag" do
     root = File.join(@tmpdir, "alpha")
     FileUtils.mkdir_p(File.join(root, ".structuredmerge"))
@@ -744,7 +759,13 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       [JSON.generate(state), "", status(0, true)]
     end
 
-    results = described_class.new(config: config, members: [alpha, beta]).results
+    events = []
+    results = described_class.new(config: config, members: [alpha, beta], jobs: 1).results(event_handler: ->(event) { events << event })
+
+    %w[alpha beta].each do |name|
+      completed = events.select { |event| event["member"] == name && event["status"] == "ok" }
+      expect(completed.map { |event| event["action"] }).to eq(%w[changelog_command computed_booleans git_state github_release transfer_changelog member_complete])
+    end
 
     expect(results.map(&:member_name)).to eq(%w[alpha beta])
     expect(results.map { |result| result.state.fetch("gem_name") }).to eq(%w[alpha beta])

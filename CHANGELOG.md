@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Honor configured ordering in release-state reports, emit all five phases for shared-changelog members, and distinguish missing exact GitHub releases from lookup errors.
+
 ### Security
 
 ## [1.3.0] - 2026-09-10
