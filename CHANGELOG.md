@@ -28,13 +28,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.3.1] - 2026-09-10
+
+- TAG: [v1.3.1][1.3.1t]
+- COVERAGE: 93.48% -- 6352/6795 lines in 36 files
+- BRANCH COVERAGE: 77.98% -- 2582/3311 branches in 36 files
+- 33.49% documented
+
+### Fixed
+
 - Honor configured ordering in release-state reports, emit all five phases for shared-changelog members, and distinguish missing exact GitHub releases from lookup errors.
 
 - Publish shared monorepo GitHub releases incrementally after each finalized member, retain successful workers from interrupted waves, attach both checksum formats, and report redundant family state cells once.
 
 - Keep independent monorepo GitHub release identities exact and avoid false unlisted-member warnings during filtered state inspection.
-
-### Security
 
 ## [1.3.0] - 2026-09-10
 
@@ -2737,7 +2746,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/kettle-dev/kettle-family/compare/v1.3.0...v1.3.1
+[1.3.1t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.1
 [1.3.0]: https://github.com/kettle-dev/kettle-family/compare/v1.2.100...v1.3.0
 [1.3.0t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.0
 [1.2.100]: https://github.com/kettle-dev/kettle-family/compare/v1.2.99...v1.2.100

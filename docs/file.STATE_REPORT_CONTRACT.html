@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: STATE_REPORT_CONTRACT
+  
+    &mdash; Documentation by YARD 0.9.45
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css">
+
+  <link rel="stylesheet" href="css/common.css" type="text/css">
+
+<script type="text/javascript">
+  pathId = "STATE_REPORT_CONTRACT";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div id="main_progress" aria-hidden="true"></div>
+
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: STATE_REPORT_CONTRACT</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="release-state-report-contract">Release State Report Contract</h1>
+
+<p><code>state</code> is a read-only inspection command, not a release gate. A successful<br>
+inspection does not mean every target is published or ready for release.</p>
+
+<h2 id="ordering-and-progress">Ordering and Progress</h2>
+
+<p>Use configured dependency order or fixed order, including hints. A cyclic<br>
+dependency graph must remain inspectable: only for state inspection, fall back<br>
+to hints followed by alphabetical order when topological ordering fails.<br>
+Commands that execute dependency-ordered work must still reject cycles.</p>
+
+<p>Each target completes five phases: changelog probe, computed booleans, Git<br>
+state, GitHub release, and transfer changelog. Shared-changelog subgems and<br>
+branch targets must emit the same phase events as ordinary members.</p>
+
+<h2 id="release-identity">Release Identity</h2>
+
+<ul>
+  <li>Ordinary independently versioned repositories use their latest GitHub release.</li>
+  <li>Shared-root changelog members query the exact registry release version’s tag.</li>
+  <li>Branch-stack targets also query their exact release version’s tag, never the<br>
+repository-wide latest release belonging to another branch.</li>
+  <li>Member-local changelogs in a shared-changelog monorepo also query their exact<br>
+released version: publishing the cohort later must not replace their identity<br>
+with the repository-wide latest release.</li>
+</ul>
+
+<p>For exact-tag queries, <code>missing</code> means GitHub explicitly reported that no release<br>
+exists. <code>error</code> means lookup failed, for example due to authentication or rate<br>
+limits. JSON retains the expected tag and diagnostic. <code>unknown</code> means no release<br>
+value was obtained without a classified exact-tag result. Missing releases must<br>
+not be replaced by an unrelated newer release, and inspection must not create<br>
+releases or move tags.</p>
+
+<h2 id="count-scope">Count Scope</h2>
+
+<p>Text output reports identical shared checkout, changelog version, GitHub<br>
+release, and Git counts on the first selected row of each explicitly shared<br>
+changelog/version/branch cohort. Later matching cells display <code>-</code>. Independently<br>
+versioned members retain their own cells. Member versions, registry versions,<br>
+transfer applicability and release-selection flags are never suppressed. JSON<br>
+retains every value and identifies the shared changelog root.</p>
+
+<p>Git ahead/behind counts compare repository refs against the selected version’s<br>
+tag. They are not path-filtered member change counts. Subgems sharing a tag and<br>
+repository therefore legitimately share counts; independent versions can have<br>
+different counts in the same repository. Parenthesized values are remote-ref<br>
+counts, not additional local commits.</p>
+
+<p>Transfer lag currently comes from Kettle Jem’s project-root status API. It<br>
+applies member-specific filters and reads transfer keys from that project’s<br>
+<code>CHANGELOG.md</code>. It does not infer applied entries from the historical replay<br>
+cursor when the status API is available. A subgem without a local changelog can<br>
+therefore report all applicable entries missing. Shared-changelog transfer<br>
+ownership needs to be represented by that API before those counts can be<br>
+interpreted as family-root replay status; changing the root blindly would also<br>
+change member-specific applicability filters.</p>
+
+<h2 id="regression-coverage">Regression Coverage</h2>
+
+<p>CLI specs exercise dependency ordering and cyclic inspection. State-check specs<br>
+exercise shared-root phase parity, independent member changelogs, branch targets,<br>
+and exact-tag missing/error results. Report specs distinguish missing, error,<br>
+and unknown values. Existing shared-version selection tests protect release<br>
+selection independently of GitHub release presentation.</p>
+
+<h2 id="incremental-shared-github-releases">Incremental Shared GitHub Releases</h2>
+
+<p>Aggregate monorepo member commands delegate GitHub publication to the family.<br>
+That delegation is per member, not conditional on the entire train succeeding.<br>
+After each member finalizes, push the shared ref and invoke <code>kettle-gh-release</code><br>
+with that member’s gem and available SHA-256/SHA-512 files. The existing uploader<br>
+creates the release if absent and preserves existing assets while adding missing<br>
+ones. Never collect artifacts from unexecuted members merely because their<br>
+package files exist locally.</p>
+
+<p>In a partially failed worktree wave, finalize successfully published and<br>
+materialized members before returning the worker failure. Do not advance to the<br>
+next wave. A GitHub upload failure is also a hard failure, with the aggregate<br>
+command retained as the recovery command. A process killed before finalization<br>
+can still require explicit reconciliation; no in-memory scheduler can guarantee<br>
+completion after process termination.</p>
+
+<p>Sibling repositories and independent monorepo members retain their own GitHub<br>
+release lifecycle. Branch-stack releases retain their branch-specific identity.<br>
+Read-only state inspection never publishes or reconciles a release itself.</p>
+
+<p>Regression specs cover sequential interruption, partial worker failure,<br>
+per-member shared release updates, upload failure propagation and shared-cell<br>
+rendering without mutation of the underlying state.</p>
+</div></div>
+
+      <div id="footer">
+  Generated on Thu Sep 10 18:28:46 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.45 (ruby-4.0.6).
+</div>
+
+    </div>
+  </body>
+</html>
