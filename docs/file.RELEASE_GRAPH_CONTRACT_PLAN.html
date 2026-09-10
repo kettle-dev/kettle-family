@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: RELEASE_GRAPH_CONTRACT_PLAN
+  
+    &mdash; Documentation by YARD 0.9.45
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css">
+
+  <link rel="stylesheet" href="css/common.css" type="text/css">
+
+<script type="text/javascript">
+  pathId = "RELEASE_GRAPH_CONTRACT_PLAN";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div id="main_progress" aria-hidden="true"></div>
+
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: RELEASE_GRAPH_CONTRACT_PLAN</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="release-graph-contract-plan">Release Graph Contract Plan</h1>
+
+<h2 id="purpose">Purpose</h2>
+
+<p>Replace the current mix of topology checks, inherited <code>*_DEV</code> environment<br>
+variables, lockfile exceptions, and release profiles with explicit release<br>
+graph contracts. The goal is to make Bundler resolution, canonical lockfile<br>
+validation, disposable release-task locks, and child-process environment<br>
+selection agree for every supported family shape.</p>
+
+<p>This is a corrective design plan. It does not treat all local paths as invalid<br>
+at release time. A local path is valid only when the selected contract proves<br>
+that the path is intentional, available in CI, and appropriate for the<br>
+specific release target.</p>
+
+<h2 id="confirmed-constraints">Confirmed Constraints</h2>
+
+<ul>
+  <li>StructuredMerge is a CI-resident monorepo. Its subgems can require<br>
+unreleased sibling gems from the checked-out <code>gems/</code> graph during release.<br>
+Its tracked canonical locks may therefore contain only those declared,<br>
+in-repository <code>PATH</code> sources, and release children may receive the matching<br>
+<code>STRUCTUREDMERGE_DEV</code> selector.</li>
+  <li>RuboCop-LTS is a sibling-repository family with a terminal branch stack on<br>
+<code>rubocop-lts</code>. No family gem has a runtime dependency on <code>rubocop-lts</code>.<br>
+<code>standard-rubocop-lts</code> and <code>rubocop-lts-rspec</code> have development dependencies<br>
+on it, which must not turn the branch targets into upstream release nodes.</li>
+  <li>A RuboCop-LTS branch target must not resolve <code>RUBOCOP_LTS_DEV</code> from the main<br>
+checkout. After its prerequisite waves publish, each target branch can use<br>
+registry dependencies and is an isolated terminal release.</li>
+  <li>A monorepo is not automatically CI-resident. For example, a monorepo whose<br>
+configured local root is outside the repository needs explicit CI<br>
+provisioning evidence before it can retain that path during release.</li>
+  <li>A disposable lock used by release tooling must represent the same selected<br>
+release graph as the canonical lock. It must not mutate the tracked lock.</li>
+</ul>
+
+<h2 id="target-contracts">Target Contracts</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Contract</th>
+      <th>Intended shapes</th>
+      <th>Canonical tracked lock</th>
+      <th>Release-child graph</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>registry_only</code></td>
+      <td>standalone and ordinary sibling repositories</td>
+      <td>registry sources only</td>
+      <td>registry sources only</td>
+    </tr>
+    <tr>
+      <td><code>wave_transition</code></td>
+      <td>sibling families with an explicitly configured unresolved selected dependency</td>
+      <td>declared workspace path only until its prerequisite wave publishes; registry afterward</td>
+      <td>exactly the same per-member graph</td>
+    </tr>
+    <tr>
+      <td><code>monorepo_ci_local</code></td>
+      <td>StructuredMerge-style complete monorepo checkout</td>
+      <td>declared paths contained in the CI checkout are valid</td>
+      <td>the same declared contained paths</td>
+    </tr>
+    <tr>
+      <td><code>branch_terminal</code></td>
+      <td>RuboCop-LTS <code>rubocop-lts@branch</code> targets</td>
+      <td>registry sources only after prerequisite waves</td>
+      <td>registry sources only; no main-checkout selector</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code>branch_terminal</code> is deliberately not a generic branch dependency-builder<br>
+contract. A future family that releases branch targets consumed by later<br>
+targets would require a separately designed contract and test scenario.</p>
+
+<h2 id="phase-1-establish-the-contract-boundary">Phase 1: Establish the Contract Boundary</h2>
+
+<ol>
+  <li>Add a single Kettle Family release-graph resolver that accepts the family,<br>
+member, optional target branch/worktree, selected members, and completed<br>
+waves.</li>
+  <li>Make the resolver return a structured value rather than independent<br>
+“allowed roots”, “allowed envs”, and override hashes. It must include:<br>
+contract name; exact local-path roots; exact selector environment values;<br>
+canonical-lock policy; disposable-lock policy; and child-process policy.</li>
+  <li>Derive graph selection from configuration and target context. Do not infer<br>
+permission from an ambient <code>*_DEV</code> environment variable.</li>
+  <li>Separate two currently conflated predicates:<br>
+<code>configured_monorepo_release?</code> for scheduling/layout, and<br>
+<code>ci_resident_local_release_graph?</code> for whether local paths are legal.</li>
+  <li>Define a configuration error for contradictory settings, such as a<br>
+<code>monorepo_ci_local</code> contract whose root is outside the CI checkout, or a<br>
+branch terminal that requests a main-worktree selector.</li>
+</ol>
+
+<p>Primary owner: <code>kettle-dev/kettle-family</code>.</p>
+
+<h2 id="phase-2-refactor-kettle-family-execution">Phase 2: Refactor Kettle Family Execution</h2>
+
+<ol>
+  <li>Replace <code>release_registry</code>, <code>release_monorepo</code>, and recovery selection with<br>
+profiles derived from the resolved contract. Keep <code>release_bootstrap</code><br>
+separate: it only boots the orchestration tool and must not silently decide<br>
+the member graph.</li>
+  <li>Route every release operation through the same resolved contract:<br>
+dependency-floor reconciliation; lockfile preparation; Bundler install;<br>
+changelog; pre-release checks; <code>kettle-release</code>; normalization; recovery;<br>
+and resume.</li>
+  <li>Make monorepo wave behavior explicit. Resolve the discrepancy between<br>
+StructuredMerge’s configured <code>local_path_strategy: waves</code> and the current<br>
+unconditional monorepo path short-circuit. The chosen configuration must<br>
+state whether every monorepo wave keeps the local graph or transitions<br>
+per-dependency; code and comments must match it.</li>
+  <li>Materialize a branch target as a target identity such as<br>
+<code>rubocop-lts@r2_3-even-v10</code>, then resolve its graph from its worktree rather<br>
+than from the primary checkout.</li>
+  <li>Remove the generic policy-environment handoff from Kettle Family once the<br>
+structured contract is passed to Kettle Dev. Compatibility shims, if<br>
+temporarily required, must be one-way and documented with removal criteria.</li>
+</ol>
+
+<p>Primary owner: <code>kettle-dev/kettle-family</code>.</p>
+
+<h2 id="phase-3-make-kettle-dev-enforce-not-redefine-the-contract">Phase 3: Make Kettle Dev Enforce, Not Redefine, the Contract</h2>
+
+<ol>
+  <li>Replace the strict global release-lockfile normalization introduced in<br>
+<code>827efa86</code>. It rejects valid CI-resident StructuredMerge paths and conflicts<br>
+with Kettle Family’s existing <code>release_monorepo</code> profile.</li>
+  <li>Give <code>LockfileReset</code> and <code>ReleaseCLI</code> one structured, validated release<br>
+graph input. They must not independently reinterpret environment variables<br>
+or choose a stricter graph than the caller selected.</li>
+  <li>Validate every <code>PATH</code> remote against the selected contract’s exact allowed<br>
+roots. Reject any path outside that list, including parent workspaces,<br>
+unrelated sibling repositories, and a primary checkout visible from a<br>
+branch worktree.</li>
+  <li>Ensure copied disposable locks retain valid contract paths when required,<br>
+and assert byte-for-byte that release-task Bundler operations do not alter<br>
+the canonical tracked lock except during an explicit canonical normalization<br>
+action.</li>
+  <li>Keep direct <code>kettle-release</code> usable without Kettle Family by selecting<br>
+<code>registry_only</code> unless a validated explicit contract is supplied. It must<br>
+never inherit local paths merely because a <code>*_DEV</code> variable exists.</li>
+</ol>
+
+<p>Primary owner: <code>kettle-dev/kettle-dev</code>.</p>
+
+<h2 id="phase-4-configure-existing-family-shapes-explicitly">Phase 4: Configure Existing Family Shapes Explicitly</h2>
+
+<ol>
+  <li>StructuredMerge:<br>
+document and configure <code>monorepo_ci_local</code> for the <code>gems/</code> root; list the<br>
+only path selector (<code>STRUCTUREDMERGE_DEV</code>); keep unrelated tooling selectors<br>
+disabled unless independently declared. Verify Kettle Jem’s template mode<br>
+is treated as a declared part of this graph only when necessary.</li>
+  <li>RuboCop-LTS:<br>
+configure <code>branch_terminal</code> for <code>rubocop-lts</code> target branches. Ensure every<br>
+branch worktree’s release graph is registry-only after waves 1-3 and cannot<br>
+observe <code>RUBOCOP_LTS_DEV</code> from the main checkout.</li>
+  <li>UR Brain adapters:<br>
+audit its <code>local_path_root: ..</code>. Either prove CI provisions that external<br>
+root and configure an explicit contract, or select <code>registry_only</code>/a<br>
+transition contract. Do not inherit StructuredMerge semantics merely from<br>
+<code>mode: monorepo</code>.</li>
+  <li>Audit every workspace <code>.kettle-family.yml</code> with <code>local_path_env</code>, explicit<br>
+release environment selectors, lockfile normalization, or release waves:<br>
+Resque, Ruby OpenID, UR Brain, and future family roots. Assign a contract or<br>
+remove stale local-release wiring.</li>
+  <li>Update Kettle Jem’s generated family/template configuration only where it<br>
+owns the relevant policy defaults. Do not inject a monorepo contract into<br>
+unrelated standalone or sibling-repository destinations.</li>
+</ol>
+
+<p>Owners: <code>structuredmerge/ruby</code>, <code>rubocop-lts</code>, <code>ur-brain</code>, affected family<br>
+roots, and <code>structuredmerge/ruby/gems/kettle-jem</code> for generated defaults.</p>
+
+<h2 id="phase-5-build-real-bundler-scenario-coverage">Phase 5: Build Real-Bundler Scenario Coverage</h2>
+
+<p>Each scenario must launch the actual command chain, run Bundler, inspect the<br>
+resulting locks, and verify child environment behavior. Command-construction<br>
+unit specs are supplemental only.</p>
+
+<ol>
+  <li>
+<code>registry_only</code>: an ambient local selector is set, but canonical and<br>
+disposable release locks resolve registry sources only.</li>
+  <li>
+<code>wave_transition</code>: a dependent member resolves an unpublished selected<br>
+predecessor from the declared local root before its wave, then resolves the<br>
+published registry gem after the wave and on resume.</li>
+  <li>
+<code>monorepo_ci_local</code>: a StructuredMerge-shaped member requires an<br>
+unpublished sibling, its canonical and disposable locks retain only<br>
+contained paths, and release children boot and execute against that graph.</li>
+  <li>
+<code>monorepo_external_root</code>: a monorepo-layout fixture points outside its<br>
+checkout and is rejected unless explicit CI provisioning is declared.</li>
+  <li>
+<code>branch_terminal</code>: create a branch worktree with a conflicting main<br>
+checkout. Prove the target release uses registry dependencies, never reads<br>
+the main checkout, and releases all target branches independently.</li>
+  <li>Direct-release fallback: run <code>kettle-release</code> outside Kettle Family with<br>
+ambient local selectors and prove it selects <code>registry_only</code> unless given a<br>
+validated explicit contract.</li>
+  <li>Resume and recovery: repeat scenarios 2, 3, and 5 from a pre-existing<br>
+release commit and prove the graph remains stable.</li>
+  <li>Canonical-lock integrity: prove release child commands cannot dirty the<br>
+tracked lock; prove an intentional normalization is visible, validated, and<br>
+committed before CI starts.</li>
+</ol>
+
+<p>Owners: Kettle Family and Kettle Dev specs first; retain focused acceptance<br>
+fixtures in StructuredMerge and RuboCop-LTS only when they catch wiring the<br>
+generic fixtures cannot represent.</p>
+
+<h2 id="phase-6-documentation-and-migration">Phase 6: Documentation and Migration</h2>
+
+<ol>
+  <li>Rewrite <code>kettle-family/EXECUTION_PROFILES.md</code> and release README sections<br>
+around the four contracts. Remove the false claim that every release child<br>
+is registry-only.</li>
+  <li>Document contract selection, CI-provisioning proof, exact allowed paths,<br>
+branch-target isolation, direct-release fallback, and recovery behavior.</li>
+  <li>Add a migration diagnostic that reports the inferred legacy behavior and<br>
+required explicit contract before changing behavior for existing families.</li>
+  <li>Update generated Kettle Jem documentation/configuration only after the<br>
+contract schema and migration diagnostics are stable.</li>
+</ol>
+
+<h2 id="phase-7-release-and-rollout">Phase 7: Release and Rollout</h2>
+
+<ol>
+  <li>Implement and test Kettle Dev’s contract consumer locally with Kettle<br>
+Family’s producer wired from the same checkout.</li>
+  <li>Release Kettle Dev first, because Kettle Family’s new producer depends on<br>
+the consumer understanding the contract.</li>
+  <li>Release Kettle Family next, then update its floor in Kettle Jem and any<br>
+affected family roots.</li>
+  <li>Apply generated template changes through the normal Kettle Jem template<br>
+workflow; validate a clean rerun before committing each family.</li>
+  <li>Run a dry-run and then a real release rehearsal for each supported shape:<br>
+ordinary sibling, wave transition, StructuredMerge monorepo, and<br>
+RuboCop-LTS branch terminal.</li>
+  <li>Do not release the current strict Kettle Dev change as the final policy.<br>
+Supersede it with the tested contract implementation and record the<br>
+corrective behavior in the appropriate Unreleased changelogs.</li>
+</ol>
+
+<h2 id="completion-criteria">Completion Criteria</h2>
+
+<ul>
+  <li>Every active family has an assigned release graph contract or an explicit<br>
+documented reason to remain on the default <code>registry_only</code> contract.</li>
+  <li>No release behavior depends on ambient local-path environment variables.</li>
+  <li>StructuredMerge can release a subgem against its declared CI-resident<br>
+sibling graph without canonical-lock churn or path-policy failure.</li>
+  <li>RuboCop-LTS branch releases cannot resolve from the main checkout and do not<br>
+need support for downstream runtime consumers.</li>
+  <li>Direct Kettle Release, Kettle Family release, restart, and recovery all use<br>
+the same graph contract for a given target.</li>
+  <li>Real-Bundler scenarios cover every supported contract and CI enforces them.</li>
+</ul>
+</div></div>
+
+      <div id="footer">
+  Generated on Thu Sep 10 17:06:47 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.45 (ruby-4.0.6).
+</div>
+
+    </div>
+  </body>
+</html>

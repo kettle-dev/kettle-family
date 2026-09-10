@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Serialize explicit release dependency graph contracts so CI-resident monorepo paths are preserved while sibling and branch-target releases reject ambient local paths.
-
 ### Security
+
+## [1.3.0] - 2026-09-10
+
+- TAG: [v1.3.0][1.3.0t]
+- COVERAGE: 93.47% -- 6322/6764 lines in 36 files
+- BRANCH COVERAGE: 77.95% -- 2559/3283 branches in 36 files
+- 33.49% documented
+
+### Fixed
+
+- Serialize explicit release dependency graph contracts so CI-resident monorepo paths are preserved while sibling and branch-target releases reject ambient local paths.
 
 ## [1.2.100] - 2026-09-09
 
@@ -2722,7 +2731,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.2.100...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/kettle-dev/kettle-family/compare/v1.2.100...v1.3.0
+[1.3.0t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.0
 [1.2.100]: https://github.com/kettle-dev/kettle-family/compare/v1.2.99...v1.2.100
 [1.2.100t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.2.100
 [1.2.99]: https://github.com/kettle-dev/kettle-family/compare/v1.2.98...v1.2.99

@@ -61,7 +61,7 @@
 
       <div id="content"><div id='filecontents'><h1 id="execution-profiles">Execution Profiles</h1>
 
-<p><code>kettle-family</code> has five execution profiles. They are a compatibility policy,<br>
+<p><code>kettle-family</code> has six execution profiles. They are a compatibility policy,<br>
 not a convenience layer for environment variables. A workflow must select one<br>
 before it invokes Bundler or a release command.</p>
 
@@ -99,17 +99,17 @@ before it invokes Bundler or a release command.</p>
     </tr>
     <tr>
       <td><code>release_monorepo</code></td>
-      <td>configured release wave only</td>
+      <td>declared CI-resident monorepo paths</td>
       <td>canonical release lock</td>
       <td>disposable bundle</td>
-      <td>canonical release lock refresh and configured-wave paths</td>
+      <td>canonical release lock refresh and declared monorepo paths</td>
     </tr>
     <tr>
-      <td><code>release_recovery</code></td>
-      <td>configured release wave only</td>
+      <td><code>release_wave_transition</code></td>
+      <td>declared unresolved wave dependencies</td>
       <td>canonical release lock</td>
       <td>disposable bundle</td>
-      <td>the same boundary as the interrupted release</td>
+      <td>canonical release lock refresh and declared transition paths</td>
     </tr>
   </tbody>
 </table>
@@ -135,11 +135,51 @@ disposable lock while asserting that the canonical bytes are unchanged.</p>
 <h3 id="template-graph-versus-release-graph">Template graph versus release graph</h3>
 
 <p>Template bootstrap and recovery are development operations. They must resolve<br>
-the configured sibling closure, including unpublished family versions.<br>
-Release-registry operations must disable that closure, except that an explicit<br>
-monorepo release wave uses <code>release_monorepo</code>. <code>kettle-changelog</code> is not a<br>
-general exemption: excluding it is valid only for a demonstrated optional<br>
-dependency constraint conflict.</p>
+the configured sibling closure, including unpublished family versions. Release<br>
+graph selection is explicit and serialized to every <code>kettle-release</code> child;<br>
+the child validates the same contract rather than rebuilding policy from its<br>
+ambient environment.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Contract</th>
+      <th>Use</th>
+      <th>Local paths in canonical release lock and child commands</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>registry_only</code></td>
+      <td>Default for standalone and ordinary sibling families</td>
+      <td>Never</td>
+    </tr>
+    <tr>
+      <td><code>wave_transition</code></td>
+      <td>A sibling release wave has an unpublished selected dependency</td>
+      <td>Only until that selected dependency completes; later waves use the registry</td>
+    </tr>
+    <tr>
+      <td><code>monorepo_ci_local</code></td>
+      <td>CI checks out the family repository and its member graph</td>
+      <td>Only roots under the declared family CI root</td>
+    </tr>
+    <tr>
+      <td><code>branch_terminal</code></td>
+      <td>A branch stack contains terminal leaf releases</td>
+      <td>Never</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code>monorepo_ci_local</code> carries both the family CI root and the allowed member-path<br>
+root. A child release runs from a subgem, so checking only the child directory<br>
+would incorrectly reject valid sibling paths. Conversely, an external parent<br>
+workspace is not a CI-resident monorepo root and must use <code>registry_only</code>.</p>
+
+<p><code>branch_terminal</code> deliberately does not inherit the main family graph. The<br>
+RuboCop-LTS branch stack is an end-node set: no family runtime dependency is<br>
+built from it. It releases only after its dependency waves have published.</p>
 
 <h3 id="branch-worktree-template-equivalence">Branch worktree template equivalence</h3>
 
