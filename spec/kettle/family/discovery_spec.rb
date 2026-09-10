@@ -43,6 +43,17 @@ RSpec.describe Kettle::Family::Discovery do
     expect(member.dependencies).to be_empty
   end
 
+  it "does not call configured but unselected roots unlisted members" do
+    write_gem("alpha")
+    write_gem("beta")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), {"members" => {"roots" => %w[alpha beta]}}.to_yaml)
+    discovery = described_class.new(config: Kettle::Family::Config.load(root: @tmpdir), release_dependency_member_names: ["alpha"])
+
+    discovery.members
+
+    expect(discovery.warnings).to be_empty
+  end
+
   it "includes development dependencies in release dependency metadata" do
     write_gem("alpha")
     write_gem("beta", development_dependencies: ["alpha"])

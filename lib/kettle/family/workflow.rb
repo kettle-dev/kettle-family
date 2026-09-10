@@ -533,7 +533,7 @@ module Kettle
           return results unless results.all?(&:ok?)
 
           results.concat(release_member_results(workflow_members, include_family_changelog: !skip_changelog))
-          return results unless explicit_monorepo_mode? && results.all?(&:ok?)
+          return results unless !execute && explicit_monorepo_mode? && results.all?(&:ok?)
 
           selected_aggregate_members = aggregate_release_members(workflow_members)
           results << aggregate_monorepo_github_release(aggregate_github_release_members) unless selected_aggregate_members.empty?
@@ -2128,6 +2128,9 @@ module Kettle
               results.concat(release_results_for_member(member, runner: runner, wave_jobs: 1))
               break unless results.last.ok?
 
+              append_member_github_release(member, results)
+              break unless results.last.ok?
+
               remaining_members = ordered_members.drop(ordered_members.index(member) + 1)
               @release_completed_member_names << member.name
               append_dependency_floor_results(released_members: [member], dependent_members: remaining_members, runner: runner, memo: results)
@@ -2217,10 +2220,15 @@ module Kettle
             unless aggregate_members.empty?
               worker_results = run_monorepo_release_wave(aggregate_members, wave_jobs: release_jobs(aggregate_members))
               results.concat(worker_results.flatten)
-              break unless worker_results.all? { |member_results| member_results.all?(&:ok?) }
-
-              finalization_results = finalize_monorepo_release_wave(aggregate_members)
+              # Finalize published successes even when another worker failed.
+              # Otherwise interruption strands registry gems without GH assets.
+              successful_members = aggregate_members.select do |member|
+                member_results = worker_results.flatten.select { |result| result.member_name == member.name }
+                member_results.any? { |result| result.phase == "release_publish" && result.ok? } && member_results.all?(&:ok?)
+              end
+              finalization_results = finalize_monorepo_release_wave(successful_members)
               results.concat(finalization_results)
+              break unless worker_results.all? { |member_results| member_results.all?(&:ok?) }
               break unless finalization_results.all?(&:ok?)
             end
 
@@ -2425,15 +2433,26 @@ module Kettle
             passthrough_output: release_command_passthrough_output?
           )
           break unless results.last.ok?
-        end
-        return results unless results.all?(&:ok?)
 
-        results << runner.call(
-          member: monorepo_release_control_member,
-          phase: "release_shared_push",
-          command: config.release_push_command
-        )
+          results << runner.call(
+            member: monorepo_release_control_member,
+            phase: "release_shared_push",
+            command: config.release_push_command
+          )
+          break unless results.last.ok?
+
+          append_member_github_release(member, results)
+          break unless results.last.ok?
+        end
         results
+      end
+
+      def append_member_github_release(member, results)
+        return unless execute && publish && aggregate_monorepo_github_release? && aggregate_release_member?(member)
+
+        # Existing assets are retained by kettle-gh-release. Only contribute
+        # this successfully published member, never a merely built future gem.
+        results << aggregate_monorepo_github_release([member])
       end
 
       def ensure_monorepo_release_tag(member, runner:)
@@ -3762,8 +3781,8 @@ module Kettle
 
         assets = members.flat_map do |member|
           gem_path = Dir[File.join(member.root, "pkg", "*.gem")].select { |path| File.basename(path).end_with?("-#{version.first}.gem") }
-          checksum_path = File.join(member.root, "checksums", "#{member.name}-#{version.first}.gem.sha256")
-          gem_path + (File.file?(checksum_path) ? [checksum_path] : [])
+          checksum_paths = %w[sha256 sha512].map { |algorithm| File.join(member.root, "checksums", "#{member.name}-#{version.first}.gem.#{algorithm}") }
+          gem_path + checksum_paths.select { |path| File.file?(path) }
         end
         command = ["bundle", "exec", "kettle-gh-release", "--allow-unpublished", "--events", "--release-version", version.first]
         assets.each { |asset| command.concat(["--asset", asset]) }

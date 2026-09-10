@@ -261,6 +261,58 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).to include("release_wave", "release_publish", "release_finalize")
   end
 
+  it "finalizes successful workers before stopping an interrupted aggregate wave" do
+    write_release_config(publish_command: "bundle exec kettle-release", family: {"name" => "example", "mode" => "monorepo"}, release_waves: [["alpha", "beta"]])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, jobs: 2)
+    success = Kettle::Family::CommandResult.new(alpha.name, "release_publish", [], alpha.root, 0, true, "", "", 0.0, false, nil)
+    failure = Kettle::Family::CommandResult.new(beta.name, "release_publish", [], beta.root, 1, false, "", "failed", 0.0, false, "failed")
+    allow(workflow).to receive_messages(start_release_progress: nil, run_monorepo_release_wave: [[success], [failure]])
+    allow(workflow).to receive(:finalize_monorepo_release_wave).with([alpha]).and_return([success])
+    expect(workflow).not_to receive(:append_dependency_floor_results)
+
+    expect(workflow.send(:parallel_monorepo_release_member_results, [alpha, beta], [])).to include(failure)
+    expect(workflow).to have_received(:finalize_monorepo_release_wave).with([alpha])
+  end
+
+  it "updates the shared release after each finalized member and propagates upload failure" do
+    write_release_config(publish_command: "bundle exec kettle-release", family: {"name" => "example", "mode" => "monorepo"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true)
+    success = Kettle::Family::CommandResult.new(alpha.name, "release_finalize", [], alpha.root, 0, true, "", "", 0.0, false, nil)
+    failure = Kettle::Family::CommandResult.new("example", "aggregate_github_release", [], @tmpdir, 1, false, "", "upload failed", 0.0, false, "failed")
+    runner = double(call: success)
+    allow(workflow).to receive_messages(release_command_runner: runner, ensure_monorepo_release_tag: success)
+    expect(workflow).to receive(:aggregate_monorepo_github_release).with([alpha]).ordered.and_return(success)
+    expect(workflow).to receive(:aggregate_monorepo_github_release).with([beta]).ordered.and_return(failure)
+
+    results = workflow.send(:finalize_monorepo_release_wave, [alpha, beta])
+
+    expect(results.last).to eq(failure)
+    expect(runner).to have_received(:call).with(hash_including(phase: "release_shared_push")).twice
+  end
+
+  it "updates the shared release before a later sequential member fails" do
+    write_release_config(publish_command: "bundle exec kettle-release", family: {"name" => "example", "mode" => "monorepo"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, jobs: 1)
+    success = Kettle::Family::CommandResult.new(alpha.name, "release_publish", [], alpha.root, 0, true, "", "", 0.0, false, nil)
+    failure = Kettle::Family::CommandResult.new(beta.name, "release_publish", [], beta.root, 1, false, "", "failed", 0.0, false, "failed")
+    allow(workflow).to receive(:start_release_progress).and_return(nil)
+    allow(workflow).to receive(:append_dependency_floor_results)
+    expect(workflow).to receive(:release_results_for_member).with(alpha, anything).ordered.and_return([success])
+    expect(workflow).to receive(:aggregate_monorepo_github_release).with([alpha]).ordered.and_return(success)
+    expect(workflow).to receive(:release_results_for_member).with(beta, anything).ordered.and_return([failure])
+
+    expect(workflow.send(:release_member_results, [alpha, beta]).last).to eq(failure)
+  end
+
   it "materializes successful worker artifacts and always cleans up their worktrees" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

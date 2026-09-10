@@ -480,6 +480,21 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(state).to include("github_latest_release" => "v1.1.7")
   end
 
+  it "keeps an independent monorepo member on its own release when the cohort publishes later" do
+    member = member("independent")
+    File.write(File.join(member.root, "CHANGELOG.md"), "# Independent changelog\n")
+    config = instance_double(Kettle::Family::Config, shared_changelog?: true)
+    check = described_class.new(members: [member], config: config)
+    allow(check).to receive(:github_repo_slug).and_return("example/monorepo")
+    allow(Open3).to receive(:capture3).with(
+      "gh", "release", "view", "v7.1.26", "--repo", "example/monorepo", "--json", "tagName", "--jq", ".tagName"
+    ).and_return(["v7.1.26\n", "", status(0, true)])
+
+    state = check.send(:enrich_github_release, member.root, {"latest_released" => "7.1.26"}, member: member)
+
+    expect(state.fetch("github_latest_release")).to eq("v7.1.26")
+  end
+
   it "normalizes GitHub release tags with a v prefix" do
     check = described_class.new(members: [])
 

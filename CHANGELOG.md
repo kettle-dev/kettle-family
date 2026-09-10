@@ -30,6 +30,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Honor configured ordering in release-state reports, emit all five phases for shared-changelog members, and distinguish missing exact GitHub releases from lookup errors.
 
+- Publish shared monorepo GitHub releases incrementally after each finalized member, retain successful workers from interrupted waves, attach both checksum formats, and report redundant family state cells once.
+
+- Keep independent monorepo GitHub release identities exact and avoid false unlisted-member warnings during filtered state inspection.
+
 ### Security
 
 ## [1.3.0] - 2026-09-10

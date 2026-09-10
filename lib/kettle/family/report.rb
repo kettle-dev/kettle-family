@@ -554,9 +554,28 @@ module Kettle
         lines << "  count columns:"
         lines << "    T(n): filter-aware kettle-jem transfer changelog lag; n is the total source entry count and row values are missing / applicable (x excluded-present)"
         rows = release_state_header
+        shared_rows = {}
         results.each do |result|
-          rows << release_state_row(result)
+          row = release_state_row(result)
+          state = result.state || {}
+          shared_root = state["shared_changelog_root"]
+          if shared_root
+            # Only explicit shared-changelog cohorts share presentation. Keep
+            # member versions, registry state, transfer filters and flags intact.
+            key = [shared_root, result.branch, state["latest_released"]]
+            offset = release_state_has_branches? ? 1 : 0
+            shared_columns = [1, 3, 5, 7]
+            if shared_rows.key?(key)
+              shared_columns.each do |column|
+                row[column + offset] = "-" if row[column + offset] == shared_rows[key][column + offset]
+              end
+            else
+              shared_rows[key] = row.dup
+            end
+          end
+          rows << row
         end
+        lines << "  -: shared family value reported on the first matching cohort row" unless shared_rows.empty?
         lines.concat(format_table(rows).map { |line| "  #{line}" })
         failures = results.reject(&:ok?)
         return if failures.empty?

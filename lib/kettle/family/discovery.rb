@@ -92,7 +92,9 @@ module Kettle
       def warn_unlisted_discovered_members(discovered, configured)
         return unless config.configured_member_roots? || config.explicit_members.any?
 
-        configured_roots = configured.map { |member| normalized_path(member.root) }
+        # Selection limits evaluation, not membership in the configuration.
+        roots = configured.map(&:root) + config.configured_member_roots + config.explicit_members.map { |entry| entry.fetch("root") }
+        configured_roots = roots.map { |root| normalized_path(root) }
         discovered.each do |member|
           next if configured_roots.include?(normalized_path(member.root))
 

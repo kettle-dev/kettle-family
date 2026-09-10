@@ -51,6 +51,21 @@ RSpec.describe Kettle::Family::Report do
     expect(described_class::MEMBER_RESULT_COMMANDS.sort).to eq(expected)
   end
 
+  it "prints redundant shared-family cells once without hiding independent members or JSON state" do
+    results = %w[alpha beta independent].map do |name|
+      state = {"version" => "1.0.0", "latest_released" => "1.0.0", "latest_changelog_version" => "1.0.0", "current_branch" => "main", "github_latest_release" => "v1.0.0", "ahead" => 5, "behind" => 0}
+      state["shared_changelog_root"] = "/repo" unless name == "independent"
+      Kettle::Family::ReleaseStateResult.new(member_name: name, command: [], workdir: "/repo/#{name}", status: 0, success: true, stdout: "", stderr: "", elapsed_seconds: 0, state: state)
+    end
+    report = described_class.new(family_name: "example", order_mode: "dependency", members: [], selected_members: [], config_path: nil, command: "release-state", results: results)
+
+    text = report.to_text
+    beta = text.lines.find { |line| line.strip.start_with?("beta ") }.split
+    expect(beta[1..5]).to eq(%w[- 1.0.0 - 1.0.0 -])
+    expect(text.lines.find { |line| line.strip.start_with?("independent ") }).to include("v1.0.0", "main")
+    expect(results[1].state.fetch("github_latest_release")).to eq("v1.0.0")
+  end
+
   it "renders release-state results with a branch column when branches are present" do
     result = Kettle::Family::ReleaseStateResult.new(
       member_name: "rubocop-lts",

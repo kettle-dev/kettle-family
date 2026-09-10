@@ -154,6 +154,7 @@ module Kettle
         state = success ? JSON.parse(stdout) : {}
         emit_event(event_handler, member: member, branch: branch, action: "computed_booleans", status: "running") if success
         state = state_with_computed_booleans(state) if success
+        state["shared_changelog_root"] = File.expand_path(config.root) if success
         state = branch_filtered_state(member, state, branch) if success && branch
         emit_event(event_handler, member: member, branch: branch, action: "computed_booleans", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "running") if success
@@ -393,7 +394,9 @@ module Kettle
       end
 
       def enrich_github_release(root, state, branch: nil, member: nil)
-        if branch || shared_root_member?(member)
+        # A shared repository can publish an independent member after (or
+        # before) the cohort. Repository-wide "latest" cannot identify either.
+        if branch || shared_changelog?
           return state.merge(github_release_for_version(root, state["latest_released"]))
         end
         tag = github_latest_release(root)
