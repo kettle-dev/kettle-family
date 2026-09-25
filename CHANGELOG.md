@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Run local Kettle Jem through a prepared member bundle so local StructuredMerge dependencies are activated during templating.
+
 ### Security
 
 ## [1.3.1] - 2026-09-10

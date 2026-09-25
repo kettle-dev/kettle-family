@@ -21,9 +21,8 @@ module Kettle
       PreflightProgressMember = Struct.new(:name)
 
       DEFAULT_COMMANDS = {
-        # kettle-jem owns the member bundle bootstrap, so it must not be
-        # launched through that bundle. The standalone executable prepares the
-        # templating dependencies before the member bundle can include them.
+        # Standalone Kettle Jem bootstraps members before its local runtime
+        # graph is in the member bundle; prepared local graphs use bundle exec.
         "template" => "kettle-jem install",
         "test" => "bundle exec kettle-test",
         "lint" => "bundle exec rake rubocop_gradual",
@@ -4215,24 +4214,22 @@ module Kettle
 
       def template_command(member)
         command_text = config.template_command || default_template_command(member)
-        command_text = localize_kettle_jem_template_command(command_text)
+        command_text = localize_kettle_jem_template_command(command_text, member: member)
         command_text = append_template_family_args(command_text) if kettle_jem_template_command?(command_text)
         append_template_skip_commit(command_text)
       end
 
       def template_prepare_command(member)
         command_text = template_prepare_command_from(config.template_command || default_template_command(member))
-        command_text = standalone_kettle_jem_prepare_command(command_text)
+        command_text = standalone_kettle_jem_prepare_command(command_text, member: member)
         command_text = append_template_family_args(command_text)
         append_template_skip_commit(command_text)
       end
 
-      # Preparation and installation invoke kettle-jem outside the member
-      # bundle by default. Explicit local executable handling remains
-      # available for development stacks. kettle-jem owns the member bundle
-      # bootstrap, so invoking it with `bundle exec` would require the
-      # dependency it is responsible for installing.
-      def standalone_kettle_jem_prepare_command(command_text)
+      # Use standalone Kettle Jem until the member lockfile proves its local
+      # runtime graph is prepared. A source checkout alone does not activate
+      # its sibling dependencies; plain Ruby could load older released gems.
+      def standalone_kettle_jem_prepare_command(command_text, member:)
         local_executable = local_kettle_jem_executable
         executable = local_executable || installed_gem_executable("kettle-jem", "kettle-jem")
         return command_text unless executable
@@ -4242,6 +4239,8 @@ module Kettle
         executable_index = argv.index { |token| File.basename(token) == "kettle-jem" }
         return command_text unless executable_index
         return command_text if !array_command && argv.any? { |token| %w[&& || ; |].include?(token) }
+
+        return bundle_kettle_jem_command(argv, executable_index) if local_executable && local_kettle_jem_locked_for_member?(member)
 
         prefix = argv[0...executable_index]
         bundle_exec = prefix.last(2) == %w[bundle exec]
@@ -4378,7 +4377,7 @@ module Kettle
         end
       end
 
-      def localize_kettle_jem_template_command(command_text)
+      def localize_kettle_jem_template_command(command_text, member:)
         executable = local_kettle_jem_executable
         return command_text unless executable
 
@@ -4387,6 +4386,8 @@ module Kettle
         index = argv.index("kettle-jem")
         return command_text unless index
         return command_text if !array_command && argv.any? { |token| %w[&& || ; |].include?(token) }
+
+        return bundle_kettle_jem_command(argv, index) if local_kettle_jem_locked_for_member?(member)
 
         prefix = argv[0...index]
         prefix = prefix[0...-2] if prefix.last(2) == %w[bundle exec]
@@ -5394,6 +5395,24 @@ module Kettle
 
       def template_command_env(wave_jobs: 1)
         (command == "template") ? template_prepare_env(wave_jobs: wave_jobs) : command_env
+      end
+
+      def local_kettle_jem_locked_for_member?(member)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return false unless File.file?(lockfile)
+
+        spec = Bundler::LockfileParser.new(Bundler.read_file(lockfile)).specs.find do |locked_spec|
+          locked_spec.name == "kettle-jem"
+        end
+        return false unless spec&.source.is_a?(Bundler::Source::Path)
+
+        File.expand_path(spec.source.path.to_s) == File.expand_path(File.join(template_local_kettle_jem_root, "kettle-jem"))
+      rescue Bundler::LockfileError, Errno::ENOENT
+        false
+      end
+
+      def bundle_kettle_jem_command(argv, executable_index)
+        ["bundle", "exec", "kettle-jem", *argv[(executable_index + 1)..]]
       end
 
       def template_execution_profile

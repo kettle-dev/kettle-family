@@ -132,7 +132,7 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
-  it "runs the local kettle-jem executable directly when templating from a local StructuredMerge stack" do
+  it "runs the local kettle-jem executable directly before its local bundle is prepared" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
     local_stack = File.join(@tmpdir, "gems")
     local_exe = File.join(local_stack, "kettle-jem", "exe", "kettle-jem")
@@ -165,11 +165,39 @@ RSpec.describe Kettle::Family::Workflow do
       "--skip-commit"
     ])
 
-    expect(workflow.send(:localize_kettle_jem_template_command, "bundle exec kettle-jem install")).to eq([
+    expect(workflow.send(:localize_kettle_jem_template_command, "bundle exec kettle-jem install", member: member)).to eq([
       RbConfig.ruby,
       local_exe,
       "install"
     ])
+  end
+
+  it "uses the member bundle for local kettle-jem after its path dependency is locked" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
+    local_stack = File.join(@tmpdir, "gems")
+    local_exe = File.join(local_stack, "kettle-jem", "exe", "kettle-jem")
+    FileUtils.mkdir_p(File.dirname(local_exe))
+    File.write(local_exe, "#!/usr/bin/env ruby\n")
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      PATH
+        remote: #{File.join(local_stack, "kettle-jem")}
+        specs:
+          kettle-jem (7.1.29)
+
+      DEPENDENCIES
+        kettle-jem!
+    LOCK
+    workflow = described_class.new(
+      command: "template",
+      config: Kettle::Family::Config.load(root: @tmpdir),
+      members: [member],
+      execute: true,
+      env_overrides: {"STRUCTUREDMERGE_DEV" => local_stack}
+    )
+
+    expect(workflow.send(:template_prepare_command, member)).to eq(%w[bundle exec kettle-jem prepare --quiet --events --skip-commit])
+    expect(workflow.send(:template_command, member)).to eq(%w[bundle exec kettle-jem install --quiet --events --skip-commit])
   end
 
   it "serializes deferred monorepo template commits with member-scoped pathspecs" do
