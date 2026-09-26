@@ -578,7 +578,21 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "bupb", config: config, members: [member]).results
 
     expect(results.map(&:phase)).to eq(%w[family_root_bupb bupb commit_bundle_update])
-    expect(results.first.command).to eq(%w[bundle update --bundler])
+    expect_stable_bundler_update(results.first.command)
+  end
+
+  it "uses the active stable Bundler version for bupb when one is active" do
+    write_config(command: [RbConfig.ruby, "-e", "exit"])
+    write_gemfile(@tmpdir)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    active_version = Gem::Version.new("4.0.21")
+
+    allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: active_version)})
+
+    results = described_class.new(command: "bupb", config: config, members: [member]).results
+
+    expect(results.first.command).to eq(["bundle", "_4.0.21_", "update", "--bundler=4.0.21"])
   end
 
   it "does not update the family root twice when it is itself a member" do
@@ -810,7 +824,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "bupb", config: config, members: [member]).results
 
     expect(results.first.phase).to eq("bupb")
-    expect(results.first.command).to eq(%w[bundle update --bundler])
+    expect_stable_bundler_update(results.first.command)
     expect(results.fetch(1).phase).to eq("commit_bundle_update")
   end
 
@@ -822,7 +836,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "bupb", config: config, members: [member]).results
 
     expect(results.map(&:phase)).to eq(%w[bupb bupb_appraisal_root bupb_appraisal_reset commit_bundle_update])
-    expect(results.fetch(1).command).to eq(%w[bundle update --bundler])
+    expect_stable_bundler_update(results.fetch(1).command)
     expect(results.fetch(2).command).to eq(%w[bundle exec rake appraisal:reset])
   end
 
@@ -957,6 +971,17 @@ RSpec.describe Kettle::Family::Workflow do
       described_class::RESET_LOCKFILE_HELPER,
       "release-lockfiles"
     ]
+  end
+
+  def expect_stable_bundler_update(command)
+    version = Gem::Specification
+      .find_all_by_name("bundler")
+      .map(&:version)
+      .reject(&:prerelease?)
+      .max
+      .to_s
+
+    expect(command).to eq(["bundle", "_#{version}_", "update", "--bundler=#{version}"])
   end
 
   def write_fake_reset_ruby(fake_bin)

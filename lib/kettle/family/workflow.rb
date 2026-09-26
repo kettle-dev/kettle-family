@@ -57,8 +57,7 @@ module Kettle
               git rebase "$default_branch"
             fi
           SH
-        ],
-        "bupb" => %w[bundle update --bundler]
+        ]
       }.freeze
       TEMPLATE_AUTOSTASH_ALLOWED_DIRECTORIES = %w[lib spec test].freeze
       TEMPLATE_MANAGED_DIRTY_PATH_PATTERN = %r{(?:\A|/)(?:Gemfile\.lock|Appraisal\.root\.gemfile\.lock|\.structuredmerge/kettle-jem\.lock|gemfiles/modular/[^/]+_local\.gemfile)\z}
@@ -4081,6 +4080,7 @@ module Kettle
           return gha_sha_pins_command(command_text: command_text)
         end
         return bup_command if command == "bup"
+        return bupb_command if command == "bupb"
         return bex_command if command == "bex"
 
         command_for(command)
@@ -4093,13 +4093,34 @@ module Kettle
         ["bundle", "update", *args]
       end
 
+      def bupb_command
+        configured = config.command_for("bupb")
+        return configured if configured
+
+        version = stable_bundler_version
+        raise Error, "bupb requires an installed stable Bundler version" unless version
+
+        ["bundle", "_#{version}_", "update", "--bundler=#{version}"]
+      end
+
+      def stable_bundler_version
+        active_version = Gem.loaded_specs["bundler"]&.version
+        return active_version if active_version && !active_version.prerelease?
+
+        Gem::Specification
+          .find_all_by_name("bundler")
+          .map(&:version)
+          .reject(&:prerelease?)
+          .max
+      end
+
       def bupb_appraisal_results(member:, runner:, memo:)
         return unless File.file?(File.join(member.root, "Appraisal.root.gemfile"))
 
         memo << runner.call(
           member: member,
           phase: "bupb_appraisal_root",
-          command: DEFAULT_COMMANDS.fetch("bupb"),
+          command: bupb_command,
           env: bundle_update_env.merge(
             "BUNDLE_GEMFILE" => "Appraisal.root.gemfile",
             "BUNDLE_LOCKFILE" => "Appraisal.root.gemfile.lock"

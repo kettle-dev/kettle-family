@@ -169,6 +169,7 @@ RSpec.describe Kettle::Family::ExecutionProfile do
         "BUNDLE_PATH" => File.join(root, "tmp", "bundle")
       ).merge(extra_env),
       "bundle",
+      "_#{Gem.loaded_specs.fetch("bundler").version}_",
       *args,
       chdir: root
     )

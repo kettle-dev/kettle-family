@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Run local Kettle Jem through a prepared member bundle so local StructuredMerge dependencies are activated during templating.
 
+- Pin bupb to an installed stable Bundler version, including its managed child updates.
+
 ### Security
 
 ## [1.3.1] - 2026-09-10

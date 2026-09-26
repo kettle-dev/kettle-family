@@ -381,7 +381,9 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     result = JSON.parse(out.string).fetch("results").first
     expect(result.fetch("phase")).to eq("bupb")
-    expect(result.fetch("command")).to eq(%w[bundle update --bundler])
+    command = result.fetch("command")
+    expect(command).to match(["bundle", /\A_\d+\.\d+\.\d+_\z/, "update", /\A--bundler=\d+\.\d+\.\d+\z/])
+    expect(command.fetch(3)).to eq("--bundler=#{command.fetch(1).delete("_")}")
   end
 
   it "plans bundle exec commands with bex" do

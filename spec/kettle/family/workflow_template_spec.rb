@@ -1143,7 +1143,8 @@ RSpec.describe Kettle::Family::Workflow do
   it "uses the template profile for real Bundler preparation, application, and normalization" do
     write_template_config
     config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
-    config_hash.fetch("template")["normalize_lockfiles_command"] = %w[bundle lock --local]
+    bundler_version = Gem.loaded_specs.fetch("bundler").version
+    config_hash.fetch("template")["normalize_lockfiles_command"] = ["bundle", "_#{bundler_version}_", "lock", "--local"]
     member = member_at("alpha")
     fixture_root = File.join(member.root, "template-fixture")
     FileUtils.mkdir_p(fixture_root)
