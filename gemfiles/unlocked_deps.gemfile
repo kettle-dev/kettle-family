@@ -6,11 +6,15 @@ gem "irb", "~> 1.17"
 
 gemspec path: "../"
 
+eval_gemfile("gemfiles/modular/templating.gemfile")
+
 eval_gemfile("modular/coverage.gemfile")
 
 eval_gemfile("modular/documentation.gemfile")
 
 eval_gemfile("modular/optional.gemfile")
+
+eval_gemfile("modular/shunted.gemfile")
 
 eval_gemfile("modular/style.gemfile")
 
