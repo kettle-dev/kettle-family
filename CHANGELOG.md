@@ -48,6 +48,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Pin bupb to an installed stable Bundler version, including its managed child updates.
 
+- [kc] nomono-self-upgrade-bundler-env: Preserve RUBYOPT bundle activation for local Kettle Jem execution, but omit eager setup from nomono self-upgrade lockfile updates so the stale self-version can be reconciled without falling back from the local template stack.
+
 ### Security
 
 ## [1.3.1] - 2026-09-10

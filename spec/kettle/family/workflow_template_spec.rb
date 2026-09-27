@@ -1140,6 +1140,46 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:template_execution_profile).name).to eq(:template_local)
   end
 
+  it "keeps eager Bundler setup for Kettle Jem but omits it from nomono lockfile updates" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("nomono")
+    env_overrides = {
+      "KETTLE_DEV_DEV" => "/workspace/kettle-dev",
+      "STRUCTUREDMERGE_DEV" => "/workspace/structuredmerge/ruby/gems",
+      "K_JEM_TEMPLATING" => "true",
+      "RUBYOPT" => "-W:deprecated -rbundler/setup",
+      "BUNDLE_GEMFILE" => "Gemfile"
+    }
+    workflow = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      env_overrides: env_overrides
+    )
+
+    expect(workflow.send(:template_prepare_env)).to include(
+      "KETTLE_DEV_DEV" => "/workspace/kettle-dev",
+      "STRUCTUREDMERGE_DEV" => "/workspace/structuredmerge/ruby/gems",
+      "K_JEM_TEMPLATING" => "true",
+      "RUBYOPT" => "-W:deprecated -rbundler/setup",
+      "BUNDLE_GEMFILE" => "Gemfile"
+    )
+    expect(workflow.send(:template_lockfile_recovery_env, member)).to include("RUBYOPT" => "-W:deprecated")
+    expect(workflow.send(:template_bootstrap_dependency_env, member)).to include("RUBYOPT" => "-W:deprecated")
+    expect(workflow.send(:template_bundler_update_env, workflow.send(:template_prepare_env), member)).to include(
+      "RUBYOPT" => "-W:deprecated"
+    )
+
+    other = member_at("alpha")
+    expect(workflow.send(:template_prepare_env)).to include(
+      "RUBYOPT" => "-W:deprecated -rbundler/setup"
+    )
+    expect(workflow.send(:template_bundler_update_env, workflow.send(:template_prepare_env), other)).to include(
+      "RUBYOPT" => "-W:deprecated -rbundler/setup"
+    )
+  end
+
   it "uses the template profile for real Bundler preparation, application, and normalization" do
     write_template_config
     config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))

@@ -1388,8 +1388,8 @@ module Kettle
         versions.max
       end
 
-      def template_bootstrap_dependency_env(_member)
-        env = template_prepare_env
+      def template_bootstrap_dependency_env(member)
+        env = template_bundler_update_env(template_prepare_env, member)
         # Bootstrap must evaluate the same development graph as template
         # preparation. In particular, K_JEM_TEMPLATING activates the generated
         # local sibling closure; without it, stale generated Gemfiles can make
@@ -5107,7 +5107,11 @@ module Kettle
       def normalize_lockfiles(member:, runner:, memo:, phase:, commit_changes: true)
         return unless config.normalize_lockfiles?
 
-        env = template_lockfile_phase?(phase) ? template_prepare_env : workflow_env
+        env = if template_lockfile_phase?(phase)
+          template_bundler_update_env(template_prepare_env, member)
+        else
+          workflow_env
+        end
         result = runner.call(
           member: member,
           phase: phase,
@@ -5158,7 +5162,7 @@ module Kettle
           member: member,
           phase: phase,
           command: normalize_lockfiles_command(member: member, phase: "prepare_lockfiles"),
-          env: template_lockfile_recovery_env
+          env: template_lockfile_recovery_env(member)
         )
         memo << result
         return unless memo.last&.ok?
@@ -5181,11 +5185,11 @@ module Kettle
         [result.stdout, result.stderr].join("\n").match?(/Unknown switches? .*--add-checksums/)
       end
 
-      def template_lockfile_recovery_env(_member = nil)
+      def template_lockfile_recovery_env(member = nil)
         # A failed template preparation can be caused by an unreleased sibling
         # version. Recover in the template graph, not the release graph, so
         # Bundler uses the configured monorepo paths.
-        execution_profile(template_execution_profile, workflow_env)
+        template_bundler_update_env(execution_profile(template_execution_profile, workflow_env), member)
       end
 
       def normalize_lockfiles_command(member:, phase:, skip_checksum_option: false)
@@ -5416,6 +5420,28 @@ module Kettle
 
       def template_command_env(wave_jobs: 1)
         (command == "template") ? template_prepare_env(wave_jobs: wave_jobs) : command_env
+      end
+
+      def template_bundler_update_env(env, member)
+        return env unless member&.name == NomonoBootstrap::GEM_NAME
+
+        # While nomono itself is being version-bumped, its Gemfile/gemspec can
+        # require the new version while Gemfile.lock still records the old
+        # self-version. Eager RUBYOPT setup activates that old lock before a
+        # Bundler update can reconcile it. Keep the setting for Kettle Jem:
+        # its standalone bootstrap needs it to activate local template gems.
+        # Bundler update initializes its own bundle, so remove only this token
+        # for nomono's lockfile-update commands and preserve all other options.
+        options = Shellwords.split(env.fetch("RUBYOPT", ""))
+        options.reject! { |option| option == "-rbundler/setup" }
+        if options.empty?
+          env.delete("RUBYOPT")
+        else
+          env["RUBYOPT"] = options.shelljoin
+        end
+        env
+      rescue ArgumentError
+        env
       end
 
       def local_kettle_jem_locked_for_member?(member)
