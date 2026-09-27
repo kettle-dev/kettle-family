@@ -227,7 +227,11 @@ module Kettle
 
       def path_matches_pattern?(path, pattern)
         relative_candidates(path).any? do |relative|
-          File.fnmatch?(pattern, relative, File::FNM_DOTMATCH | File::FNM_EXTGLOB)
+          if Gem.win_platform?
+            File.fnmatch?(pattern.downcase, relative.downcase, File::FNM_DOTMATCH | File::FNM_EXTGLOB)
+          else
+            File.fnmatch?(pattern, relative, File::FNM_DOTMATCH | File::FNM_EXTGLOB)
+          end
         end
       end
 

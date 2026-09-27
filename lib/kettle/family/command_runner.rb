@@ -677,8 +677,8 @@ module Kettle
       end
 
       def terminate_process(pid)
-        Process.kill("TERM", pid)
-      rescue Errno::ESRCH, Errno::EPERM
+        Process.kill(Gem.win_platform? ? "KILL" : "TERM", pid)
+      rescue Errno::ESRCH, Errno::EPERM, Errno::EINVAL
         nil
       end
 

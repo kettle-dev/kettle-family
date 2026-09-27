@@ -344,6 +344,22 @@ RSpec.describe Kettle::Family::Discovery do
       .to be(true)
   end
 
+  it "matches exclusion patterns case-insensitively on Windows" do
+    write_gem("alpha")
+    write_gemspec(File.join(@tmpdir, "Vendor", "Fixture"), "vendored")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      members:
+        exclude:
+          - "vendor/**"
+    YAML
+    allow(Gem).to receive(:win_platform?).and_return(true)
+
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = described_class.new(config: config).members
+
+    expect(members.map(&:name)).to eq(["alpha"])
+  end
+
   it "loads discovered gemspecs from their own directory" do
     root = File.join(@tmpdir, "relative-load")
     FileUtils.mkdir_p(File.join(root, "lib", "relative"))

@@ -313,19 +313,23 @@ RSpec.describe Kettle::Family::CommandRunner do
       env: {"K_JEM_TEMPLATING" => "true"}
     )
 
-    expect(result.command).to eq(
-      [
-        "mise",
-        "exec",
-        "-C",
-        member.root,
-        "--",
-        "env",
-        "K_JEM_TEMPLATING=true",
-        "kettle-jem",
-        "install"
-      ]
-    )
+    expected = [
+      "mise",
+      "exec",
+      "-C",
+      member.root,
+      "--",
+      "env",
+      "K_JEM_TEMPLATING=true",
+      "kettle-jem",
+      "install"
+    ]
+    if Gem.win_platform?
+      expect(result.command).to start_with("mise", "exec", "-C", member.root, "--", "ruby", "--disable=rubyopt", "-e")
+      expect(result.command).to include("K_JEM_TEMPLATING=true", "--", "kettle-jem", "install")
+    else
+      expect(result.command).to eq(expected)
+    end
   end
 
   it "executes commands when requested" do
@@ -479,7 +483,7 @@ RSpec.describe Kettle::Family::CommandRunner do
           false
         end
       )
-    end.to output("Release complete\nDone\n").to_stdout
+    end.to output(/\ARelease complete\r?\nDone\r?\n\z/).to_stdout
 
     expect(result).to be_ok
     expect(result.stdout).to include("\"event_version\":1")

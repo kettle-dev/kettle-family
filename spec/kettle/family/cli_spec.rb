@@ -634,10 +634,9 @@ RSpec.describe Kettle::Family::CLI do
       "kettle-jem install --quiet --events"
     ]
     if Gem.win_platform?
-      expect(command).to start_with(
-        "mise", "exec", "-C", File.join(@tmpdir, "alpha"), "--", "ruby", "--disable=rubyopt", "-e",
-        Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT
-      )
+      expect(command[0...3]).to eq(["mise", "exec", "-C"])
+      expect(File.identical?(command.fetch(3), File.join(@tmpdir, "alpha"))).to be(true)
+      expect(command[4...9]).to eq(["--", "ruby", "--disable=rubyopt", "-e", Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT])
       expect(command).to include(
         "DEBUG", "DEBUG_RESOLVER", "DEBUG_RESOLVER_TREE", "MOLINILLO_DEBUG",
         "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV=#{@tmpdir}",

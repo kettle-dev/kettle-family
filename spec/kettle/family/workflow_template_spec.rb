@@ -1572,15 +1572,26 @@ RSpec.describe Kettle::Family::Workflow do
     quiet_command = quiet_results.find { |result| result.phase == "template" }.command
     quiet_env = quiet_command.grep(/DEBUG|RESOLVER/)
     debug_env = debug_results.find { |result| result.phase == "template" }.command.grep(/DEBUG|RESOLVER/)
-    expect(quiet_command).to include(
-      "-u",
-      "DEBUG",
-      "-u",
-      "DEBUG_RESOLVER",
-      "BUNDLE_DEBUG=false",
-      "BUNDLER_DEBUG=false",
-      "STRUCTUREDMERGE_DEBUG=false"
-    )
+    if Gem.win_platform?
+      expect(quiet_command).to include(
+        "DEBUG",
+        "DEBUG_RESOLVER",
+        "BUNDLE_DEBUG=false",
+        "BUNDLER_DEBUG=false",
+        "STRUCTUREDMERGE_DEBUG=false"
+      )
+      expect(quiet_command).to start_with("mise", "exec", "-C", member.root, "--", "ruby", "--disable=rubyopt", "-e")
+    else
+      expect(quiet_command).to include(
+        "-u",
+        "DEBUG",
+        "-u",
+        "DEBUG_RESOLVER",
+        "BUNDLE_DEBUG=false",
+        "BUNDLER_DEBUG=false",
+        "STRUCTUREDMERGE_DEBUG=false"
+      )
+    end
     expect(quiet_env).not_to include(
       "DEBUG=true",
       "DEBUG=false",

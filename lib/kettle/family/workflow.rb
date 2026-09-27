@@ -3077,7 +3077,7 @@ module Kettle
           member: member,
           phase: phase,
           command: reset_gemfile_lock_command(member),
-          env: env
+          env: env.merge(reset_gemfile_lock_env_resets)
         )
         memo << result
         return unless result.ok? && execute
@@ -3087,17 +3087,6 @@ module Kettle
 
       def reset_gemfile_lock_command(member)
         command = [
-          "env",
-          "-u",
-          "BUNDLE_BIN_PATH",
-          "-u",
-          "BUNDLE_FROZEN",
-          "-u",
-          "BUNDLE_GEMFILE",
-          "-u",
-          "BUNDLER_VERSION",
-          "-u",
-          "RUBYOPT",
           reset_helper_ruby,
           "-e",
           RESET_LOCKFILE_HELPER,
@@ -3105,6 +3094,12 @@ module Kettle
         ]
         command.insert(-1, "--skip-changelog-dependency") if reset_skips_member_changelog_dependency?(member)
         command
+      end
+
+      def reset_gemfile_lock_env_resets
+        %w[BUNDLE_BIN_PATH BUNDLE_FROZEN BUNDLE_GEMFILE BUNDLER_VERSION RUBYOPT].to_h do |key|
+          [key, nil]
+        end
       end
 
       # Root-changelog families already prepare the changelog in a dedicated

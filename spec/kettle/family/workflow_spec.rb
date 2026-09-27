@@ -949,17 +949,6 @@ RSpec.describe Kettle::Family::Workflow do
 
   def expected_reset_command
     [
-      "env",
-      "-u",
-      "BUNDLE_BIN_PATH",
-      "-u",
-      "BUNDLE_FROZEN",
-      "-u",
-      "BUNDLE_GEMFILE",
-      "-u",
-      "BUNDLER_VERSION",
-      "-u",
-      "RUBYOPT",
       RbConfig.ruby,
       "-e",
       described_class::RESET_LOCKFILE_HELPER,

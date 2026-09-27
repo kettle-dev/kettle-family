@@ -3712,8 +3712,8 @@ RSpec.describe Kettle::Family::Workflow do
   def fake_bundle_env(body = "")
     bin_dir = File.join(@tmpdir, "fake-bin")
     FileUtils.mkdir_p(bin_dir)
-    bundle_path = File.join(bin_dir, "bundle")
-    File.write(bundle_path, <<~BASH)
+    script_path = File.join(bin_dir, "bundle.sh")
+    File.write(script_path, <<~BASH)
       #!/usr/bin/env bash
       #{body}
       cat > Gemfile.lock <<'LOCK'
@@ -3725,9 +3725,17 @@ RSpec.describe Kettle::Family::Workflow do
         alpha (1.2.3) sha256=abc123
       LOCK
     BASH
-    FileUtils.chmod("u+x", bundle_path)
+    if Gem.win_platform?
+      write_fake_ruby_executable(bin_dir, "bundle", <<~RUBY)
+        exit(system("bash", #{script_path.inspect}) ? 0 : ($?.exitstatus || 1))
+      RUBY
+    else
+      bundle_path = File.join(bin_dir, "bundle")
+      FileUtils.cp(script_path, bundle_path)
+      FileUtils.chmod("u+x", bundle_path)
+    end
     {
-      "PATH" => "#{bin_dir}:#{ENV.fetch("PATH")}",
+      "PATH" => [bin_dir, ENV.fetch("PATH")].join(File::PATH_SEPARATOR),
       "BUNDLE_ATTEMPTS_FILE" => File.join(@tmpdir, "bundle-attempts")
     }
   end
