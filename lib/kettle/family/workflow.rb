@@ -4425,6 +4425,26 @@ module Kettle
         File.file?(candidate) ? candidate : nil
       end
 
+      def local_kettle_jem_gemfile
+        executable = local_kettle_jem_executable
+        return unless executable
+
+        gemfile = File.expand_path("../Gemfile", File.dirname(executable))
+        gemfile if File.file?(gemfile)
+      end
+
+      def local_nomono_path_locked?(member)
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return false unless File.file?(lockfile)
+
+        spec = Bundler::LockfileParser.new(Bundler.read_file(lockfile)).specs.find do |locked_spec|
+          locked_spec.name == NomonoBootstrap::GEM_NAME
+        end
+        spec&.source.is_a?(Bundler::Source::Path)
+      rescue Bundler::LockfileError, Errno::ENOENT
+        false
+      end
+
       def template_local_kettle_jem_root
         values = [
           env_overrides["STRUCTUREDMERGE_DEV"],
@@ -5369,7 +5389,7 @@ module Kettle
           member: member,
           phase: "prepare_template_dependencies",
           command: template_prepare_command(member),
-          env: template_prepare_env(wave_jobs: wave_jobs)
+          env: template_prepare_env(wave_jobs: wave_jobs, member: member)
         )
         if recoverable_bundle_failure?(result)
           recover_template_lockfiles(
@@ -5390,7 +5410,7 @@ module Kettle
             member: member,
             phase: "prepare_template_dependencies",
             command: template_prepare_command(member),
-            env: template_prepare_env(wave_jobs: wave_jobs)
+            env: template_prepare_env(wave_jobs: wave_jobs, member: member)
           )
         end
         memo << result
@@ -5459,13 +5479,20 @@ module Kettle
         end
       end
 
-      def template_prepare_env(wave_jobs: 1)
+      def template_prepare_env(wave_jobs: 1, member: nil)
         # Templating is development work.  It must resolve the configured
         # family graph exactly as template application does; release-only
         # lockfile cleanup owns disabling local path sources.
-        execution_profile(template_execution_profile, workflow_env).merge(
+        env = execution_profile(template_execution_profile, workflow_env).merge(
           "KETTLE_FAMILY_WAVE_JOBS" => wave_jobs.to_s
         )
+        tool_gemfile = local_kettle_jem_gemfile if member && local_nomono_path_locked?(member)
+        # Nomono's existing generated bootstrap can activate an installed
+        # release before Bundler resolves a path-locked local Nomono. Start
+        # local Kettle Jem from its own bundle so prepare can repair that
+        # bootstrap before it loads the destination bundle.
+        env["BUNDLE_GEMFILE"] = tool_gemfile if tool_gemfile
+        env
       end
 
       def template_command_env(wave_jobs: 1)

@@ -921,6 +921,38 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:workflow_env)).not_to have_key("KETTLE_JEM_THREAD_WORKERS")
   end
 
+  it "starts local Kettle Jem from its own bundle before preparing a path-locked Nomono destination" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("nomono")
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      PATH
+        remote: .
+        specs:
+          nomono (1.1.6)
+
+      DEPENDENCIES
+        nomono!
+    LOCK
+    local_stack = File.join(@tmpdir, "structuredmerge", "ruby", "gems")
+    local_kettle_jem = File.join(local_stack, "kettle-jem")
+    FileUtils.mkdir_p(File.join(local_kettle_jem, "exe"))
+    File.write(File.join(local_kettle_jem, "exe", "kettle-jem"), "")
+    tool_gemfile = File.join(local_kettle_jem, "Gemfile")
+    File.write(tool_gemfile, <<~GEMFILE)
+      source "https://gem.coop"
+    GEMFILE
+    workflow = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      env_overrides: {"STRUCTUREDMERGE_DEV" => local_stack}
+    )
+
+    expect(workflow.send(:template_prepare_env, member: member)).to include(
+      "BUNDLE_GEMFILE" => tool_gemfile
+    )
+  end
+
   it "does not inject an implicit family local path env for no-config single-member templating" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = Kettle::Family::Member.new(
