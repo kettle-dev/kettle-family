@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "paths"
+
 module Kettle
   module Family
     class ReadinessCheck
@@ -119,10 +121,7 @@ module Kettle
         text = path.to_s
         return nil if text.empty? || text.casecmp("false").zero?
 
-        expanded = File.expand_path(text, base)
-        File.realpath(expanded)
-      rescue Errno::ENOENT
-        expanded
+        Paths.canonical(text, base: base)
       end
 
       def required_files

@@ -312,7 +312,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
     expect(results.first).to be_ok
-    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update --add-checksums\nfalse\n#{File.join(member.root, "Gemfile")}")
+    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update --add-checksums\nfalse\n#{File.expand_path(File.join(member.root, "Gemfile"))}")
     expect(File.read(File.join(member.root, "reset-helper.txt"))).to include("release-lockfiles", "true", "\n")
   end
 
@@ -373,7 +373,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
     expect(results.first).to be_ok
-    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update --add-checksums\n#{File.join(member.root, "Gemfile")}")
+    expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update --add-checksums\n#{File.expand_path(File.join(member.root, "Gemfile"))}")
     expect(File.read(File.join(member.root, "reset-helper.txt"))).to include("release-lockfiles", "true", "\n")
   end
 
@@ -549,8 +549,8 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[family_root_bup bup])
     expect(File.readlines(call_log, chomp: true)).to eq([
-      "#{@tmpdir}|update|--all",
-      "#{member.root}|update|--all"
+      "#{File.expand_path(@tmpdir)}|update|--all",
+      "#{File.expand_path(member.root)}|update|--all"
     ])
   end
 

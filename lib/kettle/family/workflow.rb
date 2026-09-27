@@ -13,6 +13,7 @@ require "yaml"
 require "kettle/dev"
 
 require_relative "concurrency"
+require_relative "paths"
 require_relative "workflow_progress"
 
 module Kettle
@@ -2946,7 +2947,7 @@ module Kettle
       def dependency_floor_allowed_path_remote?(member:, lockfile_source:, line_number:)
         remote = lockfile_source.each_line.with_index(1).find { |_line, index| index == line_number }.first
           .to_s.split("remote:", 2).last.to_s.strip
-        remote_path = File.expand_path(remote, member.root)
+        remote_path = Paths.canonical(remote, base: member.root)
         release_allowed_local_path_roots.any? do |root|
           remote_path == root || remote_path.start_with?("#{root}/")
         end
@@ -2968,7 +2969,7 @@ module Kettle
 
           if stripped.start_with?("remote:")
             remote = stripped.split("remote:", 2).last.to_s.strip
-            remote_path = File.expand_path(remote, member.root)
+            remote_path = Paths.canonical(remote, base: member.root)
             allowed_remote = release_allowed_local_path_roots.any? do |root|
               remote_path == root || remote_path.start_with?("#{root}/")
             end

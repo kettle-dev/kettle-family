@@ -235,8 +235,8 @@ RSpec.describe Kettle::Family::Workflow do
     env = workflow.send(:release_env_for_member, member, family_root: worktree_root)
 
     worktree_gems = File.join(worktree_root, "gems")
-    expect(env).to include("EXAMPLE_DEV" => worktree_gems, "K_RELEASE_CI_ROOT" => worktree_root)
-    expect(JSON.parse(env.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON")).fetch("local_path_roots")).to eq([worktree_gems])
+    expect(env).to include("EXAMPLE_DEV" => File.expand_path(worktree_gems), "K_RELEASE_CI_ROOT" => File.expand_path(worktree_root))
+    expect(JSON.parse(env.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON")).fetch("local_path_roots")).to eq([File.expand_path(worktree_gems)])
   end
 
   it "runs aggregate monorepo waves through workers then serial finalization" do
@@ -700,11 +700,11 @@ RSpec.describe Kettle::Family::Workflow do
     expect(environment).to include("STRUCTUREDMERGE_DEV" => monorepo_gems)
     expect(JSON.parse(environment.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON"))).to eq(
       "name" => "monorepo_ci_local",
-      "ci_root" => @tmpdir,
-      "local_path_roots" => [monorepo_gems],
-      "selector_env" => {"STRUCTUREDMERGE_DEV" => monorepo_gems}
+      "ci_root" => File.expand_path(@tmpdir),
+      "local_path_roots" => [File.expand_path(monorepo_gems)],
+      "selector_env" => {"STRUCTUREDMERGE_DEV" => File.expand_path(monorepo_gems)}
     )
-    expect(workflow.send(:release_allowed_local_path_roots)).to eq([monorepo_gems])
+    expect(workflow.send(:release_allowed_local_path_roots)).to eq([File.expand_path(monorepo_gems)])
   end
 
   it "disables template mode while retaining the declared monorepo release graph" do
@@ -733,7 +733,7 @@ RSpec.describe Kettle::Family::Workflow do
     environment = workflow.send(:release_lockfile_env)
     expect(environment).to include("K_JEM_TEMPLATING" => "false")
     expect(JSON.parse(environment.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON")).fetch("selector_env"))
-      .to eq("STRUCTUREDMERGE_DEV" => monorepo_gems)
+      .to eq("STRUCTUREDMERGE_DEV" => File.expand_path(monorepo_gems))
     expect(workflow.send(:release_lockfile_execution_profile).name).to eq(:release_monorepo)
   end
 

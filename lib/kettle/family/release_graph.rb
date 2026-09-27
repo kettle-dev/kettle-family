@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require_relative "paths"
 
 module Kettle
   module Family
@@ -74,20 +75,7 @@ module Kettle
       end
 
       def canonical_path(path)
-        expanded = File.expand_path(path)
-        existing = expanded
-        suffix = []
-        until File.exist?(existing)
-          parent = File.dirname(existing)
-          break if parent == existing
-
-          suffix.unshift(File.basename(existing))
-          existing = parent
-        end
-
-        File.join(File.realpath(existing), *suffix)
-      rescue Errno::ENOENT, Errno::EACCES
-        expanded
+        Paths.canonical(path)
       end
     end
   end
