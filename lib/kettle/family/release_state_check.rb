@@ -859,8 +859,8 @@ module Kettle
 
       def relative_config_root
         @relative_config_root ||= begin
-          root = git_root
-          config_root = File.realpath(config.root)
+          root = normalize_comparable_path(git_root)
+          config_root = normalize_comparable_path(File.realpath(config.root))
           if config_root == root
             "."
           elsif config_root.start_with?("#{root}/")
@@ -869,6 +869,11 @@ module Kettle
             raise Error, "configured root #{config.root} is outside git root #{root}"
           end
         end
+      end
+
+      def normalize_comparable_path(path)
+        normalized = path.to_s.tr("\\", "/")
+        Gem.win_platform? ? normalized.downcase : normalized
       end
     end
   end

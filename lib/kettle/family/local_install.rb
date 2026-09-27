@@ -7,6 +7,7 @@ require "open3"
 require "time"
 
 require_relative "concurrency"
+require_relative "paths"
 
 module Kettle
   module Family
@@ -140,7 +141,7 @@ module Kettle
 
         raise Error, "install local dependency does not exist: #{path}" unless Dir.exist?(expanded)
 
-        gemspecs = Dir.glob(File.join(expanded, "*.gemspec"))
+        gemspecs = Paths.glob(expanded, "*.gemspec")
         raise Error, "no gemspec found for install local dependency: #{path}" if gemspecs.empty?
         raise Error, "multiple gemspecs found for install local dependency: #{path}" if gemspecs.size > 1
 
@@ -163,7 +164,7 @@ module Kettle
         canonical = File.join(root, "lib", gem_name.tr("-", "_"), "version.rb")
         return canonical if File.file?(canonical)
 
-        Dir.glob(File.join(root, "lib", "**", "version.rb")).min
+        Paths.glob(root, "lib", "**", "version.rb").min
       end
 
       def required_ruby_version(spec)

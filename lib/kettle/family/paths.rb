@@ -24,6 +24,10 @@ module Kettle
         expanded
       end
 
+      def glob(*parts)
+        Dir.glob(File.join(*parts).tr("\\", "/"))
+      end
+
       def local_path_remote?(remote)
         text = remote.to_s
         drive_absolute = text.length >= 3 && text[1] == ":" && ["/", "\\"].include?(text[2])

@@ -11,6 +11,17 @@ module Kettle
         "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE"
       ].freeze
       MISE_SESSION_ENV_PREFIX = "__MISE_"
+      WINDOWS_ENV_EXEC_SCRIPT = <<~RUBY
+        unset_count = Integer(ARGV.shift)
+        unset_count.times { ENV.delete(ARGV.shift) }
+        assignment_count = Integer(ARGV.shift)
+        assignment_count.times do
+          key, value = ARGV.shift.split("=", 2)
+          ENV[key] = value
+        end
+        abort "missing command after environment arguments" if ARGV.shift != "--"
+        exec(*ARGV)
+      RUBY
 
       class OtpCoordinator
         def initialize(input: $stdin, output: $stdout, queue_total: nil, secrets_provider: nil, event_handler: nil)
@@ -680,6 +691,22 @@ module Kettle
         ]
         mise_argv = ["mise", "exec", "-C", member.root, "--"]
         return [*mise_argv, *argv] if injected_env.empty?
+
+        if Gem.win_platform?
+          return [
+            *mise_argv,
+            "ruby",
+            "-e",
+            WINDOWS_ENV_EXEC_SCRIPT,
+            "--",
+            unset_env.length.to_s,
+            *unset_env.map { |key, _value| key.to_s },
+            set_env.length.to_s,
+            *set_env.map { |key, value| "#{key}=#{value}" },
+            "--",
+            *argv
+          ]
+        end
 
         [*mise_argv, "env", *injected_env, *argv]
       end

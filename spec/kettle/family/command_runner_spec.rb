@@ -100,6 +100,40 @@ RSpec.describe Kettle::Family::CommandRunner do
     )
   end
 
+  it "builds a portable Windows environment wrapper after mise" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\nK_JEM_TEMPLATING = \"false\"\n")
+    allow(Gem).to receive(:win_platform?).and_return(true)
+
+    result = described_class.new.call(
+      member: member,
+      phase: "template",
+      command: ["bundle", "exec", "kettle-jem", "install"],
+      env: {"K_JEM_TEMPLATING" => "true"}
+    )
+
+    expect(result.command.first(6)).to eq(["mise", "exec", "-C", member.root, "--", "ruby"])
+    expect(result.command).to include("K_JEM_TEMPLATING=true", "--", "bundle", "exec", "kettle-jem", "install")
+    expect(result.command).not_to include("env")
+
+    stdout, stderr, status = Open3.capture3(
+      {"K_JEM_TEMPLATING" => "false"},
+      RbConfig.ruby,
+      "-e",
+      described_class::WINDOWS_ENV_EXEC_SCRIPT,
+      "--",
+      "0",
+      "1",
+      "K_JEM_TEMPLATING=true",
+      "--",
+      RbConfig.ruby,
+      "-e",
+      "print ENV.fetch('K_JEM_TEMPLATING')"
+    )
+    expect(status).to be_success, stderr
+    expect(stdout).to eq("true")
+  end
+
   it "places env unset options before env assignments" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")

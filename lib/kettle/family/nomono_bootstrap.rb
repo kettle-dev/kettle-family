@@ -3,6 +3,8 @@
 require "rubygems"
 require "kettle/dev"
 
+require_relative "paths"
+
 module Kettle
   module Family
     class NomonoBootstrap
@@ -91,7 +93,7 @@ module Kettle
       end
 
       def local_gemfile_edits(member)
-        Dir.glob(File.join(member.root, "gemfiles/modular/**/*_local.gemfile")).sort.flat_map do |path|
+        Paths.glob(member.root, "gemfiles/modular/**/*_local.gemfile").sort.flat_map do |path|
           source = File.read(path)
           parse_result = Kettle::Dev::VersionBump.parse_source(source, path)
           Kettle::Dev::VersionBump.each_node(parse_result.value).filter_map do |node|

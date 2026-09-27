@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Apply workflow environment overrides portably after mise and normalize Windows filesystem paths in discovery and branch configuration.
+
+- Normalize filesystem glob separators across supported platforms so family discovery, installs, and workflow asset lookup find paths on Windows.
+
 ### Security
 
 ## [1.3.2] - 2026-09-27

@@ -6,6 +6,10 @@ require "tmpdir"
 require "webrick"
 
 RSpec.describe Kettle::Family::ExecutionProfile do
+  before do
+    FileUtils.mkdir_p(File.join(Dir.pwd, "tmp"))
+  end
+
   it "defines each supported execution context without an implicit fallback" do
     expect(described_class::DEFINITIONS.keys).to contain_exactly(
       :development_local,

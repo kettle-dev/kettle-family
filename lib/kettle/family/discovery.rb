@@ -47,7 +47,7 @@ module Kettle
 
       def discover_members
         gemspecs = config.discover_member_roots.flat_map do |root|
-          Dir.glob(File.join(root, "**", "*.gemspec"))
+          Paths.glob(root, "**", "*.gemspec")
         end
         gemspecs.reject! { |path| excluded_gemspec?(path) }
         gemspecs.map { |path| member_from_gemspec(path) }
@@ -83,7 +83,7 @@ module Kettle
       end
 
       def primary_gemspec(root)
-        gemspecs = Dir.glob(File.join(root, "*.gemspec"))
+        gemspecs = Paths.glob(root, "*.gemspec")
         raise Error, "no gemspec found in #{root}" if gemspecs.empty?
         return gemspecs.first if gemspecs.one?
 
@@ -108,11 +108,12 @@ module Kettle
       end
 
       def normalized_path(path)
-        Paths.canonical(path)
+        normalized = Paths.canonical(path).tr("\\", "/")
+        Gem.win_platform? ? normalized.downcase : normalized
       end
 
       def same_directory?(left, right)
-        File.identical?(left, right)
+        normalized_path(left) == normalized_path(right) || File.identical?(left, right)
       rescue SystemCallError
         normalized_path(left) == normalized_path(right)
       end
@@ -178,7 +179,7 @@ module Kettle
         canonical = File.join(root, "lib", gem_name.tr("-", "_"), "version.rb")
         return canonical if File.file?(canonical)
 
-        candidates = Dir.glob(File.join(root, "lib", "**", "version.rb"))
+        candidates = Paths.glob(root, "lib", "**", "version.rb")
         candidates.min
       end
 
@@ -237,12 +238,14 @@ module Kettle
       end
 
       def relative_path(path, root)
-        expanded_path = File.expand_path(path)
-        expanded_root = File.expand_path(root)
+        expanded_path = File.expand_path(path).tr("\\", "/")
+        expanded_root = File.expand_path(root).tr("\\", "/")
         prefix = "#{expanded_root}/"
-        return unless expanded_path.start_with?(prefix)
+        comparable_path = Gem.win_platform? ? expanded_path.downcase : expanded_path
+        comparable_prefix = Gem.win_platform? ? prefix.downcase : prefix
+        return unless comparable_path.start_with?(comparable_prefix)
 
-        expanded_path.delete_prefix(prefix)
+        expanded_path[comparable_prefix.length..]
       end
 
       class GemfileDependencyCollector

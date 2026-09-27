@@ -3019,7 +3019,7 @@ module Kettle
       end
 
       def workflow_bundle_gemfiles(member)
-        Dir.glob(File.join(member.root, ".github", "workflows", "*.{yml,yaml}")).flat_map do |path|
+        Paths.glob(member.root, ".github", "workflows", "*.{yml,yaml}").flat_map do |path|
           workflow_bundle_gemfile_entries(path).map do |entry|
             File.expand_path(normalize_workflow_workspace_path(entry), member.root)
           end
@@ -3790,7 +3790,7 @@ module Kettle
         return aggregate_release_result("all selected members must have the same version") unless version.length == 1
 
         assets = members.flat_map do |member|
-          gem_path = Dir[File.join(member.root, "pkg", "*.gem")].select { |path| File.basename(path).end_with?("-#{version.first}.gem") }
+          gem_path = Paths.glob(member.root, "pkg", "*.gem").select { |path| File.basename(path).end_with?("-#{version.first}.gem") }
           checksum_paths = %w[sha256 sha512].map { |algorithm| File.join(member.root, "checksums", "#{member.name}-#{version.first}.gem.#{algorithm}") }
           gem_path + checksum_paths.select { |path| File.file?(path) }
         end
@@ -4234,7 +4234,7 @@ module Kettle
         return spec_executable if spec_executable && File.file?(spec_executable)
 
         candidates = Gem.path.flat_map do |gem_path|
-          Dir[File.join(gem_path, "gems", "#{gem_name}-*", "exe", executable_name)]
+          Paths.glob(gem_path, "gems", "#{gem_name}-*", "exe", executable_name)
         end
         candidates.max_by do |candidate|
           directory = File.basename(File.dirname(candidate, 2))

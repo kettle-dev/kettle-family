@@ -22,6 +22,13 @@ RSpec.describe Kettle::Family::Discovery do
     expect(ordered.map(&:name)).to eq(%w[alpha beta])
   end
 
+  it "normalizes Windows separators in filesystem glob patterns" do
+    write_gem("alpha")
+    windows_root = @tmpdir.tr("/", "\\")
+
+    expect(Kettle::Family::Paths.glob(windows_root, "*", "*.gemspec").map { |path| File.basename(path) }).to eq(["alpha.gemspec"])
+  end
+
   it "serializes legacy gemspec evaluation while concurrent discovery continues" do
     root = write_gem("alpha")
     gemspec = File.join(root, "alpha.gemspec")
@@ -325,6 +332,16 @@ RSpec.describe Kettle::Family::Discovery do
     members = described_class.new(config: config).members
 
     expect(members.map(&:name)).to eq(["alpha"])
+  end
+
+  it "matches discovered paths case-insensitively and across slash styles on Windows" do
+    discovery = described_class.new(config: Kettle::Family::Config.load(root: @tmpdir))
+    allow(Gem).to receive(:win_platform?).and_return(true)
+
+    expect(discovery.send(:relative_path, "C:\\Workspace\\Family\\alpha\\alpha.gemspec", "c:/workspace/family"))
+      .to eq("alpha/alpha.gemspec")
+    expect(discovery.send(:same_directory?, "C:/Workspace/Family", "c:/workspace/family"))
+      .to be(true)
   end
 
   it "loads discovered gemspecs from their own directory" do
