@@ -28,15 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Windows family workflows now reset lockfiles without relying on the POSIX env utility, terminate failed interactive child processes, and apply member exclusion patterns case-insensitively.
-
 ### Security
 
 ## [1.3.2] - 2026-09-27
 
 - TAG: [v1.3.2][1.3.2t]
-- COVERAGE: 93.22% -- 6530/7005 lines in 37 files
-- BRANCH COVERAGE: 77.72% -- 2651/3411 branches in 37 files
+- COVERAGE: 93.24% -- 6536/7010 lines in 37 files
+- BRANCH COVERAGE: 77.75% -- 2655/3415 branches in 37 files
 - 33.10% documented
 
 ### Added
@@ -92,6 +90,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Close the child input stream when a configured OTP provider returns no code, preventing interactive release commands from hanging.
 
 - Start the Windows environment wrapper without inherited RUBYOPT so Bundler cannot activate the parent bundle before wrapper overrides are applied.
+
+- Windows family workflows now reset lockfiles without relying on the POSIX env utility, terminate failed interactive child processes, and apply member exclusion patterns case-insensitively.
 
 ## [1.3.1] - 2026-09-10
 
