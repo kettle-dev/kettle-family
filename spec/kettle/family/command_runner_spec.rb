@@ -128,14 +128,10 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.command).to include("K_JEM_TEMPLATING=true", "--", "bundle", "exec", "kettle-jem", "install")
     expect(result.command).not_to include("env")
 
-    child_env = Bundler.unbundled_env.merge(
-      "BUNDLE_GEMFILE" => nil,
-      "BUNDLE_LOCKFILE" => nil,
-      "KETTLE_DEV_DEV" => nil,
-      "RUBYOPT" => nil,
-      "RUBYLIB" => nil,
-      "K_JEM_TEMPLATING" => "false"
-    )
+    child_env = ENV.select do |key, _value|
+      %w[HOME PATH TMP TMPDIR TEMP SYSTEMROOT WINDIR].include?(key.upcase)
+    end
+    child_env["K_JEM_TEMPLATING"] = "false"
     stdout, stderr, status = Open3.capture3(
       child_env,
       RbConfig.ruby,
@@ -150,7 +146,8 @@ RSpec.describe Kettle::Family::CommandRunner do
       RbConfig.ruby,
       "--disable=rubyopt",
       "-e",
-      "print ENV.fetch('K_JEM_TEMPLATING')"
+      "print ENV.fetch('K_JEM_TEMPLATING')",
+      unsetenv_others: true
     )
     expect(status).to be_success, stderr
     expect(stdout).to eq("true")
