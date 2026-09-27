@@ -148,6 +148,7 @@ RSpec.describe Kettle::Family::CommandRunner do
       "K_JEM_TEMPLATING=true",
       "--",
       RbConfig.ruby,
+      "--disable=rubyopt",
       "-e",
       "print ENV.fetch('K_JEM_TEMPLATING')"
     )
