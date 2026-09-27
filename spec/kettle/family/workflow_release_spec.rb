@@ -3041,6 +3041,38 @@ RSpec.describe Kettle::Family::Workflow do
     expect(memo.last.command.join(" ")).to include("Gemfile.lock")
   end
 
+  it "refreshes a dependent lockfile whenever it raises a gemspec floor" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, commit: false, jobs: 1)
+    allow(workflow).to receive(:active_release_dependency_names).and_return([])
+    runner = lambda do |member:, phase:, command:, **_options|
+      if phase == "dependency_floor_lockfiles"
+        File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+          GEM
+            specs:
+              alpha (1.2.3)
+
+          CHECKSUMS
+            alpha (1.2.3) sha256=abc123
+        LOCK
+      end
+      Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, phase, "", 0.0, false, nil)
+    end
+    memo = []
+
+    workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
+
+    expect(memo.map(&:phase)).to eq(%w[
+      dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install
+    ])
+    expect(memo.find { |result| result.phase == "dependency_floor_lockfiles" }.command).to eq(
+      %w[bundle lock --update alpha --add-checksums]
+    )
+  end
+
   it "refreshes and commits dependent lockfiles when the dependency floor is already current" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -3184,7 +3216,8 @@ RSpec.describe Kettle::Family::Workflow do
       memo: memo
     )
 
-    expect(memo.map(&:phase)).to eq(["dependency_floor"])
+    expect(memo).to be_empty
+    expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.0.0"')
   end
 
   it "refreshes a raised runtime floor without waiting for a later Gemfile-only tool dependency" do

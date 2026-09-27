@@ -2702,17 +2702,28 @@ module Kettle
         lockfile_ready_dependent_members = affected_dependent_members.select do |member|
           dependency_floor_refresh_ready?(member, released_members: released_members)
         end
+        completed_names = Array(@release_completed_member_names) + released_members.map(&:name)
+        completed_released_members = members.select { |member| completed_names.include?(member.name) }
+        completed_released_members |= released_members
         lockfile_refresh_members = if execute && publish
           lockfile_ready_dependent_members.filter_map do |member|
-            active_released_members = active_release_dependencies_for(member, released_members)
+            gemspec_dependencies = DependencyFloor.gemspec_dependency_names(member)
+            runtime_released_members = completed_released_members.select do |released_member|
+              gemspec_dependencies.include?(released_member.name)
+            end
+            active_names = active_release_dependency_names(member)
+            active_released_members = completed_released_members.select do |released_member|
+              active_names.include?(released_member.name)
+            end
+            active_released_members |= runtime_released_members
             [member, active_released_members] unless active_released_members.empty?
           end
         else
           []
         end
         floor_results = DependencyFloor.new(
-          released_members: released_members,
-          dependent_members: dependent_members,
+          released_members: completed_released_members,
+          dependent_members: lockfile_ready_dependent_members,
           mode: execute ? :execute : :dry_run
         ).results
         memo.concat(floor_results)

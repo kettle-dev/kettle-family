@@ -54,6 +54,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Template preparation now starts local Kettle Jem from its own bundle when the destination lockfile path-locks Nomono, allowing bootstrap repair before the destination bundle loads.
 
+- Refresh dependent lockfiles before committing newly raised family dependency floors.
+
 ### Security
 
 ## [1.3.1] - 2026-09-10
