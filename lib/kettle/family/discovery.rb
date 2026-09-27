@@ -258,13 +258,7 @@ module Kettle
       end
 
       def comparable_path(path)
-        expanded = File.expand_path(path)
-        canonical = if Gem.win_platform? && File.exist?(expanded)
-          Paths.canonical(expanded)
-        else
-          expanded
-        end
-        canonical.tr("\\", "/")
+        File.expand_path(path).tr("\\", "/")
       end
 
       class GemfileDependencyCollector

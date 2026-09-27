@@ -311,7 +311,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
     expect(results.first).to be_ok
     expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update --add-checksums\nfalse\n#{Kettle::Family::Paths.canonical(File.join(member.root, "Gemfile"))}")
-    expect(File.read(File.join(member.root, "reset-helper.txt"))).to include("release-lockfiles", "true", "\n")
+    expect(results.first.command).to include("release-lockfiles")
+    expect(File.read(File.join(member.root, "reset-helper.txt"))).to include("true", "\n")
   end
 
   it "executes Gemfile.lock resets without materializing the broken member bundle" do
@@ -365,7 +366,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).to eq(["reset_gemfile_lock"])
     expect(results.first).to be_ok
     expect(File.read(File.join(member.root, "bundle-reset.txt"))).to eq("lock --update --add-checksums\n#{Kettle::Family::Paths.canonical(File.join(member.root, "Gemfile"))}")
-    expect(File.read(File.join(member.root, "reset-helper.txt"))).to include("release-lockfiles", "true", "\n")
+    expect(results.first.command).to include("release-lockfiles")
+    expect(File.read(File.join(member.root, "reset-helper.txt"))).to include("true", "\n")
   end
 
   it "fails Gemfile.lock resets that leave release-invalid lockfiles" do

@@ -1610,18 +1610,21 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "release", config: config, members: [member]).results
 
     release_command = results.find { |result| result.phase == "release_build" }.command
-    expect(release_command).to include(
+    expected_release_tokens = [
       "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}",
-      "-u",
-      "DEBUG",
       "BUNDLE_QUIET=true",
       "BUNDLE_DEBUG=false",
       "BUNDLER_DEBUG=false",
       "BUNDLE_VERBOSE=false",
-      "-u",
-      "DEBUG_RESOLVER",
       "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true"
-    )
+    ]
+    if Gem.win_platform?
+      expect(release_command).to include(Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT)
+      expect(release_command).to include("DEBUG", "DEBUG_RESOLVER")
+      expected_release_tokens.each { |token| expect(release_command).to include(token) }
+    else
+      expect(release_command).to include(*expected_release_tokens, "-u", "DEBUG", "-u", "DEBUG_RESOLVER")
+    end
     expect(release_command).not_to include(
       "#{family_local_env_name}=#{@tmpdir}",
       "DEBUG=true",
@@ -3727,7 +3730,7 @@ RSpec.describe Kettle::Family::Workflow do
     BASH
     if Gem.win_platform?
       write_fake_ruby_executable(bin_dir, "bundle", <<~RUBY)
-        exit(system("bash", #{script_path.inspect}) ? 0 : ($?.exitstatus || 1))
+        exit(system("bash", #{script_path.inspect}, *ARGV) ? 0 : ($?.exitstatus || 1))
       RUBY
     else
       bundle_path = File.join(bin_dir, "bundle")

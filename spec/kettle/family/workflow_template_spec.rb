@@ -1952,12 +1952,15 @@ RSpec.describe Kettle::Family::Workflow do
     initialize_git_repo(member.root, branches: %w[r1 r2])
     calls = []
     stub_successful_runner(calls)
-    allow(Kettle::Family::GitStatus).to receive(:dirty_paths).and_return([])
-    allow(Kettle::Family::GitStatus).to receive(:dirty_paths).with(Kettle::Family::Paths.canonical(member.root)).and_return(
-      [],
-      [" M Gemfile.lock"],
-      []
-    )
+    dirty_path_checks = 0
+    expected_git_root = Kettle::Family::Paths.canonical(member.root).tr("\\", "/").downcase
+    allow(Kettle::Family::GitStatus).to receive(:dirty_paths) do |root|
+      actual_git_root = Kettle::Family::Paths.canonical(root).tr("\\", "/").downcase
+      next [] unless actual_git_root == expected_git_root
+
+      dirty_path_checks += 1
+      (dirty_path_checks == 2) ? [" M Gemfile.lock"] : []
+    end
 
     results = described_class.new(command: "test", config: config, members: [member], execute: true).results
 

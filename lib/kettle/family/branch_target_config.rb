@@ -82,8 +82,16 @@ module Kettle
       def member_relative_root(member, root)
         root = File.realpath(root)
         member_root = File.realpath(member.root)
-        return "." if member_root == root
-        return member_root.delete_prefix("#{root}/") if member_root.start_with?("#{root}/")
+        if Gem.win_platform?
+          normalized_root = root.tr("\\", "/").downcase
+          normalized_member_root = member_root.tr("\\", "/").downcase
+        else
+          normalized_root = root.tr("\\", "/")
+          normalized_member_root = member_root.tr("\\", "/")
+        end
+        return "." if normalized_member_root == normalized_root
+        prefix = "#{normalized_root}/"
+        return member_root.tr("\\", "/")[prefix.length..] if normalized_member_root.start_with?(prefix)
 
         raise Error, "member root #{member.root} is outside git root #{root}"
       end
