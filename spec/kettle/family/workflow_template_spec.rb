@@ -359,7 +359,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(runner).to have_received(:call).with(
       member: entry.fetch(:member),
       phase: "template_member_worktree_mise_trust",
-      command: ["mise", "trust", "-C", entry.fetch(:member).root],
+      command: ["mise", "trust", "-C", Kettle::Family::Paths.canonical(entry.fetch(:member).root)],
       raw: true
     ).ordered
   ensure

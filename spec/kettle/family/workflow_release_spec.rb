@@ -235,7 +235,7 @@ RSpec.describe Kettle::Family::Workflow do
     env = workflow.send(:release_env_for_member, member, family_root: worktree_root)
 
     worktree_gems = File.join(worktree_root, "gems")
-    expect(env).to include("EXAMPLE_DEV" => Kettle::Family::Paths.canonical(worktree_gems), "K_RELEASE_CI_ROOT" => Kettle::Family::Paths.canonical(worktree_root))
+    expect(env).to include("EXAMPLE_DEV" => File.expand_path(worktree_gems), "K_RELEASE_CI_ROOT" => File.expand_path(worktree_root))
     expect(JSON.parse(env.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON")).fetch("local_path_roots")).to eq([Kettle::Family::Paths.canonical(worktree_gems)])
   end
 
@@ -702,7 +702,7 @@ RSpec.describe Kettle::Family::Workflow do
       "name" => "monorepo_ci_local",
       "ci_root" => Kettle::Family::Paths.canonical(@tmpdir),
       "local_path_roots" => [Kettle::Family::Paths.canonical(monorepo_gems)],
-      "selector_env" => {"STRUCTUREDMERGE_DEV" => Kettle::Family::Paths.canonical(monorepo_gems)}
+      "selector_env" => {"STRUCTUREDMERGE_DEV" => File.expand_path(monorepo_gems)}
     )
     expect(workflow.send(:release_allowed_local_path_roots)).to eq([Kettle::Family::Paths.canonical(monorepo_gems)])
   end
