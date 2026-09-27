@@ -416,17 +416,17 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-16
 17
 18
 19
 20
 21
 22
-23</pre>
+23
+24</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 16</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 17</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>name:</span><span class='comma'>,</span> <span class='label'>ci_root:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>local_path_roots:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>selector_env:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span>
   <span class='ivar'>@name</span> <span class='op'>=</span> <span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span>
@@ -473,12 +473,12 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-14
 15
-16</pre>
+16
+17</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 14</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 15</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_ci_root'>ci_root</span>
   <span class='ivar'>@ci_root</span>
@@ -515,12 +515,12 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-14
 15
-16</pre>
+16
+17</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 14</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 15</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_local_path_roots'>local_path_roots</span>
   <span class='ivar'>@local_path_roots</span>
@@ -557,12 +557,12 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-14
 15
-16</pre>
+16
+17</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 14</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 15</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_name'>name</span>
   <span class='ivar'>@name</span>
@@ -599,12 +599,12 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-14
 15
-16</pre>
+16
+17</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 14</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 15</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_selector_env'>selector_env</span>
   <span class='ivar'>@selector_env</span>
@@ -636,12 +636,12 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-33
 34
-35</pre>
+35
+36</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 33</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 34</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_environment'>environment</span>
   <span class='id identifier rubyid_selector_env'>selector_env</span><span class='period'>.</span><span class='id identifier rubyid_merge'>merge</span><span class='lparen'>(</span><span class='const'><span class='object_link'><a href="#ENV_KEY-constant" title="Kettle::Family::ReleaseGraph::ENV_KEY (constant)">ENV_KEY</a></span></span> <span class='op'>=&gt;</span> <span class='const'>JSON</span><span class='period'>.</span><span class='id identifier rubyid_generate'>generate</span><span class='lparen'>(</span><span class='id identifier rubyid_to_h'>to_h</span><span class='rparen'>)</span><span class='rparen'>)</span>
@@ -689,12 +689,12 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-29
 30
-31</pre>
+31
+32</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 29</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 30</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_local_paths?'>local_paths?</span>
   <span class='op'>!</span><span class='id identifier rubyid_local_path_roots'>local_path_roots</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
@@ -742,12 +742,12 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-25
 26
-27</pre>
+27
+28</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 25</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 26</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_registry_only?'>registry_only?</span>
   <span class='id identifier rubyid_name'>name</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>registry_only</span><span class='tstring_end'>&quot;</span></span> <span class='op'>||</span> <span class='id identifier rubyid_name'>name</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branch_terminal</span><span class='tstring_end'>&quot;</span></span>
@@ -772,17 +772,17 @@ whichever *_DEV variables happened to launch the family command.</p>
       <pre class="lines">
 
 
-37
 38
 39
 40
 41
 42
 43
-44</pre>
+44
+45</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 37</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_graph.rb', line 38</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_to_h'>to_h</span>
   <span class='lbrace'>{</span>

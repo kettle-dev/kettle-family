@@ -28,16 +28,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Handle macOS canonical temp paths, Unix socket limits, and PTY EOF during family workflows.
-
 ### Security
 
 ## [1.3.2] - 2026-09-27
 
 - TAG: [v1.3.2][1.3.2t]
-- COVERAGE: 93.43% -- 6432/6884 lines in 36 files
-- BRANCH COVERAGE: 77.89% -- 2618/3361 branches in 36 files
-- 33.49% documented
+- COVERAGE: 93.41% -- 6454/6909 lines in 37 files
+- BRANCH COVERAGE: 77.95% -- 2627/3370 branches in 37 files
+- 33.33% documented
 
 ### Added
 
@@ -72,6 +70,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Template preparation now starts local Kettle Jem from its own bundle when the destination lockfile path-locks Nomono, allowing bootstrap repair before the destination bundle loads.
 
 - Refresh dependent lockfiles before committing newly raised family dependency floors.
+
+- Handle macOS canonical temp paths, Unix socket limits, and PTY EOF during family workflows.
 
 ## [1.3.1] - 2026-09-10
 
