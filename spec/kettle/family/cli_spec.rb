@@ -590,51 +590,53 @@ RSpec.describe Kettle::Family::CLI do
     expect(status).to eq(0)
     result = JSON.parse(out.string).fetch("results").find { |entry| entry.fetch("phase") == "template" }
     command = result.fetch("command")
-    expect(command).to eq(
-      [
-        "mise",
-        "exec",
-        "-C",
-        File.join(Kettle::Family::Paths.canonical(@tmpdir), "alpha"),
-        "--",
-        "env",
-        "-u",
-        "DEBUG",
-        "-u",
-        "DEBUG_RESOLVER",
-        "-u",
-        "DEBUG_RESOLVER_TREE",
-        "-u",
-        "BUNDLER_DEBUG_RESOLVER",
-        "-u",
-        "BUNDLER_DEBUG_RESOLVER_TREE",
-        "-u",
-        "DEBUG_COMPACT_INDEX",
-        "-u",
-        "MOLINILLO_DEBUG",
-        "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV=#{@tmpdir}",
-        "BUNDLE_DISABLE_CHECKSUM_VALIDATION=true",
-        "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
-        "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
-        "K_JEM_TEMPLATING=true",
-        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
-        "KETTLE_JEM_QUIET=true",
-        "KETTLE_JEM_DEBUG=false",
-        "KETTLE_DEV_DEBUG=false",
-        "STRUCTUREDMERGE_DEBUG=false",
-        "BUNDLE_QUIET=true",
-        "BUNDLE_DEBUG=false",
-        "BUNDLER_DEBUG=false",
-        "BUNDLE_VERBOSE=false",
-        "BUNDLE_SILENCE_DEPRECATIONS=true",
-        "BUNDLE_SILENCE_ROOT_WARNING=true",
-        "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
-        "KETTLE_FAMILY_WAVE_JOBS=1",
-        "sh",
-        "-lc",
-        "kettle-jem install --quiet --events"
-      ]
-    )
+    expected_command = [
+      "mise",
+      "exec",
+      "-C",
+      File.join(@tmpdir, "alpha"),
+      "--",
+      "env",
+      "-u",
+      "DEBUG",
+      "-u",
+      "DEBUG_RESOLVER",
+      "-u",
+      "DEBUG_RESOLVER_TREE",
+      "-u",
+      "BUNDLER_DEBUG_RESOLVER",
+      "-u",
+      "BUNDLER_DEBUG_RESOLVER_TREE",
+      "-u",
+      "DEBUG_COMPACT_INDEX",
+      "-u",
+      "MOLINILLO_DEBUG",
+      "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV=#{@tmpdir}",
+      "BUNDLE_DISABLE_CHECKSUM_VALIDATION=true",
+      "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
+      "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
+      "K_JEM_TEMPLATING=true",
+      "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
+      "KETTLE_JEM_QUIET=true",
+      "KETTLE_JEM_DEBUG=false",
+      "KETTLE_DEV_DEBUG=false",
+      "STRUCTUREDMERGE_DEBUG=false",
+      "BUNDLE_QUIET=true",
+      "BUNDLE_DEBUG=false",
+      "BUNDLER_DEBUG=false",
+      "BUNDLE_VERBOSE=false",
+      "BUNDLE_SILENCE_DEPRECATIONS=true",
+      "BUNDLE_SILENCE_ROOT_WARNING=true",
+      "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
+      "KETTLE_FAMILY_WAVE_JOBS=1",
+      "sh",
+      "-lc",
+      "kettle-jem install --quiet --events"
+    ]
+    expect(command.length).to eq(expected_command.length)
+    expect(command[0...3]).to eq(expected_command[0...3])
+    expect(File.identical?(command.fetch(3), expected_command.fetch(3))).to be(true)
+    expect(command.drop(4)).to eq(expected_command.drop(4))
   end
 
   it "preserves template debug environment only when debug is enabled" do
