@@ -25,7 +25,7 @@ RSpec.describe Kettle::Family::ReleaseGraph do
       "name" => "monorepo_ci_local",
       "ci_root" => File.realpath(@root),
       "local_path_roots" => [File.realpath(gems)],
-      "selector_env" => {"STRUCTUREDMERGE_DEV" => File.realpath(gems)}
+      "selector_env" => {"STRUCTUREDMERGE_DEV" => gems}
     )
   end
 
@@ -42,7 +42,25 @@ RSpec.describe Kettle::Family::ReleaseGraph do
       selector_env: {"STRUCTUREDMERGE_DEV" => File.join(alias_root, "gems")}
     )
 
-    expect(graph.selector_env.fetch("STRUCTUREDMERGE_DEV")).to eq(File.realpath(gems))
+    expect(graph.selector_env.fetch("STRUCTUREDMERGE_DEV")).to eq(File.join(alias_root, "gems"))
+  ensure
+    FileUtils.rm_f(alias_root) if alias_root
+  end
+
+  it "canonicalizes a missing selector leaf through its existing parent for validation" do
+    alias_root = File.join(File.dirname(@root), "release-graph-missing-alias")
+    File.symlink(@root, alias_root)
+    gems = File.join(@root, "not-created")
+    aliased_gems = File.join(alias_root, "not-created")
+
+    graph = described_class.new(
+      name: "monorepo_ci_local",
+      ci_root: @root,
+      local_path_roots: [gems],
+      selector_env: {"STRUCTUREDMERGE_DEV" => aliased_gems}
+    )
+
+    expect(graph.selector_env.fetch("STRUCTUREDMERGE_DEV")).to eq(aliased_gems)
   ensure
     FileUtils.rm_f(alias_root) if alias_root
   end
