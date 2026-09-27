@@ -44,7 +44,7 @@ module KettleFamilySpecSupport
     if Gem.win_platform?
       script_path = File.join(directory, "#{name}.rb")
       File.write(script_path, source)
-      File.write(command_path, "@echo off\r\n\"#{RbConfig.ruby}\" \"#{script_path}\" %*\r\n")
+      File.write(command_path, "@echo off\r\n\"#{RbConfig.ruby}\" --disable=rubyopt \"#{script_path}\" %*\r\n")
     else
       File.write(command_path, "#!/usr/bin/env ruby\n#{source}")
       FileUtils.chmod("+x", command_path)
@@ -60,7 +60,7 @@ module KettleFamilySpecSupport
     name += ".cmd" if Gem.win_platform?
     command_path = File.join(directory, name)
     if Gem.win_platform?
-      File.write(command_path, "@echo off\r\n\"#{RbConfig.ruby}\" %*\r\n")
+      File.write(command_path, "@echo off\r\n\"#{RbConfig.ruby}\" --disable=rubyopt %*\r\n")
     else
       File.write(command_path, "#!/usr/bin/env ruby\n")
       FileUtils.chmod("+x", command_path)

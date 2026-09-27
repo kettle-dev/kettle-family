@@ -635,7 +635,7 @@ RSpec.describe Kettle::Family::CLI do
     ]
     if Gem.win_platform?
       expect(command).to start_with(
-        "mise", "exec", "-C", File.join(@tmpdir, "alpha"), "--", "ruby", "-e",
+        "mise", "exec", "-C", File.join(@tmpdir, "alpha"), "--", "ruby", "--disable=rubyopt", "-e",
         Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT
       )
       expect(command).to include(

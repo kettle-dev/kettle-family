@@ -124,13 +124,14 @@ RSpec.describe Kettle::Family::CommandRunner do
       env: {"K_JEM_TEMPLATING" => "true"}
     )
 
-    expect(result.command.first(6)).to eq(["mise", "exec", "-C", member.root, "--", "ruby"])
+    expect(result.command.first(7)).to eq(["mise", "exec", "-C", member.root, "--", "ruby", "--disable=rubyopt"])
     expect(result.command).to include("K_JEM_TEMPLATING=true", "--", "bundle", "exec", "kettle-jem", "install")
     expect(result.command).not_to include("env")
 
     stdout, stderr, status = Open3.capture3(
       {"K_JEM_TEMPLATING" => "false"},
       RbConfig.ruby,
+      "--disable=rubyopt",
       "-e",
       described_class::WINDOWS_ENV_EXEC_SCRIPT,
       "--",

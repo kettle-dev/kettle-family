@@ -1990,7 +1990,7 @@ RSpec.describe Kettle::Family::Workflow do
     ])
     if Gem.win_platform?
       expect(results.first.command).to start_with(
-        "mise", "exec", "-C", member.root, "--", "ruby", "-e",
+        "mise", "exec", "-C", member.root, "--", "ruby", "--disable=rubyopt", "-e",
         Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT
       )
     else

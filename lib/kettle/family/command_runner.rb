@@ -699,6 +699,7 @@ module Kettle
           return [
             *mise_argv,
             "ruby",
+            "--disable=rubyopt",
             "-e",
             WINDOWS_ENV_EXEC_SCRIPT,
             "--",

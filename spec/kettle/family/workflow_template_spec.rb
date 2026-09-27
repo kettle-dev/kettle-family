@@ -1460,7 +1460,7 @@ RSpec.describe Kettle::Family::Workflow do
     template_command = results.fetch(2).command
     if Gem.win_platform?
       expect(template_command).to start_with(
-        "mise", "exec", "-C", member.root, "--", "ruby", "-e",
+        "mise", "exec", "-C", member.root, "--", "ruby", "--disable=rubyopt", "-e",
         Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT
       )
       expect(template_command).to include(

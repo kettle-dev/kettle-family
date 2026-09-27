@@ -36,6 +36,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Close the child input stream when a configured OTP provider returns no code, preventing interactive release commands from hanging.
 
+- Start the Windows environment wrapper without inherited RUBYOPT so Bundler cannot activate the parent bundle before wrapper overrides are applied.
+
 ### Security
 
 ## [1.3.2] - 2026-09-27
