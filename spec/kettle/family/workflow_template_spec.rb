@@ -906,7 +906,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
-    expect(results.fetch(1).stdout).to eq("full/standalone\n")
+    expect(results.fetch(1).stdout.chomp).to eq("full/standalone")
   end
 
   it "passes the active template wave width to member commands" do

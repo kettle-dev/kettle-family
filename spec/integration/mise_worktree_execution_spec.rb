@@ -275,15 +275,20 @@ RSpec.describe "Mise execution across family checkout shapes" do
 
   def executable_on_path?(name)
     ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |directory|
-      File.executable?(File.join(directory, name))
+      executable_extensions = Gem.win_platform? ? ENV.fetch("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") : [""]
+      executable_extensions.any? do |extension|
+        File.executable?(File.join(directory, "#{name}#{extension.downcase}")) ||
+          File.executable?(File.join(directory, "#{name}#{extension.upcase}"))
+      end
     end
   end
 
   def install_fixture_mise
     bin_dir = File.join(@tmpdir, "fixture-bin")
-    executable = File.join(bin_dir, "mise")
+    executable = File.join(bin_dir, Gem.win_platform? ? "mise.cmd" : "mise")
+    script = File.join(bin_dir, "mise.rb")
     FileUtils.mkdir_p(bin_dir)
-    File.write(executable, <<~'RUBY')
+    File.write(script, <<~'RUBY')
       #!/usr/bin/env ruby
       # This process substitute models only the trust and exec contract used by
       # these fixtures. Local development and release runs exercise real Mise.
@@ -359,7 +364,12 @@ RSpec.describe "Mise execution across family checkout shapes" do
         abort "mise fixture: unsupported command #{command.inspect}"
       end
     RUBY
-    FileUtils.chmod("u+x", executable)
+    if Gem.win_platform?
+      File.write(executable, "@echo off\r\n\"#{RbConfig.ruby}\" \"%~dp0mise.rb\" %*\r\n")
+    else
+      FileUtils.chmod("u+x", script)
+      File.rename(script, executable)
+    end
     ENV["PATH"] = "#{bin_dir}#{File::PATH_SEPARATOR}#{ENV.fetch("PATH", "")}"
   end
 
