@@ -28,8 +28,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Keep Windows temporary test paths canonical, launch the Mise integration fixture on Windows, and include WEBrick for local registry specs.
-
 ### Security
 
 ## [1.3.2] - 2026-09-27
@@ -74,6 +72,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Refresh dependent lockfiles before committing newly raised family dependency floors.
 
 - Handle macOS canonical temp paths, Unix socket limits, and PTY EOF during family workflows.
+
+- Keep Windows temporary test paths canonical, launch the Mise integration fixture on Windows, and include WEBrick for local registry specs.
 
 ## [1.3.1] - 2026-09-10
 
