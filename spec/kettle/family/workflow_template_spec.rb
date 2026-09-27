@@ -2013,6 +2013,30 @@ RSpec.describe Kettle::Family::Workflow do
     expect(calls.count { |call| call[:phase] == "prepare_template_dependencies" }).to eq(2)
   end
 
+  it "uses bundle lock --update syntax for nomono template recovery targets" do
+    write_template_config(command: "bundle exec kettle-jem install")
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash.fetch("template")["normalize_lockfiles_command"] = "bundle lock"
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("nomono")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      gem "nomono"
+      gem "kettle-dev"
+    RUBY
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      GEM
+        specs:
+          kettle-dev (3.1.0)
+          nomono (1.1.5)
+    LOCK
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+
+    expect(workflow.send(:normalize_lockfiles_command, member: member, phase: "prepare_lockfiles")).to eq(
+      "bundle lock --update nomono kettle-dev"
+    )
+  end
+
   it "retries template lockfile normalization once after a Bundler materialization failure" do
     write_template_config
     config = Kettle::Family::Config.load(root: @tmpdir)

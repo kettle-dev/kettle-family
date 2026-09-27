@@ -50,6 +50,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - [kc] nomono-self-upgrade-bundler-env: Preserve RUBYOPT bundle activation for local Kettle Jem execution, but omit eager setup from nomono self-upgrade lockfile updates so the stale self-version can be reconciled without falling back from the local template stack.
 
+- Recover template lockfiles with Bundler's valid bundle lock --update GEM syntax instead of passing gem names as invalid positional arguments.
+
 ### Security
 
 ## [1.3.1] - 2026-09-10

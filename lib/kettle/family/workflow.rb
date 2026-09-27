@@ -5197,8 +5197,13 @@ module Kettle
         return configured unless template_prepare_lockfiles_phase?(phase)
         return %w[bundle install] if bundle_update_command?(configured) && !File.file?(File.join(member.root, "Gemfile.lock"))
 
-        command = PRE_TEMPLATE_BOOTSTRAP_GEMS.select { |gem_name| member_declares_or_locks_gem?(member, gem_name) }.reduce(configured) do |command_text, gem_name|
-          append_command_arg(command_text, gem_name)
+        lock_targets = PRE_TEMPLATE_BOOTSTRAP_GEMS.select { |gem_name| member_declares_or_locks_gem?(member, gem_name) }
+        command = if bundle_lock_command?(configured)
+          append_bundle_lock_update_targets(configured, lock_targets)
+        else
+          lock_targets.reduce(configured) do |command_text, gem_name|
+            append_command_arg(command_text, gem_name)
+          end
         end
         command = remove_command_arg(command, "nomono") unless member_declares_or_locks_gem?(member, "nomono")
         skip_checksum_option ? remove_command_arg(command, "--add-checksums") : command
@@ -5210,6 +5215,51 @@ module Kettle
         bundle_index && argv[bundle_index + 1] == "update"
       rescue ArgumentError
         false
+      end
+
+      def bundle_lock_command?(command_text)
+        argv = leading_command_argv(command_text)
+        bundle_index = argv.index("bundle")
+        bundle_index && argv[bundle_index + 1] == "lock"
+      end
+
+      def append_bundle_lock_update_targets(command_text, targets)
+        return command_text if targets.empty?
+
+        if command_text.is_a?(Array)
+          argv = command_text.map(&:to_s)
+          return append_bundle_lock_update_targets_to_argv(argv, targets)
+        end
+
+        command, separator, remainder = command_text.to_s.partition(/\s(?:&&|\|\||;)\s/)
+        argv = append_bundle_lock_update_targets_to_argv(Shellwords.split(command), targets)
+        [Shellwords.join(argv), separator, remainder].join
+      rescue ArgumentError
+        command_text
+      end
+
+      def append_bundle_lock_update_targets_to_argv(argv, targets)
+        bundle_index = argv.index("bundle")
+        return argv unless bundle_index && argv[bundle_index + 1] == "lock"
+
+        update_index = argv.each_index.find do |index|
+          index >= bundle_index + 2 && argv[index] == "--update"
+        end
+        unless update_index
+          argv.insert(bundle_index + 2, "--update")
+          update_index = bundle_index + 2
+        end
+        additions = targets.reject { |target| argv.include?(target) }
+        argv.insert(update_index + 1, *additions)
+        argv
+      end
+
+      def leading_command_argv(command_text)
+        return command_text.map(&:to_s) if command_text.is_a?(Array)
+
+        command_text.to_s.partition(/\s(?:&&|\|\||;)\s/).first.then { |command| Shellwords.split(command) }
+      rescue ArgumentError
+        []
       end
 
       def append_command_arg(command_text, arg)
