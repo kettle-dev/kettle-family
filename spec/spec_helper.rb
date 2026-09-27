@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
 # Windows' system temp directory can be exposed through an 8.3 path alias.
-# Shell-escaped paths containing that alias are not interpreted consistently by
-# Git Bash and child Git processes, so keep generated test paths under checkout.
+# Canonicalize it so paths passed to Git Bash and child Git processes use the
+# same spelling, while keeping fixtures outside the checkout's Git worktree.
 if Gem.win_platform?
-  require "fileutils"
-  windows_test_tmp = File.expand_path("../tmp", __dir__)
-  FileUtils.mkdir_p(windows_test_tmp)
+  require "tmpdir"
+  windows_test_tmp = File.realpath(Dir.tmpdir)
   ENV["TMPDIR"] = windows_test_tmp
   ENV["TMP"] = windows_test_tmp
   ENV["TEMP"] = windows_test_tmp

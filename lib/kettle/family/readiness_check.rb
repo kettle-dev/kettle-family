@@ -45,7 +45,8 @@ module Kettle
       def missing_required_bins
         required_bins.filter_map do |path|
           full_path = File.join(member.root, path)
-          next if File.file?(full_path) && File.executable?(full_path)
+          executable = Gem.win_platform? || File.executable?(full_path)
+          next if File.file?(full_path) && executable
 
           "missing executable binstub #{path}"
         end

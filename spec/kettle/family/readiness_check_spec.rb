@@ -20,6 +20,16 @@ RSpec.describe Kettle::Family::ReadinessCheck do
     expect(result.stdout).to eq("")
   end
 
+  it "checks binstub presence without Unix executable bits on Windows" do
+    member = ready_member("alpha")
+    allow(Gem).to receive(:win_platform?).and_return(true)
+    allow(File).to receive(:executable?).and_return(false)
+
+    result = described_class.call(member: member)
+
+    expect(result).to be_ok
+  end
+
   it "reports missing files, missing binstubs, and local lockfile remotes" do
     root = File.join(@tmpdir, "alpha")
     FileUtils.mkdir_p(root)
