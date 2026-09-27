@@ -3760,6 +3760,7 @@ RSpec.describe Kettle::Family::Workflow do
         spec.name = #{name.inspect}
         spec.version = #{version.inspect}
         spec.summary = #{name.inspect}
+        spec.authors = ["Kettle Family Spec"]
       #{dependency_lines.join("\n")}
       end
     RUBY

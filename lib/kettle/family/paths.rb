@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "pathname"
+
 module Kettle
   module Family
     module Paths
@@ -20,6 +22,12 @@ module Kettle
         File.join(File.realpath(existing), *suffix)
       rescue Errno::ENOENT, Errno::EACCES
         expanded
+      end
+
+      def local_path_remote?(remote)
+        text = remote.to_s
+        drive_absolute = text.length >= 3 && text[1] == ":" && ["/", "\\"].include?(text[2])
+        drive_absolute || text.start_with?("/", "./", "../", ".\\", "..\\") || Pathname.new(text).absolute?
       end
     end
   end

@@ -81,7 +81,20 @@ module Kettle
             target_version: member_target_version
           ).edits
         end
+        version_edits = version_edits.map do |edit|
+          if same_file?(edit.fetch(:path), member.gemspec_path)
+            edit.merge(path: member.gemspec_path)
+          else
+            edit
+          end
+        end
         version_edits + gemspec_dependency_edits(member)
+      end
+
+      def same_file?(left, right)
+        right && File.identical?(left, right)
+      rescue SystemCallError
+        false
       end
 
       def gemspec_dependency_edits(member)

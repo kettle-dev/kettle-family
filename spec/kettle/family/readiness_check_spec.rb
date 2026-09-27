@@ -67,6 +67,16 @@ RSpec.describe Kettle::Family::ReadinessCheck do
     expect(result.stdout).to include("local path remote")
   end
 
+  it "recognizes Windows drive-letter lockfile remotes" do
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), "PATH\n  remote: C:/workspace/other/gamma\n")
+
+    result = described_class.call(member: member)
+
+    expect(result).not_to be_ok
+    expect(result.stdout).to include("local path remote")
+  end
+
   it "uses configured member and root readiness requirements" do
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)

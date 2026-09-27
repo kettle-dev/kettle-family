@@ -50,6 +50,17 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.1.0"')
   end
 
+  it "combines gemspec edits when member and discovered paths use different spellings" do
+    alpha = write_gem("alpha", version: "1.0.0")
+    beta = write_gem("beta", version: "1.0.0", dependencies: {"alpha" => "= 1.0.0"})
+    beta.gemspec_path = File.join(File.dirname(beta.gemspec_path), ".", File.basename(beta.gemspec_path))
+
+    results = described_class.new(members: [alpha, beta], target_version: "1.1.0", mode: :execute).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(beta.gemspec_path)).to include('spec.version = "1.1.0"', '"alpha", "= 1.1.0"')
+  end
+
   it "updates exact family development dependency pins" do
     alpha = write_gem("alpha", version: "1.0.0")
     beta = write_gem("beta", version: "1.0.0", dependencies: {"alpha" => "= 1.0.0"}, dependency_method: "add_development_dependency")
@@ -231,6 +242,7 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
         spec.name = "#{name}"
         spec.version = "#{version}"
         spec.summary = "#{name} fixture"
+        spec.authors = ["Kettle Family Spec"]
       #{dependency_lines.join("\n")}
       end
     RUBY

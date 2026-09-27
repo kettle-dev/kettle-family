@@ -103,7 +103,8 @@ module Kettle
         return [] unless File.file?(lockfile)
 
         File.readlines(lockfile).filter_map.with_index(1) do |line, index|
-          next unless line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+          next unless line.start_with?("  remote:")
+          next unless Paths.local_path_remote?(line.split("remote:", 2).last.to_s.strip)
           next if allowed_local_path?(line)
 
           "release lockfile has local path remote at Gemfile.lock:#{index}"

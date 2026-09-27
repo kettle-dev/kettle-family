@@ -605,6 +605,7 @@ RSpec.describe Kettle::Family::CommandRunner do
     coordinator = described_class::OtpCoordinator.new(input: StringIO.new, output: StringIO.new, secrets_provider: provider)
     runner = described_class.new(execute: true, otp_coordinator: coordinator)
     allow(runner).to receive(:pty_available?).and_return(false)
+    allow(Gem).to receive(:win_platform?).and_return(true)
     allow($stdin).to receive(:tty?).and_return(false)
 
     result = Timeout.timeout(5) do

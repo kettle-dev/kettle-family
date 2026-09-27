@@ -595,7 +595,7 @@ RSpec.describe Kettle::Family::CLI do
         "mise",
         "exec",
         "-C",
-        File.join(@tmpdir, "alpha"),
+        File.join(Kettle::Family::Paths.canonical(@tmpdir), "alpha"),
         "--",
         "env",
         "-u",

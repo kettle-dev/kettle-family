@@ -91,7 +91,8 @@ module Kettle
       def member_local_config_paths(root, relative_root)
         branches = local_branches(root)
         candidates = Config::DEFAULT_PATHS.map do |path|
-          (relative_root == ".") ? path : File.join(relative_root, path)
+          candidate = (relative_root == ".") ? path : File.join(relative_root, path)
+          candidate.tr("\\", "/")
         end
         branches.each_with_object([]) do |branch, memo|
           candidates.each do |path|

@@ -5742,9 +5742,10 @@ module Kettle
         return [] unless File.file?(lockfile)
 
         File.readlines(lockfile).filter_map do |line|
-          next unless line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+          next unless line.start_with?("  remote:")
 
           remote = line.split("remote:", 2).last.to_s.strip
+          next unless Paths.local_path_remote?(remote)
           expanded = File.expand_path(remote, member.root)
           File.realpath(expanded)
         rescue Errno::ENOENT

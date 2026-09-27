@@ -37,7 +37,7 @@ module Kettle
 
         (configured + discovered).each do |member|
           existing = by_name[member.name]
-          raise Error, "duplicate family member #{member.name.inspect}" if existing && existing.root != member.root
+          raise Error, "duplicate family member #{member.name.inspect}" if existing && !same_directory?(existing.root, member.root)
 
           by_name[member.name] = member
         end
@@ -95,9 +95,8 @@ module Kettle
 
         # Selection limits evaluation, not membership in the configuration.
         roots = configured.map(&:root) + config.configured_member_roots + config.explicit_members.map { |entry| entry.fetch("root") }
-        configured_roots = roots.map { |root| normalized_path(root) }
         discovered.each do |member|
-          next if configured_roots.include?(normalized_path(member.root))
+          next if roots.any? { |root| same_directory?(root, member.root) }
 
           warnings << {
             "kind" => "unlisted_discovered_member",
@@ -110,6 +109,12 @@ module Kettle
 
       def normalized_path(path)
         Paths.canonical(path)
+      end
+
+      def same_directory?(left, right)
+        File.identical?(left, right)
+      rescue SystemCallError
+        normalized_path(left) == normalized_path(right)
       end
 
       def member_from_gemspec(path)

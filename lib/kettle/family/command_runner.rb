@@ -386,6 +386,19 @@ module Kettle
       end
 
       def run_interactive_open3(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil, passthrough_output: true)
+        if Gem.win_platform?
+          return run_interactive_open3_threads(
+            env: env,
+            argv: argv,
+            chdir: chdir,
+            member_name: member_name,
+            process_options: process_options,
+            stdout_line_handler: stdout_line_handler,
+            log_io: log_io,
+            passthrough_output: passthrough_output
+          )
+        end
+
         captured_stdout = +""
         captured_stderr = +""
         stdout_line_buffer = +""
@@ -425,6 +438,62 @@ module Kettle
             status = failure_status
           else
             status = wait_thread.value
+          end
+          flush_interactive_stdout(stdout_line_buffer, stdout_line_handler, passthrough_output: passthrough_output)
+        end
+        [captured_stdout, captured_stderr, status]
+      end
+
+      def run_interactive_open3_threads(env:, argv:, chdir:, member_name:, process_options:, stdout_line_handler:, log_io: nil, passthrough_output: true)
+        captured_stdout = +""
+        captured_stderr = +""
+        stdout_line_buffer = +""
+        prompt_buffer = +""
+        status = nil
+        Open3.popen3(env, *argv, chdir: chdir, **process_options) do |input, output, stderr_stream, wait_thread|
+          streams = [output, stderr_stream]
+          streams << $stdin if $stdin.tty? && !otp_coordinator
+          queue = Queue.new
+          readers = streams.map do |stream|
+            Thread.new do # rubocop:disable ThreadSafety/NewThread -- Windows pipes are not selectable with IO.select.
+              loop { queue << [stream, stream.readpartial(1024)] }
+            rescue IOError
+              queue << [stream, nil]
+            end
+          end
+          input_reader = readers[streams.index($stdin)] if streams.include?($stdin)
+          active_streams = streams.dup
+          begin
+            until active_streams.empty?
+              stream, chunk = queue.pop
+              unless chunk
+                active_streams.delete(stream)
+                next
+              end
+              if stream.equal?($stdin)
+                input.write(chunk)
+                next
+              end
+              if stream.equal?(output)
+                captured_stdout << chunk
+                transcript_write(log_io, chunk)
+                stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler, passthrough_output: passthrough_output)
+              else
+                captured_stderr << chunk
+                transcript_write(log_io, chunk)
+                $stderr.print(chunk) if passthrough_output
+              end
+              prompt_buffer = handle_interactive_prompt(input, chunk, member_name: member_name, prompt_buffer: prompt_buffer)
+            end
+            status = wait_thread.value
+          rescue Error => exception
+            captured_stderr << "#{exception.message}\n"
+            transcript_write(log_io, "#{exception.message}\n")
+            terminate_process(wait_thread.pid)
+            status = failure_status
+          ensure
+            input_reader&.kill if input_reader&.alive?
+            readers.each(&:join)
           end
           flush_interactive_stdout(stdout_line_buffer, stdout_line_handler, passthrough_output: passthrough_output)
         end
