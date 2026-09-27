@@ -10,6 +10,7 @@ require "securerandom"
 require "yaml"
 
 require_relative "concurrency"
+require_relative "paths"
 
 module Kettle
   module Family
@@ -872,8 +873,18 @@ module Kettle
       end
 
       def normalize_comparable_path(path)
-        normalized = path.to_s.tr("\\", "/")
-        Gem.win_platform? ? normalized.downcase : normalized
+        expanded = File.expand_path(path)
+        canonical = if Gem.win_platform? && File.exist?(expanded)
+          Paths.canonical(expanded)
+        else
+          expanded
+        end
+        normalized = canonical.tr("\\", "/")
+        if Gem.win_platform?
+          normalized.downcase
+        else
+          normalized
+        end
       end
     end
   end

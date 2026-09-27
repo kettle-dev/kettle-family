@@ -1457,57 +1457,73 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command.last(3)).to eq(["prepare", "--quiet", "--events"])
     expect(results.fetch(1).command).to include(RbConfig.ruby)
     expect(results.fetch(1).command).to include(a_string_ending_with("/kettle-jem"))
-    expect(results.fetch(2).command).to eq(
-      [
-        "mise",
-        "exec",
-        "-C",
-        member.root,
-        "--",
-        "env",
-        "-u",
-        "DEBUG",
-        "-u",
-        "DEBUG_RESOLVER",
-        "-u",
-        "DEBUG_RESOLVER_TREE",
-        "-u",
-        "BUNDLER_DEBUG_RESOLVER",
-        "-u",
-        "BUNDLER_DEBUG_RESOLVER_TREE",
-        "-u",
-        "DEBUG_COMPACT_INDEX",
-        "-u",
-        "MOLINILLO_DEBUG",
+    template_command = results.fetch(2).command
+    if Gem.win_platform?
+      expect(template_command).to start_with(
+        "mise", "exec", "-C", member.root, "--", "ruby", "-e",
+        Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT
+      )
+      expect(template_command).to include(
+        "DEBUG", "DEBUG_RESOLVER", "DEBUG_RESOLVER_TREE", "BUNDLER_DEBUG_RESOLVER",
+        "BUNDLER_DEBUG_RESOLVER_TREE", "DEBUG_COMPACT_INDEX", "MOLINILLO_DEBUG",
         "#{family_local_env_name}=#{@tmpdir}",
-        "BUNDLE_DISABLE_CHECKSUM_VALIDATION=true",
-        "KETTLE_JEM_TEMPLATE_PROFILE=full",
-        "KJ_REPOSITORY_TOPOLOGY=standalone",
-        "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
-        "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
-        "K_JEM_TEMPLATING=true",
         "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
-        "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
-        "KETTLE_JEM_QUIET=true",
-        "KETTLE_JEM_DEBUG=false",
-        "KETTLE_DEV_DEBUG=false",
-        "STRUCTUREDMERGE_DEBUG=false",
-        "BUNDLE_QUIET=true",
-        "BUNDLE_DEBUG=false",
-        "BUNDLER_DEBUG=false",
-        "BUNDLE_VERBOSE=false",
-        "BUNDLE_SILENCE_DEPRECATIONS=true",
-        "BUNDLE_SILENCE_ROOT_WARNING=true",
-        "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
-        "KETTLE_FAMILY_WAVE_JOBS=1",
-        "bundle",
-        "exec",
-        "kettle-jem",
-        "install",
-        "--quiet",
-        "--events"
-      ]
-    )
+        "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts", "--"
+      )
+      expect(template_command.last(6)).to eq(["bundle", "exec", "kettle-jem", "install", "--quiet", "--events"])
+    else
+      expect(template_command).to eq(
+        [
+          "mise",
+          "exec",
+          "-C",
+          member.root,
+          "--",
+          "env",
+          "-u",
+          "DEBUG",
+          "-u",
+          "DEBUG_RESOLVER",
+          "-u",
+          "DEBUG_RESOLVER_TREE",
+          "-u",
+          "BUNDLER_DEBUG_RESOLVER",
+          "-u",
+          "BUNDLER_DEBUG_RESOLVER_TREE",
+          "-u",
+          "DEBUG_COMPACT_INDEX",
+          "-u",
+          "MOLINILLO_DEBUG",
+          "#{family_local_env_name}=#{@tmpdir}",
+          "BUNDLE_DISABLE_CHECKSUM_VALIDATION=true",
+          "KETTLE_JEM_TEMPLATE_PROFILE=full",
+          "KJ_REPOSITORY_TOPOLOGY=standalone",
+          "KETTLE_JEM_GIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
+          "KETTLE_JEM_GIT_COMMIT_LOCK=#{File.join(@tmpdir, ".git", "kettle-family-template-commit.lock")}",
+          "K_JEM_TEMPLATING=true",
+          "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems",
+          "RUBOCOP_LTS_LOCAL=/workspace/rubocop-lts",
+          "KETTLE_JEM_QUIET=true",
+          "KETTLE_JEM_DEBUG=false",
+          "KETTLE_DEV_DEBUG=false",
+          "STRUCTUREDMERGE_DEBUG=false",
+          "BUNDLE_QUIET=true",
+          "BUNDLE_DEBUG=false",
+          "BUNDLER_DEBUG=false",
+          "BUNDLE_VERBOSE=false",
+          "BUNDLE_SILENCE_DEPRECATIONS=true",
+          "BUNDLE_SILENCE_ROOT_WARNING=true",
+          "BUNDLE_SUPPRESS_INSTALL_USING_MESSAGES=true",
+          "KETTLE_FAMILY_WAVE_JOBS=1",
+          "bundle",
+          "exec",
+          "kettle-jem",
+          "install",
+          "--quiet",
+          "--events"
+        ]
+      )
+    end
 
     [results.fetch(0), results.fetch(3)].each do |result|
       expect(result.command).to include(

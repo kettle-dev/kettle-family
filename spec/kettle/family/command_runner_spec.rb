@@ -83,7 +83,18 @@ RSpec.describe Kettle::Family::CommandRunner do
       env: {"K_JEM_TEMPLATING" => "true"}
     )
 
-    expect(result.command).to eq(
+    if Gem.win_platform?
+      expect(result.command).to include(
+        described_class::WINDOWS_ENV_EXEC_SCRIPT,
+        "K_JEM_TEMPLATING=true",
+        "--",
+        "bundle",
+        "exec",
+        "kettle-jem",
+        "install"
+      )
+    else
+      expect(result.command).to eq(
       [
         "mise",
         "exec",
@@ -98,6 +109,7 @@ RSpec.describe Kettle::Family::CommandRunner do
         "install"
       ]
     )
+    end
   end
 
   it "builds a portable Windows environment wrapper after mise" do
@@ -150,7 +162,20 @@ RSpec.describe Kettle::Family::CommandRunner do
       }
     )
 
-    expect(result.command).to eq(
+    if Gem.win_platform?
+      expect(result.command).to include(
+        "2",
+        "DEBUG",
+        "DEBUG_RESOLVER",
+        "KETTLE_JEM_QUIET=true",
+        "BUNDLE_QUIET=true",
+        "--",
+        "bundle",
+        "update",
+        "nomono"
+      )
+    else
+      expect(result.command).to eq(
       [
         "mise",
         "exec",
@@ -169,6 +194,7 @@ RSpec.describe Kettle::Family::CommandRunner do
         "nomono"
       ]
     )
+    end
   end
 
   it "keeps sensitive env out of mise command argv while passing it to the child process" do
@@ -188,7 +214,17 @@ RSpec.describe Kettle::Family::CommandRunner do
       env: env
     )
 
-    expect(result.command).to eq(
+    if Gem.win_platform?
+      expect(result.command).to include(
+        "KETTLE_RELEASE_SECRETS_PROVIDER=1password",
+        "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE_SOURCE=cached",
+        "--",
+        "bundle",
+        "exec",
+        "kettle-release"
+      )
+    else
+      expect(result.command).to eq(
       [
         "mise",
         "exec",
@@ -203,6 +239,7 @@ RSpec.describe Kettle::Family::CommandRunner do
         "kettle-release"
       ]
     )
+    end
     expect(result.command.join(" ")).not_to include("secret")
     expect(runner.send(:process_env, member: member, env: env))
       .to include("KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "secret")
@@ -739,6 +776,12 @@ RSpec.describe Kettle::Family::CommandRunner do
 
     expect(normalized.encoding).to eq(Encoding::UTF_8)
     expect(normalized).to eq("ok ")
+  end
+
+  it "normalizes Windows process line endings" do
+    runner = described_class.new
+
+    expect(runner.send(:normalize_output, "first\r\nsecond\r\n")).to eq("first\nsecond\n")
   end
 
   it "rejects unsupported command shapes" do

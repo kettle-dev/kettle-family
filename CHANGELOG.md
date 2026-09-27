@@ -32,6 +32,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Normalize filesystem glob separators across supported platforms so family discovery, installs, and workflow asset lookup find paths on Windows.
 
+- Normalize Windows path aliases and subprocess line endings in family workflows.
+
+- Close the child input stream when a configured OTP provider returns no code, preventing interactive release commands from hanging.
+
 ### Security
 
 ## [1.3.2] - 2026-09-27

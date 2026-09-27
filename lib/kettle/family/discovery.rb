@@ -238,14 +238,29 @@ module Kettle
       end
 
       def relative_path(path, root)
-        expanded_path = File.expand_path(path).tr("\\", "/")
-        expanded_root = File.expand_path(root).tr("\\", "/")
+        expanded_path = comparable_path(path)
+        expanded_root = comparable_path(root)
         prefix = "#{expanded_root}/"
-        comparable_path = Gem.win_platform? ? expanded_path.downcase : expanded_path
-        comparable_prefix = Gem.win_platform? ? prefix.downcase : prefix
+        if Gem.win_platform?
+          comparable_path = expanded_path.downcase
+          comparable_prefix = prefix.downcase
+        else
+          comparable_path = expanded_path
+          comparable_prefix = prefix
+        end
         return unless comparable_path.start_with?(comparable_prefix)
 
         expanded_path[comparable_prefix.length..]
+      end
+
+      def comparable_path(path)
+        expanded = File.expand_path(path)
+        canonical = if Gem.win_platform? && File.exist?(expanded)
+          Paths.canonical(expanded)
+        else
+          expanded
+        end
+        canonical.tr("\\", "/")
       end
 
       class GemfileDependencyCollector

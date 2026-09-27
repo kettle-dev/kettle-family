@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "fileutils"
+require "rbconfig"
+
 # Windows' system temp directory can be exposed through an 8.3 path alias.
 # Canonicalize it so paths passed to Git Bash and child Git processes use the
 # same spelling, while keeping fixtures outside the checkout's Git worktree.
@@ -34,6 +37,38 @@ require "kettle/test/rspec"
 # `kettle/test/rspec` installs harness helpers documented in spec/README.md.
 require "kettle/family"
 
+module KettleFamilySpecSupport
+  def write_fake_ruby_executable(directory, name, source)
+    name += ".cmd" if Gem.win_platform?
+    command_path = File.join(directory, name)
+    if Gem.win_platform?
+      script_path = File.join(directory, "#{name}.rb")
+      File.write(script_path, source)
+      File.write(command_path, "@echo off\r\n\"#{RbConfig.ruby}\" \"#{script_path}\" %*\r\n")
+    else
+      File.write(command_path, "#!/usr/bin/env ruby\n#{source}")
+      FileUtils.chmod("+x", command_path)
+    end
+    command_path
+  end
+
+  def prepend_path(directory)
+    [directory, ENV.fetch("PATH")].join(File::PATH_SEPARATOR)
+  end
+
+  def write_fake_ruby_launcher(directory, name)
+    name += ".cmd" if Gem.win_platform?
+    command_path = File.join(directory, name)
+    if Gem.win_platform?
+      File.write(command_path, "@echo off\r\n\"#{RbConfig.ruby}\" %*\r\n")
+    else
+      File.write(command_path, "#!/usr/bin/env ruby\n")
+      FileUtils.chmod("+x", command_path)
+    end
+    command_path
+  end
+end
+
 SENSITIVE_ENV_KEYS = %w[
   BUNDLE_GITHUB__COM
   GEM_HOST_API_KEY
@@ -59,6 +94,7 @@ SENSITIVE_ENV_KEYS = %w[
 ].freeze
 
 RSpec.configure do |config|
+  config.include KettleFamilySpecSupport
   config.before do
     hide_env(*SENSITIVE_ENV_KEYS)
     stub_env_hash_accessors

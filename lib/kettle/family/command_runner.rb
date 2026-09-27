@@ -642,7 +642,10 @@ module Kettle
 
       def write_otp_response(input, chunk, member_name:)
         response = otp_coordinator.request(member_name: member_name || "release", chunk: chunk)
-        return if response.to_s.empty?
+        if response.to_s.empty?
+          input.close unless input.closed?
+          return
+        end
 
         input.write("#{response}\n")
         input.flush
@@ -666,7 +669,7 @@ module Kettle
       end
 
       def normalize_output(output)
-        output.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "")
+        output.to_s.encode("UTF-8", invalid: :replace, undef: :replace, replace: "").gsub("\r\n", "\n")
       end
 
       def failure_status

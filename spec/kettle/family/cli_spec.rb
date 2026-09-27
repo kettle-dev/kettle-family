@@ -633,10 +633,23 @@ RSpec.describe Kettle::Family::CLI do
       "-lc",
       "kettle-jem install --quiet --events"
     ]
-    expect(command.length).to eq(expected_command.length)
-    expect(command[0...3]).to eq(expected_command[0...3])
-    expect(File.identical?(command.fetch(3), expected_command.fetch(3))).to be(true)
-    expect(command.drop(4)).to eq(expected_command.drop(4))
+    if Gem.win_platform?
+      expect(command).to start_with(
+        "mise", "exec", "-C", File.join(@tmpdir, "alpha"), "--", "ruby", "-e",
+        Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT
+      )
+      expect(command).to include(
+        "DEBUG", "DEBUG_RESOLVER", "DEBUG_RESOLVER_TREE", "MOLINILLO_DEBUG",
+        "#{File.basename(@tmpdir).gsub(/[^A-Za-z0-9]+/, "_").upcase}_DEV=#{@tmpdir}",
+        "STRUCTUREDMERGE_DEV=/workspace/structuredmerge/ruby/gems", "--"
+      )
+      expect(command.last(3)).to eq(["sh", "-lc", "kettle-jem install --quiet --events"])
+    else
+      expect(command.length).to eq(expected_command.length)
+      expect(command[0...3]).to eq(expected_command[0...3])
+      expect(File.identical?(command.fetch(3), expected_command.fetch(3))).to be(true)
+      expect(command.drop(4)).to eq(expected_command.drop(4))
+    end
   end
 
   it "preserves template debug environment only when debug is enabled" do

@@ -1918,7 +1918,7 @@ RSpec.describe Kettle::Family::Workflow do
       publish: true,
       commit: false,
       gem_signing_password: "secret",
-      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+      env_overrides: {"PATH" => prepend_path(fake_bin)}
     )
     allow(workflow).to receive(:installed_gem_executable).with("kettle-gha-pins", "kettle-gha-pins").and_return(fake_executable)
 
@@ -1988,7 +1988,14 @@ RSpec.describe Kettle::Family::Workflow do
       release_changelog
       release_build
     ])
-    expect(results.first.command).to start_with("mise", "exec", "-C", member.root, "--", "env")
+    if Gem.win_platform?
+      expect(results.first.command).to start_with(
+        "mise", "exec", "-C", member.root, "--", "ruby", "-e",
+        Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT
+      )
+    else
+      expect(results.first.command).to start_with("mise", "exec", "-C", member.root, "--", "env")
+    end
     expect(results.first.command).to include(
       "#{family_local_env_name}=false",
       "KETTLE_FAMILY_CONFIG=#{File.join(@tmpdir, ".kettle-family.yml")}"

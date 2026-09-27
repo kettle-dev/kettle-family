@@ -264,8 +264,7 @@ RSpec.describe Kettle::Family::Workflow do
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
     fake_ruby = write_fake_reset_ruby(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
-      #!/usr/bin/env ruby
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
       File.write("bundle-reset.txt", [ARGV.join(" "), ENV["KETTLE_DEV_DEV"], ENV["BUNDLE_GEMFILE"]].join("\\n"))
       File.write("Gemfile.lock", <<~LOCK)
         GEM
@@ -278,7 +277,6 @@ RSpec.describe Kettle::Family::Workflow do
       LOCK
       exit(0)
     RUBY
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     write_gemfile(member.root)
@@ -306,7 +304,7 @@ RSpec.describe Kettle::Family::Workflow do
       commit: false,
       env_overrides: {
         "KETTLE_FAMILY_RESET_RUBY" => fake_ruby,
-        "PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"
+        "PATH" => prepend_path(fake_bin)
       }
     ).results
 
@@ -320,15 +318,9 @@ RSpec.describe Kettle::Family::Workflow do
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
     fake_ruby = write_fake_reset_ruby(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
-      #!/usr/bin/env ruby
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
       File.write("bundle-reset.txt", [ARGV.join(" "), ENV["BUNDLE_GEMFILE"]].join("\\n"))
       File.write("Gemfile.lock", <<~LOCK)
-        PATH
-          remote: .
-          specs:
-            alpha (1.0.0)
-
         GEM
           remote: https://gem.coop/
           specs:
@@ -339,7 +331,6 @@ RSpec.describe Kettle::Family::Workflow do
       LOCK
       exit(0)
     RUBY
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     write_gemfile(member.root)
@@ -367,7 +358,7 @@ RSpec.describe Kettle::Family::Workflow do
       commit: false,
       env_overrides: {
         "KETTLE_FAMILY_RESET_RUBY" => fake_ruby,
-        "PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"
+        "PATH" => prepend_path(fake_bin)
       }
     ).results
 
@@ -381,8 +372,7 @@ RSpec.describe Kettle::Family::Workflow do
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
     fake_ruby = write_fake_reset_ruby(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
-      #!/usr/bin/env ruby
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
       File.write("Gemfile.lock", <<~LOCK)
         PATH
           remote: #{@tmpdir}/beta
@@ -395,11 +385,10 @@ RSpec.describe Kettle::Family::Workflow do
             alpha (1.0.0)
 
         CHECKSUMS
-          alpha (1.0.0)
+          alpha (1.0.0) sha256=abc123
       LOCK
       exit(0)
     RUBY
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     write_gemfile(member.root)
@@ -422,7 +411,7 @@ RSpec.describe Kettle::Family::Workflow do
       commit: false,
       env_overrides: {
         "KETTLE_FAMILY_RESET_RUBY" => fake_ruby,
-        "PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"
+        "PATH" => prepend_path(fake_bin)
       }
     ).results
 
@@ -480,7 +469,7 @@ RSpec.describe Kettle::Family::Workflow do
       members: [alpha, beta],
       execute: true,
       commit: false,
-      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+      env_overrides: {"PATH" => prepend_path(fake_bin)}
     )
     allow(workflow).to receive(:standalone_gha_sha_pins_command).and_return([RbConfig.ruby, gha_executable])
     allow(workflow).to receive(:command_for).with("gha-sha-pins").and_return([RbConfig.ruby, gha_executable])
@@ -523,13 +512,11 @@ RSpec.describe Kettle::Family::Workflow do
     fake_bin = File.join(@tmpdir, "bin")
     call_log = File.join(@tmpdir, "bundle-calls.log")
     FileUtils.mkdir_p(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
-      #!/usr/bin/env ruby
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
       File.open(ENV.fetch("BUNDLE_CALL_LOG"), "a") do |file|
         file.puts([Dir.pwd, *ARGV].join("|"))
       end
     RUBY
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "sibling_repos"}}))
     write_gemfile(@tmpdir)
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -543,7 +530,7 @@ RSpec.describe Kettle::Family::Workflow do
       commit: false,
       env_overrides: {
         "BUNDLE_CALL_LOG" => call_log,
-        "PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"
+        "PATH" => prepend_path(fake_bin)
       }
     ).results
 
@@ -625,8 +612,7 @@ RSpec.describe Kettle::Family::Workflow do
   it "stops before member updates when the family-root bundle update fails" do
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), "#!/usr/bin/env ruby\nexit 7\n")
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
+    write_fake_ruby_executable(fake_bin, "bundle", "exit 7\n")
     write_gemfile(@tmpdir)
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -636,7 +622,7 @@ RSpec.describe Kettle::Family::Workflow do
       config: config,
       members: [member],
       execute: true,
-      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+      env_overrides: {"PATH" => prepend_path(fake_bin)}
     ).results
 
     expect(results.map(&:phase)).to eq(%w[family_root_bup])
@@ -648,11 +634,9 @@ RSpec.describe Kettle::Family::Workflow do
     external_root = File.join(File.dirname(@tmpdir), "external-family")
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
-      #!/usr/bin/env ruby
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
       File.write("Gemfile.lock", "PATH\\n  remote: #{external_root}\\n")
     RUBY
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "monorepo", "members_root" => "gems"}}))
     write_gemfile(@tmpdir)
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -663,7 +647,7 @@ RSpec.describe Kettle::Family::Workflow do
       config: config,
       members: [member],
       execute: true,
-      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+      env_overrides: {"PATH" => prepend_path(fake_bin)}
     ).results
 
     expect(results.map(&:phase)).to eq(%w[family_root_bup family_root_bundle_update_readiness])
@@ -730,12 +714,10 @@ RSpec.describe Kettle::Family::Workflow do
   it "does not commit bundle updates that produce unrequested local path lockfile remotes" do
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
-      #!/usr/bin/env ruby
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
       File.write("Gemfile.lock", "PATH\\n  remote: #{@tmpdir}/beta\\n")
       exit(0)
     RUBY
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
 
@@ -744,7 +726,7 @@ RSpec.describe Kettle::Family::Workflow do
       config: config,
       members: [member],
       execute: true,
-      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+      env_overrides: {"PATH" => prepend_path(fake_bin)}
     ).results
 
     expect(results.map(&:phase)).to eq(%w[bup bundle_update_readiness])
@@ -857,13 +839,11 @@ RSpec.describe Kettle::Family::Workflow do
     stub_stable_bundler_version
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
-    File.write(File.join(fake_bin, "bundle"), <<~RUBY)
-      #!/usr/bin/env ruby
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
       File.open("bupb-env.txt", "a") do |file|
         file.puts([ARGV.join(" "), ENV["BUNDLE_GEMFILE"], ENV["BUNDLE_LOCKFILE"]].inspect)
       end
     RUBY
-    FileUtils.chmod("+x", File.join(fake_bin, "bundle"))
 
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -875,7 +855,7 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       execute: true,
       commit: false,
-      env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
+      env_overrides: {"PATH" => prepend_path(fake_bin)}
     ).results
 
     expect(results).to all(be_ok)
@@ -996,16 +976,12 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   def write_fake_reset_ruby(fake_bin)
-    path = File.join(fake_bin, "fake-reset-ruby")
-    File.write(path, <<~RUBY)
-      #!/usr/bin/env ruby
+    write_fake_ruby_executable(fake_bin, "fake-reset-ruby", <<~RUBY)
       script = ARGV.fetch(1)
       File.write("reset-helper.txt", [ARGV.join(" "), script.include?("https://gem.coop"), ENV["BUNDLE_GEMFILE"].inspect].join("\\n"))
       ENV["BUNDLE_GEMFILE"] = File.expand_path("Gemfile", Dir.pwd)
       system("bundle", "lock", "--update", "--add-checksums")
       exit($?.exitstatus)
     RUBY
-    FileUtils.chmod("+x", path)
-    path
   end
 end
