@@ -78,6 +78,7 @@ module Kettle
       end
 
       def member_relative_root(member, root)
+        root = File.realpath(root)
         member_root = File.realpath(member.root)
         return "." if member_root == root
         return member_root.delete_prefix("#{root}/") if member_root.start_with?("#{root}/")

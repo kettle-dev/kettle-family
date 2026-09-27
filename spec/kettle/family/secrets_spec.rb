@@ -188,15 +188,16 @@ RSpec.describe Kettle::Family::Secrets do
     broker&.close
   end
 
-  it "uses a compact repository-local socket path for deep release roots" do
+  it "uses a compact socket path for deep release roots" do
     provider = instance_double(Kettle::Family::Secrets::Provider)
 
     Dir.mktmpdir("kettle-family-broker-spec") do |sandbox|
-      root = File.join(sandbox, "a" * 25)
+      root = File.join(sandbox, "a" * 80)
       broker = described_class::Broker.new(provider: provider, root: root)
 
       expect(broker.path.bytesize).to be <= described_class::Broker::UNIX_SOCKET_PATH_MAX
-      expect(broker.path).to start_with(File.join(root, "tmp", "kf", "s-"))
+      expect(broker.path).to start_with(Dir.tmpdir)
+      expect(File.basename(broker.path)).to start_with("s-")
     ensure
       broker&.close
     end
@@ -238,12 +239,15 @@ RSpec.describe Kettle::Family::Secrets do
     FileUtils.rm_rf(root) if root
   end
 
-  it "rejects roots too deep for even the compact Unix socket path" do
+  it "uses a private system temp directory when the repository root is too deep" do
     provider = instance_double(Kettle::Family::Secrets::Provider)
     root = File.join(File::SEPARATOR, "r" * described_class::Broker::UNIX_SOCKET_PATH_MAX)
+    broker = described_class::Broker.new(provider: provider, root: root)
 
-    expect { described_class::Broker.new(provider: provider, root: root) }
-      .to raise_error(Kettle::Family::Error, /socket path is too long/)
+    expect(broker.path.bytesize).to be <= described_class::Broker::UNIX_SOCKET_PATH_MAX
+    expect(broker.path).to start_with(Dir.tmpdir)
+  ensure
+    broker&.close
   end
 
   it "can close before the broker has started" do

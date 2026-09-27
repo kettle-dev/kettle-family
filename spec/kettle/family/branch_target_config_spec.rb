@@ -112,6 +112,18 @@ RSpec.describe Kettle::Family::BranchTargetConfig do
     FileUtils.rm_rf(outside_root) if outside_root
   end
 
+  it "compares member and Git roots through symlink aliases" do
+    alias_root = File.join(File.dirname(@family_root), "branch-config-alias")
+    File.symlink(@family_root, alias_root)
+    member_root = File.join(alias_root, "member")
+    FileUtils.mkdir_p(member_root)
+    member = Kettle::Family::Member.new("member", member_root)
+
+    expect(described_class.member_relative_root(member, alias_root)).to eq("member")
+  ensure
+    FileUtils.rm_f(alias_root) if alias_root
+  end
+
   it "reports failure to enumerate local branches" do
     allow(Open3).to receive(:capture3)
       .and_return(["", "not a repository", instance_double(Process::Status, success?: false)])

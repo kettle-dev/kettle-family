@@ -23,10 +23,28 @@ RSpec.describe Kettle::Family::ReleaseGraph do
 
     expect(graph.to_h).to eq(
       "name" => "monorepo_ci_local",
-      "ci_root" => @root,
-      "local_path_roots" => [gems],
-      "selector_env" => {"STRUCTUREDMERGE_DEV" => gems}
+      "ci_root" => File.realpath(@root),
+      "local_path_roots" => [File.realpath(gems)],
+      "selector_env" => {"STRUCTUREDMERGE_DEV" => File.realpath(gems)}
     )
+  end
+
+  it "canonicalizes local selector paths supplied through a symlink alias" do
+    alias_root = File.join(File.dirname(@root), "release-graph-alias")
+    File.symlink(@root, alias_root)
+    gems = File.join(@root, "gems")
+    FileUtils.mkdir_p(gems)
+
+    graph = described_class.new(
+      name: "monorepo_ci_local",
+      ci_root: @root,
+      local_path_roots: [gems],
+      selector_env: {"STRUCTUREDMERGE_DEV" => File.join(alias_root, "gems")}
+    )
+
+    expect(graph.selector_env.fetch("STRUCTUREDMERGE_DEV")).to eq(File.realpath(gems))
+  ensure
+    FileUtils.rm_f(alias_root) if alias_root
   end
 
   it "rejects a monorepo graph whose path is outside its CI checkout" do

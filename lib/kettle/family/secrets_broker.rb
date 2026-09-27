@@ -2,8 +2,10 @@
 
 require "fileutils"
 require "json"
+require "rbconfig"
 require "securerandom"
 require "socket"
+require "tmpdir"
 
 module Kettle
   module Family
@@ -13,7 +15,7 @@ module Kettle
       # one release session is shared across sequential and parallel waves.
       class Broker
         OPERATIONS = %w[gem_signing_passphrase rubygems_otp].freeze
-        UNIX_SOCKET_PATH_MAX = 108
+        UNIX_SOCKET_PATH_MAX = RbConfig::CONFIG["host_os"].include?("darwin") ? 103 : 107
 
         attr_reader :path
 
@@ -29,6 +31,14 @@ module Kettle
           end
 
           if @path.bytesize > UNIX_SOCKET_PATH_MAX
+            @socket_directory = Dir.mktmpdir("kf-", Dir.tmpdir)
+            directory = @socket_directory
+            @path = File.join(directory, "s-#{SecureRandom.hex(8)}")
+          end
+
+          if @path.bytesize > UNIX_SOCKET_PATH_MAX
+            FileUtils.rm_rf(@socket_directory)
+            @socket_directory = nil
             raise Error,
               "release secrets broker socket path is too long (#{@path.bytesize} bytes; Unix sockets allow #{UNIX_SOCKET_PATH_MAX})"
           end
@@ -55,6 +65,7 @@ module Kettle
         ensure
           @thread&.kill if @thread&.alive?
           FileUtils.rm_f(@path)
+          FileUtils.rm_rf(@socket_directory) if @socket_directory
         end
 
         private

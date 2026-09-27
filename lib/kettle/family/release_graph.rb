@@ -17,7 +17,7 @@ module Kettle
         @name = name.to_s
         @ci_root = canonical_path(ci_root) if ci_root
         @local_path_roots = Array(local_path_roots).map { |path| canonical_path(path) }.uniq.freeze
-        @selector_env = selector_env.to_h.transform_keys(&:to_s).transform_values(&:to_s).freeze
+        @selector_env = selector_env.to_h.transform_keys(&:to_s).transform_values { |path| canonical_path(path) }.freeze
         validate!
         freeze
       end

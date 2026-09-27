@@ -371,7 +371,7 @@ module Kettle
                 end
               end
             end
-          rescue Errno::EIO
+          rescue Errno::EIO, EOFError
             # PTY raises EIO when the child process exits after closing the slave.
           rescue Error => error
             stderr << "#{error.message}\n"
