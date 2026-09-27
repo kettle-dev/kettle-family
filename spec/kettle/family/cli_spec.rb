@@ -373,6 +373,7 @@ RSpec.describe Kettle::Family::CLI do
   end
 
   it "plans bundler updates with bupb" do
+    allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: Gem::Version.new("4.0.21"))})
     write_gem("alpha")
     out = StringIO.new
 

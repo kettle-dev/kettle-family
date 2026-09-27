@@ -570,6 +570,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "updates the family root with bupb before member Bundler updates" do
+    stub_stable_bundler_version
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "sibling_repos"}}))
     write_gemfile(@tmpdir)
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -593,6 +594,16 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "bupb", config: config, members: [member]).results
 
     expect(results.first.command).to eq(["bundle", "_4.0.21_", "update", "--bundler=4.0.21"])
+  end
+
+  it "rejects bupb when no stable Bundler version is installed" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    allow(Gem).to receive(:loaded_specs).and_return({})
+    allow(Gem::Specification).to receive(:find_all_by_name).with("bundler").and_return([])
+
+    expect { described_class.new(command: "bupb", config: config, members: [member]).results }
+      .to raise_error(Kettle::Family::Error, "bupb requires an installed stable Bundler version")
   end
 
   it "does not update the family root twice when it is itself a member" do
@@ -818,6 +829,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "plans bundler updates" do
+    stub_stable_bundler_version
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
 
@@ -829,6 +841,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "updates the appraisal root lockfile and resets appraisal lockfiles with bupb" do
+    stub_stable_bundler_version
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     File.write(File.join(member.root, "Appraisal.root.gemfile"), "gemspec\n")
@@ -841,6 +854,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "targets Appraisal.root.gemfile.lock only for the appraisal root bupb phase" do
+    stub_stable_bundler_version
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
     File.write(File.join(fake_bin, "bundle"), <<~RUBY)
@@ -974,14 +988,11 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   def expect_stable_bundler_update(command)
-    version = Gem::Specification
-      .find_all_by_name("bundler")
-      .map(&:version)
-      .reject(&:prerelease?)
-      .max
-      .to_s
+    expect(command).to eq(["bundle", "_4.0.21_", "update", "--bundler=4.0.21"])
+  end
 
-    expect(command).to eq(["bundle", "_#{version}_", "update", "--bundler=#{version}"])
+  def stub_stable_bundler_version(version = "4.0.21")
+    allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: Gem::Version.new(version))})
   end
 
   def write_fake_reset_ruby(fake_bin)
