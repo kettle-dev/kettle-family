@@ -235,8 +235,8 @@ RSpec.describe Kettle::Family::Workflow do
     env = workflow.send(:release_env_for_member, member, family_root: worktree_root)
 
     worktree_gems = File.join(worktree_root, "gems")
-    expect(env).to include("EXAMPLE_DEV" => File.expand_path(worktree_gems), "K_RELEASE_CI_ROOT" => File.expand_path(worktree_root))
-    expect(JSON.parse(env.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON")).fetch("local_path_roots")).to eq([File.expand_path(worktree_gems)])
+    expect(env).to include("EXAMPLE_DEV" => Kettle::Family::Paths.canonical(worktree_gems), "K_RELEASE_CI_ROOT" => Kettle::Family::Paths.canonical(worktree_root))
+    expect(JSON.parse(env.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON")).fetch("local_path_roots")).to eq([Kettle::Family::Paths.canonical(worktree_gems)])
   end
 
   it "runs aggregate monorepo waves through workers then serial finalization" do
@@ -700,11 +700,11 @@ RSpec.describe Kettle::Family::Workflow do
     expect(environment).to include("STRUCTUREDMERGE_DEV" => monorepo_gems)
     expect(JSON.parse(environment.fetch("KETTLE_RELEASE_GRAPH_CONTRACT_JSON"))).to eq(
       "name" => "monorepo_ci_local",
-      "ci_root" => File.expand_path(@tmpdir),
-      "local_path_roots" => [File.expand_path(monorepo_gems)],
-      "selector_env" => {"STRUCTUREDMERGE_DEV" => File.expand_path(monorepo_gems)}
+      "ci_root" => Kettle::Family::Paths.canonical(@tmpdir),
+      "local_path_roots" => [Kettle::Family::Paths.canonical(monorepo_gems)],
+      "selector_env" => {"STRUCTUREDMERGE_DEV" => Kettle::Family::Paths.canonical(monorepo_gems)}
     )
-    expect(workflow.send(:release_allowed_local_path_roots)).to eq([File.expand_path(monorepo_gems)])
+    expect(workflow.send(:release_allowed_local_path_roots)).to eq([Kettle::Family::Paths.canonical(monorepo_gems)])
   end
 
   it "disables template mode while retaining the declared monorepo release graph" do

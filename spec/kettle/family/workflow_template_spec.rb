@@ -353,7 +353,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(runner).to have_received(:call).with(
       member: entry.fetch(:member),
       phase: "template_member_worktree_mise_trust",
-      command: ["mise", "trust", "-C", File.expand_path(worktree_root)],
+      command: ["mise", "trust", "-C", Kettle::Family::Paths.canonical(worktree_root)],
       raw: true
     ).ordered
     expect(runner).to have_received(:call).with(
@@ -434,7 +434,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(runner).to have_received(:call).with(
       member: worktree_member,
       phase: "template_member_worktree_mise_trust",
-      command: ["mise", "trust", "-C", File.expand_path(worktree_root)],
+      command: ["mise", "trust", "-C", Kettle::Family::Paths.canonical(worktree_root)],
       raw: true
     )
   end
@@ -1926,7 +1926,7 @@ RSpec.describe Kettle::Family::Workflow do
     calls = []
     stub_successful_runner(calls)
     allow(Kettle::Family::GitStatus).to receive(:dirty_paths).and_return([])
-    allow(Kettle::Family::GitStatus).to receive(:dirty_paths).with(File.expand_path(member.root)).and_return(
+    allow(Kettle::Family::GitStatus).to receive(:dirty_paths).with(Kettle::Family::Paths.canonical(member.root)).and_return(
       [],
       [" M Gemfile.lock"],
       []
