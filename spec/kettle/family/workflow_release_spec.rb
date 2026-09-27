@@ -2034,6 +2034,20 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
   end
 
+  it "recognizes drive-absolute local path lockfile remotes" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+      PATH
+        remote: C:/workspace/dependency
+        specs:
+          dependency (1.0.0)
+    LOCK
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:release_lockfile_has_local_path_remote?, member)).to be(true)
+  end
+
   it "skips dry-run release readiness when lockfiles require normalization first" do
     write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"])
     config = Kettle::Family::Config.load(root: @tmpdir)

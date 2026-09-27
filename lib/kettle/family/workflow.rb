@@ -5672,7 +5672,9 @@ module Kettle
         return false unless File.file?(lockfile)
 
         File.readlines(lockfile).any? do |line|
-          line.start_with?("  remote: /", "  remote: ./", "  remote: ../")
+          next false unless line.start_with?("  remote: ")
+
+          Paths.local_path_remote?(line.delete_prefix("  remote: ").strip)
         end
       end
 

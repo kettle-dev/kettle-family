@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Windows family workflow specs now preserve command arguments and handle case-insensitive checkout paths.
 
+- Detect Windows drive-absolute local paths when preparing release lockfile normalization.
+
 ### Security
 
 ## [1.3.2] - 2026-09-27
