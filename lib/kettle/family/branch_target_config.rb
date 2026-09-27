@@ -75,6 +75,8 @@ module Kettle
         raise Error, "could not determine git root for #{member.root}: #{stderr}" unless status.success?
 
         File.realpath(stdout.strip)
+      rescue SystemCallError
+        raise Error, "could not determine git root for #{member.root}: invalid Git root response"
       end
 
       def member_relative_root(member, root)

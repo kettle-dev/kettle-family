@@ -230,6 +230,7 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "#{version}"
+        spec.summary = "#{name} fixture"
       #{dependency_lines.join("\n")}
       end
     RUBY

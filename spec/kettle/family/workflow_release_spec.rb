@@ -3759,6 +3759,7 @@ RSpec.describe Kettle::Family::Workflow do
       Gem::Specification.new do |spec|
         spec.name = #{name.inspect}
         spec.version = #{version.inspect}
+        spec.summary = #{name.inspect}
       #{dependency_lines.join("\n")}
       end
     RUBY

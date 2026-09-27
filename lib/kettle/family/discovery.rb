@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "open3"
+require_relative "paths"
 
 module Kettle
   module Family
@@ -108,7 +109,7 @@ module Kettle
       end
 
       def normalized_path(path)
-        File.expand_path(path)
+        Paths.canonical(path)
       end
 
       def member_from_gemspec(path)

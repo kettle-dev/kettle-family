@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Readiness checks accept existing binstub files on Windows, where Unix executable-bit checks are not portable.
 
+- Make family specs portable on Windows and use valid generated gemspec fixtures.
+
 ### Security
 
 ## [1.3.2] - 2026-09-27

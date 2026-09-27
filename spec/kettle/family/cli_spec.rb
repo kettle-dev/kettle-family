@@ -1791,6 +1791,7 @@ RSpec.describe Kettle::Family::CLI do
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "1.0.0"
+        spec.summary = "#{name} fixture"
         #{dependencies.map { |dependency| %(spec.add_dependency "#{dependency}") }.join("\n")}
         #{metadata_lines.join("\n")}
       end
@@ -1803,6 +1804,7 @@ RSpec.describe Kettle::Family::CLI do
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "1.0.0"
+        spec.summary = "#{name} fixture"
         spec.add_development_dependency "#{dependency}", "#{requirement}"
       end
     RUBY
@@ -1818,6 +1820,7 @@ RSpec.describe Kettle::Family::CLI do
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "#{version}"
+        spec.summary = "#{name} fixture"
       end
     RUBY
   end

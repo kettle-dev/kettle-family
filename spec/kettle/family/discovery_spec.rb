@@ -373,13 +373,14 @@ RSpec.describe Kettle::Family::Discovery do
       Gem::Specification.new do |spec|
         spec.name = "stone_checksums"
         spec.version = "1.0.0"
+        spec.summary = "stone checksums fixture"
       end
     RUBY
 
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = described_class.new(config: config).members.fetch(0)
 
-    expect(member.version_file).to eq(canonical)
+    expect(member.version_file).to eq(File.realpath(canonical))
   end
 
   it "excludes gemspecs ignored by git before loading members" do
@@ -425,6 +426,7 @@ RSpec.describe Kettle::Family::Discovery do
       Gem::Specification.new do |spec|
         spec.name = "#{name}"
         spec.version = "1.0.0"
+        spec.summary = "#{name} fixture"
       #{dependency_lines.join("\n")}
       #{development_dependency_lines.join("\n")}
       end

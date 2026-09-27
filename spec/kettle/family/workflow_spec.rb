@@ -482,8 +482,8 @@ RSpec.describe Kettle::Family::Workflow do
       commit: false,
       env_overrides: {"PATH" => "#{fake_bin}:#{ENV.fetch("PATH")}"}
     )
-    allow(workflow).to receive(:standalone_gha_sha_pins_command).and_return([gha_executable])
-    allow(workflow).to receive(:command_for).with("gha-sha-pins").and_return([gha_executable])
+    allow(workflow).to receive(:standalone_gha_sha_pins_command).and_return([RbConfig.ruby, gha_executable])
+    allow(workflow).to receive(:command_for).with("gha-sha-pins").and_return([RbConfig.ruby, gha_executable])
 
     results = workflow.results
 

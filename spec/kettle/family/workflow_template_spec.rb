@@ -79,9 +79,9 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
     expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles commit_normalized_lockfiles])
     expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("released\n")
-    expect(`git -C #{Shellwords.escape(member.root)} status --short`).to be_empty
-    expect(`git -C #{Shellwords.escape(member.root)} show --format= --name-only HEAD`).to eq("Gemfile.lock\n")
-    expect(`git -C #{Shellwords.escape(member.root)} log -1 --format=%s`).to eq("🔒️ Normalize lockfiles after templating\n")
+    expect(git_output(member.root, "status", "--short")).to be_empty
+    expect(git_output(member.root, "show", "--format=", "--name-only", "HEAD")).to eq("Gemfile.lock\n")
+    expect(git_output(member.root, "log", "-1", "--format=%s")).to eq("🔒️ Normalize lockfiles after templating\n")
   end
 
   it "commits final lockfile normalization inside a template branch worktree" do
@@ -110,7 +110,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles commit_normalized_lockfiles])
     expect(results).to all(have_attributes(branch: "r1"))
     expect(File.read(File.join(member.root, "Gemfile.lock"))).to eq("released\n")
-    expect(`git -C #{Shellwords.escape(member.root)} status --short`).to be_empty
+    expect(git_output(member.root, "status", "--short")).to be_empty
   end
 
   it "defers kettle-jem bootstrap commits during executed monorepo templating" do
@@ -258,8 +258,8 @@ RSpec.describe Kettle::Family::Workflow do
       expect(command.fetch(2)).to include("git add -A -- .")
       expect(command.fetch(2)).to match(/git commit -m .*Template\\ (alpha|beta)\\ by\\ kettle-family/)
     end
-    expect(`git -C #{Shellwords.escape(@tmpdir)} status --short`).to eq("")
-    log = `git -C #{Shellwords.escape(@tmpdir)} log --format=%s`
+    expect(git_output(@tmpdir, "status", "--short")).to eq("")
+    log = git_output(@tmpdir, "log", "--format=%s")
     expect(log).to include("🎨 Template alpha by kettle-family")
     expect(log).to include("🎨 Template beta by kettle-family")
   end
@@ -324,7 +324,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(File.join(alpha.root, "Gemfile.lock"))).to eq("alpha local dependency state\n")
     expect(File.read(File.join(beta.root, "Gemfile.lock"))).to eq("beta local dependency state\n")
     FileUtils.rm_rf(barrier)
-    expect(`git -C #{Shellwords.escape(@tmpdir)} status --short`).to eq("")
+    expect(git_output(@tmpdir, "status", "--short")).to eq("")
   end
 
   it "trusts root and member mise configs before running a detached template worktree" do
@@ -1045,7 +1045,7 @@ RSpec.describe Kettle::Family::Workflow do
         "img_src" => "https://sponsor.example/logo.svg"
       }
     ])
-    expect(results.fetch(1).stdout).to eq("Family Sponsor\n")
+    expect(results.fetch(1).stdout.chomp).to eq("Family Sponsor")
   end
 
   it "executes custom non-kettle-jem template commands without prepare dependency results" do
@@ -1059,7 +1059,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
     expect(results.map(&:phase)).to eq(["template"])
-    expect(results.fetch(0).stdout).to eq("custom templated\n")
+    expect(results.fetch(0).stdout.chomp).to eq("custom templated")
   end
 
   it "streams custom non-kettle-jem template commands without prepare dependency results" do
@@ -1073,7 +1073,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "template", config: config, members: members, execute: true, jobs: 2).results
 
     expect(results.map(&:phase)).to eq(%w[template template])
-    expect(results.map(&:stdout)).to eq(["custom templated\n", "custom templated\n"])
+    expect(results.map { |result| result.stdout.chomp }).to eq(["custom templated", "custom templated"])
   end
 
   it "adds quiet JSON flags and disables noisy debug environment for kettle-jem family templating" do
@@ -2272,8 +2272,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:member_name)).to eq(["beta"])
     expect(results.first.stderr).to include("README.md")
     expect(results.first.stderr).not_to include("lib/scratch.rb")
-    expect(`git -C #{alpha.root} stash list`).to be_empty
-    expect(`git -C #{beta.root} stash list`).to be_empty
+    expect(git_output(alpha.root, "stash", "list")).to be_empty
+    expect(git_output(beta.root, "stash", "list")).to be_empty
   end
 
   it "restores completed autostashes when template synchronization fails" do
@@ -2360,7 +2360,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:template_blocking_dirty_paths, [" M ../beta/Gemfile.lock", " M ../beta/gemfiles/modular/style_local.gemfile"])).to be_empty
     expect(results).to all(be_ok)
     expect(stashes).to be_empty
-    expect(`git -C #{member.root} stash list`).to be_empty
+    expect(git_output(member.root, "stash", "list")).to be_empty
   end
 
   it "uses Git autostash while synchronizing retained managed template outputs" do
@@ -2404,7 +2404,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.find { |result| result.phase == "template_autostash_rollback" }).to be_ok
     expect(File.read(File.join(member.root, "lib", "scratch.rb"))).to eq("dirty\n")
     expect(File).not_to exist(File.join(member.root, "templated.txt"))
-    expect(`git -C #{member.root} stash list`).to be_empty
+    expect(git_output(member.root, "stash", "list")).to be_empty
   end
 
   it "preserves failed template output and its autostash when cleanup is disabled" do
@@ -2429,7 +2429,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.map(&:phase)).not_to include("template_autostash_rollback")
     expect(File).to exist(File.join(member.root, "templated.txt"))
     expect(File).not_to exist(File.join(member.root, "lib", "scratch.rb"))
-    expect(`git -C #{member.root} stash list`).to include("kettle-family-template-alpha")
+    expect(git_output(member.root, "stash", "list")).to include("kettle-family-template-alpha")
   end
 
   it "restores non-failed member autostashes when cleanup is disabled" do
@@ -2460,8 +2460,8 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     expect(results.count { |result| result.phase == "template_autostash_preserved" }).to eq(1)
-    expect(`git -C #{alpha.root} stash list`).to include("kettle-family-template-alpha")
-    expect(`git -C #{beta.root} stash list`).to be_empty
+    expect(git_output(alpha.root, "stash", "list")).to include("kettle-family-template-alpha")
+    expect(git_output(beta.root, "stash", "list")).to be_empty
     expect(File).not_to exist(File.join(alpha.root, "lib", "scratch.rb"))
     expect(File.read(File.join(beta.root, "lib", "scratch.rb"))).to eq("dirty\n")
   end
@@ -2548,6 +2548,13 @@ RSpec.describe Kettle::Family::Workflow do
     root = File.join(@tmpdir, name)
     FileUtils.mkdir_p(root)
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: File.join(root, "#{name}.gemspec"), version: "1.0.0", dependencies: [])
+  end
+
+  def git_output(root, *arguments)
+    stdout, stderr, status = Open3.capture3("git", "-C", root, *arguments)
+    raise stderr unless status.success?
+
+    stdout
   end
 
   def write_nomono_bundle(member, floor:, locked:)
