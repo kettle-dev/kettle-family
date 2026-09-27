@@ -90,9 +90,9 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.2">v1.3.2</a>
 </li>
-  <li>COVERAGE: 93.41% – 6454/6909 lines in 37 files</li>
-  <li>BRANCH COVERAGE: 77.95% – 2627/3370 branches in 37 files</li>
-  <li>33.33% documented</li>
+  <li>COVERAGE: 93.24% – 6501/6972 lines in 37 files</li>
+  <li>BRANCH COVERAGE: 77.77% – 2642/3397 branches in 37 files</li>
+  <li>33.25% documented</li>
 </ul>
 
 <h3 id="added-1">Added</h3>
@@ -149,7 +149,16 @@ engine support needs.</li>
     <p>Handle macOS canonical temp paths, Unix socket limits, and PTY EOF during family workflows.</p>
   </li>
   <li>
-    <p>Keep Windows temporary test paths canonical, launch the Mise integration fixture on Windows, and include WEBrick for local registry specs.</p>
+    <p>Canonicalize Windows system temporary paths for Git-based specs, launch the Mise integration fixture on Windows, and include WEBrick for local registry specs.</p>
+  </li>
+  <li>
+    <p>Readiness checks accept existing binstub files on Windows, where Unix executable-bit checks are not portable.</p>
+  </li>
+  <li>
+    <p>Make family specs portable on Windows and use valid generated gemspec fixtures.</p>
+  </li>
+  <li>
+    <p>Support Windows pipe-driven interactive commands, absolute local-path lockfile remotes, and equivalent filesystem path spellings in family workflows.</p>
   </li>
 </ul>
 

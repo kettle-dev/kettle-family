@@ -28,20 +28,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Readiness checks accept existing binstub files on Windows, where Unix executable-bit checks are not portable.
-
-- Make family specs portable on Windows and use valid generated gemspec fixtures.
-
-- Support Windows pipe-driven interactive commands, absolute local-path lockfile remotes, and equivalent filesystem path spellings in family workflows.
-
 ### Security
 
 ## [1.3.2] - 2026-09-27
 
 - TAG: [v1.3.2][1.3.2t]
-- COVERAGE: 93.41% -- 6454/6909 lines in 37 files
-- BRANCH COVERAGE: 77.95% -- 2627/3370 branches in 37 files
-- 33.33% documented
+- COVERAGE: 93.24% -- 6501/6972 lines in 37 files
+- BRANCH COVERAGE: 77.77% -- 2642/3397 branches in 37 files
+- 33.25% documented
 
 ### Added
 
@@ -80,6 +74,12 @@ Please file a bug if you notice a violation of semantic versioning.
 - Handle macOS canonical temp paths, Unix socket limits, and PTY EOF during family workflows.
 
 - Canonicalize Windows system temporary paths for Git-based specs, launch the Mise integration fixture on Windows, and include WEBrick for local registry specs.
+
+- Readiness checks accept existing binstub files on Windows, where Unix executable-bit checks are not portable.
+
+- Make family specs portable on Windows and use valid generated gemspec fixtures.
+
+- Support Windows pipe-driven interactive commands, absolute local-path lockfile remotes, and equivalent filesystem path spellings in family workflows.
 
 ## [1.3.1] - 2026-09-10
 
