@@ -228,7 +228,6 @@
       <pre class="lines">
 
 
-26
 27
 28
 29
@@ -238,10 +237,11 @@
 33
 34
 35
-36</pre>
+36
+37</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 26</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 27</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>jobs:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
@@ -281,7 +281,6 @@
       <pre class="lines">
 
 
-38
 39
 40
 41
@@ -293,10 +292,11 @@
 47
 48
 49
-50</pre>
+50
+51</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 38</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 39</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>

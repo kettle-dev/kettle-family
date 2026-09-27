@@ -90,9 +90,9 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.2">v1.3.2</a>
 </li>
-  <li>COVERAGE: 93.24% – 6501/6972 lines in 37 files</li>
-  <li>BRANCH COVERAGE: 77.77% – 2642/3397 branches in 37 files</li>
-  <li>33.25% documented</li>
+  <li>COVERAGE: 93.22% – 6530/7005 lines in 37 files</li>
+  <li>BRANCH COVERAGE: 77.72% – 2651/3411 branches in 37 files</li>
+  <li>33.10% documented</li>
 </ul>
 
 <h3 id="added-1">Added</h3>
@@ -159,6 +159,21 @@ engine support needs.</li>
   </li>
   <li>
     <p>Support Windows pipe-driven interactive commands, absolute local-path lockfile remotes, and equivalent filesystem path spellings in family workflows.</p>
+  </li>
+  <li>
+    <p>Apply workflow environment overrides portably after mise and normalize Windows filesystem paths in discovery and branch configuration.</p>
+  </li>
+  <li>
+    <p>Normalize filesystem glob separators across supported platforms so family discovery, installs, and workflow asset lookup find paths on Windows.</p>
+  </li>
+  <li>
+    <p>Normalize Windows path aliases and subprocess line endings in family workflows.</p>
+  </li>
+  <li>
+    <p>Close the child input stream when a configured OTP provider returns no code, preventing interactive release commands from hanging.</p>
+  </li>
+  <li>
+    <p>Start the Windows environment wrapper without inherited RUBYOPT so Bundler cannot activate the parent bundle before wrapper overrides are applied.</p>
   </li>
 </ul>
 

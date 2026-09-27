@@ -28,24 +28,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Apply workflow environment overrides portably after mise and normalize Windows filesystem paths in discovery and branch configuration.
-
-- Normalize filesystem glob separators across supported platforms so family discovery, installs, and workflow asset lookup find paths on Windows.
-
-- Normalize Windows path aliases and subprocess line endings in family workflows.
-
-- Close the child input stream when a configured OTP provider returns no code, preventing interactive release commands from hanging.
-
-- Start the Windows environment wrapper without inherited RUBYOPT so Bundler cannot activate the parent bundle before wrapper overrides are applied.
-
 ### Security
 
 ## [1.3.2] - 2026-09-27
 
 - TAG: [v1.3.2][1.3.2t]
-- COVERAGE: 93.24% -- 6501/6972 lines in 37 files
-- BRANCH COVERAGE: 77.77% -- 2642/3397 branches in 37 files
-- 33.25% documented
+- COVERAGE: 93.22% -- 6530/7005 lines in 37 files
+- BRANCH COVERAGE: 77.72% -- 2651/3411 branches in 37 files
+- 33.10% documented
 
 ### Added
 
@@ -90,6 +80,16 @@ Please file a bug if you notice a violation of semantic versioning.
 - Make family specs portable on Windows and use valid generated gemspec fixtures.
 
 - Support Windows pipe-driven interactive commands, absolute local-path lockfile remotes, and equivalent filesystem path spellings in family workflows.
+
+- Apply workflow environment overrides portably after mise and normalize Windows filesystem paths in discovery and branch configuration.
+
+- Normalize filesystem glob separators across supported platforms so family discovery, installs, and workflow asset lookup find paths on Windows.
+
+- Normalize Windows path aliases and subprocess line endings in family workflows.
+
+- Close the child input stream when a configured OTP provider returns no code, preventing interactive release commands from hanging.
+
+- Start the Windows environment wrapper without inherited RUBYOPT so Bundler cannot activate the parent bundle before wrapper overrides are applied.
 
 ## [1.3.1] - 2026-09-10
 
