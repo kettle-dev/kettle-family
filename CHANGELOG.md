@@ -28,20 +28,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Windows family workflow specs now preserve command arguments and handle case-insensitive checkout paths.
-
-- Detect Windows drive-absolute local paths when preparing release lockfile normalization.
-
-- Delegate canonical, identity, and containment path checks to kettle-dev so family workflows consistently handle symlink aliases and platform path semantics.
-
 ### Security
 
-## [1.3.2] - 2026-09-27
+## [1.3.2] - 2026-09-28
 
 - TAG: [v1.3.2][1.3.2t]
-- COVERAGE: 93.24% -- 6536/7010 lines in 37 files
-- BRANCH COVERAGE: 77.75% -- 2655/3415 branches in 37 files
-- 33.10% documented
+- COVERAGE: 93.21% -- 6525/7000 lines in 37 files
+- BRANCH COVERAGE: 77.73% -- 2652/3412 branches in 37 files
+- 33.41% documented
 
 ### Added
 
@@ -98,6 +92,12 @@ Please file a bug if you notice a violation of semantic versioning.
 - Start the Windows environment wrapper without inherited RUBYOPT so Bundler cannot activate the parent bundle before wrapper overrides are applied.
 
 - Windows family workflows now reset lockfiles without relying on the POSIX env utility, terminate failed interactive child processes, and apply member exclusion patterns case-insensitively.
+
+- Windows family workflow specs now preserve command arguments and handle case-insensitive checkout paths.
+
+- Detect Windows drive-absolute local paths when preparing release lockfile normalization.
+
+- Delegate canonical, identity, and containment path checks to kettle-dev so family workflows consistently handle symlink aliases and platform path semantics.
 
 ## [1.3.1] - 2026-09-10
 

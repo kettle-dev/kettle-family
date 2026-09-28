@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  File: WINDOWS_SUPPORT
+  
+    &mdash; Documentation by YARD 0.9.45
+  
+</title>
+
+  <link rel="stylesheet" href="css/style.css" type="text/css">
+
+  <link rel="stylesheet" href="css/common.css" type="text/css">
+
+<script type="text/javascript">
+  pathId = "WINDOWS_SUPPORT";
+  relpath = '';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div id="main_progress" aria-hidden="true"></div>
+
+    <div class="nav_wrap">
+      <iframe id="nav" src="file_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="_index.html">Index</a> &raquo; 
+    <span class="title">File: WINDOWS_SUPPORT</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><div id='filecontents'><h1 id="windows-support-and-test-policy">Windows Support and Test Policy</h1>
+
+<h2 id="support-contract">Support Contract</h2>
+
+<p>Kettle Family supports native Windows Ruby for the same public family commands<br>
+as other supported platforms, subject to individually documented operating<br>
+system limitations. A green Windows workflow is evidence only for the behavior<br>
+the job actually executes. It is not evidence that a command works natively if<br>
+the test substitutes the process, shell, or executable behavior under test.</p>
+
+<p>The Windows CI job runs the same spec suite as Linux and macOS. Keep that job<br>
+red when a supported behavior fails. Do not make it green by weakening an<br>
+assertion, hiding a failure, or marking a test pending without documenting a<br>
+specific unsupported capability and its follow-up.</p>
+
+<h2 id="test-boundaries">Test Boundaries</h2>
+
+<p>Classify a test by the behavior it claims to establish:</p>
+
+<ul>
+  <li>Pure Ruby logic and data transformation should use the same examples on all<br>
+platforms.</li>
+  <li>Process integration tests must execute through native Windows process<br>
+creation, argument passing, environment handling, and filesystem semantics<br>
+whenever one of those is under test.</li>
+  <li>A test double is appropriate for an external service or executable only<br>
+when that dependency is outside the behavior under test. The double must not<br>
+replace the Windows mechanism whose behavior the test claims to verify.</li>
+  <li>Tests of Bundler or lockfile behavior should use real Ruby, Bundler, and Git<br>
+against local temporary fixtures. They must not require registry or network<br>
+access. A stubbed <code>bundle</code> command may test family orchestration around a<br>
+bundle command, but cannot establish that Bundler works on Windows.</li>
+  <li>A native <code>.cmd</code> fixture may test Windows command lookup and argument<br>
+forwarding, but it must implement the fixture behavior directly. Do not add<br>
+a Ruby-to-Bash bridge to make a Unix shell fixture appear portable.</li>
+  <li>If a Windows capability genuinely is unavailable (for example, PTY), mark<br>
+only the affected example pending, state the limitation in the example, and<br>
+keep the surrounding behavior covered by tests that do run on Windows.</li>
+</ul>
+
+<h2 id="failure-handling">Failure Handling</h2>
+
+<p>For each Windows CI failure, preserve the run URL and commit, exact example,<br>
+observed error or mismatch, and the root cause once proven. Separate observed<br>
+symptoms from root-cause claims. Before changing an expectation or adding a<br>
+platform branch, establish whether the defect is in production behavior, the<br>
+test fixture, or an unsupported capability. After a fix, the regression test<br>
+must exercise the same boundary that failed; a passing test on another<br>
+platform is not Windows validation.</p>
+
+<p>Do not accumulate Windows-only conditionals as a substitute for understanding<br>
+the platform contract. Prefer a shared implementation and shared assertions;<br>
+use platform-specific setup only where the operating system genuinely requires<br>
+it, and keep that setup smaller than the behavior being tested.</p>
+
+<h2 id="baseline-current-mri-workflow">Baseline: Current MRI Workflow</h2>
+
+<p>Run <a href="https://github.com/kettle-dev/kettle-family/actions/runs/36358393188">36358393188</a><br>
+at commit <code>288729fe</code> completed with Linux and macOS passing and Windows failing<br>
+with 12 failures out of 745 examples (one PTY example was already pending).<br>
+The following are observed symptoms; they are not yet root-cause diagnoses:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Area</th>
+      <th>Failing example(s)</th>
+      <th>Observed symptom</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Branch test cleanup</td>
+      <td><code>workflow_template_spec.rb:1948</code></td>
+      <td>Expected <code>branch_generated_lockfile_recovery</code> phase was absent.</td>
+    </tr>
+    <tr>
+      <td>Reset subprocess</td>
+      <td>
+<code>workflow_spec.rb:256</code>, <code>:318</code>
+</td>
+      <td>Helper output did not show expected bundle environment/reset state.</td>
+    </tr>
+    <tr>
+      <td>Branch target config</td>
+      <td><code>release_state_check_spec.rb:685</code></td>
+      <td>Loaded config path did not match the expected member-local config.</td>
+    </tr>
+    <tr>
+      <td>Discovery exclusions</td>
+      <td>
+<code>discovery_spec.rb:289</code>, <code>:305</code>, <code>:316</code>, <code>:327</code>, <code>:347</code>
+</td>
+      <td>Configured/default exclusions failed to exclude fixture or vendored gemspecs; one case raised a duplicate-member error.</td>
+    </tr>
+    <tr>
+      <td>Release lockfile planning</td>
+      <td>
+<code>workflow_release_spec.rb:2010</code>, <code>:2037</code>, <code>:2062</code>
+</td>
+      <td>Expected lockfile normalization/recovery phases were absent; planning stopped at <code>check</code> or omitted those phases.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The Windows-specific <code>fake_bundle_env</code> in <code>workflow_release_spec.rb</code> currently<br>
+launches a Bash script through a Ruby <code>.cmd</code> wrapper. This is a test-fixture<br>
+implementation, not a product requirement. It crosses two command interpreters<br>
+and therefore does not provide clean evidence about native Bundler behavior.<br>
+Replace it with direct fixture behavior or a local real-Bundler integration<br>
+test according to the boundary being tested; do not extend the bridge.</p>
+
+<p>Until each baseline failure has a proven cause and an appropriate regression<br>
+test, Windows support for the affected behavior remains unverified. The CI job<br>
+must continue to report those failures rather than converting them into passes.</p>
+</div></div>
+
+      <div id="footer">
+  Generated on Mon Sep 28 02:26:55 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.45 (ruby-4.0.7).
+</div>
+
+    </div>
+  </body>
+</html>
