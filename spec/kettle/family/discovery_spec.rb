@@ -337,6 +337,17 @@ RSpec.describe Kettle::Family::Discovery do
   it "matches discovered paths case-insensitively and across slash styles on Windows" do
     discovery = described_class.new(config: Kettle::Family::Config.load(root: @tmpdir))
     allow(Gem).to receive(:win_platform?).and_return(true)
+    allow(Kettle::Family::Paths).to receive(:canonical)
+      .with("C:\\Workspace\\Family\\alpha\\alpha.gemspec")
+      .and_return("C:/Workspace/Family/alpha/alpha.gemspec")
+    allow(Kettle::Family::Paths).to receive(:canonical)
+      .with("c:/workspace/family")
+      .and_return("c:/workspace/family")
+    allow(Kettle::Family::Paths).to receive(:within?).and_return(true)
+    allow(Kettle::Family::Paths).to receive(:same?).and_call_original
+    allow(Kettle::Family::Paths).to receive(:same?)
+      .with("C:/Workspace/Family", "c:/workspace/family")
+      .and_return(true)
 
     expect(discovery.send(:relative_path, "C:\\Workspace\\Family\\alpha\\alpha.gemspec", "c:/workspace/family"))
       .to eq("alpha/alpha.gemspec")

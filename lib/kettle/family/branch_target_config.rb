@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "open3"
-require "pathname"
 require "yaml"
 require_relative "paths"
 
@@ -87,7 +86,8 @@ module Kettle
         return "." if Paths.same?(member_root, root)
         raise Error, "member root #{member.root} is outside git root #{root}" unless Paths.within?(member_root, root)
 
-        Pathname.new(member_root).relative_path_from(Pathname.new(root)).to_s.tr("\\", "/")
+        relative_parts = member_root.tr("\\", "/").split("/").drop(root.tr("\\", "/").split("/").length)
+        File.join(*relative_parts).tr("\\", "/")
       end
 
       def member_local_config_paths(root, relative_root)
