@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Compare filesystem paths by canonical identity throughout family workflows.
+
 ### Security
 
 ## [1.3.2] - 2026-09-28

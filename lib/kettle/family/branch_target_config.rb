@@ -55,7 +55,7 @@ module Kettle
         return false if left.to_s.empty? || right.to_s.empty?
         return false unless File.file?(left) && File.file?(right)
 
-        File.realpath(left) == File.realpath(right)
+        Paths.same?(left, right)
       end
 
       def member_local_release_config_from_branch(member)

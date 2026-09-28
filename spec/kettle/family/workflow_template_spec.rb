@@ -2339,6 +2339,20 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "tags branch worktree results by filesystem path identity" do
+    write_template_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+    result = Kettle::Family::CommandResult.new(member.name, "template_branch_sync", [], "/alternate/alpha", 0, true, "", "", 0.0, false, nil)
+    entries = [{member: member, branch: "main"}]
+    allow(Kettle::Family::Paths).to receive(:same?).with(member.root, "/alternate/alpha").and_return(true)
+
+    workflow.send(:tag_template_worktree_results, [result], entries)
+
+    expect(result.branch).to eq("main")
+  end
+
   it "autostashes changes under lib, spec, and test and restores them afterward" do
     write_template_config(command: [RbConfig.ruby, "-e", "File.write('templated.txt', 'ok')"], normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)

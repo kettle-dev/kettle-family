@@ -644,7 +644,7 @@ module Kettle
         return false unless File.file?(File.join(config.root, "Gemfile"))
 
         family_members.none? do |member|
-          File.expand_path(member.root) == File.expand_path(config.root)
+          Paths.same?(member.root, config.root)
         end
       end
 
@@ -1752,9 +1752,11 @@ module Kettle
       end
 
       def tag_template_worktree_results(results, entries)
-        branches_by_root = entries.to_h { |entry| [File.expand_path(entry.fetch(:member).root), entry.fetch(:branch)] }
         results.each do |result|
-          result.branch = branches_by_root[File.expand_path(result.workdir)] if result.workdir
+          next unless result.workdir
+
+          entry = entries.find { |candidate| Paths.same?(candidate.fetch(:member).root, result.workdir) }
+          result.branch = entry.fetch(:branch) if entry
         end
       end
 
@@ -4348,8 +4350,8 @@ module Kettle
         return false if config.path
         return false unless config.family_mode == "monorepo"
         return false unless members.one?
-        return false unless File.expand_path(config.members_root) == File.expand_path(config.root)
-        return false unless File.expand_path(members.first.root) == File.expand_path(config.root)
+        return false unless Paths.same?(config.members_root, config.root)
+        return false unless Paths.same?(members.first.root, config.root)
 
         family_env_name = config.family_local_path_env_name
         family_env_name && !env_overrides.key?(family_env_name)
@@ -5531,7 +5533,7 @@ module Kettle
         end
         return false unless spec&.source.is_a?(Bundler::Source::Path)
 
-        File.expand_path(spec.source.path.to_s) == File.expand_path(File.join(template_local_kettle_jem_root, "kettle-jem"))
+        Paths.same?(spec.source.path.to_s, File.join(template_local_kettle_jem_root, "kettle-jem"))
       rescue Bundler::LockfileError, Errno::ENOENT
         false
       end
@@ -5696,7 +5698,7 @@ module Kettle
       end
 
       def family_local_path_root_for(family_root)
-        return config.family_local_path_root if File.expand_path(family_root) == File.expand_path(config.root)
+        return config.family_local_path_root if Paths.same?(family_root, config.root)
 
         relative = Pathname.new(config.family_local_path_root).relative_path_from(Pathname.new(config.root))
         File.expand_path(relative, family_root)
