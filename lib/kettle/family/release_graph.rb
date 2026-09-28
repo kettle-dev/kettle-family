@@ -58,8 +58,7 @@ module Kettle
         raise Error, "#{name} release graph requires a local path selector" if selector_env.empty?
 
         selector_env.each_value do |value|
-          selector_path = canonical_path(value)
-          next if local_path_roots.any? { |root| selector_path == root || selector_path.start_with?("#{root}/") }
+          next if local_path_roots.any? { |root| Paths.within?(value, root) }
 
           raise Error, "#{name} selector #{value.inspect} is outside its declared local path roots"
         end
@@ -68,7 +67,7 @@ module Kettle
 
         raise Error, "monorepo_ci_local release graph requires a CI root" if ci_root.to_s.empty?
         local_path_roots.each do |path|
-          next if path == ci_root || path.start_with?("#{ci_root}/")
+          next if Paths.within?(path, ci_root)
 
           raise Error, "monorepo_ci_local path #{path.inspect} is outside CI root #{ci_root.inspect}"
         end

@@ -116,7 +116,7 @@ module Kettle
         remote_path = normalized_path(remote, base: member.root)
         return false unless remote_path
 
-        allowed_local_path_roots.any? { |root| remote_path == root || remote_path.start_with?("#{root}/") }
+        allowed_local_path_roots.any? { |root| Paths.within?(remote_path, root) }
       end
 
       def normalized_path(path, base: nil)

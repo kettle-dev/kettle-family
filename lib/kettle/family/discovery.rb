@@ -108,14 +108,11 @@ module Kettle
       end
 
       def normalized_path(path)
-        normalized = Paths.canonical(path).tr("\\", "/")
-        Gem.win_platform? ? normalized.downcase : normalized
+        Paths.canonical(path).tr("\\", "/")
       end
 
       def same_directory?(left, right)
-        normalized_path(left) == normalized_path(right) || File.identical?(left, right)
-      rescue SystemCallError
-        normalized_path(left) == normalized_path(right)
+        Paths.same?(left, right)
       end
 
       def member_from_gemspec(path)

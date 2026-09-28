@@ -402,9 +402,7 @@ module Kettle
       private
 
       def path_within_root?(path)
-        expanded_path = File.expand_path(path)
-        expanded_root = File.expand_path(root)
-        expanded_path == expanded_root || expanded_path.start_with?("#{expanded_root}/")
+        Paths.within?(path, root)
       end
 
       def expand_config_relative_path(value)

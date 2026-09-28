@@ -2948,9 +2948,7 @@ module Kettle
         remote = lockfile_source.each_line.with_index(1).find { |_line, index| index == line_number }.first
           .to_s.split("remote:", 2).last.to_s.strip
         remote_path = Paths.canonical(remote, base: member.root)
-        release_allowed_local_path_roots.any? do |root|
-          remote_path == root || remote_path.start_with?("#{root}/")
-        end
+        release_allowed_local_path_roots.any? { |root| Paths.within?(remote_path, root) }
       end
 
       def dependency_floor_allowed_path_gems(member:, lockfile_source:)
@@ -2970,9 +2968,7 @@ module Kettle
           if stripped.start_with?("remote:")
             remote = stripped.split("remote:", 2).last.to_s.strip
             remote_path = Paths.canonical(remote, base: member.root)
-            allowed_remote = release_allowed_local_path_roots.any? do |root|
-              remote_path == root || remote_path.start_with?("#{root}/")
-            end
+            allowed_remote = release_allowed_local_path_roots.any? { |root| Paths.within?(remote_path, root) }
             next
           end
           if stripped == "specs:"
@@ -3411,9 +3407,7 @@ module Kettle
       # simplecov:enable
 
       def path_inside?(path, root)
-        expanded_path = File.expand_path(path)
-        expanded_root = File.expand_path(root)
-        expanded_path == expanded_root || expanded_path.start_with?("#{expanded_root}#{File::SEPARATOR}")
+        Paths.within?(path, root)
       end
 
       def release_phase

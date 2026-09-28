@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Detect Windows drive-absolute local paths when preparing release lockfile normalization.
 
+- Delegate canonical, identity, and containment path checks to kettle-dev so family workflows consistently handle symlink aliases and platform path semantics.
+
 ### Security
 
 ## [1.3.2] - 2026-09-27

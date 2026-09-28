@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "pathname"
+require "kettle/dev"
 
 module Kettle
   module Family
@@ -8,20 +9,15 @@ module Kettle
       module_function
 
       def canonical(path, base: nil)
-        expanded = File.expand_path(path, base)
-        existing = expanded
-        suffix = []
-        until File.exist?(existing)
-          parent = File.dirname(existing)
-          break if parent == existing
+        Kettle::Dev::Paths.canonical(path, base: base)
+      end
 
-          suffix.unshift(File.basename(existing))
-          existing = parent
-        end
+      def same?(left, right, base: nil)
+        Kettle::Dev::Paths.same?(left, right, base: base)
+      end
 
-        File.join(File.realpath(existing), *suffix)
-      rescue Errno::ENOENT, Errno::EACCES
-        expanded
+      def within?(path, root, base: nil)
+        Kettle::Dev::Paths.within?(path, root, base: base)
       end
 
       def glob(*parts)
