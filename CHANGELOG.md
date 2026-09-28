@@ -28,16 +28,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Resolve family-relative paths by filesystem identity so discovery exclusions and branch-stack configs work with Windows path aliases.
-
 ### Security
 
 ## [1.3.2] - 2026-09-28
 
 - TAG: [v1.3.2][1.3.2t]
-- COVERAGE: 93.25% -- 6538/7011 lines in 37 files
-- BRANCH COVERAGE: 77.75% -- 2656/3416 branches in 37 files
-- 33.41% documented
+- COVERAGE: 93.25% -- 6537/7010 lines in 37 files
+- BRANCH COVERAGE: 77.77% -- 2659/3419 branches in 37 files
+- 33.57% documented
 
 ### Added
 
@@ -102,6 +100,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Delegate canonical, identity, and containment path checks to kettle-dev so family workflows consistently handle symlink aliases and platform path semantics.
 
 - Windows family discovery now applies exclusion globs across path separators, and branch-target config lookup uses shared path normalization.
+
+- Resolve family-relative paths by filesystem identity so discovery exclusions and branch-stack configs work with Windows path aliases.
 
 ## [1.3.1] - 2026-09-10
 
