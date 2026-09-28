@@ -360,6 +360,16 @@ RSpec.describe Kettle::Family::Discovery do
     expect(members.map(&:name)).to eq(["alpha"])
   end
 
+  it "matches recursive exclusion patterns across Windows separators" do
+    discovery = described_class.new(config: Kettle::Family::Config.load(root: @tmpdir))
+    allow(Gem).to receive(:win_platform?).and_return(true)
+
+    expect(discovery.send(:path_glob_match?, "**/benchmarks/**", "beta\\benchmarks\\fixtures\\skeleton\\skeleton.gemspec"))
+      .to be(true)
+    expect(discovery.send(:path_glob_match?, "vendor/**", "Vendor\\fixture\\vendored.gemspec"))
+      .to be(true)
+  end
+
   it "loads discovered gemspecs from their own directory" do
     root = File.join(@tmpdir, "relative-load")
     FileUtils.mkdir_p(File.join(root, "lib", "relative"))

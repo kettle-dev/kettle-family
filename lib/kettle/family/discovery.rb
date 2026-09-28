@@ -224,12 +224,36 @@ module Kettle
 
       def path_matches_pattern?(path, pattern)
         relative_candidates(path).any? do |relative|
-          if Gem.win_platform?
-            File.fnmatch?(pattern.downcase, relative.downcase, File::FNM_DOTMATCH | File::FNM_EXTGLOB)
-          else
-            File.fnmatch?(pattern, relative, File::FNM_DOTMATCH | File::FNM_EXTGLOB)
-          end
+          path_glob_match?(pattern, relative)
         end
+      end
+
+      def path_glob_match?(pattern, path)
+        pattern_parts = pattern.tr("\\", "/").split("/")
+        path_parts = path.tr("\\", "/").split("/")
+        if Gem.win_platform?
+          pattern_parts.map!(&:downcase)
+          path_parts.map!(&:downcase)
+        end
+
+        path_glob_parts_match?(pattern_parts, path_parts, {})
+      end
+
+      def path_glob_parts_match?(pattern_parts, path_parts, memo)
+        key = [pattern_parts.length, path_parts.length]
+        return memo[key] if memo.key?(key)
+        return memo[key] = path_parts.empty? if pattern_parts.empty?
+
+        pattern_part = pattern_parts.first
+        matched = if pattern_part == "**"
+          path_glob_parts_match?(pattern_parts.drop(1), path_parts, memo) ||
+            (!path_parts.empty? && path_glob_parts_match?(pattern_parts, path_parts.drop(1), memo))
+        else
+          !path_parts.empty? &&
+            File.fnmatch?(pattern_part, path_parts.first, File::FNM_DOTMATCH | File::FNM_EXTGLOB) &&
+            path_glob_parts_match?(pattern_parts.drop(1), path_parts.drop(1), memo)
+        end
+        memo[key] = matched
       end
 
       def relative_candidates(path)

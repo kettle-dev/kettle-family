@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Windows family discovery now applies exclusion globs across path separators, and branch-target config lookup uses shared path normalization.
+
 ### Security
 
 ## [1.3.2] - 2026-09-28

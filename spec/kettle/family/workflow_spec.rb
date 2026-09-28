@@ -254,6 +254,8 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "executes Gemfile.lock resets with local path environments disabled" do
+    skip "Windows .cmd wrappers cannot preserve the multiline Ruby -e argument used by the real reset command" if Gem.win_platform?
+
     File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
       family:
         local_path_env: KETTLE_DEV_DEV
@@ -316,6 +318,8 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "executes Gemfile.lock resets without materializing the broken member bundle" do
+    skip "Windows .cmd wrappers cannot preserve the multiline Ruby -e argument used by the real reset command" if Gem.win_platform?
+
     fake_bin = File.join(@tmpdir, "bin")
     FileUtils.mkdir_p(fake_bin)
     fake_ruby = write_fake_reset_ruby(fake_bin)
@@ -920,6 +924,14 @@ RSpec.describe Kettle::Family::Workflow do
       ["git", "checkout", "r1"],
       ["git", "checkout", "r2"]
     ])
+  end
+
+  it "passes the reset helper to Ruby as one argument rather than through a shell" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    workflow = described_class.new(command: "reset", reset_target: "Gemfile.lock", config: config, members: [member])
+
+    expect(workflow.send(:reset_gemfile_lock_command, member)).to eq(expected_reset_command)
   end
 
   def write_config(command:)

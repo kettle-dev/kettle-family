@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "open3"
+require "pathname"
 require "yaml"
+require_relative "paths"
 
 module Kettle
   module Family
@@ -80,20 +82,12 @@ module Kettle
       end
 
       def member_relative_root(member, root)
-        root = File.realpath(root)
-        member_root = File.realpath(member.root)
-        if Gem.win_platform?
-          normalized_root = root.tr("\\", "/").downcase
-          normalized_member_root = member_root.tr("\\", "/").downcase
-        else
-          normalized_root = root.tr("\\", "/")
-          normalized_member_root = member_root.tr("\\", "/")
-        end
-        return "." if normalized_member_root == normalized_root
-        prefix = "#{normalized_root}/"
-        return member_root.tr("\\", "/")[prefix.length..] if normalized_member_root.start_with?(prefix)
+        root = Paths.canonical(root)
+        member_root = Paths.canonical(member.root)
+        return "." if Paths.same?(member_root, root)
+        raise Error, "member root #{member.root} is outside git root #{root}" unless Paths.within?(member_root, root)
 
-        raise Error, "member root #{member.root} is outside git root #{root}"
+        Pathname.new(member_root).relative_path_from(Pathname.new(root)).to_s.tr("\\", "/")
       end
 
       def member_local_config_paths(root, relative_root)
