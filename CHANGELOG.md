@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Resolve family-relative paths by filesystem identity so discovery exclusions and branch-stack configs work with Windows path aliases.
+
 ### Security
 
 ## [1.3.2] - 2026-09-28

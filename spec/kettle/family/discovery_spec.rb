@@ -355,6 +355,14 @@ RSpec.describe Kettle::Family::Discovery do
       .to be(true)
   end
 
+  it "computes relative paths by filesystem ancestry" do
+    write_gem("alpha")
+    discovery = described_class.new(config: Kettle::Family::Config.load(root: @tmpdir))
+    gemspec = File.join(@tmpdir, "alpha", "alpha.gemspec")
+
+    expect(discovery.send(:relative_path, gemspec, @tmpdir)).to eq("alpha/alpha.gemspec")
+  end
+
   it "matches exclusion patterns case-insensitively on Windows" do
     write_gem("alpha")
     write_gemspec(File.join(@tmpdir, "Vendor", "Fixture"), "vendored")

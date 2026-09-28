@@ -81,13 +81,10 @@ module Kettle
       end
 
       def member_relative_root(member, root)
-        root = Paths.canonical(root)
-        member_root = Paths.canonical(member.root)
-        return "." if Paths.same?(member_root, root)
-        raise Error, "member root #{member.root} is outside git root #{root}" unless Paths.within?(member_root, root)
+        relative = Paths.relative(member.root, root)
+        raise Error, "member root #{member.root} is outside git root #{root}" unless relative
 
-        relative_parts = member_root.tr("\\", "/").split("/").drop(root.tr("\\", "/").split("/").length)
-        File.join(*relative_parts).tr("\\", "/")
+        relative
       end
 
       def member_local_config_paths(root, relative_root)

@@ -20,6 +20,29 @@ module Kettle
         Kettle::Dev::Paths.within?(path, root, base: base)
       end
 
+      # Computes a relative path by walking filesystem ancestors. Component
+      # string comparisons are insufficient on Windows, where equivalent
+      # paths may have different drive-letter casing or filesystem aliases.
+      def relative(path, root)
+        candidate = canonical(path)
+        boundary = canonical(root)
+        return "." if same?(candidate, boundary)
+
+        is_directory = File.directory?(candidate)
+        current = is_directory ? candidate : File.dirname(candidate)
+        parts = is_directory ? [] : [File.basename(candidate)]
+
+        until same?(current, boundary)
+          parent = File.dirname(current)
+          return unless parent != current
+
+          parts.unshift(File.basename(current))
+          current = parent
+        end
+
+        File.join(*parts).tr("\\", "/")
+      end
+
       def glob(*parts)
         Dir.glob(File.join(*parts).tr("\\", "/"))
       end

@@ -263,13 +263,7 @@ module Kettle
       end
 
       def relative_path(path, root)
-        canonical_path = Paths.canonical(path)
-        canonical_root = Paths.canonical(root)
-        return unless Paths.within?(canonical_path, canonical_root)
-        return "." if Paths.same?(canonical_path, canonical_root)
-
-        relative_parts = canonical_path.tr("\\", "/").split("/").drop(canonical_root.tr("\\", "/").split("/").length)
-        File.join(*relative_parts).tr("\\", "/")
+        Paths.relative(path, root)
       end
 
       class GemfileDependencyCollector
