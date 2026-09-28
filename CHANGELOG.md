@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Compare filesystem paths by canonical identity throughout family workflows.
-
 ### Security
+
+## [1.3.3] - 2026-09-28
+
+- TAG: [v1.3.3][1.3.3t]
+- COVERAGE: 93.25% -- 6538/7011 lines in 37 files
+- BRANCH COVERAGE: 77.76% -- 2660/3421 branches in 37 files
+- 33.57% documented
+
+### Fixed
+
+- Compare filesystem paths by canonical identity throughout family workflows.
 
 ## [1.3.2] - 2026-09-28
 
@@ -2821,7 +2830,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.3...HEAD
+[1.3.3]: https://github.com/kettle-dev/kettle-family/compare/v1.3.2...v1.3.3
+[1.3.3t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.3
 [1.3.2]: https://github.com/kettle-dev/kettle-family/compare/v1.3.1...v1.3.2
 [1.3.2t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.2
 [1.3.1]: https://github.com/kettle-dev/kettle-family/compare/v1.3.0...v1.3.1
