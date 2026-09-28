@@ -28,15 +28,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Windows family discovery now applies exclusion globs across path separators, and branch-target config lookup uses shared path normalization.
-
 ### Security
 
 ## [1.3.2] - 2026-09-28
 
 - TAG: [v1.3.2][1.3.2t]
-- COVERAGE: 93.21% -- 6525/7000 lines in 37 files
-- BRANCH COVERAGE: 77.73% -- 2652/3412 branches in 37 files
+- COVERAGE: 93.25% -- 6538/7011 lines in 37 files
+- BRANCH COVERAGE: 77.75% -- 2656/3416 branches in 37 files
 - 33.41% documented
 
 ### Added
@@ -100,6 +98,8 @@ Please file a bug if you notice a violation of semantic versioning.
 - Detect Windows drive-absolute local paths when preparing release lockfile normalization.
 
 - Delegate canonical, identity, and containment path checks to kettle-dev so family workflows consistently handle symlink aliases and platform path semantics.
+
+- Windows family discovery now applies exclusion globs across path separators, and branch-target config lookup uses shared path normalization.
 
 ## [1.3.1] - 2026-09-10
 

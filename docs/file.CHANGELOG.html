@@ -90,8 +90,8 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.2">v1.3.2</a>
 </li>
-  <li>COVERAGE: 93.21% – 6525/7000 lines in 37 files</li>
-  <li>BRANCH COVERAGE: 77.73% – 2652/3412 branches in 37 files</li>
+  <li>COVERAGE: 93.25% – 6538/7011 lines in 37 files</li>
+  <li>BRANCH COVERAGE: 77.75% – 2656/3416 branches in 37 files</li>
   <li>33.41% documented</li>
 </ul>
 
@@ -186,6 +186,9 @@ engine support needs.</li>
   </li>
   <li>
     <p>Delegate canonical, identity, and containment path checks to kettle-dev so family workflows consistently handle symlink aliases and platform path semantics.</p>
+  </li>
+  <li>
+    <p>Windows family discovery now applies exclusion globs across path separators, and branch-target config lookup uses shared path normalization.</p>
   </li>
 </ul>
 
