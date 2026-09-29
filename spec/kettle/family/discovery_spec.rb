@@ -442,7 +442,7 @@ RSpec.describe Kettle::Family::Discovery do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = described_class.new(config: config).members.fetch(0)
 
-    expect(File.identical?(member.version_file, canonical)).to be(true)
+    expect(Kettle::Family::Paths.same?(member.version_file, canonical)).to be(true)
   end
 
   it "excludes gemspecs ignored by git before loading members" do

@@ -635,7 +635,7 @@ RSpec.describe Kettle::Family::CLI do
     ]
     if Gem.win_platform?
       expect(command[0...3]).to eq(["mise", "exec", "-C"])
-      expect(File.identical?(command.fetch(3), File.join(@tmpdir, "alpha"))).to be(true)
+      expect(Kettle::Family::Paths.same?(command.fetch(3), File.join(@tmpdir, "alpha"))).to be(true)
       expect(command[4...9]).to eq(["--", "ruby", "--disable=rubyopt", "-e", Kettle::Family::CommandRunner::WINDOWS_ENV_EXEC_SCRIPT])
       expect(command).to include(
         "DEBUG", "DEBUG_RESOLVER", "DEBUG_RESOLVER_TREE", "MOLINILLO_DEBUG",
@@ -646,7 +646,7 @@ RSpec.describe Kettle::Family::CLI do
     else
       expect(command.length).to eq(expected_command.length)
       expect(command[0...3]).to eq(expected_command[0...3])
-      expect(File.identical?(command.fetch(3), expected_command.fetch(3))).to be(true)
+      expect(Kettle::Family::Paths.same?(command.fetch(3), expected_command.fetch(3))).to be(true)
       expect(command.drop(4)).to eq(expected_command.drop(4))
     end
   end
