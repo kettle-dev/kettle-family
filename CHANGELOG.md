@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- kettle-family installs the latest stable Bundler and updates family lockfiles with `update-bundler`.
-
 ### Changed
 
 ### Deprecated
@@ -30,11 +28,24 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.3.4] - 2026-10-02
+
+- TAG: [v1.3.4][1.3.4t]
+- COVERAGE: 93.26% -- 6571/7046 lines in 37 files
+- BRANCH COVERAGE: 77.70% -- 2666/3431 branches in 37 files
+- 33.33% documented
+
+### Added
+
+- kettle-family installs the latest stable Bundler and updates family lockfiles with `update-bundler`.
+
+### Fixed
+
 - Lock each repository's worktree registry across process setup, parallel branch probes, and cleanup to prevent intermittent Git worktree failures.
 
 - Family reports now include results from the update-bundler command.
-
-### Security
 
 ## [1.3.3] - 2026-09-28
 
@@ -2836,7 +2847,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.3...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.4...HEAD
+[1.3.4]: https://github.com/kettle-dev/kettle-family/compare/v1.3.3...v1.3.4
+[1.3.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.4
 [1.3.3]: https://github.com/kettle-dev/kettle-family/compare/v1.3.2...v1.3.3
 [1.3.3t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.3
 [1.3.2]: https://github.com/kettle-dev/kettle-family/compare/v1.3.1...v1.3.2

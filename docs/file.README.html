@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-7.011-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-7.046-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -764,6 +764,10 @@ publish command explicitly includes <code>--secrets-provider</code>.</p>
       <td>Run <code>bundle update --bundler</code> at the family root and per member.</td>
     </tr>
     <tr>
+      <td><code>update-bundler</code></td>
+      <td>Install the latest stable Bundler from RubyGems, then update family lockfiles.</td>
+    </tr>
+    <tr>
       <td><code>bex</code></td>
       <td>Run an arbitrary <code>bundle exec</code> command per member.</td>
     </tr>
@@ -923,6 +927,11 @@ kettle-family template --execute
 root-first order with <code>bundle update --bundler</code>. A root that is itself a member<br>
 is updated only once. A gem name may be passed to <code>bup</code> to update only that<br>
 dependency, for example <code>kettle-family bup --execute kettle-test</code>.</p>
+
+<p><code>update-bundler</code> installs the latest stable Bundler from <code>https://rubygems.org</code><br>
+without enabling prereleases, then runs the same root-first lockfile update as<br>
+<code>bupb</code>. Family mise tasks select an installed stable Bundler explicitly to<br>
+start the command, so an installed prerelease cannot intercept startup.</p>
 
 <p>Executed member updates commit successful lockfile changes by default. The<br>
 family-root lockfile is also validated and committed for monorepos, where the<br>
