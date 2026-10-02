@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- kettle-family installs the latest stable Bundler and updates family lockfiles with `update-bundler`.
+
 ### Changed
 
 ### Deprecated

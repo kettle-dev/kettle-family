@@ -373,7 +373,7 @@ RSpec.describe Kettle::Family::CLI do
   end
 
   it "plans bundler updates with bupb" do
-    allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: Gem::Version.new("4.0.21"))})
+    allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: Gem::Version.new("4.0.22"))})
     write_gem("alpha")
     out = StringIO.new
 
@@ -385,6 +385,37 @@ RSpec.describe Kettle::Family::CLI do
     command = result.fetch("command")
     expect(command).to match(["bundle", /\A_\d+\.\d+\.\d+_\z/, "update", /\A--bundler=\d+\.\d+\.\d+\z/])
     expect(command.fetch(3)).to eq("--bundler=#{command.fetch(1).delete("_")}")
+  end
+
+  it "plans update-bundler without installing gems" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    expect(Gem::DependencyInstaller).not_to receive(:new)
+    status = described_class.call(["update-bundler", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    expect(report.fetch("command")).to eq("update-bundler")
+    expect(report.fetch("results").first.fetch("phase")).to eq("update-bundler")
+  end
+
+  it "installs Bundler from RubyGems without enabling prereleases" do
+    installer = instance_double(Gem::DependencyInstaller)
+    original_sources = Gem.sources.to_a
+    command = described_class::UpdateBundler.new(stdout: StringIO.new, stderr: StringIO.new)
+
+    allow(Gem::DependencyInstaller).to receive(:new)
+      .with(domain: :remote, prerelease: false, document: [])
+      .and_return(installer)
+    allow(installer).to receive(:install).with("bundler")
+
+    command.send(:install_latest_stable_bundler)
+
+    expect(Gem::DependencyInstaller).to have_received(:new)
+      .with(domain: :remote, prerelease: false, document: [])
+    expect(installer).to have_received(:install).with("bundler")
+    expect(Gem.sources.to_a).to eq(original_sources)
   end
 
   it "plans bundle exec commands with bex" do

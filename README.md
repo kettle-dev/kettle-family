@@ -510,6 +510,7 @@ The command names below are available from `kettle-family --help`:
 | `gha-sha-pins` | Inspect or update GitHub Actions SHA pins. |
 | `bup` | Run `bundle update --all`, or update a named dependency, at the family root and per member. |
 | `bupb` | Run `bundle update --bundler` at the family root and per member. |
+| `update-bundler` | Install the latest stable Bundler from RubyGems, then update family lockfiles. |
 | `bex` | Run an arbitrary `bundle exec` command per member. |
 | `install` | Build and install selected local family gems. |
 | `bump` | Check, plan, or execute family version alignment. |
@@ -613,6 +614,11 @@ kettle-family template --execute
 root-first order with `bundle update --bundler`. A root that is itself a member
 is updated only once. A gem name may be passed to `bup` to update only that
 dependency, for example `kettle-family bup --execute kettle-test`.
+
+`update-bundler` installs the latest stable Bundler from `https://rubygems.org`
+without enabling prereleases, then runs the same root-first lockfile update as
+`bupb`. Family mise tasks select an installed stable Bundler explicitly to
+start the command, so an installed prerelease cannot intercept startup.
 
 Executed member updates commit successful lockfile changes by default. The
 family-root lockfile is also validated and committed for monorepos, where the

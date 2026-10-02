@@ -574,7 +574,7 @@ module Kettle
 
         runner = CommandRunner.new(execute: execute, accept: accept)
         results = []
-        update_family_root_bundle(runner: runner, memo: results) if %w[bup bupb].include?(command)
+        update_family_root_bundle(runner: runner, memo: results) if %w[bup bupb update-bundler].include?(command)
         return results unless results.all?(&:ok?)
 
         if command == "gha-sha-pins" && execute
@@ -607,10 +607,10 @@ module Kettle
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
           commit_gha_sha_pins(member: member, runner: runner, memo: memo) if command == "gha-sha-pins"
-          if command == "bupb"
+          if %w[bupb update-bundler].include?(command)
             bupb_appraisal_results(member: member, runner: runner, memo: memo)
           end
-          if %w[bup bupb].include?(command) && memo.last&.ok? && validate_bundle_update_lockfile(member: member, memo: memo)
+          if %w[bup bupb update-bundler].include?(command) && memo.last&.ok? && validate_bundle_update_lockfile(member: member, memo: memo)
             commit_bundle_update(member: member, runner: runner, memo: memo)
           end
           commit_bex_changes(member: member, runner: runner, memo: memo) if command == "bex"
@@ -4083,7 +4083,7 @@ module Kettle
           return gha_sha_pins_command(command_text: command_text)
         end
         return bup_command if command == "bup"
-        return bupb_command if command == "bupb"
+        return bupb_command if %w[bupb update-bundler].include?(command)
         return bex_command if command == "bex"
 
         command_for(command)
@@ -4108,11 +4108,11 @@ module Kettle
 
       def stable_bundler_version
         active_version = Gem.loaded_specs["bundler"]&.version
-        return active_version if active_version && !active_version.prerelease?
-
         Gem::Specification
           .find_all_by_name("bundler")
           .map(&:version)
+          .push(active_version)
+          .compact
           .reject(&:prerelease?)
           .max
       end
@@ -4358,7 +4358,7 @@ module Kettle
       end
 
       def command_env
-        return bundle_update_env if %w[bup bupb].include?(command)
+        return bundle_update_env if %w[bup bupb update-bundler].include?(command)
 
         workflow_env
       end

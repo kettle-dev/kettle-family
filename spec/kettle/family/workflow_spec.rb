@@ -575,18 +575,22 @@ RSpec.describe Kettle::Family::Workflow do
     expect_stable_bundler_update(results.first.command)
   end
 
-  it "uses the active stable Bundler version for bupb when one is active" do
+  it "uses the newest installed stable Bundler version even when an older version is active" do
     write_config(command: [RbConfig.ruby, "-e", "exit"])
     write_gemfile(@tmpdir)
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     active_version = Gem::Version.new("4.0.21")
+    installed_versions = %w[4.0.21 4.0.22 4.1.0.beta1].map do |version|
+      double(version: Gem::Version.new(version))
+    end
 
     allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: active_version)})
+    allow(Gem::Specification).to receive(:find_all_by_name).with("bundler").and_return(installed_versions)
 
     results = described_class.new(command: "bupb", config: config, members: [member]).results
 
-    expect(results.first.command).to eq(["bundle", "_4.0.21_", "update", "--bundler=4.0.21"])
+    expect(results.first.command).to eq(["bundle", "_4.0.22_", "update", "--bundler=4.0.22"])
   end
 
   it "rejects bupb when no stable Bundler version is installed" do
@@ -971,10 +975,10 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   def expect_stable_bundler_update(command)
-    expect(command).to eq(["bundle", "_4.0.21_", "update", "--bundler=4.0.21"])
+    expect(command).to eq(["bundle", "_4.0.22_", "update", "--bundler=4.0.22"])
   end
 
-  def stub_stable_bundler_version(version = "4.0.21")
+  def stub_stable_bundler_version(version = "4.0.22")
     allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: Gem::Version.new(version))})
   end
 

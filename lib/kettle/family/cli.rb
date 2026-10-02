@@ -4,14 +4,15 @@ require "command_kit"
 require "command_kit/commands"
 require "fileutils"
 require "optparse"
+require "rubygems/dependency_installer"
 
 module Kettle
   module Family
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[version mise-trust discover plan report metadata check clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
-      WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb bex release push pull sync up].freeze
+      COMMANDS = %w[version mise-trust discover plan report metadata check clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
+      WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb update-bundler bex release push pull sync up].freeze
 
       command_name "kettle-family"
       usage "[options] COMMAND [ARGS...]"
@@ -434,6 +435,31 @@ module Kettle
         description "Plan or execute bundle update --bundler."
       end
 
+      class UpdateBundler < WorkflowCommand
+        command_name "update-bundler"
+        usage "[options]"
+        description "Install the latest stable Bundler, then update family lockfiles."
+
+        def run(*args)
+          unexpected_arguments!(args)
+          install_latest_stable_bundler if truthy_option?(:execute)
+          run_family("update-bundler")
+        end
+
+        private
+
+        def install_latest_stable_bundler
+          original_sources = Gem.sources.to_a
+          Gem.sources = ["https://rubygems.org"]
+          Gem::DependencyInstaller.new(domain: :remote, prerelease: false, document: []).install("bundler")
+          Gem::Specification.reset
+        rescue => error
+          raise Error, "could not install latest stable Bundler from RubyGems: #{error.message}"
+        ensure
+          Gem.sources = original_sources if original_sources
+        end
+      end
+
       class Bex < WorkflowCommand
         command_name "bex"
         usage "[options] -- COMMAND [ARGS...]"
@@ -626,6 +652,7 @@ module Kettle
       command GhaShaPins
       command Bup
       command Bupb
+      command UpdateBundler
       command Bex
       command Install
       command Bump
