@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Lock each repository's worktree registry across process setup, parallel branch probes, and cleanup to prevent intermittent Git worktree failures.
 
+- Family reports now include results from the update-bundler command.
+
 ### Security
 
 ## [1.3.3] - 2026-09-28

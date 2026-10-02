@@ -29,6 +29,7 @@ module Kettle
         template
         test
         up
+        update-bundler
       ].freeze
 
       attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode, :release_resume_arguments, :warnings, :event_log_dirs
