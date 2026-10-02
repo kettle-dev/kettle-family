@@ -23,6 +23,7 @@ module Kettle
       ].freeze
       TRANSFER_CHANGELOG_TOTAL_UNSET = Object.new.freeze
       CACHE_MISS = Object.new.freeze
+      WORKTREE_ADMIN_MUTEX = Mutex.new
 
       def initialize(members:, config: nil, jobs: nil)
         @members = members
@@ -57,21 +58,30 @@ module Kettle
       def branch_results(event_handler: nil)
         root = git_root
         selected_names = members.map(&:name)
-        parallel_map(release_target_branches) do |branch|
-          branch_results_for(branch: branch, root: root, selected_names: selected_names, event_handler: event_handler)
-        end.flatten
+        with_branch_worktrees(root: root, branches: release_target_branches) do |entries|
+          parallel_map(entries) do |entry|
+            if entry[:error]
+              error_result(branch: entry[:branch], error: entry[:error])
+            else
+              branch_results_for_worktree(
+                branch: entry[:branch],
+                worktree_root: entry[:worktree_root],
+                selected_names: selected_names,
+                event_handler: event_handler
+              )
+            end
+          end.flatten
+        end
       end
 
-      def branch_results_for(branch:, root:, selected_names:, event_handler:)
-        with_branch_worktree(root: root, branch: branch) do |worktree_root|
-          branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
-          if shared_changelog?
-            results = parallel_map(branch_members) { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) }
-            next normalize_shared_version_bump(results)
-          end
-
-          parallel_map(branch_members) { |member| check_member(member, branch: branch, event_handler: event_handler) }
+      def branch_results_for_worktree(branch:, worktree_root:, selected_names:, event_handler:)
+        branch_members = discover_branch_members(worktree_root: worktree_root, selected_names: selected_names)
+        if shared_changelog?
+          results = parallel_map(branch_members) { |member| check_shared_changelog_member_or_local(member, branch: branch, event_handler: event_handler) }
+          return normalize_shared_version_bump(results)
         end
+
+        parallel_map(branch_members) { |member| check_member(member, branch: branch, event_handler: event_handler) }
       rescue Error => error
         [error_result(branch: branch, error: error)]
       end
@@ -826,25 +836,52 @@ module Kettle
         File.realpath(stdout.strip)
       end
 
-      def with_branch_worktree(root:, branch:)
-        base = File.join(root, "tmp", "kettle-family-release-state")
-        FileUtils.mkdir_p(base)
-        worktree_root = File.join(base, "worktree-#{Process.pid}-#{SecureRandom.hex(8)}")
-        add_branch_worktree(root: root, branch: branch, worktree_root: worktree_root)
-        yield worktree_root
-      ensure
-        remove_branch_worktree(root: root, worktree_root: worktree_root)
+      def with_branch_worktrees(root:, branches:)
+        with_worktree_registry_lock(root: root) do
+          base = File.join(root, "tmp", "kettle-family-release-state")
+          FileUtils.mkdir_p(base)
+          entries = branches.map do |branch|
+            {branch: branch, worktree_root: File.join(base, "worktree-#{Process.pid}-#{SecureRandom.hex(8)}")}
+          end
+          entries.each do |entry|
+            add_branch_worktree(root: root, branch: entry[:branch], worktree_root: entry[:worktree_root])
+          rescue Error => error
+            entry[:error] = error
+          end
+          yield entries
+        ensure
+          entries&.reverse_each do |entry|
+            remove_branch_worktree(root: root, worktree_root: entry[:worktree_root])
+          end
+        end
+      end
+
+      def with_worktree_registry_lock(root:)
+        stdout, stderr, status = Open3.capture3("git", "rev-parse", "--git-common-dir", chdir: root)
+        raise Error, "could not determine git common directory for #{root}: #{stderr}" unless status.success?
+
+        lock_path = File.join(File.expand_path(stdout.strip, root), "kettle-family-worktree.lock")
+        File.open(lock_path, File::RDWR | File::CREAT, 0o600) do |lock_file|
+          lock_file.flock(File::LOCK_EX)
+          yield
+        ensure
+          lock_file&.flock(File::LOCK_UN)
+        end
       end
 
       def add_branch_worktree(root:, branch:, worktree_root:)
-        _stdout, stderr, status = Open3.capture3("git", "worktree", "add", "--detach", worktree_root, branch, chdir: root)
-        raise Error, "could not add worktree for #{branch}: #{stderr}" unless status.success?
+        WORKTREE_ADMIN_MUTEX.synchronize do
+          _stdout, stderr, status = Open3.capture3("git", "worktree", "add", "--detach", worktree_root, branch, chdir: root)
+          raise Error, "could not add worktree for #{branch}: #{stderr}" unless status.success?
+        end
       end
 
       def remove_branch_worktree(root:, worktree_root:)
         return unless worktree_root && Dir.exist?(worktree_root)
 
-        Open3.capture3("git", "worktree", "remove", "--force", worktree_root, chdir: root)
+        WORKTREE_ADMIN_MUTEX.synchronize do
+          Open3.capture3("git", "worktree", "remove", "--force", worktree_root, chdir: root)
+        end
       end
 
       def discover_branch_members(worktree_root:, selected_names:)

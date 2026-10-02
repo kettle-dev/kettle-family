@@ -249,7 +249,9 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     check = described_class.new(config: config, members: [member], jobs: 1)
     branch_members = [member]
     allow(check).to receive_messages(git_root: @tmpdir, discover_branch_members: branch_members)
-    allow(check).to receive(:with_branch_worktree).and_yield(@tmpdir)
+    allow(check).to receive(:with_branch_worktrees) do |root:, branches:, &block|
+      block.call(branches.map { |branch| {branch: branch, worktree_root: @tmpdir} })
+    end
     allow(check).to receive(:branch_latest_released).and_return("1.0.0", "1.0.1")
     allow(check).to receive(:commits_ahead_of_release).and_return(2, 3)
     allow(Open3).to receive(:capture3).and_return(
@@ -290,7 +292,10 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     end
 
     allow(check).to receive(:git_root).and_return(@tmpdir)
-    allow(check).to receive(:branch_results_for) do |branch:, **|
+    allow(check).to receive(:with_branch_worktrees) do |root:, branches:, &block|
+      block.call(branches.map { |branch| {branch: branch, worktree_root: @tmpdir} })
+    end
+    allow(check).to receive(:branch_results_for_worktree) do |branch:, **|
       mutex.synchronize do
         active += 1
         maximum_active = [maximum_active, active].max
@@ -718,7 +723,8 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     config = release_state_config(release_target_branches: %w[r1])
     check = described_class.new(config: config, members: [member])
     allow(check).to receive(:git_root).and_return(@tmpdir)
-    allow(check).to receive(:with_branch_worktree).and_raise(Kettle::Family::Error, "missing branch")
+    allow(check).to receive(:with_worktree_registry_lock) { |root:, &block| block.call }
+    allow(check).to receive(:add_branch_worktree).and_raise(Kettle::Family::Error, "missing branch")
 
     result = check.results.fetch(0)
 
@@ -744,16 +750,78 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
   it "adds and removes temporary branch worktrees" do
     config = release_state_config
     check = described_class.new(config: config, members: [])
+    allow(check).to receive(:with_worktree_registry_lock) { |root:, &block| block.call }
     allow(SecureRandom).to receive(:hex).and_return("abc123")
     allow(check).to receive(:add_branch_worktree)
     allow(check).to receive(:remove_branch_worktree)
 
     yielded = nil
-    check.send(:with_branch_worktree, root: @tmpdir, branch: "main") { |path| yielded = path }
+    check.send(:with_branch_worktrees, root: @tmpdir, branches: ["main"]) do |entries|
+      yielded = entries.first.fetch(:worktree_root)
+    end
 
     expect(yielded).to end_with("tmp/kettle-family-release-state/worktree-#{Process.pid}-abc123")
     expect(check).to have_received(:add_branch_worktree).with(root: @tmpdir, branch: "main", worktree_root: yielded)
     expect(check).to have_received(:remove_branch_worktree).with(root: @tmpdir, worktree_root: yielded)
+  end
+
+  it "serializes Git worktree metadata mutations across branch probes" do
+    check = described_class.new(config: release_state_config, members: [], jobs: 2)
+    active_commands = 0
+    max_active_commands = 0
+    counter_mutex = Mutex.new
+    allow(Open3).to receive(:capture3) do
+      counter_mutex.synchronize do
+        active_commands += 1
+        max_active_commands = [max_active_commands, active_commands].max
+      end
+      sleep 0.01
+      counter_mutex.synchronize { active_commands -= 1 }
+      ["", "", status(0, true)]
+    end
+
+    check.send(:parallel_map, [0, 1]) do |index|
+      path = File.join(@tmpdir, "worktree-#{index}")
+      check.send(:add_branch_worktree, root: @tmpdir, branch: "branch-#{index}", worktree_root: path)
+      FileUtils.mkdir_p(path)
+      check.send(:remove_branch_worktree, root: @tmpdir, worktree_root: path)
+    end
+
+    expect(max_active_commands).to eq(1)
+  end
+
+  it "creates and removes branch worktrees outside the parallel probe phase" do
+    check = described_class.new(config: release_state_config(release_target_branches: %w[r1 r2]), members: [], jobs: 2)
+    operations = []
+    allow(check).to receive(:git_root).and_return(@tmpdir)
+    allow(check).to receive(:with_worktree_registry_lock) { |root:, &block| block.call }
+    allow(check).to receive(:add_branch_worktree) do |branch:, **|
+      operations << [:add, branch]
+    end
+    allow(check).to receive(:branch_results_for_worktree) do |branch:, **|
+      operations << [:probe, branch]
+      []
+    end
+    allow(check).to receive(:remove_branch_worktree) do |worktree_root:, **|
+      operations << [:remove, File.basename(worktree_root)]
+    end
+
+    check.results
+
+    expect(operations.first(2).map(&:first)).to eq(%i[add add])
+    expect(operations.drop(2).take(2).map(&:first)).to contain_exactly(:probe, :probe)
+    expect(operations.last(2).map(&:first)).to eq(%i[remove remove])
+  end
+
+  it "holds a repository-scoped lock while using the worktree registry" do
+    run_git(@tmpdir, "init", "--quiet")
+    check = described_class.new(members: [])
+    yielded = false
+
+    check.send(:with_worktree_registry_lock, root: @tmpdir) { yielded = true }
+
+    expect(yielded).to be(true)
+    expect(File.file?(File.join(@tmpdir, ".git", "kettle-family-worktree.lock"))).to be(true)
   end
 
   it "checks a shared root changelog once per monorepo member" do
@@ -839,7 +907,9 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     config = release_state_config(shared_changelog: true, release_target_branches: %w[r1])
     check = described_class.new(config: config, members: [member])
     allow(check).to receive_messages(git_root: @tmpdir, discover_branch_members: [member])
-    allow(check).to receive(:with_branch_worktree).and_yield(File.join(@tmpdir, "worktree"))
+    allow(check).to receive(:with_branch_worktrees) do |root:, branches:, &block|
+      block.call(branches.map { |branch| {branch: branch, worktree_root: File.join(@tmpdir, "worktree")} })
+    end
     allow(check).to receive_messages(branch_latest_released: "1.0.0", commits_ahead_of_release: 4)
     allow(Open3).to receive(:capture3).and_return(
       [JSON.generate("gem_name" => "alpha", "version" => "1.1.0", "latest_released" => "9.0.0", "latest_changelog_version" => "1.1.0", "pending_release" => true), "", status(0, true)]
