@@ -20,13 +20,27 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `Kettle::Family::ReleaseStateCheck` accepts a `branches:` scope, and `Kettle::Family::Selection.branches_matching` reports which of a member branch stack currently satisfies a release-state token. Both are the seams for per-branch release and bump decisions.
+
 ### Changed
+
+- A blocked release now reports phase `release_blocked` instead of `release_skip`, so a hard failure is never reported as a skipped member in the progress summary or report.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Already-released detection for branch-stack members is now scoped to the branch being released instead of the whole stack, so a clean published branch is no longer reported as having unreleased changes and blocked with a release_skip failure.
+
+- A published version whose release tag is followed only by post-release maintenance commits (checksums, dependency-floor lockfile reconciliation) is now skipped as already released; only changes to the gemspec, version file, or changelog after the tag make the published version stale.
+
+- Release-state status-token selection (`--only unreleased|prepared|pending|bump`) no longer collapses a branch-stack member to whichever branch happened to be evaluated last; a member is selected when any of its branches matches, and multiple tokens are still ANDed within a single branch.
+
+- `kettle-family bump` now bumps each branch of a member branch stack independently: branches with no pending version bump are reported as skipped instead of being bumped, so an already-released branch is no longer given version bumps it never needed. An explicit `--only MEMBER` remains an unconditional request and is not filtered.
+
+- Release-state worktrees orphaned by a killed run are reaped on the next run. Directories are named `worktree-PID-RANDOM`, so only those whose owning PID is no longer running are removed; live worktrees from concurrent runs are left alone.
 
 ### Security
 
