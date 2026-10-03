@@ -83,22 +83,40 @@ module Kettle
         selected.drop(index)
       end
 
+      # A branch-stack member yields one release-state result per branch, all
+      # sharing a member_name. Collapsing them by member_name alone would let
+      # whichever branch came last decide selection for every branch, so a
+      # member qualifies when *any* of its branches matches the token.
       def select_release_state_status(selected, status_tokens)
         results_by_member = release_state_results_by_member
-        failed = results_by_member.values.select { |result| !result.ok? }
-        raise Error, "release-state check failed for: #{failed.map(&:member_name).join(", ")}" unless failed.empty?
+        failed = results_by_member.values.flatten.select { |result| !result.ok? }
+        raise Error, "release-state check failed for: #{failed.map(&:member_name).uniq.join(", ")}" unless failed.empty?
 
         selected.select do |candidate|
-          result = results_by_member[candidate.name]
-          result && status_tokens.all? { |token| truthy_state?(result.state[STATUS_TOKEN_KEYS.fetch(token)]) }
+          Array(results_by_member[candidate.name]).any? do |result|
+            status_tokens.all? { |token| truthy_state?(result.state[STATUS_TOKEN_KEYS.fetch(token)]) }
+          end
         end
+      end
+
+      # Branches of one member that currently satisfy +tokens+. Used to decide
+      # per-branch bump work, so a bump never touches a branch that has nothing
+      # to release.
+      def self.branches_matching(release_state_results, member_name:, tokens:)
+        names = Array(tokens).map(&:to_s)
+        keys = names.filter_map { |token| STATUS_TOKEN_KEYS[token] }
+        return [] if keys.empty?
+
+        Array(release_state_results).select do |result|
+          result.member_name == member_name && keys.all? { |key| result.state[key] == true }
+        end.map(&:branch).compact.uniq
       end
 
       def release_state_results_by_member
         raise Error, "--only release-state tokens require release-state results" unless release_state_results
 
         release_state_results.each_with_object({}) do |result, memo|
-          memo[result.member_name] = result
+          (memo[result.member_name] ||= []) << result
         end
       end
 

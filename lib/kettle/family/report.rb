@@ -517,6 +517,7 @@ module Kettle
 
       def release_terminal_result?(result)
         result.phase == "release_skip" ||
+          result.phase == "release_blocked" ||
           result.phase == "release_publish" ||
           result.phase == "release_build"
       end

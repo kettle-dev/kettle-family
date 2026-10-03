@@ -3978,28 +3978,38 @@ module Kettle
         @release_progress&.update(member, status: "ci bundle #{relative} #{attempt}/#{REGISTRY_WAIT_ATTEMPTS}", mark: ">")
       end
 
+      # A published version only means "already released" when nothing
+      # releasable landed after its tag. kettle-release commits checksums
+      # (and the family commits dependency-floor lockfiles) *after* tagging,
+      # so comparing HEAD to the tag directly never matches; compare the
+      # release-relevant paths instead.
       def already_released_result(member)
         tag = release_tag_name(member.version)
-        current_release_head = released_version_current_head?(member, tag)
-        if current_release_head
-          stdout = "#{member.name} #{member.version} is already published and current HEAD matches #{tag}; skipping release"
+        branch = current_member_branch(member)
+        scope = branch ? "#{member.name}@#{branch}" : member.name
+        if no_releasable_changes_since_tag?(member, tag)
+          stdout = "#{scope} #{member.version} is already published#{branch_suffix(branch)} and nothing releasable " \
+            "landed after #{tag}; skipping release"
           reason = "already released"
           skipped = true
-        elsif unreleased_changes_pending?(member)
-          stdout = "#{member.name} #{member.version} is already published, but release-state reports unreleased changes. " \
-            "Bump the version with `kettle-family bump patch --execute --only #{member.name}` before releasing."
+        elsif unreleased_changes_pending?(member, branch: branch)
+          stdout = "#{scope} #{member.version} is already published#{branch_suffix(branch)}, but release-state reports " \
+            "unreleased changes on this branch. Bump only this branch with " \
+            "`kettle-family bump patch --execute --only #{member.name}` before releasing."
           reason = "published version has unreleased changes"
           skipped = false
         else
-          stdout = "#{member.name} #{member.version} is already published, current HEAD is newer than #{tag}, " \
-            "and release-state reports no unreleased changes; skipping release"
+          stdout = "#{scope} #{member.version} is already published#{branch_suffix(branch)}, and release-state reports " \
+            "no unreleased changes on this branch; skipping release"
           reason = "already released; no unreleased changes"
           skipped = true
         end
 
         CommandResult.new(
           member_name: member.name,
-          phase: "release_skip",
+          # A blocked release is a distinct terminal phase from a skip: it is a
+          # hard failure and must never be reported as "skipped".
+          phase: skipped ? "release_skip" : "release_blocked",
           command: ["internal", "released-version-check", member.version],
           workdir: member.root,
           status: skipped ? 0 : 1,
@@ -4008,12 +4018,34 @@ module Kettle
           stderr: "",
           elapsed_seconds: 0.0,
           skipped: skipped,
-          reason: reason
+          reason: reason,
+          branch: branch
         )
       end
 
-      def unreleased_changes_pending?(member)
-        results = ReleaseStateCheck.new(members: [member], config: config).results
+      def branch_suffix(branch)
+        branch ? " on #{branch}" : ""
+      end
+
+      def current_member_branch(member)
+        return unless git_work_tree?(member.root)
+
+        stdout, _stderr, status = Open3.capture3("git", "branch", "--show-current", chdir: member.root)
+        return unless status.success?
+
+        branch = stdout.strip
+        branch.empty? ? nil : branch
+      end
+
+      # Scope the check to the branch being released. Consulting the whole
+      # branch stack here would report every already-published branch as
+      # having unreleased changes whenever any other branch in the stack does.
+      def unreleased_changes_pending?(member, branch: nil)
+        results = ReleaseStateCheck.new(
+          members: [member],
+          config: config,
+          branches: branch ? [branch] : nil
+        ).results
         return true unless results.all?(&:ok?)
 
         results.any? { |result| result.state.fetch("unreleased_entries", true) }
@@ -4023,12 +4055,42 @@ module Kettle
         "v#{version}"
       end
 
-      def released_version_current_head?(member, tag)
-        return true unless git_work_tree?(member.root)
+      # Post-release maintenance commits (checksums, lockfile reconciliation,
+      # docs) land after the tag by design, so "HEAD != tag" cannot mean
+      # "needs a release". Only a change to the gemspec, version file, or
+      # changelog between the tag and HEAD makes the published version stale.
+      def no_releasable_changes_since_tag?(member, tag)
+        return false unless git_work_tree?(member.root)
 
         tag_sha = git_rev_parse(member.root, "refs/tags/#{tag}^{}")
-        head_sha = git_rev_parse(member.root, "HEAD")
-        !tag_sha.to_s.empty? && tag_sha == head_sha
+        return false if tag_sha.to_s.empty?
+        return true if tag_sha == git_rev_parse(member.root, "HEAD")
+
+        releasable_changes_since_tag(member, tag).empty?
+      end
+
+      def releasable_changes_since_tag(member, tag)
+        paths = releasable_paths(member)
+        return [] if paths.empty?
+
+        stdout, _stderr, status = Open3.capture3(
+          "git", "diff", "--name-only", "#{tag}^{}", "HEAD", "--", *paths, chdir: member.root
+        )
+        # An unreadable diff is not evidence of "nothing to release".
+        return [tag] unless status.success?
+
+        stdout.lines.map(&:strip).reject(&:empty?)
+      end
+
+      def releasable_paths(member)
+        paths = [member.gemspec_path, member.version_file, config.changelog_full_path(member)]
+        paths.compact.filter_map do |path|
+          next unless File.file?(path)
+
+          Pathname.new(path).relative_path_from(Pathname.new(member.root)).to_s
+        rescue ArgumentError
+          path.to_s
+        end.uniq
       end
 
       def git_work_tree?(root)
@@ -4634,7 +4696,9 @@ module Kettle
       def emit_release_progress_summary(results, progress:)
         return unless progress
 
-        release_results = results.select { |result| result.phase == release_phase || result.phase == "release_skip" }
+        release_results = results.select do |result|
+          result.phase == release_phase || result.phase == "release_skip" || result.phase == "release_blocked"
+        end
         progress.stop
         progress.summary("release summary: #{release_results.count(&:ok?)}/#{release_results.length} members ok")
       end

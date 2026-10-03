@@ -188,7 +188,12 @@ module Kettle
         end
 
         def run_family(command, overrides = {})
-          Kettle::Family::CLI.new(stdout: stdout, stderr: stderr).run_command(command, family_options(overrides))
+          effective = family_options(overrides)
+          # Thread the *effective* --only (including the command's default
+          # release-state token) downstream so per-branch logic sees the same
+          # selection the member selector used.
+          effective[:only] = Kettle::Family::CLI.default_only_filter(command: command, only: effective[:only])
+          Kettle::Family::CLI.new(stdout: stdout, stderr: stderr).run_command(command, effective)
         end
 
         def truthy_option?(name)
@@ -822,6 +827,10 @@ module Kettle
       end
 
       def default_only_filter(command:, only:)
+        self.class.default_only_filter(command: command, only: only)
+      end
+
+      def self.default_only_filter(command:, only:)
         return only unless only.to_s.empty?
         return "bump" if %w[bump bump-version].include?(command)
         return "pending" if command == "release"
@@ -1122,6 +1131,17 @@ module Kettle
             memo.last.branch = branch
             break unless memo.last.ok?
 
+            if (skipped = branch_bump_skip_result(
+              member: member,
+              branch: branch,
+              command: command,
+              options: options,
+              release_state_results: release_state_results
+            ))
+              memo << skipped
+              next
+            end
+
             branch_members = rediscovered_selected_members(config: member_config, selected_names: [member.name], command: command)
             branch_members = [member] if branch_members.empty?
             branch_results = command_results_for_current_branch(
@@ -1138,6 +1158,41 @@ module Kettle
           end
           break memo unless memo.last&.ok?
         end
+      end
+
+      BUMP_COMMANDS = %w[bump bump-version].freeze
+
+      # Bumping a whole branch stack must be per-branch: a branch already
+      # released with nothing pending has nothing to bump. `--only bump` is a
+      # status-driven selection, so it is filtered by each branch's own
+      # release-state. An explicit `--only MEMBER` is a direct request and is
+      # honored as given.
+      def branch_bump_skip_result(member:, branch:, command:, options:, release_state_results:)
+        return unless BUMP_COMMANDS.include?(command)
+        return unless status_token_only?(options[:only])
+
+        matching = Selection.branches_matching(release_state_results, member_name: member.name, tokens: %w[bump])
+        return if matching.empty? || matching.include?(branch)
+
+        CommandResult.new(
+          member_name: member.name,
+          phase: command,
+          command: ["internal", "branch-bump-skip", branch],
+          workdir: member.root,
+          status: 0,
+          success: true,
+          stdout: "#{member.name}@#{branch} has no unreleased entries at its released version; skipping bump on this branch",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: true,
+          reason: "no version bump pending on #{branch}",
+          branch: branch
+        )
+      end
+
+      def status_token_only?(only)
+        names = only.to_s.split(",").map(&:strip).reject(&:empty?)
+        !names.empty? && names.all? { |name| Selection.status_token?(name) }
       end
 
       def rediscovered_selected_members(config:, selected_names:, command:)

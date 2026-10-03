@@ -1141,6 +1141,64 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string.scan("alpha add-changelog").size).to eq(2)
   end
 
+  # A branch stack must be bumped per branch: a branch already released with
+  # nothing pending has nothing to bump, and bumping the whole stack is how
+  # released branches got version bumps they never needed.
+  describe "per-branch bump filtering" do
+    let(:member) { Kettle::Family::Member.new(name: "alpha", root: "alpha", version: "1.0.0") }
+    let(:results) do
+      [
+        branch_state("alpha", "r1_8-even-v0", "unreleased_entries" => false, "bump_release_pending" => false),
+        branch_state("alpha", "r2_1-even-v6", "unreleased_entries" => true, "bump_release_pending" => true),
+        branch_state("alpha", "main", "unreleased_entries" => true, "bump_release_pending" => false)
+      ]
+    end
+
+    it "skips stack branches with no pending bump and bumps the rest" do
+      cli = described_class.allocate
+
+      expect(cli.send(:branch_bump_skip_result, member: member, branch: "r2_1-even-v6", command: "bump", options: {only: "bump"}, release_state_results: results)).to be_nil
+      skipped = cli.send(:branch_bump_skip_result, member: member, branch: "main", command: "bump", options: {only: "bump"}, release_state_results: results)
+      expect(skipped).to be_ok
+      expect(skipped.skipped).to be(true)
+      expect(skipped.branch).to eq("main")
+      expect(skipped.reason).to eq("no version bump pending on main")
+    end
+
+    it "honors an explicit member request without per-branch filtering" do
+      cli = described_class.allocate
+
+      expect(cli.send(:branch_bump_skip_result, member: member, branch: "r1_8-even-v0", command: "bump", options: {only: "alpha"}, release_state_results: results)).to be_nil
+    end
+
+    it "does not filter commands that are not bumps" do
+      cli = described_class.allocate
+
+      expect(cli.send(:branch_bump_skip_result, member: member, branch: "r1_8-even-v0", command: "install", options: {only: "bump"}, release_state_results: results)).to be_nil
+    end
+
+    it "bumps every branch when no branch state was collected" do
+      cli = described_class.allocate
+
+      expect(cli.send(:branch_bump_skip_result, member: member, branch: "r1_8-even-v0", command: "bump", options: {only: "bump"}, release_state_results: nil)).to be_nil
+    end
+  end
+
+  def branch_state(member_name, branch, state)
+    Kettle::Family::ReleaseStateResult.new(
+      member_name: member_name,
+      command: %w[kettle-changelog --release-state --json],
+      workdir: member_name,
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.0,
+      state: state,
+      branch: branch
+    )
+  end
+
   it "plans releases in fixed configured order" do
     write_ready_gem("alpha")
     write_ready_gem("beta")

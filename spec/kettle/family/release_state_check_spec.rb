@@ -267,6 +267,41 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(results.map { |result| result.state.fetch("ahead") }).to eq([2, 3])
   end
 
+  # A per-branch release decision must never consult the whole stack: with
+  # `main` holding unreleased entries, every other branch used to inherit it.
+  it "scopes a single-branch check to that branch when the checkout is already on it" do
+    member = member("alpha")
+    config = release_state_config(release_target_branches: %w[r1 r2 main])
+    check = described_class.new(config: config, members: [member], branches: ["r1"], jobs: 1)
+    allow(check).to receive_messages(current_branch_for: "r1", branch_latest_released: "1.0.0", commits_ahead_of_release: 4)
+    allow(Open3).to receive(:capture3).and_return(
+      [JSON.generate("gem_name" => "alpha", "version" => "1.0.1", "latest_released" => "9.0.0", "latest_changelog_version" => "1.0.0", "unreleased_entries" => false), "", status(0, true)]
+    )
+    expect(check).not_to receive(:with_branch_worktrees)
+
+    results = check.results
+
+    expect(results.map(&:branch)).to eq(["r1"])
+    expect(results.first.state).to include("unreleased_entries" => false, "latest_released" => "1.0.0", "ahead" => 4)
+  end
+
+  it "uses a worktree when the scoped branch is not the checked-out branch" do
+    member = member("alpha")
+    config = release_state_config(release_target_branches: %w[r1 r2])
+    check = described_class.new(config: config, members: [member], branches: ["r2"], jobs: 1)
+    allow(check).to receive_messages(current_branch_for: "r1", git_root: @tmpdir, discover_branch_members: [member])
+    allow(check).to receive(:with_branch_worktrees) do |root:, branches:, &block|
+      block.call(branches.map { |branch| {branch: branch, worktree_root: @tmpdir} })
+    end
+    allow(Open3).to receive(:capture3).and_return(
+      [JSON.generate("gem_name" => "alpha", "version" => "1.0.2", "latest_released" => "1.0.1", "unreleased_entries" => true), "", status(0, true)]
+    )
+
+    results = check.results
+
+    expect(results.map(&:branch)).to eq(["r2"])
+  end
+
   it "checks independent release target worktrees concurrently within the requested job budget" do
     member = member("alpha")
     config = release_state_config(release_target_branches: %w[r1 r2])

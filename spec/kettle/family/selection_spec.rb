@@ -5,6 +5,65 @@ RSpec.describe Kettle::Family::Selection do
     Kettle::Family::Member.new(name: name, root: name, gemspec_path: "#{name}.gemspec", version: "1.0.0", dependencies: [])
   end
 
+  # A branch-stack member reports one result per branch, all sharing a member
+  # name. Selection must not be decided by whichever branch came last.
+  describe "branch-stack members" do
+    let(:members) { [member("alpha"), member("beta")] }
+
+    it "selects a stack member when any of its branches matches, not only the last" do
+      results = [
+        branch_state("alpha", "r1_8-even-v0", "pending_release" => true),
+        branch_state("alpha", "r2_1-even-v6", "pending_release" => true),
+        branch_state("alpha", "main", "pending_release" => false),
+        branch_state("beta", "main", "pending_release" => false)
+      ]
+
+      selected = described_class.new(members: members, release_state_results: results).apply(only: "pending")
+
+      expect(selected.map(&:name)).to eq(["alpha"])
+    end
+
+    it "ANDs tokens within one branch rather than across a member's branches" do
+      results = [
+        branch_state("alpha", "r1_8-even-v0", "unreleased_entries" => true, "prepared_release_pending" => false),
+        branch_state("alpha", "main", "unreleased_entries" => false, "prepared_release_pending" => true),
+        branch_state("beta", "main", "unreleased_entries" => false, "prepared_release_pending" => false)
+      ]
+      selection = described_class.new(members: members, release_state_results: results)
+
+      expect { selection.apply(only: "unreleased,prepared") }.to raise_error(Kettle::Family::Error, /selection is empty/)
+    end
+
+    it "reports a failed branch probe once per member" do
+      results = [
+        branch_state("alpha", "r1_8-even-v0", { "pending_release" => false }, status: 1, success: false),
+        branch_state("alpha", "main", { "pending_release" => false }, status: 1, success: false)
+      ]
+
+      expect { described_class.new(members: members, release_state_results: results).apply(only: "pending") }
+        .to raise_error(Kettle::Family::Error, /release-state check failed for: alpha\z/)
+    end
+
+    it "reports only branches whose own state matches" do
+      results = [
+        branch_state("alpha", "r1_8-even-v0", "unreleased_entries" => true, "bump_release_pending" => false),
+        branch_state("alpha", "r2_1-even-v6", "unreleased_entries" => true, "bump_release_pending" => true),
+        branch_state("alpha", "main", "unreleased_entries" => false, "bump_release_pending" => false),
+        branch_state("beta", "main", "unreleased_entries" => true, "bump_release_pending" => true)
+      ]
+
+      expect(described_class.branches_matching(results, member_name: "alpha", tokens: %w[bump])).to eq(["r2_1-even-v6"])
+      expect(described_class.branches_matching(results, member_name: "beta", tokens: %w[bump])).to eq(["main"])
+    end
+
+    it "reports no branches when the member has no matching branch state" do
+      results = [branch_state("alpha", "main", "bump_release_pending" => false)]
+
+      expect(described_class.branches_matching(results, member_name: "alpha", tokens: %w[bump])).to be_empty
+      expect(described_class.branches_matching(results, member_name: "alpha", tokens: %w[not-a-token])).to be_empty
+    end
+  end
+
   it "selects only one member" do
     selected = described_class.new(members: [member("alpha"), member("beta")]).apply(only: "beta")
 
@@ -173,7 +232,12 @@ RSpec.describe Kettle::Family::Selection do
       stdout: "",
       stderr: "",
       elapsed_seconds: 0.0,
-      state: state
+      state: state,
+      branch: options[:branch]
     )
+  end
+
+  def branch_state(member_name, branch, state, options = {})
+    release_state(member_name, state, options.merge(branch: branch))
   end
 end

@@ -2250,6 +2250,8 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
     allow(workflow).to receive(:prompt_for_gem_signing_password)
     allow(workflow).to receive(:released_version?).with("alpha", "1.0.0").and_return(true)
+    allow(workflow).to receive(:current_member_branch).with(member).and_return(nil)
+    allow(workflow).to receive(:no_releasable_changes_since_tag?).with(member, "v1.0.0").and_return(true)
 
     results = workflow.results
 
@@ -2269,51 +2271,50 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:released_version?, "alpha", "1.0.0")).to be(true)
   end
 
-  it "fails published-version skips when release state reports unreleased changes" do
+  it "blocks, rather than skips, a published version whose own branch has unreleased changes" do
     write_release_config(publish_command: [RbConfig.ruby, "-e", "abort 'should not run'"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
     workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
     allow(workflow).to receive(:prompt_for_gem_signing_password)
     allow(workflow).to receive(:released_version?).with("alpha", "1.0.0").and_return(true)
-    allow(workflow).to receive(:git_work_tree?).with(member.root).and_return(true)
-    allow(workflow).to receive(:git_rev_parse).with(member.root, "refs/tags/v1.0.0^{}").and_return("tag-sha")
-    allow(workflow).to receive(:git_rev_parse).with(member.root, "HEAD").and_return("head-sha")
-    allow(workflow).to receive(:unreleased_changes_pending?).with(member).and_return(true)
+    allow(workflow).to receive(:current_member_branch).with(member).and_return("r1_8-even-v0")
+    allow(workflow).to receive(:no_releasable_changes_since_tag?).with(member, "v1.0.0").and_return(false)
+    allow(workflow).to receive(:unreleased_changes_pending?).with(member, branch: "r1_8-even-v0").and_return(true)
 
     results = workflow.results
 
-    expect(results.map(&:phase)).to eq(["release_skip"])
+    expect(results.map(&:phase)).to eq(["release_blocked"])
     expect(results.first).not_to be_ok
     expect(results.first.skipped).to be(false)
+    expect(results.first.branch).to eq("r1_8-even-v0")
     expect(results.first.reason).to eq("published version has unreleased changes")
-    expect(results.first.stdout).to include("release-state reports unreleased changes")
+    expect(results.first.stdout).to include("release-state reports unreleased changes on this branch")
     expect(results.first.stdout).to include("bump patch --execute --only alpha")
   end
 
-  it "skips already published versions when local HEAD is newer than the release tag with no unreleased changes" do
+  it "skips already published versions when this branch has no unreleased changes" do
     write_release_config(publish_command: [RbConfig.ruby, "-e", "abort 'should not run'"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
     workflow = described_class.new(command: "release", config: config, members: [member], execute: true, publish: true)
     allow(workflow).to receive(:prompt_for_gem_signing_password)
     allow(workflow).to receive(:released_version?).with("alpha", "1.0.0").and_return(true)
-    allow(workflow).to receive(:git_work_tree?).with(member.root).and_return(true)
-    allow(workflow).to receive(:git_rev_parse).with(member.root, "refs/tags/v1.0.0^{}").and_return("tag-sha")
-    allow(workflow).to receive(:git_rev_parse).with(member.root, "HEAD").and_return("head-sha")
-    allow(workflow).to receive(:unreleased_changes_pending?).with(member).and_return(false)
+    allow(workflow).to receive(:current_member_branch).with(member).and_return("r1_8-even-v0")
+    allow(workflow).to receive(:no_releasable_changes_since_tag?).with(member, "v1.0.0").and_return(false)
+    allow(workflow).to receive(:unreleased_changes_pending?).with(member, branch: "r1_8-even-v0").and_return(false)
 
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(["release_skip"])
     expect(results.first).to be_ok
     expect(results.first.skipped).to be(true)
+    expect(results.first.branch).to eq("r1_8-even-v0")
     expect(results.first.reason).to eq("already released; no unreleased changes")
-    expect(results.first.stdout).to include("current HEAD is newer than v1.0.0")
-    expect(results.first.stdout).to include("no unreleased changes")
+    expect(results.first.stdout).to include("no unreleased changes on this branch")
   end
 
-  it "continues release after skipping an already published version whose HEAD moved past the tag" do
+  it "continues release after skipping an already published version with nothing releasable since its tag" do
     write_release_config(publish_command: [RbConfig.ruby, "-e", "puts 'publish'"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     alpha = ready_member("alpha")
@@ -2322,10 +2323,9 @@ RSpec.describe Kettle::Family::Workflow do
     allow(workflow).to receive(:prompt_for_gem_signing_password)
     allow(workflow).to receive(:released_version?).with("alpha", "1.0.0").and_return(true)
     allow(workflow).to receive(:released_version?).with("beta", "1.0.0").and_return(false)
-    allow(workflow).to receive(:git_work_tree?).with(alpha.root).and_return(true)
-    allow(workflow).to receive(:git_rev_parse).with(alpha.root, "refs/tags/v1.0.0^{}").and_return("tag-sha")
-    allow(workflow).to receive(:git_rev_parse).with(alpha.root, "HEAD").and_return("head-sha")
-    allow(workflow).to receive(:unreleased_changes_pending?).with(alpha).and_return(false)
+    allow(workflow).to receive(:current_member_branch).with(alpha).and_return("r1_8-even-v0")
+    allow(workflow).to receive(:no_releasable_changes_since_tag?).with(alpha, "v1.0.0").and_return(false)
+    allow(workflow).to receive(:unreleased_changes_pending?).with(alpha, branch: "r1_8-even-v0").and_return(false)
 
     results = workflow.results
 
@@ -2334,6 +2334,49 @@ RSpec.describe Kettle::Family::Workflow do
     expect(alpha_skip).to be_ok
     expect(alpha_skip.skipped).to be(true)
     expect(results.find { |result| result.member_name == "beta" && result.phase == "release_publish" }).to be_ok
+  end
+
+  # kettle-release commits checksums (and the family commits dependency-floor
+  # lockfiles) *after* tagging, so HEAD never equals the release tag.
+  it "treats post-tag maintenance commits as already released" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    git = lambda { |*args| system("git", *args, chdir: member.root, out: File::NULL, err: File::NULL) || raise("git #{args.first} failed") }
+    git.call("init", "--initial-branch=r1_8-even-v0")
+    git.call("config", "user.email", "spec@example.com")
+    git.call("config", "user.name", "Spec")
+    git.call("add", ".")
+    git.call("commit", "-m", "release")
+    git.call("tag", "-a", "v1.0.0", "-m", "v1.0.0")
+    FileUtils.mkdir_p(File.join(member.root, "checksums"))
+    File.write(File.join(member.root, "checksums", "SHA256SUMS"), "deadbeef\n")
+    git.call("add", ".")
+    git.call("commit", "-m", "Checksums for v1.0.0")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:current_member_branch, member)).to eq("r1_8-even-v0")
+    expect(workflow.send(:no_releasable_changes_since_tag?, member, "v1.0.0")).to be(true)
+  end
+
+  it "treats a post-tag changelog entry as needing a release" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    git = lambda { |*args| system("git", *args, chdir: member.root, out: File::NULL, err: File::NULL) || raise("git #{args.first} failed") }
+    git.call("init", "--initial-branch=r1_8-even-v0")
+    git.call("config", "user.email", "spec@example.com")
+    git.call("config", "user.name", "Spec")
+    git.call("add", ".")
+    git.call("commit", "-m", "release")
+    git.call("tag", "-a", "v1.0.0", "-m", "v1.0.0")
+    File.write(File.join(member.root, "CHANGELOG.md"), "## [Unreleased]\n\n### Fixed\n\n- a thing\n")
+    git.call("add", ".")
+    git.call("commit", "-m", "Update changelog")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:no_releasable_changes_since_tag?, member, "v1.0.0")).to be(false)
+    expect(workflow.send(:releasable_changes_since_tag, member, "v1.0.0")).to eq(["CHANGELOG.md"])
   end
 
   it "rediscovers member metadata after each target branch checkout" do

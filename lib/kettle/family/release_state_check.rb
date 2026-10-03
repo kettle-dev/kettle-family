@@ -25,10 +25,16 @@ module Kettle
       CACHE_MISS = Object.new.freeze
       WORKTREE_ADMIN_MUTEX = Mutex.new
 
-      def initialize(members:, config: nil, jobs: nil)
+      # +branches+ scopes the check to specific release target branches. A
+      # branch-stack member produces one result per branch; a per-branch
+      # decision (is this branch already published? does it need a bump?) must
+      # never consult the whole stack, or every branch inherits the state of
+      # the branch that happens to have unreleased entries.
+      def initialize(members:, config: nil, jobs: nil, branches: nil)
         @members = members
         @config = config
         @jobs = jobs
+        @branches = branches&.map(&:to_s)&.reject(&:empty?)
         @github_latest_release_by_repo = {}
         @transfer_changelog_status_by_root = {}
         @transfer_changelog_lag_by_key = {}
@@ -38,6 +44,7 @@ module Kettle
       end
 
       def results(event_handler: nil)
+        return scoped_checkout_results(event_handler: event_handler) if checked_out_scoped_results?
         return branch_results(event_handler: event_handler) unless release_target_branches.empty?
         if shared_changelog?
           results = parallel_map(members) { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) }
@@ -53,7 +60,25 @@ module Kettle
 
       private
 
-      attr_reader :members, :config, :jobs
+      attr_reader :members, :config, :jobs, :branches
+
+      # A single-branch scope whose checkout already sits on that branch needs
+      # no worktree: the primary checkout is the branch under test.
+      def checked_out_scoped_results?
+        return false unless branches&.one?
+
+        members.any? { |member| current_branch_for(member) == branches.first }
+      end
+
+      def scoped_checkout_results(event_handler: nil)
+        branch = branches.first
+        results = parallel_map(members) { |member| check_member(member, branch: branch, event_handler: event_handler) }
+        results.flatten
+      end
+
+      def current_branch_for(member)
+        git_output(member.root, "branch", "--show-current")
+      end
 
       def branch_results(event_handler: nil)
         root = git_root
@@ -769,6 +794,7 @@ module Kettle
 
       def release_target_branches
         return [] unless config
+        return @branches if @branches
 
         config.release_target_branches
       end
@@ -840,6 +866,7 @@ module Kettle
         with_worktree_registry_lock(root: root) do
           base = File.join(root, "tmp", "kettle-family-release-state")
           FileUtils.mkdir_p(base)
+          prune_stale_worktrees(root: root)
           entries = branches.map do |branch|
             {branch: branch, worktree_root: File.join(base, "worktree-#{Process.pid}-#{SecureRandom.hex(8)}")}
           end
@@ -867,6 +894,40 @@ module Kettle
         ensure
           lock_file&.flock(File::LOCK_UN)
         end
+      end
+
+      # A killed run (SIGKILL, terminal close) skips the ensure-block cleanup and
+      # leaves registered worktrees behind. Registered-but-ownerless worktrees
+      # are pinned refs that accumulate forever, so reap them on the way in.
+      def prune_stale_worktrees(root:)
+        base = File.join(root, "tmp", "kettle-family-release-state")
+        WORKTREE_ADMIN_MUTEX.synchronize do
+          Open3.capture3("git", "worktree", "prune", chdir: root)
+          orphaned_worktree_paths(base).each do |path|
+            Open3.capture3("git", "worktree", "remove", "--force", path, chdir: root)
+            FileUtils.rm_rf(path)
+          end
+        end
+      end
+
+      # Worktree directories are named worktree-PID-RANDOM. A PID that is no
+      # longer running cannot still own a live worktree.
+      def orphaned_worktree_paths(base)
+        Dir[File.join(base, "worktree-*")].select do |path|
+          pid = File.basename(path)[/worktree-(\d+)-/, 1]
+          next false if pid.nil? || pid == Process.pid.to_s
+
+          !process_alive?(pid)
+        end
+      end
+
+      def process_alive?(pid)
+        Process.kill(0, pid)
+        true
+      rescue Errno::ESRCH
+        false
+      rescue Errno::EPERM
+        true
       end
 
       def add_branch_worktree(root:, branch:, worktree_root:)
