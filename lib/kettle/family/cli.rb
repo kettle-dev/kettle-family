@@ -28,6 +28,16 @@ module Kettle
         main(argv, stdout: out, stderr: err)
       end
 
+      # Defined as a singleton method above the `private` keyword: a `private`
+      # instance modifier does not apply to `def self.` definitions.
+      def self.default_only_filter(command:, only:)
+        return only unless only.to_s.empty?
+        return "bump" if %w[bump bump-version].include?(command)
+        return "pending" if command == "release"
+
+        only
+      end
+
       module SharedOptions
         def self.included(base)
           base.option :root, value: {type: String, usage: "PATH"}, desc: "Workspace or family root"
@@ -828,14 +838,6 @@ module Kettle
 
       def default_only_filter(command:, only:)
         self.class.default_only_filter(command: command, only: only)
-      end
-
-      def self.default_only_filter(command:, only:)
-        return only unless only.to_s.empty?
-        return "bump" if %w[bump bump-version].include?(command)
-        return "pending" if command == "release"
-
-        only
       end
 
       def direct_member_only_names(only)

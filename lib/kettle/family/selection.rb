@@ -21,6 +21,21 @@ module Kettle
         STATUS_TOKEN_KEYS.key?(value.to_s)
       end
 
+      # Defined as a singleton method above the `private` keyword: a `private`
+      # instance modifier does not apply to `def self.` definitions.
+      #
+      # Branches of one member that currently satisfy +tokens+. Used to decide
+      # per-branch bump work, so a bump never touches a branch that has nothing
+      # to release.
+      def self.branches_matching(release_state_results, member_name:, tokens:)
+        keys = Array(tokens).map(&:to_s).filter_map { |token| STATUS_TOKEN_KEYS[token] }
+        return [] if keys.empty?
+
+        Array(release_state_results).select do |result|
+          result.member_name == member_name && keys.all? { |key| result.state[key] == true }
+        end.map(&:branch).compact.uniq
+      end
+
       def self.validate_release_state_only_filter!(only)
         names = only.to_s.split(",").map(&:strip).reject(&:empty?)
         status_tokens = names.select { |name| status_token?(name) }
@@ -99,19 +114,8 @@ module Kettle
         end
       end
 
-      # Branches of one member that currently satisfy +tokens+. Used to decide
-      # per-branch bump work, so a bump never touches a branch that has nothing
-      # to release.
-      def self.branches_matching(release_state_results, member_name:, tokens:)
-        names = Array(tokens).map(&:to_s)
-        keys = names.filter_map { |token| STATUS_TOKEN_KEYS[token] }
-        return [] if keys.empty?
-
-        Array(release_state_results).select do |result|
-          result.member_name == member_name && keys.all? { |key| result.state[key] == true }
-        end.map(&:branch).compact.uniq
-      end
-
+      # Branch-stack members report one result per branch, all sharing a member
+      # name, so results are grouped per member instead of collapsed to one.
       def release_state_results_by_member
         raise Error, "--only release-state tokens require release-state results" unless release_state_results
 

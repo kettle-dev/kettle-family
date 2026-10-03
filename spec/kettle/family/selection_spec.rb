@@ -36,8 +36,8 @@ RSpec.describe Kettle::Family::Selection do
 
     it "reports a failed branch probe once per member" do
       results = [
-        branch_state("alpha", "r1_8-even-v0", { "pending_release" => false }, status: 1, success: false),
-        branch_state("alpha", "main", { "pending_release" => false }, status: 1, success: false)
+        branch_state("alpha", "r1_8-even-v0", {"pending_release" => false}, status: 1, success: false),
+        branch_state("alpha", "main", {"pending_release" => false}, status: 1, success: false)
       ]
 
       expect { described_class.new(members: members, release_state_results: results).apply(only: "pending") }
