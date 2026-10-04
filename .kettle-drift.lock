@@ -1,10 +1,37 @@
 {
+  "command_path = File.join(directory, name)\nif Gem.win_platform?": [
+    {
+      "file": "spec/spec_helper.rb",
+      "lines": [
+        43,
+        61
+      ]
+    }
+  ],
   "exec_cmd: \"kettle-test\"\nrubygems: latest": [
     {
       "file": ".github/workflows/current.yml",
       "lines": [
         43,
         49
+      ]
+    }
+  ],
+  "if respond_to?(:generator_only)\ngenerator_only do": [
+    {
+      "file": "Appraisal.root.gemfile",
+      "lines": [
+        18,
+        27
+      ]
+    }
+  ],
+  "name += \".cmd\" if Gem.win_platform?\ncommand_path = File.join(directory, name)": [
+    {
+      "file": "spec/spec_helper.rb",
+      "lines": [
+        42,
+        60
       ]
     }
   ]

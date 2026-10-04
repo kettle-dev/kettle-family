@@ -26,6 +26,16 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - A blocked release now reports phase `release_blocked` instead of `release_skip`, so a hard failure is never reported as a skipped member in the progress summary or report.
 
+- [kc] kettle-jem/prepare: updated 12 project files:
+  - dependencies (12)
+
+- [kc] kettle-jem/template: updated 6 project files:
+  - code and tests (1)
+  - dependencies (1)
+  - documentation (1)
+  - other (2)
+  - workflows (1)
+
 ### Deprecated
 
 ### Removed

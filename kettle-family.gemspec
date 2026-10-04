@@ -98,7 +98,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
   spec.add_dependency("kettle-changelog", "~> 1.0", ">= 1.0.8")             # ruby >= 4.0.0, release-state and family changelog commands
-  spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.5")                 # ruby >= 3.2.0
+  spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.6")                 # ruby >= 3.2.0
   spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.16")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow
   spec.add_dependency("kettle-jem", "~> 7.1", ">= 7.1.28")                    # ruby >= 4.0.0, built-in templating workflow
   spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.23")              # ruby >= 2.4
@@ -132,9 +132,8 @@ Gem::Specification.new do |spec|
   # Testing
   # Loads version files in anonymous namespaces for coverage without constant redefinition warnings.
   spec.add_development_dependency("anonymous_loader", "~> 0.1", ">= 0.1.3")         # ruby >= 2.2.0
-  spec.add_development_dependency("appraisal2", "~> 3.2", ">= 3.2.4")               # ruby >= 1.8.7, for testing against multiple versions of dependencies
-  spec.add_development_dependency("turbo_tests2", "~> 3.2", ">= 3.2.11")           # ruby >= 2.4.0, default kettle-test runner
-  spec.add_development_dependency("webrick", "~> 1.9")                             # Ruby 4 extracted stdlib, local gem-server integration specs
+  spec.add_development_dependency("appraisal2", "~> 3.2", ">= 3.2.5")               # ruby >= 1.8.7, for testing against multiple versions of dependencies
+  spec.add_development_dependency("turbo_tests2", "~> 3.2", ">= 3.2.13")           # ruby >= 2.4.0, default kettle-test runner
 
   # Releasing
   spec.add_development_dependency("ruby-progressbar", "~> 1.13")                    # ruby >= 0
@@ -145,5 +144,13 @@ Gem::Specification.new do |spec|
   # This means we have no choice but to use the erb that shipped with Ruby 2.3
   # /opt/hostedtoolcache/Ruby/2.3.8/x64/lib/ruby/gems/2.3.0/gems/erb-2.2.2/lib/erb.rb:670:in `prepare_trim_mode': undefined method `match?' for "-":String (NoMethodError)
   # spec.add_development_dependency("erb", ">= 2.2")                                  # ruby >= 2.3.0, not SemVer, old rubies get dropped in a patch.
-  spec.add_development_dependency("gitmoji-regex", "~> 2.0", ">= 2.0.13")            # ruby >= 2.4
+  spec.add_development_dependency("gitmoji-regex", "~> 2.0", ">= 2.0.15")            # ruby >= 2.4
+
+  # HTTP recording for deterministic specs
+  # In Ruby 3.5 (HEAD) the CGI library has been pared down, so we also need to depend on gem "cgi" for ruby@head
+  # This is done in the "head" appraisal.
+  # See: https://github.com/vcr/vcr/issues/1057
+  # spec.add_development_dependency("vcr", ">= 4")                        # 6.0 claims to support ruby >= 2.3, but fails on ruby 2.4
+  # spec.add_development_dependency("webmock", ">= 3")                    # Last version to support ruby >= 2.3
+  spec.add_development_dependency("webrick", "~> 1.9")                             # Ruby 4 extracted stdlib, local gem-server integration specs
 end
