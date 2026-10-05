@@ -156,7 +156,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(members:, config: nil, jobs: nil)  &#x21d2; ReleaseStateCheck </a>
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(members:, config: nil, jobs: nil, branches: nil)  &#x21d2; ReleaseStateCheck </a>
     
 
     
@@ -172,7 +172,7 @@
   
 
   
-    <span class="summary_desc"><div class='inline'><p>A new instance of ReleaseStateCheck.</p>
+    <span class="summary_desc"><div class='inline'><p>+branches+ scopes the check to specific release target branches.</p>
 </div></span>
   
 </li>
@@ -211,7 +211,7 @@
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(members:, config: nil, jobs: nil)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::ReleaseStateCheck (class)">ReleaseStateCheck</a></span></tt> 
+    #<strong>initialize</strong>(members:, config: nil, jobs: nil, branches: nil)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::ReleaseStateCheck (class)">ReleaseStateCheck</a></span></tt> 
   
 
   
@@ -219,7 +219,11 @@
   
 </h3><div class="docstring">
   <div class="discussion">
-    <p>Returns a new instance of ReleaseStateCheck.</p>
+    <p>+branches+ scopes the check to specific release target branches. A<br />
+branch-stack member produces one result per branch; a per-branch<br />
+decision (is this branch already published? does it need a bump?) must<br />
+never consult the whole stack, or every branch inherits the state of<br />
+the branch that happens to have unreleased entries.</p>
 
 
   </div>
@@ -233,25 +237,27 @@
       <pre class="lines">
 
 
-28
-29
-30
-31
-32
 33
 34
 35
 36
 37
-38</pre>
+38
+39
+40
+41
+42
+43
+44</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 28</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 33</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>jobs:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>jobs:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>branches:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
   <span class='ivar'>@jobs</span> <span class='op'>=</span> <span class='id identifier rubyid_jobs'>jobs</span>
+  <span class='ivar'>@branches</span> <span class='op'>=</span> <span class='id identifier rubyid_branches'>branches</span><span class='op'>&amp;.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:to_s</span><span class='rparen'>)</span><span class='op'>&amp;.</span><span class='id identifier rubyid_reject'>reject</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:empty?</span><span class='rparen'>)</span>
   <span class='ivar'>@github_latest_release_by_repo</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_status_by_root</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_lag_by_key</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
@@ -286,24 +292,26 @@
       <pre class="lines">
 
 
-40
-41
-42
-43
-44
-45
 46
 47
 48
 49
 50
 51
-52</pre>
+52
+53
+54
+55
+56
+57
+58
+59</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 40</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 46</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_scoped_checkout_results'>scoped_checkout_results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='kw'>if</span> <span class='id identifier rubyid_checked_out_scoped_results?'>checked_out_scoped_results?</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_branch_results'>branch_results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
   <span class='kw'>if</span> <span class='id identifier rubyid_shared_changelog?'>shared_changelog?</span>
     <span class='id identifier rubyid_results'>results</span> <span class='op'>=</span> <span class='id identifier rubyid_parallel_map'>parallel_map</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span> <span class='id identifier rubyid_check_shared_changelog_member_or_local'>check_shared_changelog_member_or_local</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='rbrace'>}</span>

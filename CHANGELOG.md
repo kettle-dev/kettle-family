@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.5] - 2026-10-05
+
+- TAG: [v1.3.5][1.3.5t]
+- COVERAGE: 93.16% -- 6636/7123 lines in 37 files
+- BRANCH COVERAGE: 77.64% -- 2701/3479 branches in 37 files
+- 33.64% documented
+
+### Added
+
 - `Kettle::Family::ReleaseStateCheck` accepts a `branches:` scope, and `Kettle::Family::Selection.branches_matching` reports which of a member branch stack currently satisfies a release-state token. Both are the seams for per-branch release and bump decisions.
 
 ### Changed
@@ -36,10 +55,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - other (2)
   - workflows (1)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Already-released detection for branch-stack members is now scoped to the branch being released instead of the whole stack, so a clean published branch is no longer reported as having unreleased changes and blocked with a release_skip failure.
@@ -51,8 +66,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - `kettle-family bump` now bumps each branch of a member branch stack independently: branches with no pending version bump are reported as skipped instead of being bumped, so an already-released branch is no longer given version bumps it never needed. An explicit `--only MEMBER` remains an unconditional request and is not filtered.
 
 - Release-state worktrees orphaned by a killed run are reaped on the next run. Directories are named `worktree-PID-RANDOM`, so only those whose owning PID is no longer running are removed; live worktrees from concurrent runs are left alone.
-
-### Security
 
 ## [1.3.4] - 2026-10-02
 
@@ -2871,7 +2884,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.4...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.5...HEAD
+[1.3.5]: https://github.com/kettle-dev/kettle-family/compare/v1.3.4...v1.3.5
+[1.3.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.5
 [1.3.4]: https://github.com/kettle-dev/kettle-family/compare/v1.3.3...v1.3.4
 [1.3.4t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.4
 [1.3.3]: https://github.com/kettle-dev/kettle-family/compare/v1.3.2...v1.3.3
