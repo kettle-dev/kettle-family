@@ -1,4 +1,7 @@
 {
+  "lib/kettle/family/workflow.rb:212818314": [
+    [5136, 9, 38, "ThreadSafety/LazySynchronizationPrimitive: Do not lazily initialize synchronization primitives with `||=`.", 3762219047]
+  ],
   "spec/kettle/family/discovery_spec.rb:3732611222": [
     [38, 33, 10, "ThreadSafety/NewThread: Avoid starting new threads.", 3411682361]
   ],
