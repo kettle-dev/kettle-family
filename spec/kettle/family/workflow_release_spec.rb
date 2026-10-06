@@ -20,7 +20,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "release", config: config, members: [member]).results
 
-    expect(results.map(&:phase)).to eq(%w[check release_changelog release_build])
+    expect(results.map(&:phase)).to eq(%w[check published_version_check release_changelog release_build])
     expect(results.last.skipped).to be(true)
   end
 
@@ -61,7 +61,7 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true, tag: true, push: true)
     results = workflow.results
 
-    expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish release_tag release_push])
+    expect(results.map(&:phase)).to eq(%w[check published_version_check release_changelog release_publish release_tag release_push])
     expect(workflow.send(:release_progress_label)).to eq("publishing")
   end
 
@@ -488,7 +488,7 @@ RSpec.describe Kettle::Family::Workflow do
       skip_changelog: true
     ).results
 
-    expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish])
+    expect(results.map(&:phase)).to eq(%w[check published_version_check release_changelog release_publish])
     expect(results.map(&:command).join(" ")).to include("--skip-changelog")
     expect(results.map(&:phase)).not_to include("family_changelog")
   end
@@ -593,7 +593,7 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
     results = workflow.results
 
-    expect(results.map(&:phase)).to eq(%w[family_changelog check release_changelog release_publish])
+    expect(results.map(&:phase)).to eq(%w[family_changelog check published_version_check release_changelog release_publish])
     expect(results.first.command).to end_with(RbConfig.ruby, "-e", "puts 'changelog'")
     expect(results.first.workdir).to eq(member.root)
     expect(results.first.skipped).to be(true)
@@ -629,7 +629,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "release", config: config, members: [member], publish: true).results
 
-    expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish])
+    expect(results.map(&:phase)).to eq(%w[check published_version_check release_changelog release_publish])
   end
 
   it "keeps local monorepo siblings available to the shared changelog suite" do
@@ -1062,8 +1062,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      release_checkout check release_changelog release_build
-      release_checkout check release_changelog release_build
+      release_checkout check published_version_check release_changelog release_build
+      release_checkout check published_version_check release_changelog release_build
     ])
     expect(results.select { |result| result.phase == "release_checkout" }.map(&:command)).to eq([
       ["git", "checkout", "r1_8-even-v0"],
@@ -1200,7 +1200,7 @@ RSpec.describe Kettle::Family::Workflow do
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true, execute: true)
 
     expect(workflow.send(:normalize_release_lockfiles?, member)).to be(false)
-    expect(workflow.send(:release_phase_total, member)).to eq(3)
+    expect(workflow.send(:release_phase_total, member)).to eq(4)
   end
 
   it "lets kettle-release normalize existing local path remotes before readiness" do
@@ -1218,7 +1218,7 @@ RSpec.describe Kettle::Family::Workflow do
       publish: true
     ).results
 
-    expect(results.map(&:phase)).to eq(%w[check release_changelog release_publish])
+    expect(results.map(&:phase)).to eq(%w[check published_version_check release_changelog release_publish])
     expect(results.first).to be_ok
   end
 
@@ -1889,7 +1889,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = workflow.results
 
-    expect(results.map(&:phase)).to eq(%w[check release_changelog release_build])
+    expect(results.map(&:phase)).to eq(%w[check published_version_check release_changelog release_build])
     expect(results).to all(be_ok)
   end
 
@@ -1988,6 +1988,7 @@ RSpec.describe Kettle::Family::Workflow do
       release_normalize_lockfiles
       commit_normalized_lockfiles
       check
+      published_version_check
       release_changelog
       release_build
     ])
@@ -2026,6 +2027,7 @@ RSpec.describe Kettle::Family::Workflow do
       release_normalize_lockfiles
       release_bundle_install
       check
+      published_version_check
       release_changelog
       release_build
     ])
@@ -2096,6 +2098,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[
       check
+      published_version_check
       release_changelog
       release_build
       release_normalize_lockfiles
@@ -2409,8 +2412,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "release", config: config, members: [member]).results
 
     expect(results.map(&:phase)).to eq(%w[
-      release_checkout check release_changelog release_build
-      release_checkout check release_changelog release_build
+      release_checkout check published_version_check release_changelog release_build
+      release_checkout check published_version_check release_changelog release_build
     ])
     expect(results.select { |result| result.phase == "release_checkout" }.map(&:command)).to eq([
       ["git", "checkout", "r1"],
@@ -2509,8 +2512,8 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
     expect(results.count { |result| result.phase == "release_build" }).to eq(2)
     expect(progress.string).to include("releasing 2 members with 2 jobs:")
-    expect(progress.string).to match(/\[alpha\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+\.\s+release_build/)
-    expect(progress.string).to match(/\[beta\]\s+\(3\/3\)\s+\d{2}:\d{2}\s+\.\s+release_build/)
+    expect(progress.string).to match(/\[alpha\]\s+\(4\/4\)\s+\d{2}:\d{2}\s+\.\s+release_build/)
+    expect(progress.string).to match(/\[beta\]\s+\(4\/4\)\s+\d{2}:\d{2}\s+\.\s+release_build/)
     expect(progress.string).to include("release summary: 2/2 members ok")
   end
 
@@ -2760,8 +2763,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "release", config: config, members: [alpha, beta]).results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_build dependency_floor
-      check release_changelog release_build
+      check published_version_check release_changelog release_build dependency_floor
+      check published_version_check release_changelog release_build
     ])
     expect(results.find { |result| result.phase == "dependency_floor" }.stdout).to include("would update")
     expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.0.0"')
@@ -2781,8 +2784,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install
-      check release_changelog release_publish
+      check published_version_check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install
+      check published_version_check release_changelog release_publish
     ])
     expect(results.find { |result| result.phase == "release_wait_for_registry" }).to be_nil
     lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
@@ -2889,8 +2892,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install
-      check release_changelog release_publish
+      check published_version_check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install
+      check published_version_check release_changelog release_publish
     ])
     lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
     expect(lockfile_refresh).to be_ok
@@ -2965,8 +2968,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install dependency_floor_ci_bundle
-      check release_changelog release_publish
+      check published_version_check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install dependency_floor_ci_bundle
+      check published_version_check release_changelog release_publish
     ])
     ci_bundle = results.find { |result| result.phase == "dependency_floor_ci_bundle" }
     expect(ci_bundle).to be_ok
@@ -3001,8 +3004,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install dependency_floor_ci_bundle
-      check release_changelog release_publish
+      check published_version_check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install dependency_floor_ci_bundle
+      check published_version_check release_changelog release_publish
     ])
     ci_bundle = results.find { |result| result.phase == "dependency_floor_ci_bundle" }
     expect(ci_bundle).to be_ok
@@ -3055,7 +3058,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install dependency_floor_ci_bundle
+      check published_version_check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install dependency_floor_ci_bundle
     ])
     ci_bundle = results.last
     expect(ci_bundle).not_to be_ok
@@ -3489,8 +3492,8 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install
-      check release_changelog release_publish
+      check published_version_check release_changelog release_publish dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install
+      check published_version_check release_changelog release_publish
     ])
     lockfile_refresh = results.find { |result| result.phase == "dependency_floor_lockfiles" }
     expect(lockfile_refresh).to be_ok
@@ -3520,7 +3523,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(%w[
-      check release_changelog release_publish dependency_floor dependency_floor_lockfiles
+      check published_version_check release_changelog release_publish dependency_floor dependency_floor_lockfiles
     ])
     refresh = results.last
     expect(refresh.phase).to eq("dependency_floor_lockfiles")

@@ -20,6 +20,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- [kc] published-version-check: `Kettle::Family::PublishedVersionCheck` detects lockfile pins that no registry serves — the signature of a locally built and installed gem leaking into a lockfile. Bundler resolves against the local gem dir, so an ordinary `bundle install` can pin such a version, and the entry it writes is a normal GEM-section line carrying a valid checksum taken from the installed spec, so nothing in the lockfile text distinguishes it and there is no offline marker either (installed specs look the same as fetched ones, and `Gem::Specification` has no `#remote`). Only asking the registry can tell. A pinned native gem is compared after splitting off its platform suffix, because a lockfile pins `nokogiri (1.19.4-x86_64-linux-gnu)` while the registry lists bare `1.19.4` once per platform; comparing the pinned string directly reported every native gem as unpublished, adding 10 false positives to one real lockfile. Prerelease versions are unaffected because they are dot-separated (`1.0.0.rc1`) and RubyGems version strings cannot contain a hyphen, so the first hyphen is always the version/platform boundary. Runs in `bup`/`bupb`/`update-bundler` before committing a lockfile update, and in release preflight, where a bad pin previously surfaced much later as an opaque bundler error during lockfile reset.
+
+- The published-version check fails open: when a registry cannot be consulted the version counts as unverifiable rather than unpublished, so a registry outage cannot turn every family member into a false failure. Registry answers are memoized per process keyed by gem and remote, so members sharing toolchain and sibling dependencies query the registry once for the whole run rather than once each, and one invocation sees a consistent snapshot even if a gem is published mid-run.
+
 ### Changed
 
 ### Deprecated

@@ -2343,9 +2343,9 @@ module Kettle
             return memo
           end
 
-          append_release_internal_checks(member: member, memo: memo)
-          memo.last(2).each { |result| emit_member_result_progress(original_member, result, progress: progress) }
-          return memo unless memo.last(2).all?(&:ok?)
+          internal_check_results = append_release_internal_checks(member: member, memo: memo)
+          internal_check_results.each { |result| emit_member_result_progress(original_member, result, progress: progress) }
+          return memo unless internal_check_results.all?(&:ok?)
 
           release_event_state = {}
           result = release_command_runner.call(
@@ -2526,9 +2526,9 @@ module Kettle
             end
           end
 
-          append_release_internal_checks(member: member, memo: memo)
-          memo.last(2).each { |result| emit_member_result_progress(member, result, progress: progress) }
-          return memo unless memo.last(2).all?(&:ok?)
+          internal_check_results = append_release_internal_checks(member: member, memo: memo)
+          internal_check_results.each { |result| emit_member_result_progress(member, result, progress: progress) }
+          return memo unless internal_check_results.all?(&:ok?)
 
           release_event_state = {}
           release_result = runner.call(
@@ -3275,13 +3275,34 @@ module Kettle
         results.each { |result| result.branch = branch if result.respond_to?(:branch=) }
       end
 
+      # Runs the internal pre-release checks for one member, appending each
+      # result to +memo+. Returns the results appended by this call so callers
+      # can inspect exactly them instead of relying on a positional
+      # `memo.last(N)` window.
+      #
+      # Short-circuits on the first failure: a member with a broken lockfile
+      # should not spend a release on its changelog, and the returned array
+      # then holds only the failing result.
       def append_release_internal_checks(member:, memo:)
-        memo << ReadinessCheck.call(
+        appended = []
+        readiness = ReadinessCheck.call(
           member: member,
           config: config,
           allowed_local_path_roots: release_readiness_allowed_local_path_roots(member)
         )
-        memo << ChangelogCheck.call(member: member, config: config) if memo.last.ok?
+        memo << readiness
+        appended << readiness
+        return appended unless readiness.ok?
+
+        published_versions = PublishedVersionCheck.call(member: member)
+        memo << published_versions
+        appended << published_versions
+        return appended unless published_versions.ok?
+
+        changelog = ChangelogCheck.call(member: member, config: config)
+        memo << changelog
+        appended << changelog
+        appended
       end
 
       def release_readiness_allowed_local_path_roots(member)
@@ -4597,8 +4618,16 @@ module Kettle
         total
       end
 
+      # Progress denominator for one member's release. The base four are
+      # check, published_version_check, release_changelog and release_build.
+      #
+      # This must stay in step with what append_release_internal_checks emits:
+      # Progress#increment_member_count clamps the count to the total, so a
+      # total that is too low silently saturates the progress display instead
+      # of failing. Adding a release-internal phase without raising this base
+      # would leave every member showing its final count early.
       def release_phase_total(member = nil)
-        total = 3
+        total = 4
         if member
           normalize = normalize_release_lockfiles?(member)
           total += 2 if normalize
@@ -5723,8 +5752,14 @@ module Kettle
       end
 
       def release_lockfile_readiness_would_fail?(member)
-        result = ReadinessCheck.call(member: member, config: config, allowed_local_path_roots: release_allowed_local_path_roots)
-        result.stdout.lines.any? { |line| line.start_with?("release lockfile has local path remote at ") }
+        readiness = ReadinessCheck.call(
+          member: member,
+          config: config,
+          allowed_local_path_roots: release_allowed_local_path_roots
+        )
+        return true if readiness.stdout.lines.any? { |line| line.start_with?("release lockfile has local path remote at ") }
+
+        !PublishedVersionCheck.call(member: member).ok?
       end
 
       def release_lockfile_has_local_path_remote?(member)
@@ -5975,11 +6010,14 @@ module Kettle
       end
 
       def bundle_update_lockfile_diagnostics(member)
-        ReadinessCheck.call(
+        readiness = ReadinessCheck.call(
           member: member,
           config: config,
           allowed_local_path_roots: bundle_update_allowed_local_path_roots
-        ).stdout.lines.grep(/^release lockfile has local path remote at /).map do |line|
+        ).stdout.lines.grep(/^release lockfile has local path remote at /)
+        unpublished = PublishedVersionCheck.call(member: member).stdout.lines
+
+        (readiness + unpublished).map do |line|
           line.sub("release lockfile", "bundle update lockfile").chomp
         end
       end

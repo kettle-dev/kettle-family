@@ -1,0 +1,138 @@
+# frozen_string_literal: true
+
+require "kettle/dev/lockfile_reset"
+require "kettle/dev/ruby_gems_versions"
+
+module Kettle
+  module Family
+    # Detects versions pinned in a release lockfile that no registry actually
+    # serves — the signature of a locally built and installed gem leaking into
+    # a lockfile.
+    #
+    # Why this is needed at all: bundler resolves against the local gem dir, so
+    # an ordinary `bundle install` will happily pin a locally installed version.
+    # The resulting entry is a normal GEM-section line carrying a valid checksum
+    # taken from the installed spec, so it is indistinguishable from a published
+    # gem by inspection. There is also no offline marker for a local build —
+    # installed specs look the same as fetched ones, and Gem::Specification has
+    # no #remote — so the only reliable signal is asking the registry.
+    #
+    # Deliberately NOT applied to templating. Templating injects its own
+    # (often unreleased) version into a destination so it can run itself, and
+    # local templating from unreleased source is a routine workflow; gating that
+    # would break it. So this runs only where a lockfile is about to be
+    # committed or published, and templating's transient local pins get cleaned
+    # up later by a release-mode dependency update.
+    #
+    # Fails open: when the registry cannot be consulted the version counts as
+    # unverifiable rather than unpublished, so offline runs are never blocked by
+    # network conditions.
+    class PublishedVersionCheck
+      PHASE = "published_version_check"
+
+      # Process-local memo of registry answers, keyed by [gem name, remote].
+      #
+      # Two reasons this is safe and desirable:
+      #
+      #   * Family members share almost all their toolchain and sibling
+      #     dependencies, so one member's lookups serve every later member.
+      #     Without this, a 30-member release re-queries the same gems 30
+      #     times; the recently-released ones deliberately cache-bust through
+      #     the on-disk cache (Kettle::Dev::RubyGemsVersions), so they cost a
+      #     live request every time.
+      #   * A single command invocation should see one consistent snapshot of
+      #     the registry. Re-querying per member could otherwise report a gem
+      #     as unpublished for early members and published for later ones if it
+      #     lands mid-run.
+      #
+      # nil is memoized too, so an unreachable registry is asked once rather
+      # than once per pin. Lifetime is one process; nothing persists.
+      REGISTRY_MEMO = {}
+
+      def self.call(member:)
+        new(member: member).call
+      end
+
+      def initialize(member:)
+        @member = member
+      end
+
+      def call
+        result(diagnostics)
+      end
+
+      private
+
+      attr_reader :member
+
+      def diagnostics
+        lockfile = File.join(member.root, "Gemfile.lock")
+        return [] unless File.file?(lockfile)
+
+        registry_lockfile_specs(lockfile).filter_map { |spec| diagnostic_for(spec) }
+      end
+
+      def registry_lockfile_specs(lockfile)
+        Kettle::Dev::LockfileReset.registry_gem_specs_from_source(File.read(lockfile))
+      end
+
+      # A message for an unpublished pin, or nil when the version is published
+      # or the registry could not be consulted.
+      def diagnostic_for(spec)
+        return nil unless unpublished?(spec)
+
+        "release lockfile pins #{spec.fetch(:name)} #{spec.fetch(:version)}, " \
+          "which is not published on #{spec.fetch(:remote)} " \
+          "(locally installed but unreleased; run a release-mode dependency update to re-resolve)"
+      end
+
+      def unpublished?(spec)
+        remote = spec.fetch(:remote).to_s
+        return false if remote.empty?
+
+        versions = published_versions(spec.fetch(:name), remote)
+        return false if versions.nil?
+
+        !versions.include?(version_without_platform(spec.fetch(:version)))
+      end
+
+      # A lockfile pins a native gem as "1.19.4-x86_64-linux-gnu" while the
+      # registry lists its versions as bare "1.19.4", one entry per platform.
+      # Comparing the pinned string directly would report every native gem as
+      # unpublished, so split off the platform first.
+      #
+      # Splitting on the first "-" matches Bundler::LockfileParser. It is safe
+      # because RubyGems version strings cannot themselves contain a hyphen
+      # (prerelease segments are dot-separated, e.g. "1.0.0.rc1"), so the first
+      # hyphen is always the version/platform boundary.
+      def version_without_platform(pinned)
+        pinned.to_s.split("-", 2).first
+      end
+
+      # nil when the registry could not be consulted. Memoized per process.
+      def published_versions(name, remote)
+        key = [name, remote]
+        return REGISTRY_MEMO[key] if REGISTRY_MEMO.key?(key)
+
+        REGISTRY_MEMO[key] = Kettle::Dev::RubyGemsVersions.published_version_numbers(name, source: remote)
+      end
+
+      def result(found)
+        clean = found.empty?
+        CommandResult.new(
+          member_name: member.name,
+          phase: PHASE,
+          command: ["internal", PHASE],
+          workdir: member.root,
+          status: clean ? 0 : 1,
+          success: clean,
+          stdout: found.join("\n"),
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: clean ? nil : "lockfile pins versions no registry serves"
+        )
+      end
+    end
+  end
+end
