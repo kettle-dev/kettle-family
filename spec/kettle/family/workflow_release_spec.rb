@@ -9,8 +9,24 @@ RSpec.describe Kettle::Family::Workflow do
   around do |example|
     Dir.mktmpdir("kettle-family-release-workflow-spec") do |dir|
       @tmpdir = dir
+      # The dependency floor gate runs PublishedVersionCheck, whose REGISTRY_MEMO
+      # is process-global. Examples stub the registry differently, so leaking
+      # answers between them would make ordering matter.
+      Kettle::Family::PublishedVersionCheck::REGISTRY_MEMO.clear
       example.run
+      Kettle::Family::PublishedVersionCheck::REGISTRY_MEMO.clear
     end
+  end
+
+  # PublishedVersionCheck reads kettle-release's on-disk release marker, which
+  # is real accumulated state on this machine (every release ever run here).
+  # Stubbing it keeps these specs hermetic; examples that exercise marker
+  # behavior override this with their own stub.
+  #
+  # `before` rather than inside the `around` hook, because RSpec only makes the
+  # mocking framework available to examples and before/after hooks.
+  before do
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?).and_return(false)
   end
 
   it "plans build releases with readiness and changelog checks" do
@@ -3105,8 +3121,10 @@ RSpec.describe Kettle::Family::Workflow do
     workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
 
     expect(memo.map(&:phase)).to eq(%w[
-      dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install commit_dependency_floor
+      dependency_floor dependency_floor_lockfiles dependency_floor_bundle_install published_version_check commit_dependency_floor
     ])
+    # The gate runs PublishedVersionCheck directly rather than through the
+    # runner, so the executed command sequence is unchanged.
     expect(phases).to eq(%w[dependency_floor_lockfiles dependency_floor_bundle_install commit_dependency_floor])
     expect(memo.last.command.join(" ")).to include("Gemfile.lock")
   end
@@ -3168,10 +3186,133 @@ RSpec.describe Kettle::Family::Workflow do
     memo = []
     workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
 
-    expect(memo.map(&:phase)).to eq(%w[dependency_floor_lockfiles dependency_floor_bundle_install commit_dependency_floor])
+    expect(memo.map(&:phase)).to eq(
+      %w[dependency_floor_lockfiles dependency_floor_bundle_install published_version_check commit_dependency_floor]
+    )
     expect(phases).to eq(%w[dependency_floor_lockfiles dependency_floor_bundle_install commit_dependency_floor])
     expect(memo.find { |result| result.phase == "dependency_floor_bundle_install" }.command).to eq(%w[bundle install])
     expect(memo.last.command.join(" ")).to include("Gemfile.lock")
+  end
+
+  # The reconcile commit records whatever the preceding bundle install
+  # resolved, and that resolution runs against the local gem dir. Without this
+  # gate a locally built unreleased version gets committed into the tracked
+  # lockfile, and the failure only surfaces much later as an opaque bundler
+  # error during release lockfile reset. Observed live: kettle-jem 7.1.28 ->
+  # 7.1.29 committed by a release run that then aborted at step 0.
+  it "blocks the dependency floor commit when the refreshed lockfile pins an unpublished version" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.2.3"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, jobs: 1)
+    executed = []
+    runner = lambda do |member:, phase:, command:, **_options|
+      executed << phase
+      if phase == "dependency_floor_lockfiles"
+        # Models the real failure: the released member (alpha) is correct and
+        # has its checksum, but a toolchain dependency that is NOT a family
+        # member got pinned at a locally installed unreleased version. The
+        # existing floor diagnostics only validate checksums for released
+        # members, so nothing else catches this.
+        File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+          GEM
+            remote: https://gem.coop/
+            specs:
+              alpha (1.2.3)
+              kettle-jem (9.9.9)
+
+          CHECKSUMS
+            alpha (1.2.3) sha256=abc123
+            kettle-jem (9.9.9) sha256=deadbeef
+        LOCK
+      end
+      Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, phase, "", 0.0, false, nil)
+    end
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |name, **_opts|
+      (name == "kettle-jem") ? ["7.1.28"] : ["1.2.3"]
+    end
+
+    memo = []
+    workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
+
+    expect(executed).not_to include("commit_dependency_floor")
+    expect(memo.map(&:phase)).to include("published_version_check")
+    gate = memo.find { |result| result.phase == "published_version_check" }
+    expect(gate).not_to be_ok
+    expect(gate.stdout).to include("kettle-jem 9.9.9")
+  end
+
+  it "commits the dependency floor when the refreshed lockfile pins only published versions" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.2.3"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, jobs: 1)
+    executed = []
+    runner = lambda do |member:, phase:, command:, **_options|
+      executed << phase
+      if phase == "dependency_floor_lockfiles"
+        File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+          GEM
+            remote: https://gem.coop/
+            specs:
+              alpha (1.2.3)
+
+          CHECKSUMS
+            alpha (1.2.3) sha256=abc123
+        LOCK
+      end
+      Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, phase, "", 0.0, false, nil)
+    end
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers)
+      .and_return(["1.2.3"])
+
+    memo = []
+    workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
+
+    expect(executed).to include("commit_dependency_floor")
+    expect(memo.find { |result| result.phase == "published_version_check" }).to be_ok
+  end
+
+  # A gem published during this very release must not be blocked: the on-disk
+  # marker kettle-release writes after confirming availability is consulted
+  # ahead of PublishedVersionCheck's process memo.
+  it "does not block a version the release marker says was just published" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+    beta = ready_member_with_gemspec("beta", dependencies: {"alpha" => ["~> 1.0", ">= 1.2.3"]})
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta], execute: true, publish: true, jobs: 1)
+    executed = []
+    runner = lambda do |member:, phase:, command:, **_options|
+      executed << phase
+      if phase == "dependency_floor_lockfiles"
+        File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
+          GEM
+            remote: https://gem.coop/
+            specs:
+              alpha (1.2.3)
+
+          CHECKSUMS
+            alpha (1.2.3) sha256=abc123
+        LOCK
+      end
+      Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, phase, "", 0.0, false, nil)
+    end
+    # Registry has not propagated the just-published version yet, but the
+    # marker says this machine released it, so the cache must be busted and the
+    # gate must not fire on a stale answer.
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?)
+      .with("alpha", "1.2.3").and_return(true)
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers)
+      .and_return(["1.2.3"])
+
+    memo = []
+    workflow.send(:append_dependency_floor_results, released_members: [alpha], dependent_members: [beta], runner: runner, memo: memo)
+
+    expect(executed).to include("commit_dependency_floor")
+    expect(memo.find { |result| result.phase == "published_version_check" }).to be_ok
   end
 
   it "stops dependency reconciliation when installing a refreshed bundle fails" do

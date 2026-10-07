@@ -2744,7 +2744,38 @@ module Kettle
         end
 
         reconciled_members = (floor_results.map(&:member_name) + lockfile_refresh_members.map { |member, _released_members| member.name }).uniq
-        commit_dependency_floor_changes(dependent_members: reconciled_members, runner: runner, memo: memo) if reconciled_members.any? && execute && commit
+        return unless reconciled_members.any? && execute && commit
+
+        return unless validate_dependency_floor_published_versions(member_names: reconciled_members, memo: memo)
+
+        commit_dependency_floor_changes(dependent_members: reconciled_members, runner: runner, memo: memo)
+      end
+
+      # Gates the "Reconcile family dependencies" commit on the lockfile it is
+      # about to record.
+      #
+      # The preceding bundle install resolves against the local gem dir, so it
+      # happily pins a locally built and installed version. Committing that
+      # produces a lockfile no isolated environment can resolve, and the failure
+      # surfaces much later as an opaque bundler error during release lockfile
+      # reset ("locked to kettle-jem (7.1.29) ... can no longer be found")
+      # rather than at the moment the bad pin was introduced. Observed live: a
+      # release run's own reconcile commit flipped kettle-jem 7.1.28 -> 7.1.29
+      # in the tracked Gemfile.lock and then aborted at step 0.
+      #
+      # Gems published during this very run are not a false positive, because
+      # PublishedVersionCheck consults kettle-release's on-disk release marker
+      # ahead of its process memo, and that marker is written only after the gem
+      # is confirmed available on the registry.
+      def validate_dependency_floor_published_versions(member_names:, memo:)
+        by_name = members.to_h { |member| [member.name, member] }
+        results = member_names.filter_map do |member_name|
+          member = by_name[member_name]
+          next unless member
+
+          PublishedVersionCheck.call(member: member).tap { |result| memo << result }
+        end
+        results.all?(&:ok?)
       end
 
       def dependent_members_depending_on(released_members:, dependent_members:)

@@ -16,6 +16,18 @@ RSpec.describe Kettle::Family::PublishedVersionCheck do
     end
   end
 
+  # The release marker is real on-disk state this machine accumulates from every
+  # release ever run here (74 entries at last count), and recently_released?
+  # reads it. Stubbing it keeps these specs hermetic instead of changing
+  # behavior depending on what happens to be marked locally. Examples that
+  # exercise the marker override this with their own stub.
+  #
+  # This is a `before` rather than part of the `around` hook because RSpec only
+  # makes the mocking framework available to examples and before/after hooks.
+  before do
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?).and_return(false)
+  end
+
   # A locally built and installed gem resolves during an ordinary
   # `bundle install` and lands in the lockfile as a normal GEM entry with a
   # valid checksum taken from the installed spec, so nothing about the lockfile
@@ -218,6 +230,94 @@ RSpec.describe Kettle::Family::PublishedVersionCheck do
 
     expect(described_class.call(member: member)).to be_ok
     expect(queries).to eq(2) # one per distinct gem, not per retry
+  end
+
+  # A release publishes a gem mid-run and then raises its dependents' floors to
+  # it. If the memo answered from a pre-publish query, the freshly released
+  # version would be reported unpublished and block a legitimate release. The
+  # on-disk marker kettle-release writes after publishing must win over the memo.
+  it "bypasses the memo when the release marker says that version was just published" do
+    member = member_at("alpha")
+    write_gem_lockfile(member, version: "1.1.0")
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?)
+      .with("demo-gem", "1.1.0").and_return(false, true)
+    published = [["1.0.0"], %w[1.0.0 1.1.0]]
+    queries = []
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |name, **opts|
+      queries << [name, opts[:source], opts[:version]]
+      published[queries.size - 1] || []
+    end
+
+    expect(described_class.call(member: member)).not_to be_ok # pre-publish
+    expect(described_class.call(member: member)).to be_ok # post-publish
+
+    expect(queries.size).to eq(2) # memo was not served the stale answer
+  end
+
+  it "passes the pinned version through to the registry query" do
+    member = member_at("alpha")
+    write_gem_lockfile(member, version: "2.3.4")
+    versions = []
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |_name, **opts|
+      versions << opts[:version]
+      %w[2.3.4]
+    end
+
+    described_class.call(member: member)
+
+    expect(versions).to eq(["2.3.4"])
+  end
+
+  # The marker records a bare version, so a platform-suffixed pin must be
+  # normalized before asking, or the marker would never match a native gem.
+  it "asks the marker with the platform suffix already stripped" do
+    member = member_at("alpha")
+    write_gem_lockfile(member, name: "nokogiri", version: "1.19.4-x86_64-linux-gnu")
+    hints = []
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?) do |name, version|
+      hints << [name, version]
+      false
+    end
+    stub_registry("nokogiri" => ["1.19.4"])
+
+    described_class.call(member: member)
+
+    expect(hints).to eq([["nokogiri", "1.19.4"]])
+  end
+
+  it "still answers from the memo when the marker says nothing was just published" do
+    member = member_at("alpha")
+    write_gem_lockfile(member, version: "1.0.0")
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?).and_return(false)
+    queries = 0
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do
+      queries += 1
+      ["1.0.0"]
+    end
+
+    3.times { described_class.call(member: member) }
+
+    expect(queries).to eq(1)
+  end
+
+  it "does not ask the marker when the pin has no version" do
+    member = member_at("alpha")
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?).and_raise("should not be called")
+    stub_registry("demo-gem" => ["1.0.0"])
+
+    check = described_class.new(member: member)
+
+    expect(check.send(:just_released?, "demo-gem", nil)).to be(false)
+    expect(check.send(:just_released?, "demo-gem", "")).to be(false)
+  end
+
+  it "treats a marker read failure as not just released" do
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?)
+      .and_raise(Errno::EACCES, "permission denied")
+
+    check = described_class.new(member: member_at("alpha"))
+
+    expect(check.send(:just_released?, "demo-gem", "1.0.0")).to be(false)
   end
 
   # A lockfile pins a native gem as "1.19.4-x86_64-linux-gnu" while the

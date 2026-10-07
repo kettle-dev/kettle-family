@@ -37,13 +37,23 @@ module Kettle
       #   * Family members share almost all their toolchain and sibling
       #     dependencies, so one member's lookups serve every later member.
       #     Without this, a 30-member release re-queries the same gems 30
-      #     times; the recently-released ones deliberately cache-bust through
-      #     the on-disk cache (Kettle::Dev::RubyGemsVersions), so they cost a
-      #     live request every time.
+      #     times.
       #   * A single command invocation should see one consistent snapshot of
       #     the registry. Re-querying per member could otherwise report a gem
       #     as unpublished for early members and published for later ones if it
       #     lands mid-run.
+      #
+      # The memo is subordinate to the on-disk release marker, never above it.
+      # kettle-release writes ~/.local/state/kettle-dev/rubygems-cache-bust.json
+      # after publishing, so the filesystem is the authority on what this
+      # machine just released. A gem published *during* the current run — say
+      # kettle-dev 3.1.8, released before its dependents' floors are raised to
+      # it — would otherwise be answered from a pre-publish memo entry and
+      # falsely reported unpublished, blocking a legitimate release. So
+      # #published_versions always consults the marker first and skips the memo
+      # when it says that exact gem+version was just released. Verified: a
+      # pre-publish memo entry yields 0 live queries without the marker check
+      # and reports the new version missing.
       #
       # nil is memoized too, so an unreachable registry is asked once rather
       # than once per pin. Lifetime is one process; nothing persists.
@@ -90,10 +100,11 @@ module Kettle
         remote = spec.fetch(:remote).to_s
         return false if remote.empty?
 
-        versions = published_versions(spec.fetch(:name), remote)
+        pinned = version_without_platform(spec.fetch(:version))
+        versions = published_versions(spec.fetch(:name), remote, pinned)
         return false if versions.nil?
 
-        !versions.include?(version_without_platform(spec.fetch(:version)))
+        !versions.include?(pinned)
       end
 
       # A lockfile pins a native gem as "1.19.4-x86_64-linux-gnu" while the
@@ -109,12 +120,28 @@ module Kettle
         pinned.to_s.split("-", 2).first
       end
 
-      # nil when the registry could not be consulted. Memoized per process.
-      def published_versions(name, remote)
-        key = [name, remote]
-        return REGISTRY_MEMO[key] if REGISTRY_MEMO.key?(key)
+      # nil when the registry could not be consulted. Memoized per process,
+      # except for gems the on-disk release marker says were just published —
+      # see REGISTRY_MEMO for why bypassing the memo there is required.
+      def published_versions(name, remote, version)
+        key = [name, remote, version]
+        unless just_released?(name, version)
+          return REGISTRY_MEMO[key] if REGISTRY_MEMO.key?(key)
+        end
 
-        REGISTRY_MEMO[key] = Kettle::Dev::RubyGemsVersions.published_version_numbers(name, source: remote)
+        REGISTRY_MEMO[key] = Kettle::Dev::RubyGemsVersions.published_version_numbers(
+          name,
+          source: remote,
+          version: version
+        )
+      end
+
+      def just_released?(name, version)
+        return false if version.to_s.empty?
+
+        Kettle::Dev::RubyGemsVersions.recently_released?(name, version)
+      rescue
+        false
       end
 
       def result(found)
