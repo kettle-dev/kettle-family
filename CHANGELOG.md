@@ -34,6 +34,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- [kc] clean-unreleased-batch: `kettle-family clean-unreleased` now removes every unreleased installed version across the family in a single `gem uninstall` invocation instead of one invocation per gem. This is not merely fewer processes: RubyGems' `uninstall_specific` builds a `Gem::DependencyList` from every requested gem and removes them via `strongly_connected_components.flatten.reverse`, a topological sort of the whole set that removes dependents before their dependencies. A per-gem invocation sees only one gem and cannot sort, so it raises `Gem::DependencyRemovalException` ("Uninstallation aborted due to dependent gem(s)") whenever another installed gem still depends on it. Because family members are interdependent and the release order is dependency order, per-gem removal failed on the foundations: observed live, removing tree_haver first failed while ast-merge still required it, and four repeated passes still left two gems installed. One batched invocation removed both. Versions are passed as `name:version` arguments since RubyGems rejects `--version` alongside multiple gems, and `--all` is deliberately omitted because with gem arguments it is redundant while with none it means `uninstall_all`, which would remove every gem in the gem home.
+
+- [kc] clean-unreleased-source-checkouts: `kettle-family clean-unreleased` no longer reports source checkouts as unreleased installed gems. Under `bundle exec`, bundler adds PATH and git sources to the load path, so `Gem::Specification.find_all_by_name` also returns specs whose `full_gem_path` points at a working copy rather than a gem home — for example tree_haver 7.1.10 resolving to `gems/tree_haver`. Those are not installed gems and `gem uninstall` cannot remove them, so the command reported work that could never succeed; after uninstalling all 31 genuinely installed unreleased gems in the structuredmerge family, it still listed all 31. Candidates are now filtered to specs under `Gem.path`.
+
 ### Security
 
 ## [1.3.5] - 2026-10-05
