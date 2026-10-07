@@ -20,12 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- [kc] published-version-check: `Kettle::Family::PublishedVersionCheck` detects lockfile pins that no registry serves — the signature of a locally built and installed gem leaking into a lockfile. Bundler resolves against the local gem dir, so an ordinary `bundle install` can pin such a version, and the entry it writes is a normal GEM-section line carrying a valid checksum taken from the installed spec, so nothing in the lockfile text distinguishes it and there is no offline marker either (installed specs look the same as fetched ones, and `Gem::Specification` has no `#remote`). Only asking the registry can tell. A pinned native gem is compared after splitting off its platform suffix, because a lockfile pins `nokogiri (1.19.4-x86_64-linux-gnu)` while the registry lists bare `1.19.4` once per platform; comparing the pinned string directly reported every native gem as unpublished, adding 10 false positives to one real lockfile. Prerelease versions are unaffected because they are dot-separated (`1.0.0.rc1`) and RubyGems version strings cannot contain a hyphen, so the first hyphen is always the version/platform boundary. Runs in `bup`/`bupb`/`update-bundler` before committing a lockfile update, and in release preflight, where a bad pin previously surfaced much later as an opaque bundler error during lockfile reset.
-
-- [kc] published-version-memo: The published-version check fails open: when a registry cannot be consulted the version counts as unverifiable rather than unpublished, so a registry outage cannot turn every family member into a false failure. Registry answers are memoized per process keyed by gem, remote and version, so members sharing toolchain and sibling dependencies query the registry once for the whole run rather than once each. The memo is subordinate to the on-disk release marker that `kettle-release` writes after confirming a gem is available: a gem published during the current run is always re-queried rather than answered from a pre-publish memo entry, which would otherwise report the just-published version as unpublished and block a legitimate release.
-
-- [kc] dependency-floor-published-version-gate: `kettle-family release` now gates the "Reconcile family dependencies" commit on the lockfile it is about to record. The preceding `bundle install` resolves against the local gem dir, so it can pin a locally built and installed version, and committing that produces a lockfile no isolated environment can resolve. The failure previously surfaced much later as an opaque bundler error during release lockfile reset ("Your bundle is locked to kettle-jem (7.1.29) ... but that version can no longer be found") rather than at the moment the bad pin was introduced; observed live, a release run's own reconcile commit flipped kettle-jem 7.1.28 to 7.1.29 in the tracked `Gemfile.lock` and then aborted at step 0. The existing floor diagnostics do not catch this, because they validate checksums only for released family members, while the pins that break resolution are typically toolchain dependencies that are not members at all and carry a valid checksum. Gems published during the same run are not blocked, since the check consults the on-disk release marker ahead of its process memo.
-
 ### Changed
 
 ### Deprecated
@@ -34,11 +28,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.3.6] - 2026-10-07
+
+- TAG: [v1.3.6][1.3.6t]
+- COVERAGE: 93.25% -- 6743/7231 lines in 38 files
+- BRANCH COVERAGE: 77.82% -- 2740/3521 branches in 38 files
+- 34.02% documented
+
+### Added
+
+- [kc] published-version-check: `Kettle::Family::PublishedVersionCheck` detects lockfile pins that no registry serves — the signature of a locally built and installed gem leaking into a lockfile. Bundler resolves against the local gem dir, so an ordinary `bundle install` can pin such a version, and the entry it writes is a normal GEM-section line carrying a valid checksum taken from the installed spec, so nothing in the lockfile text distinguishes it and there is no offline marker either (installed specs look the same as fetched ones, and `Gem::Specification` has no `#remote`). Only asking the registry can tell. A pinned native gem is compared after splitting off its platform suffix, because a lockfile pins `nokogiri (1.19.4-x86_64-linux-gnu)` while the registry lists bare `1.19.4` once per platform; comparing the pinned string directly reported every native gem as unpublished, adding 10 false positives to one real lockfile. Prerelease versions are unaffected because they are dot-separated (`1.0.0.rc1`) and RubyGems version strings cannot contain a hyphen, so the first hyphen is always the version/platform boundary. Runs in `bup`/`bupb`/`update-bundler` before committing a lockfile update, and in release preflight, where a bad pin previously surfaced much later as an opaque bundler error during lockfile reset.
+
+- [kc] published-version-memo: The published-version check fails open: when a registry cannot be consulted the version counts as unverifiable rather than unpublished, so a registry outage cannot turn every family member into a false failure. Registry answers are memoized per process keyed by gem, remote and version, so members sharing toolchain and sibling dependencies query the registry once for the whole run rather than once each. The memo is subordinate to the on-disk release marker that `kettle-release` writes after confirming a gem is available: a gem published during the current run is always re-queried rather than answered from a pre-publish memo entry, which would otherwise report the just-published version as unpublished and block a legitimate release.
+
+- [kc] dependency-floor-published-version-gate: `kettle-family release` now gates the "Reconcile family dependencies" commit on the lockfile it is about to record. The preceding `bundle install` resolves against the local gem dir, so it can pin a locally built and installed version, and committing that produces a lockfile no isolated environment can resolve. The failure previously surfaced much later as an opaque bundler error during release lockfile reset ("Your bundle is locked to kettle-jem (7.1.29) ... but that version can no longer be found") rather than at the moment the bad pin was introduced; observed live, a release run's own reconcile commit flipped kettle-jem 7.1.28 to 7.1.29 in the tracked `Gemfile.lock` and then aborted at step 0. The existing floor diagnostics do not catch this, because they validate checksums only for released family members, while the pins that break resolution are typically toolchain dependencies that are not members at all and carry a valid checksum. Gems published during the same run are not blocked, since the check consults the on-disk release marker ahead of its process memo.
+
+### Fixed
+
 - [kc] clean-unreleased-batch: `kettle-family clean-unreleased` now removes every unreleased installed version across the family in a single `gem uninstall` invocation instead of one invocation per gem. This is not merely fewer processes: RubyGems' `uninstall_specific` builds a `Gem::DependencyList` from every requested gem and removes them via `strongly_connected_components.flatten.reverse`, a topological sort of the whole set that removes dependents before their dependencies. A per-gem invocation sees only one gem and cannot sort, so it raises `Gem::DependencyRemovalException` ("Uninstallation aborted due to dependent gem(s)") whenever another installed gem still depends on it. Because family members are interdependent and the release order is dependency order, per-gem removal failed on the foundations: observed live, removing tree_haver first failed while ast-merge still required it, and four repeated passes still left two gems installed. One batched invocation removed both. Versions are passed as `name:version` arguments since RubyGems rejects `--version` alongside multiple gems, and `--all` is deliberately omitted because with gem arguments it is redundant while with none it means `uninstall_all`, which would remove every gem in the gem home.
 
 - [kc] clean-unreleased-source-checkouts: `kettle-family clean-unreleased` no longer reports source checkouts as unreleased installed gems. Under `bundle exec`, bundler adds PATH and git sources to the load path, so `Gem::Specification.find_all_by_name` also returns specs whose `full_gem_path` points at a working copy rather than a gem home — for example tree_haver 7.1.10 resolving to `gems/tree_haver`. Those are not installed gems and `gem uninstall` cannot remove them, so the command reported work that could never succeed; after uninstalling all 31 genuinely installed unreleased gems in the structuredmerge family, it still listed all 31. Candidates are now filtered to specs under `Gem.path`.
-
-### Security
 
 ## [1.3.5] - 2026-10-05
 
@@ -2894,7 +2905,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.5...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.6...HEAD
+[1.3.6]: https://github.com/kettle-dev/kettle-family/compare/v1.3.5...v1.3.6
+[1.3.6t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.6
 [1.3.5]: https://github.com/kettle-dev/kettle-family/compare/v1.3.4...v1.3.5
 [1.3.5t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.5
 [1.3.4]: https://github.com/kettle-dev/kettle-family/compare/v1.3.3...v1.3.4
