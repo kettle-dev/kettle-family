@@ -124,6 +124,38 @@
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump_release_pending</span><span class='tstring_end'>&quot;</span></span>
 <span class='rbrace'>}</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
       
+        <dt id="NON_POSITIONAL_DISPATCH_COMMANDS-constant" class="">NON_POSITIONAL_DISPATCH_COMMANDS =
+          <div class="docstring">
+  <div class="discussion">
+    <p>Commands whose member dispatch is not positional, so <code>--start-at</code> cannot<br />
+express “the members that still need work” for them.</p>
+
+<p>template groups members into dependency waves derived from gemspec<br />
+dependencies and test uses a concurrent work queue. In both, a failure only<br />
+sets a stop flag that prevents threads from popping further work: members<br />
+already in flight finish while later waves never run. The pending set is<br />
+therefore interleaved through the configured order rather than being a<br />
+suffix of it, so no –start-at value selects exactly that set.</p>
+
+<p>Measured on the kettle-dev family: nomono failed in template wave 1 and<br />
+left kettle-dev, kettle-changelog, kettle-family and kettle-soup-cover<br />
+pending at ordered positions 6, 8, 9 and 11, while kettle-drift at 7 and<br />
+kettle-wash at 10 had already succeeded. The pending positions were<br />
+[5, 7, 8, 10] against a required suffix of [9, 10, 11, 12].</p>
+
+<p>These commands ignore the configured <code>release.waves</code>, which only feed<br />
+display_members_for and so only affect release ordering.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
+        </dt>
+        <dd><pre class="code"><span class='qwords_beg'>%w[</span><span class='tstring_content'>template</span><span class='words_sep'> </span><span class='tstring_content'>test</span><span class='tstring_end'>]</span></span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
     </dl>
   
 
@@ -159,6 +191,29 @@
 
   
     <span class="summary_desc"><div class='inline'><p>Defined as a singleton method above the <code>private</code> keyword: a <code>private</code> instance modifier does not apply to <code>def self.</code> definitions.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#non_positional_dispatch%3F-class_method" title="non_positional_dispatch? (class method)">.<strong>non_positional_dispatch?</strong>(command)  &#x21d2; Boolean </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
 </div></span>
   
 </li>
@@ -205,6 +260,29 @@
 
   
     <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#validate_positional_start_at!-class_method" title="validate_positional_start_at! (class method)">.<strong>validate_positional_start_at!</strong>(command, start_at)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Rejects <code>--start-at</code> for commands whose dispatch is not positional, rather than letting it silently drop members.</p>
 </div></span>
   
 </li>
@@ -323,13 +401,13 @@
       <pre class="lines">
 
 
-48
-49
-50
-51</pre>
+85
+86
+87
+88</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 48</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 85</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>release_state_results:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
@@ -377,17 +455,17 @@ to release.</p>
       <pre class="lines">
 
 
-30
-31
-32
-33
-34
-35
-36
-37</pre>
+67
+68
+69
+70
+71
+72
+73
+74</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 30</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 67</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_branches_matching'>branches_matching</span><span class='lparen'>(</span><span class='id identifier rubyid_release_state_results'>release_state_results</span><span class='comma'>,</span> <span class='label'>member_name:</span><span class='comma'>,</span> <span class='label'>tokens:</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_keys'>keys</span> <span class='op'>=</span> <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_tokens'>tokens</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:to_s</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_filter_map'>filter_map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_token'>token</span><span class='op'>|</span> <span class='const'><span class='object_link'><a href="#STATUS_TOKEN_KEYS-constant" title="Kettle::Family::Selection::STATUS_TOKEN_KEYS (constant)">STATUS_TOKEN_KEYS</a></span></span><span class='lbracket'>[</span><span class='id identifier rubyid_token'>token</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
@@ -396,6 +474,59 @@ to release.</p>
   <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_release_state_results'>release_state_results</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_select'>select</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_result'>result</span><span class='op'>|</span>
     <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_member_name'>member_name</span> <span class='op'>==</span> <span class='id identifier rubyid_member_name'>member_name</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_keys'>keys</span><span class='period'>.</span><span class='id identifier rubyid_all?'>all?</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_key'>key</span><span class='op'>|</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_state'>state</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>==</span> <span class='kw'>true</span> <span class='rbrace'>}</span>
   <span class='kw'>end</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:branch</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_compact'>compact</span><span class='period'>.</span><span class='id identifier rubyid_uniq'>uniq</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="non_positional_dispatch?-class_method">
+  
+    .<strong>non_positional_dispatch?</strong>(command)  &#x21d2; <tt>Boolean</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+36
+37
+38</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 36</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_non_positional_dispatch?'>non_positional_dispatch?</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
+  <span class='const'><span class='object_link'><a href="#NON_POSITIONAL_DISPATCH_COMMANDS-constant" title="Kettle::Family::Selection::NON_POSITIONAL_DISPATCH_COMMANDS (constant)">NON_POSITIONAL_DISPATCH_COMMANDS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -440,12 +571,12 @@ to release.</p>
       <pre class="lines">
 
 
-20
-21
-22</pre>
+57
+58
+59</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 20</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 57</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_status_token?'>status_token?</span><span class='lparen'>(</span><span class='id identifier rubyid_value'>value</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="#STATUS_TOKEN_KEYS-constant" title="Kettle::Family::Selection::STATUS_TOKEN_KEYS (constant)">STATUS_TOKEN_KEYS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_key?'>key?</span><span class='lparen'>(</span><span class='id identifier rubyid_value'>value</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='rparen'>)</span>
@@ -470,15 +601,81 @@ to release.</p>
       <pre class="lines">
 
 
-16
-17
-18</pre>
+53
+54
+55</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 16</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 53</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_status_tokens'>status_tokens</span>
   <span class='const'><span class='object_link'><a href="#STATUS_TOKEN_KEYS-constant" title="Kettle::Family::Selection::STATUS_TOKEN_KEYS (constant)">STATUS_TOKEN_KEYS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_keys'>keys</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="validate_positional_start_at!-class_method">
+  
+    .<strong>validate_positional_start_at!</strong>(command, start_at)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Rejects <code>--start-at</code> for commands whose dispatch is not positional, rather<br />
+than letting it silently drop members. Mirrors the class-method validation<br />
+convention used by validate_release_state_only_filter! so callers in the CLI<br />
+do not have to know which commands are affected.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Raises:</p>
+<ul class="raise">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt><span class='object_link'><a href="Error.html" title="Kettle::Family::Error (class)">Error</a></span></tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+44
+45
+46
+47
+48
+49
+50
+51</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 44</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_validate_positional_start_at!'>validate_positional_start_at!</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='id identifier rubyid_start_at'>start_at</span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_start_at'>start_at</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span> <span class='op'>||</span> <span class='id identifier rubyid_start_at'>start_at</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+  <span class='kw'>return</span> <span class='kw'>unless</span> <span class='id identifier rubyid_non_positional_dispatch?'>non_positional_dispatch?</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
+
+  <span class='id identifier rubyid_raise'>raise</span> <span class='const'><span class='object_link'><a href="Error.html" title="Kettle::Family::Error (class)">Error</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>--start-at is not supported for </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_command'>command</span><span class='embexpr_end'>}</span><span class='tstring_content'>: members are dispatched in dependency </span><span class='tstring_end'>&quot;</span></span> \
+               <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>waves, so a positional resume would silently skip members that never ran. </span><span class='tstring_end'>&quot;</span></span> \
+               <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Use --only </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_start_at'>start_at</span><span class='embexpr_end'>}</span><span class='tstring_content'> (or the resume hint from the previous report) instead.</span><span class='tstring_end'>&quot;</span></span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -523,17 +720,17 @@ to release.</p>
       <pre class="lines">
 
 
-39
-40
-41
-42
-43
-44
-45
-46</pre>
+76
+77
+78
+79
+80
+81
+82
+83</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 39</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 76</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_validate_release_state_only_filter!'>validate_release_state_only_filter!</span><span class='lparen'>(</span><span class='id identifier rubyid_only'>only</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_names'>names</span> <span class='op'>=</span> <span class='id identifier rubyid_only'>only</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_split'>split</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>,</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:strip</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_reject'>reject</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:empty?</span><span class='rparen'>)</span>
@@ -592,18 +789,18 @@ to release.</p>
       <pre class="lines">
 
 
-53
-54
-55
-56
-57
-58
-59
-60
-61</pre>
+90
+91
+92
+93
+94
+95
+96
+97
+98</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 53</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/selection.rb', line 90</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_apply'>apply</span><span class='lparen'>(</span><span class='label'>only:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>exclude:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>start_at:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_selected'>selected</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
