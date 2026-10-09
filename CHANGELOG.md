@@ -22,6 +22,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+- Add a structured CommandResult#diagnostics channel carrying complete, machine-readable findings. stdout is a human summary truncated to its last 20 lines, so a JSON consumer parsing it to decide what to act on silently acted on an incomplete set: a real cross-family release reported 28 unpublished lockfile pins and the JSON carried only 20, losing 8 gems. PublishedVersionCheck now emits each pin as gem, version, remote, member, and lockfile data alongside its message.
+
+### Security
+
+## [1.3.7] - 2026-10-09
+
+- TAG: [v1.3.7][1.3.7t]
+- COVERAGE: 93.30% -- 6778/7265 lines in 38 files
+- BRANCH COVERAGE: 77.95% -- 2757/3537 branches in 38 files
+- 34.47% documented
+
+### Changed
+
 - Reject --start-at for template and test instead of silently dropping members. Those commands dispatch in dependency waves and a concurrent queue, so the set of members that still need work is not a suffix of the configured order and no positional value can select it. The flag now exits 1 with a message pointing at the equivalent --only selection. release is deliberately left accepting --start-at: it uses MEMBER@BRANCH to select a branch lane via release_target_branches, and its own resume hints already use --only rather than --start-at. Sequentially dispatched commands (lint, bup, check, docs, install, sync, push, pull, bump) keep positional --start-at, which is correct because they abort at the first failure so pending genuinely is a suffix.
 
 - [kc] kettle-jem/prepare: updated 5 project files:
@@ -31,10 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - code and tests (1)
   - other (1)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Fix clean-unreleased missing locally installed unreleased versions. Under `bundle exec`, every RubyGems enumeration API (find_all_by_name, stubs_for, Specification.all) reports only the versions the active bundle resolves, not everything installed in the gem home. An unreleased version that was built and installed but is not pinned by the lockfile was therefore invisible, so cleanup reported "no unreleased installed versions found" with outcome success while leaving the offender installed -- blind in exactly the state it exists to correct, since re-resolving the lockfile to released versions is what hides the offender. Installed versions are now read by scanning the specification directories under each Gem.path root, which sees every installed version regardless of bundle activation and still excludes PATH/git source checkouts. Verified against the kettle-dev family: the fix now surfaces 10 unreleased members (kettle-rb 0.1.16, kettle-test 2.0.24, token-resolver 2.0.13, and others) that the previous implementation reported as none, while correctly leaving the two released members (kettle-dev 3.1.8, kettle-family 1.3.6) alone.
@@ -42,8 +57,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fix clean-unreleased --execute reporting success when gem uninstall removes nothing. RubyGems exits 0 and prints "Gem 'name' is not installed" when the target is absent from GEM_HOME, so an exit-status check could not distinguish a completed cleanup from one that silently did nothing -- the same silent-success failure mode as the enumeration bug. The batch outcome is now verified by re-enumerating installed versions afterwards, and any survivor turns the result into a failure that names it. Investigated and deliberately not implemented: `gem uninstall -i <root>` is not a workaround for a gem home other than GEM_HOME, because it fails with the same "not installed in GEM_HOME" error even when the path equals GEM_HOME. That case already fails loudly with a non-zero exit rather than being reported as success.
 
 - Fix the resume hint for template and test silently dropping members that never ran. Those commands do not dispatch positionally: template groups members into dependency waves derived from gemspec dependencies, test uses a concurrent work queue, and in both a failure only sets a stop flag that prevents threads from popping further work -- members already in flight finish while later waves never run. The pending set is therefore interleaved through the configured order rather than being a suffix of it, so the emitted positional `--start-at <failed member>` dropped every pending member ordered ahead of the failure. Measured on the kettle-dev family: nomono failed in template wave 1 and left kettle-dev, kettle-changelog, kettle-family and kettle-soup-cover pending at ordered positions 6, 8, 9 and 11 while kettle-drift at 7 and kettle-wash at 10 had succeeded, so `--start-at nomono` resumed only nomono and token-resolver and reported outcome success having never templated the other four. Resume hints for these commands are now set-based, mirroring release: one `--only` hint per failure plus a combined `--only` hint naming every member that never ran. Sequentially dispatched commands keep positional `--start-at`, which remains correct because they abort at the first failure. A failed family-root phase still restarts the whole command, since it aborts before member dispatch. Note that template and test ignore the configured `release.waves`, which only affect release ordering.
-
-### Security
 
 ## [1.3.6] - 2026-10-07
 
@@ -2920,7 +2933,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.6...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.7...HEAD
+[1.3.7]: https://github.com/kettle-dev/kettle-family/compare/v1.3.6...v1.3.7
+[1.3.7t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.7
 [1.3.6]: https://github.com/kettle-dev/kettle-family/compare/v1.3.5...v1.3.6
 [1.3.6t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.6
 [1.3.5]: https://github.com/kettle-dev/kettle-family/compare/v1.3.4...v1.3.5
