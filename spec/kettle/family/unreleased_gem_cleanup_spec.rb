@@ -96,15 +96,32 @@ RSpec.describe Kettle::Family::UnreleasedGemCleanup do
     end
   end
 
+  # A runner double that behaves like a real `gem uninstall`: it removes the
+  # specification files from the fixture gem home. Cleanup re-enumerates after
+  # the batch to verify removal, so a double that only returns success would
+  # model a cleanup that removed nothing.
+  def runner_that_removes(gem_home, result: nil)
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(runner).to receive(:call) do |member:, phase:, command:|
+      command.each do |arg|
+        next unless arg.include?(":")
+
+        name, version = arg.split(":", 2)
+        FileUtils.rm_f(File.join(gem_home, "specifications", "#{name}-#{version}.gemspec"))
+      end
+      result || Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, "removed", "", 0.0, false, nil)
+    end
+    runner
+  end
+
   it "runs one gem uninstall for all unreleased installed candidates when executed" do
     Dir.mktmpdir do |home|
       alpha = member("alpha")
       write_installed(home, "alpha", "1.0.1")
       with_gem_homes([home])
       with_states([release_state("alpha", latest_released: "1.0.0")])
-      runner = instance_double(Kettle::Family::CommandRunner)
       expected = Kettle::Family::CommandResult.new("alpha", "clean_unreleased", %w[gem uninstall alpha], "/repo/alpha", 0, true, "", "", 0.0, false, nil)
-      allow(runner).to receive(:call).and_return(expected)
+      runner = runner_that_removes(home, result: expected)
 
       results = described_class.new(config: nil, members: [alpha], execute: true, runner: runner).results
 
@@ -134,10 +151,7 @@ RSpec.describe Kettle::Family::UnreleasedGemCleanup do
         release_state("alpha", latest_released: "1.0.0"),
         release_state("beta", latest_released: "2.0.0")
       ])
-      runner = instance_double(Kettle::Family::CommandRunner)
-      allow(runner).to receive(:call) do |member:, phase:, command:|
-        Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, "", "", 0.0, false, nil)
-      end
+      runner = runner_that_removes(home)
 
       described_class.new(config: nil, members: [alpha, beta], execute: true, runner: runner).results
 
@@ -281,9 +295,9 @@ RSpec.describe Kettle::Family::UnreleasedGemCleanup do
       write_installed(home, "alpha", "1.0.1")
       with_gem_homes([home])
       with_states([release_state("alpha", latest_released: "1.0.0")])
-      runner = instance_double(Kettle::Family::CommandRunner)
-      allow(runner).to receive(:call).and_return(
-        Kettle::Family::CommandResult.new("alpha", "clean_unreleased", %w[gem uninstall], "/repo/alpha", 0, true, "ok", "", 0.5, false, nil)
+      runner = runner_that_removes(
+        home,
+        result: Kettle::Family::CommandResult.new("alpha", "clean_unreleased", %w[gem uninstall], "/repo/alpha", 0, true, "ok", "", 0.5, false, nil)
       )
 
       result = described_class.new(config: nil, members: [member("alpha")], execute: true, runner: runner).results.first
@@ -311,6 +325,31 @@ RSpec.describe Kettle::Family::UnreleasedGemCleanup do
 
       expect(result).not_to be_ok
       expect(result.reason).to eq("batched gem uninstall including alpha 1.0.1 failed")
+    end
+  end
+
+  # `gem uninstall` exits 0 and prints "Gem 'name' is not installed" when it
+  # removes nothing, so a bare exit-status check reports success for a cleanup
+  # that never happened. Post-removal verification catches that instead of
+  # trusting the status, and names the version that survived.
+  it "fails when gem uninstall exits 0 but the version is still installed" do
+    Dir.mktmpdir do |home|
+      write_installed(home, "alpha", "1.0.1")
+      with_gem_homes([home])
+      with_states([release_state("alpha", latest_released: "1.0.0")])
+      runner = instance_double(Kettle::Family::CommandRunner)
+      allow(runner).to receive(:call).and_return(
+        Kettle::Family::CommandResult.new("alpha", "clean_unreleased", %w[gem uninstall], "/repo/alpha", 0, true, "Gem 'alpha' is not installed", "", 0.5, false, nil)
+      )
+
+      result = described_class.new(config: nil, members: [member("alpha")], execute: true, runner: runner).results.first
+
+      expect(result).not_to be_ok
+      # member_result deliberately restates the failure in per-member terms so a
+      # multi-member batch stays attributable; the verification detail rides in
+      # stderr, where it names exactly which version survived.
+      expect(result.reason).to eq("batched gem uninstall including alpha 1.0.1 failed")
+      expect(result.stderr).to include("still installed after gem uninstall: alpha 1.0.1")
     end
   end
 

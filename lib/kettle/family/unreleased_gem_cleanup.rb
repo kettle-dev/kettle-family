@@ -192,11 +192,40 @@ module Kettle
         # gem uninstall does not depend on the working directory, so the first
         # contributing member provides a real directory to execute in.
         host = contributors.first.fetch(:member)
-        outcome = execute ? runner.call(member: host, phase: PHASE, command: command) : dry_run_outcome(command)
+        outcome = execute ? verified_outcome(candidates, host, command) : dry_run_outcome(command)
 
         contributors.map do |entry|
           member_result(entry.fetch(:member), outcome, entry.fetch(:candidates))
         end
+      end
+
+      # `gem uninstall` exits 0 and prints "Gem 'name' is not installed" when it
+      # removes nothing, so the exit status alone cannot distinguish a completed
+      # cleanup from one that found the wrong gem home and silently did nothing.
+      # Reporting ok in that case is the same failure mode as the enumeration bug
+      # this class exists to prevent: a success verdict over work that never
+      # happened. The candidates are therefore re-enumerated after the batch, and
+      # any version still present turns the outcome into a failure that names it.
+      def verified_outcome(candidates, host, command)
+        outcome = runner.call(member: host, phase: PHASE, command: command)
+        return outcome unless outcome.success && !outcome.skipped
+
+        remaining = candidates.select { |name, version| installed_versions(name).include?(version) }
+        return outcome if remaining.empty?
+
+        CommandResult.new(
+          member_name: nil,
+          phase: PHASE,
+          command: command,
+          workdir: host.root,
+          status: outcome.status,
+          success: false,
+          stdout: outcome.stdout.to_s,
+          stderr: "#{outcome.stderr}still installed after gem uninstall: #{describe(remaining)}".strip,
+          elapsed_seconds: outcome.elapsed_seconds,
+          skipped: false,
+          reason: "gem uninstall reported success but #{describe(remaining)} remains installed"
+        )
       end
 
       def dry_run_outcome(command)
