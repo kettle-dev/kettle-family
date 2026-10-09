@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Fix clean-unreleased missing locally installed unreleased versions. Under `bundle exec`, every RubyGems enumeration API (find_all_by_name, stubs_for, Specification.all) reports only the versions the active bundle resolves, not everything installed in the gem home. An unreleased version that was built and installed but is not pinned by the lockfile was therefore invisible, so cleanup reported "no unreleased installed versions found" with outcome success while leaving the offender installed -- blind in exactly the state it exists to correct, since re-resolving the lockfile to released versions is what hides the offender. Installed versions are now read by scanning the specification directories under each Gem.path root, which sees every installed version regardless of bundle activation and still excludes PATH/git source checkouts. Verified against the kettle-dev family: the fix now surfaces 10 unreleased members (kettle-rb 0.1.16, kettle-test 2.0.24, token-resolver 2.0.13, and others) that the previous implementation reported as none, while correctly leaving the two released members (kettle-dev 3.1.8, kettle-family 1.3.6) alone.
+
 ### Security
 
 ## [1.3.6] - 2026-10-07

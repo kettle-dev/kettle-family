@@ -102,13 +102,14 @@ module Kettle
       # Installed versions newer than anything published, as [name, version] pairs.
       #
       # Only genuinely installed gems count. Under `bundle exec`, bundler adds
-      # PATH and git sources to the load path, so
-      # Gem::Specification.find_all_by_name also returns specs whose
-      # full_gem_path points at a source checkout rather than a gem home — e.g.
-      # tree_haver 7.1.10 resolving to gems/tree_haver. Those are not installed
-      # gems and `gem uninstall` cannot remove them, so treating them as
-      # candidates would report work that can never succeed. Filtering on
-      # Gem.path membership excludes them.
+      # PATH and git sources to the load path, so a source checkout can appear as
+      # a spec — e.g. tree_haver 7.1.10 resolving to gems/tree_haver rather than a
+      # gem home. That is not an installed gem and `gem uninstall` cannot remove
+      # it, so treating it as a candidate would report work that can never
+      # succeed, and once batched one such candidate would abort the whole
+      # removal. installed_versions therefore scans only specification
+      # directories under a Gem.path root, which excludes source checkouts by
+      # construction.
       def unreleased_candidates(member:, release_state:)
         return [] unless release_state&.ok?
 
@@ -130,21 +131,53 @@ module Kettle
         nil
       end
 
+      # Versions present in a gem home, oldest first.
+      #
+      # This scans the filesystem rather than asking RubyGems, because every
+      # RubyGems enumeration API is bundle-scoped: under `bundle exec`,
+      # find_all_by_name, stubs_for and Specification.all all report only the
+      # versions the active bundle resolves. An unreleased version installed in
+      # the gem home but not pinned by the lockfile is therefore invisible, which
+      # makes cleanup blind in exactly the state it exists to correct — once the
+      # lockfile re-resolves to released versions, the offenders it should remove
+      # stop being enumerated and the run reports "no unreleased installed
+      # versions found" with outcome success while leaving them installed.
+      # Observed live with kettle-rb: `gem list` showed 0.1.14, 0.1.15 and
+      # 0.1.16, while find_all_by_name under bundle exec returned only 0.1.15.
       def installed_versions(name)
-        Gem::Specification.find_all_by_name(name)
-          .select { |spec| installed_spec?(spec) }
-          .map(&:version)
-          .uniq
-          .sort
+        gem_home_specification_dirs.flat_map { |dir| installed_spec_versions_in(dir, name) }.uniq.sort
       end
 
-      def installed_spec?(spec)
-        path = spec.full_gem_path.to_s
-        return false if path.empty?
+      # Only specification directories under a Gem.path root are scanned. A PATH
+      # or git source checkout that bundler put on the load path is not in a gem
+      # home, so it stays excluded: `gem uninstall` cannot remove one, and one
+      # bogus candidate would abort the whole batch.
+      def gem_home_specification_dirs
+        Gem::Specification.dirs.select do |dir|
+          path = dir.to_s
+          !path.empty? && Gem.path.any? { |root| path.start_with?("#{root}#{File::SEPARATOR}") }
+        end
+      end
 
-        Gem.path.any? { |root| path.start_with?("#{root}#{File::SEPARATOR}") }
-      rescue
-        false
+      # Specifications are stored as `name-VERSION.gemspec`, or
+      # `name-VERSION-PLATFORM.gemspec` for a native gem. The version is the part
+      # before the first hyphen, which matches Gem::Specification#version and so
+      # excludes the platform exactly as the previous implementation did. A
+      # filename whose version part does not parse is skipped rather than guessed
+      # at, so a similarly named gem (name-extra) cannot become a candidate.
+      def installed_spec_versions_in(dir, name)
+        prefix = "#{name}-"
+        Dir.glob(File.join(dir, "#{prefix}*.gemspec")).filter_map do |file|
+          version_text = File.basename(file, ".gemspec").delete_prefix(prefix).split("-", 2).first.to_s
+          version = parse_version(version_text)
+          version unless version.nil?
+        end
+      end
+
+      def parse_version(text)
+        Gem::Version.new(text)
+      rescue ArgumentError, TypeError
+        nil
       end
 
       # Runs the batch once, then reports that one outcome against every member
