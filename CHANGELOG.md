@@ -24,6 +24,13 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Reject --start-at for template and test instead of silently dropping members. Those commands dispatch in dependency waves and a concurrent queue, so the set of members that still need work is not a suffix of the configured order and no positional value can select it. The flag now exits 1 with a message pointing at the equivalent --only selection. release is deliberately left accepting --start-at: it uses MEMBER@BRANCH to select a branch lane via release_target_branches, and its own resume hints already use --only rather than --start-at. Sequentially dispatched commands (lint, bup, check, docs, install, sync, push, pull, bump) keep positional --start-at, which is correct because they abort at the first failure so pending genuinely is a suffix.
 
+- [kc] kettle-jem/prepare: updated 5 project files:
+  - dependencies (5)
+
+- [kc] kettle-jem/template: updated 2 project files:
+  - code and tests (1)
+  - other (1)
+
 ### Deprecated
 
 ### Removed
