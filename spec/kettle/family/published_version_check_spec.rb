@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "json"
 require "tmpdir"
 
 RSpec.describe Kettle::Family::PublishedVersionCheck do
@@ -51,6 +52,25 @@ RSpec.describe Kettle::Family::PublishedVersionCheck do
     allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |name, **_opts|
       published_versions_by_name.fetch(name) { raise "unexpected registry query for #{name}" }
     end
+  end
+
+  # A lockfile pinning several gems at one version, for specs that need more
+  # findings than the stdout summary can carry.
+  def write_multi_gem_lockfile(member, names:, version:, remote: "https://gem.coop/")
+    specs = names.map { |name| "    #{name} (#{version})" }.join("\n")
+    dependencies = names.join("\n")
+    File.write(
+      File.join(member.root, "Gemfile.lock"),
+      <<~LOCK
+        GEM
+          remote: #{remote}
+          specs:
+        #{specs}
+
+        DEPENDENCIES
+        #{dependencies}
+      LOCK
+    )
   end
 
   it "reports a pinned version the registry does not serve" do
@@ -362,6 +382,61 @@ RSpec.describe Kettle::Family::PublishedVersionCheck do
     stub_registry("demo-gem" => ["1.0.0.rc1"])
 
     expect(described_class.call(member: member)).to be_ok
+  end
+
+  # The structured channel exists because stdout is a human summary truncated to
+  # its last 20 lines, so it cannot carry a complete finding set. A consumer that
+  # parsed stdout to decide what to uninstall would act on an incomplete set.
+  describe "structured diagnostics" do
+    it "reports the gem, version, and remote as data rather than prose" do
+      member = member_at("alpha")
+      write_gem_lockfile(member, name: "ast-merge", version: "7.1.10")
+      stub_registry("ast-merge" => %w[7.1.9])
+
+      diagnostic = described_class.call(member: member).diagnostics.fetch(0)
+
+      expect(diagnostic["kind"]).to eq("unpublished_lockfile_pin")
+      expect(diagnostic["gem"]).to eq("ast-merge")
+      expect(diagnostic["version"]).to eq("7.1.10")
+      expect(diagnostic["remote"]).to eq("https://gem.coop/")
+      expect(diagnostic["member"]).to eq("alpha")
+      expect(diagnostic["lockfile"]).to eq(File.join(member.root, "Gemfile.lock"))
+    end
+
+    it "carries a message matching the human-readable stdout line" do
+      member = member_at("alpha")
+      write_gem_lockfile(member, version: "9.9.9")
+      stub_registry("demo-gem" => %w[1.0.0])
+
+      result = described_class.call(member: member)
+
+      expect(result.diagnostics.map { |diagnostic| diagnostic["message"] }).to eq(result.stdout.lines.map(&:chomp))
+    end
+
+    it "is empty when every pinned version is published" do
+      member = member_at("alpha")
+      write_gem_lockfile(member, version: "1.1.0")
+      stub_registry("demo-gem" => %w[1.1.0])
+
+      expect(described_class.call(member: member).diagnostics).to be_empty
+    end
+
+    # The regression this guards: 28 unpublished pins in one member, which is what
+    # a real cross-family release produced. stdout keeps its last 20 lines, so
+    # parsing it loses 8 gems; the structured channel must lose none.
+    it "preserves every finding beyond the stdout summary limit" do
+      member = member_at("alpha")
+      names = (1..28).map { |index| "blocker-gem-#{index}" }
+      write_multi_gem_lockfile(member, names: names, version: "7.1.10")
+      stub_registry(names.to_h { |name| [name, %w[7.1.9]] })
+
+      result = described_class.call(member: member)
+      report = JSON.parse(JSON.generate(result.to_h))
+
+      expect(result.diagnostics.length).to eq(28)
+      expect(report["diagnostics"].map { |diagnostic| diagnostic["gem"] }).to match_array(names)
+      expect(report["stdout"].lines.length).to be < names.length
+    end
   end
 
   def member_at(name)

@@ -68,7 +68,8 @@ module Kettle
       end
 
       def call
-        result(diagnostics)
+        found = diagnostics
+        result(found)
       end
 
       private
@@ -86,13 +87,33 @@ module Kettle
         Kettle::Dev::LockfileReset.registry_gem_specs_from_source(File.read(lockfile))
       end
 
-      # A message for an unpublished pin, or nil when the version is published
-      # or the registry could not be consulted.
+      # A structured diagnostic for an unpublished pin, or nil when the version is
+      # published or the registry could not be consulted.
+      #
+      # The structured form is what machine consumers read; #message renders the
+      # human line. Keeping both here rather than formatting a string and later
+      # parsing it back out is what lets a consumer act on the complete set — see
+      # CommandResult#diagnostics for why the summarized stdout cannot be used.
       def diagnostic_for(spec)
         return nil unless unpublished?(spec)
 
-        "release lockfile pins #{spec.fetch(:name)} #{spec.fetch(:version)}, " \
-          "which is not published on #{spec.fetch(:remote)} " \
+        name = spec.fetch(:name).to_s
+        version = spec.fetch(:version).to_s
+        remote = spec.fetch(:remote).to_s
+        {
+          "kind" => "unpublished_lockfile_pin",
+          "gem" => name,
+          "version" => version,
+          "remote" => remote,
+          "member" => member.name,
+          "lockfile" => File.join(member.root, "Gemfile.lock"),
+          "message" => unpublished_message(name: name, version: version, remote: remote)
+        }
+      end
+
+      def unpublished_message(name:, version:, remote:)
+        "release lockfile pins #{name} #{version}, " \
+          "which is not published on #{remote} " \
           "(locally installed but unreleased; run a release-mode dependency update to re-resolve)"
       end
 
@@ -153,11 +174,12 @@ module Kettle
           workdir: member.root,
           status: clean ? 0 : 1,
           success: clean,
-          stdout: found.join("\n"),
+          stdout: found.map { |diagnostic| diagnostic.fetch("message") }.join("\n"),
           stderr: "",
           elapsed_seconds: 0.0,
           skipped: false,
-          reason: clean ? nil : "lockfile pins versions no registry serves"
+          reason: clean ? nil : "lockfile pins versions no registry serves",
+          diagnostics: found
         )
       end
     end
