@@ -13,6 +13,43 @@ module Kettle
         "bump" => "bump_release_pending"
       }.freeze
 
+      # Commands whose member dispatch is not positional, so `--start-at` cannot
+      # express "the members that still need work" for them.
+      #
+      # template groups members into dependency waves derived from gemspec
+      # dependencies and test uses a concurrent work queue. In both, a failure only
+      # sets a stop flag that prevents threads from popping further work: members
+      # already in flight finish while later waves never run. The pending set is
+      # therefore interleaved through the configured order rather than being a
+      # suffix of it, so no --start-at value selects exactly that set.
+      #
+      # Measured on the kettle-dev family: nomono failed in template wave 1 and
+      # left kettle-dev, kettle-changelog, kettle-family and kettle-soup-cover
+      # pending at ordered positions 6, 8, 9 and 11, while kettle-drift at 7 and
+      # kettle-wash at 10 had already succeeded. The pending positions were
+      # [5, 7, 8, 10] against a required suffix of [9, 10, 11, 12].
+      #
+      # These commands ignore the configured `release.waves`, which only feed
+      # display_members_for and so only affect release ordering.
+      NON_POSITIONAL_DISPATCH_COMMANDS = %w[template test].freeze
+
+      def self.non_positional_dispatch?(command)
+        NON_POSITIONAL_DISPATCH_COMMANDS.include?(command)
+      end
+
+      # Rejects `--start-at` for commands whose dispatch is not positional, rather
+      # than letting it silently drop members. Mirrors the class-method validation
+      # convention used by validate_release_state_only_filter! so callers in the CLI
+      # do not have to know which commands are affected.
+      def self.validate_positional_start_at!(command, start_at)
+        return if start_at.nil? || start_at.to_s.empty?
+        return unless non_positional_dispatch?(command)
+
+        raise Error, "--start-at is not supported for #{command}: members are dispatched in dependency " \
+                     "waves, so a positional resume would silently skip members that never ran. " \
+                     "Use --only #{start_at} (or the resume hint from the previous report) instead."
+      end
+
       def self.status_tokens
         STATUS_TOKEN_KEYS.keys
       end

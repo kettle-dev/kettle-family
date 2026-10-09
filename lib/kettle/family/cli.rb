@@ -715,6 +715,7 @@ module Kettle
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
         start_at = parse_start_at(options[:start_at])
+        Selection.validate_positional_start_at!(command, start_at.member)
         effective_only = default_only_filter(command: command, only: options[:only])
         discovery = Discovery.new(
           config: config,

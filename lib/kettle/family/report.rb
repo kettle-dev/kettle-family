@@ -711,24 +711,14 @@ module Kettle
         release_resume_hints
       end
 
-      # Commands whose member dispatch is not positional. They group members into
-      # dependency waves (template) or a concurrent work queue (test), and a
-      # failure only sets a stop flag that prevents threads from popping further
-      # work -- members already in flight still finish while later waves never
-      # run. The pending set is therefore interleaved through the configured
-      # order rather than being a suffix of it, so no --start-at value can express
-      # it. Measured on the kettle-dev family: nomono failed in template wave 1
-      # and left kettle-dev, kettle-changelog, kettle-family and kettle-soup-cover
-      # pending at ordered positions 6, 8, 9 and 11, while kettle-drift at 7 and
-      # kettle-wash at 10 had already succeeded. Resuming with the emitted
-      # `--start-at nomono` dropped all four and reported outcome success without
-      # ever templating them. Resume for these commands is set-based instead.
-      #
-      # Note that template and test ignore the configured `release.waves`
-      # entirely: those only feed display_members_for, which returns members
-      # unchanged for every command except release. template derives its waves
-      # from gemspec dependencies at runtime.
-      NON_POSITIONAL_DISPATCH_COMMANDS = %w[template test].freeze
+      # Commands whose member dispatch is not positional are defined once, on
+      # Selection, because that is also where --start-at is rejected for them.
+      # Report needs the same classification to emit a set-based resume hint
+      # instead of a positional one. See the documentation on
+      # Selection::NON_POSITIONAL_DISPATCH_COMMANDS for the measured evidence.
+      def non_positional_dispatch?
+        Selection.non_positional_dispatch?(command)
+      end
 
       def non_release_resume_hints
         return non_positional_resume_hints if non_positional_dispatch?
@@ -755,10 +745,6 @@ module Kettle
         return failed_hints if pending_names.empty?
 
         [*failed_hints, "kettle-family #{command} --only #{pending_names.join(",")}"]
-      end
-
-      def non_positional_dispatch?
-        NON_POSITIONAL_DISPATCH_COMMANDS.include?(command)
       end
 
       def release_resume_hints

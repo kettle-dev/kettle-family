@@ -216,6 +216,46 @@ RSpec.describe Kettle::Family::Selection do
     expect { selection.apply(start_at: "missing") }.to raise_error(Kettle::Family::Error, /unknown member/)
   end
 
+  # --start-at is positional, but template and test dispatch in dependency waves
+  # and a concurrent queue, so a positional resume silently drops members that
+  # never ran. Rejecting it points the operator at --only, which selects by name
+  # and re-derives wave grouping from the chosen subset.
+  describe ".validate_positional_start_at!" do
+    it "rejects start-at for wave-dispatched commands" do
+      %w[template test].each do |command|
+        expect {
+          described_class.validate_positional_start_at!(command, "nomono")
+        }.to raise_error(Kettle::Family::Error, /--start-at is not supported for #{command}/)
+      end
+    end
+
+    it "points at the equivalent --only selection" do
+      expect {
+        described_class.validate_positional_start_at!("template", "nomono")
+      }.to raise_error(Kettle::Family::Error, /Use --only nomono/)
+    end
+
+    it "allows start-at for sequentially dispatched commands" do
+      %w[lint bup check docs install sync push pull bump release].each do |command|
+        expect { described_class.validate_positional_start_at!(command, "beta") }.not_to raise_error
+      end
+    end
+
+    it "is a no-op without a start-at value" do
+      expect { described_class.validate_positional_start_at!("template", nil) }.not_to raise_error
+      expect { described_class.validate_positional_start_at!("template", "") }.not_to raise_error
+    end
+
+    it "classifies dispatch positionality from a single source of truth" do
+      expect(described_class.non_positional_dispatch?("template")).to be(true)
+      expect(described_class.non_positional_dispatch?("test")).to be(true)
+      expect(described_class.non_positional_dispatch?("lint")).to be(false)
+      # release uses configured waves but already resumes with --only, so it is
+      # not classified here and keeps its own release-specific hints.
+      expect(described_class.non_positional_dispatch?("release")).to be(false)
+    end
+  end
+
   it "rejects empty selections" do
     selection = described_class.new(members: [])
 
