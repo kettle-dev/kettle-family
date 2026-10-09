@@ -922,9 +922,141 @@ RSpec.describe Kettle::Family::Report do
     expect(summary.fetch("pending")).to eq([
       {"member" => "beta", "phase" => "template", "reason" => "not run after earlier failure"}
     ])
-    expect(summary.fetch("resume_hints")).to eq(["kettle-family template --start-at alpha"])
+    # template dispatches in dependency waves, so resume is set-based (--only)
+    # rather than positional (--start-at); see the pending-set spec below.
+    expect(summary.fetch("resume_hints")).to eq([
+      "kettle-family template --only alpha",
+      "kettle-family template --only beta"
+    ])
     expect(text).to include("  0/2 members ok")
     expect(text).to include("  0 files changed")
+  end
+
+  # The real kettle-dev failure that motivated set-based resume. template groups
+  # members into waves derived from gemspec dependencies (NOT the configured
+  # release.waves, which only affect release), runs each wave concurrently, and a
+  # failure merely sets a stop flag that prevents threads from popping further
+  # work. Members already in flight finish; later waves never run. So pending
+  # members are interleaved through the configured order, not a suffix of it.
+  #
+  # Measured: nomono failed in wave 1 while kettle-dev, kettle-changelog,
+  # kettle-family and kettle-soup-cover sat pending at ordered positions 6, 8, 9
+  # and 11 -- and kettle-drift (7) and kettle-wash (10) had already succeeded.
+  # `--start-at nomono` is positional, so it dropped all four and the resumed run
+  # reported outcome success having never templated them.
+  it "resumes wave-dispatched commands by name because pending is not a suffix" do
+    ordered = %w[kettle-paths kettle-rb kettle-ndjson kettle-gha-pins kettle-test
+      kettle-dev kettle-drift kettle-changelog kettle-family kettle-wash
+      kettle-soup-cover nomono token-resolver]
+    all = ordered.map { |name| member(name) }
+
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: all,
+      selected_members: all,
+      config_path: nil,
+      command: "template",
+      results: [
+        # Wave 1 members that completed before the stop flag took effect.
+        result("kettle-paths", phase: "template"),
+        result("kettle-rb", phase: "template"),
+        result("kettle-ndjson", phase: "template"),
+        result("kettle-gha-pins", phase: "template"),
+        result("kettle-test", phase: "template"),
+        result("kettle-drift", phase: "template"),
+        result("kettle-wash", phase: "template"),
+        result("token-resolver", phase: "template"),
+        result("nomono", phase: "prepare_template_dependencies", success: false, reason: "command failed")
+      ]
+    )
+
+    summary = report.to_h.fetch("summary")
+
+    # Pending members are ordered AHEAD of the failure, so they are not a suffix:
+    # no --start-at value can select them without also dropping finished work.
+    pending = summary.fetch("pending").map { |entry| entry.fetch("member") }
+    expect(pending).to eq(%w[kettle-dev kettle-changelog kettle-family kettle-soup-cover])
+    expect(pending.map { |name| ordered.index(name) }).to eq([5, 7, 8, 10])
+    expect(pending).not_to eq(ordered.last(pending.length))
+
+    expect(summary.fetch("resume_hints")).to eq([
+      "kettle-family template --only nomono",
+      "kettle-family template --only kettle-dev,kettle-changelog,kettle-family,kettle-soup-cover"
+    ])
+  end
+
+  # test shares template's concurrent stop-flag dispatch, so it must resume by
+  # name for the same reason.
+  it "resumes test by name rather than position" do
+    all = %w[alpha beta gamma].map { |name| member(name) }
+
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: all,
+      selected_members: all,
+      config_path: nil,
+      command: "test",
+      results: [
+        result("alpha", phase: "test"),
+        result("beta", phase: "test", success: false, reason: "1 example, 1 failure")
+      ]
+    )
+
+    summary = report.to_h.fetch("summary")
+
+    expect(summary.fetch("pending").map { |entry| entry.fetch("member") }).to eq(%w[gamma])
+    expect(summary.fetch("resume_hints")).to eq([
+      "kettle-family test --only beta",
+      "kettle-family test --only gamma"
+    ])
+  end
+
+  # Sequential commands abort at the first failure, so pending genuinely is a
+  # suffix and positional --start-at remains correct and cheaper to read.
+  it "keeps positional --start-at for sequentially dispatched commands" do
+    all = %w[alpha beta gamma].map { |name| member(name) }
+
+    %w[lint bup check docs install sync push pull].each do |command|
+      report = described_class.new(
+        family_name: "kettle-dev",
+        order_mode: "dependency",
+        members: all,
+        selected_members: all,
+        config_path: nil,
+        command: command,
+        results: [
+          result("alpha", phase: command),
+          result("beta", phase: command, success: false, reason: "command failed")
+        ]
+      )
+
+      summary = report.to_h.fetch("summary")
+
+      expect(summary.fetch("pending").map { |entry| entry.fetch("member") }).to eq(%w[gamma])
+      expect(summary.fetch("resume_hints")).to eq(["kettle-family #{command} --start-at beta"])
+    end
+  end
+
+  # A failed family-root phase aborts the whole run rather than one member, so it
+  # restarts the command outright even for wave-dispatched commands.
+  it "keeps the family-root restart hint for wave-dispatched commands" do
+    all = %w[alpha beta].map { |name| member(name) }
+
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: all,
+      selected_members: all,
+      config_path: nil,
+      command: "template",
+      results: [
+        result("alpha", phase: "family_root_bundle", success: false, reason: "command failed")
+      ]
+    )
+
+    expect(report.to_h.fetch("summary").fetch("resume_hints")).to eq(["kettle-family template"])
   end
 
   it "does not count dependency floor-only members as released in release summaries" do

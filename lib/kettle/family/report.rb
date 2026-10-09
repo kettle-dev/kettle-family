@@ -711,9 +711,54 @@ module Kettle
         release_resume_hints
       end
 
+      # Commands whose member dispatch is not positional. They group members into
+      # dependency waves (template) or a concurrent work queue (test), and a
+      # failure only sets a stop flag that prevents threads from popping further
+      # work -- members already in flight still finish while later waves never
+      # run. The pending set is therefore interleaved through the configured
+      # order rather than being a suffix of it, so no --start-at value can express
+      # it. Measured on the kettle-dev family: nomono failed in template wave 1
+      # and left kettle-dev, kettle-changelog, kettle-family and kettle-soup-cover
+      # pending at ordered positions 6, 8, 9 and 11, while kettle-drift at 7 and
+      # kettle-wash at 10 had already succeeded. Resuming with the emitted
+      # `--start-at nomono` dropped all four and reported outcome success without
+      # ever templating them. Resume for these commands is set-based instead.
+      #
+      # Note that template and test ignore the configured `release.waves`
+      # entirely: those only feed display_members_for, which returns members
+      # unchanged for every command except release. template derives its waves
+      # from gemspec dependencies at runtime.
+      NON_POSITIONAL_DISPATCH_COMMANDS = %w[template test].freeze
+
       def non_release_resume_hints
+        return non_positional_resume_hints if non_positional_dispatch?
+
         failed = results.find { |result| !result.ok? }
         failed ? [resume_hint_for(failed)] : []
+      end
+
+      # Mirrors release_resume_hints: one hint per failure, plus a single set-based
+      # hint naming every member that never ran. --only selects by name rather
+      # than position, so it resumes exactly the unfinished members regardless of
+      # how dispatch ordered them, and the wave grouping is re-derived from the
+      # selected subset.
+      #
+      # A family-root failure takes precedence and suppresses the set-based hint:
+      # that phase aborts the entire run before member dispatch, so every member
+      # needs the whole command re-run rather than a subset resumed by name.
+      def non_positional_resume_hints
+        root_failure = results.find { |result| !result.ok? && family_root_phase?(result.phase) }
+        return [resume_hint_for(root_failure)] if root_failure
+
+        failed_hints = visible_results.reject(&:ok?).filter_map { |result| resume_hint_for(result) }.uniq
+        pending_names = summary_pending.map { |entry| entry.fetch("member") }
+        return failed_hints if pending_names.empty?
+
+        [*failed_hints, "kettle-family #{command} --only #{pending_names.join(",")}"]
+      end
+
+      def non_positional_dispatch?
+        NON_POSITIONAL_DISPATCH_COMMANDS.include?(command)
       end
 
       def release_resume_hints
@@ -726,9 +771,16 @@ module Kettle
 
       def resume_hint_for(result)
         return release_resume_hint(result) if command == "release"
-        return "kettle-family #{command}" if result.phase.start_with?("family_root_") || result.phase == "commit_family_root_bundle_update"
+        return "kettle-family #{command}" if family_root_phase?(result.phase)
+        # A positional --start-at would silently drop pending members that are
+        # ordered ahead of this one, so wave-dispatched commands resume by name.
+        return "kettle-family #{command} --only #{result.member_name}" if non_positional_dispatch?
 
         "kettle-family #{command} --start-at #{result.member_name}"
+      end
+
+      def family_root_phase?(phase)
+        phase.to_s.start_with?("family_root_") || phase == "commit_family_root_bundle_update"
       end
 
       def release_resume_hint(result)
