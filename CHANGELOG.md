@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.9] - 2026-10-10
+
+- TAG: [v1.3.9][1.3.9t]
+- COVERAGE: 93.45% -- 7066/7561 lines in 43 files
+- BRANCH COVERAGE: 77.98% -- 2830/3629 branches in 43 files
+- 35.42% documented
+
+### Added
+
 - New `clean-blockers` command uninstalls locally installed gems, from any family, whose unreleased versions are pinned by members’ lockfiles. Unlike `clean-unreleased`, which can only remove a family sibling newer than its latest release, it removes cross-family offenders: a kettle-dev member blocked by unreleased StructuredMerge gems, or vice versa.
 
 - Add clean-installed: the deterministic inverse of install. Uninstalls each selected member's current source version (plus configured install local_dependencies, which install also covers) when that version is unreleased, including cached .gem files. The other two cleanups cannot see this pollution class: clean-unreleased derives candidates from release state and can miss versions it judges released, and clean-blockers only sees lockfile pins, so an installed-but-unpinned gem (observed: commonmarker-merge 7.1.10) survives and then breaks gem activation with a dangling exact pin once the rest of its series is removed. Release state comes from the same ReleaseStateCheck clean-unreleased uses; members at a released source version are left alone. Also extracts MemberLoader from LocalInstall so install and clean-installed construct members identically.
@@ -36,17 +55,11 @@ Please file a bug if you notice a violation of semantic versioning.
   - documentation (1)
   - other (1)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Add a structured CommandResult#diagnostics channel carrying complete, machine-readable findings. stdout is a human summary truncated to its last 20 lines, so a JSON consumer parsing it to decide what to act on silently acted on an incomplete set: a real cross-family release reported 28 unpublished lockfile pins and the JSON carried only 20, losing 8 gems. PublishedVersionCheck now emits each pin as gem, version, remote, member, and lockfile data alongside its message.
 
 - clean-blockers (and clean-unreleased, sharing GemUninstallSupport): two uninstall bugs fixed. The batched gem uninstall now retries once with --ignore-dependencies when RubyGems aborts on a dependent outside the batch (Gem::DependencyRemovalException), re-batching only what survived the abort; the dependency refusal previously left a partial cleanup reported as failure. And the cleanup now removes the cached .gem files as well as the installed specifications -- gem uninstall leaves cache/<name>-<version>.gem behind, and the next bundle install was reinstalling the same unreleased versions from that cache without touching the network, so the cleanup did not hold.
-
-### Security
 
 ## [1.3.7] - 2026-10-09
 
@@ -2949,7 +2962,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.7...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.9...HEAD
+[1.3.9]: https://github.com/kettle-dev/kettle-family/compare/v1.3.7...v1.3.9
+[1.3.9t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.9
 [1.3.7]: https://github.com/kettle-dev/kettle-family/compare/v1.3.6...v1.3.7
 [1.3.7t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.7
 [1.3.6]: https://github.com/kettle-dev/kettle-family/compare/v1.3.5...v1.3.6
