@@ -181,6 +181,98 @@ RSpec.describe Kettle::Family::BlockerCleanup do
         end
       end
     end
+
+    it "retries once with --ignore-dependencies when an out-of-batch dependent aborts the batch" do
+      Dir.mktmpdir do |home|
+        Dir.mktmpdir do |repo|
+          alpha = member("alpha", repo)
+          write_installed(home, "ast-crispr", "7.1.10")
+          write_installed(home, "tree_haver", "7.1.10")
+          with_gem_homes([home])
+          with_blockers("alpha" => [["ast-crispr", "7.1.10"], ["tree_haver", "7.1.10"]])
+
+          calls = []
+          runner = instance_double(Kettle::Family::CommandRunner)
+          allow(runner).to receive(:call) do |member:, phase:, command:|
+            calls << command
+            if command.include?("--ignore-dependencies")
+              # The retry completes the removal of whatever is still installed.
+              command.each do |arg|
+                next unless arg.include?(":")
+
+                name, version = arg.split(":", 2)
+                FileUtils.rm_f(File.join(home, "specifications", "#{name}-#{version}.gemspec"))
+              end
+              Kettle::Family::CommandResult.new(member.name, phase, command, member.root, 0, true, "removed", "", 0.0, false, nil)
+            else
+              # An installed gem outside the batch depends on a batch member:
+              # RubyGems aborts the batch, but only after removing part of it.
+              FileUtils.rm_f(File.join(home, "specifications", "ast-crispr-7.1.10.gemspec"))
+              Kettle::Family::CommandResult.new(
+                member.name, phase, command, member.root, 1, false, "",
+                "ERROR:  While executing gem ... (Gem::DependencyRemovalException)\nUninstallation aborted due to dependent gem(s)",
+                0.0, false, nil
+              )
+            end
+          end
+
+          results = described_class.new(members: [alpha], execute: true, runner: runner).results
+
+          expect(calls.length).to eq(2)
+          expect(calls.first).to eq(%w[gem uninstall ast-crispr:7.1.10 tree_haver:7.1.10 --executables])
+          # The retry re-batches only what survived the aborted first attempt.
+          expect(calls.last).to eq(%w[gem uninstall tree_haver:7.1.10 --executables --ignore-dependencies])
+          expect(results.last.success).to be(true)
+          expect(results.last.stderr).to include("retried with --ignore-dependencies")
+          expect(File.exist?(File.join(home, "specifications", "tree_haver-7.1.10.gemspec"))).to be(false)
+        end
+      end
+    end
+
+    it "does not retry failures that are not dependency refusals" do
+      Dir.mktmpdir do |home|
+        Dir.mktmpdir do |repo|
+          alpha = member("alpha", repo)
+          write_installed(home, "ast-crispr", "7.1.10")
+          with_gem_homes([home])
+          with_blockers("alpha" => [["ast-crispr", "7.1.10"]])
+
+          runner = instance_double(Kettle::Family::CommandRunner)
+          allow(runner).to receive(:call).and_return(
+            Kettle::Family::CommandResult.new(alpha.name, "clean_blockers", ["gem"], alpha.root, 1, false, "", "Errno::EACCES: permission denied", 0.0, false, nil)
+          )
+
+          results = described_class.new(members: [alpha], execute: true, runner: runner).results
+
+          expect(runner).to have_received(:call).once
+          expect(results.last.success).to be(false)
+        end
+      end
+    end
+
+    it "removes the cached .gem as well, so the next bundle install cannot resurrect the version" do
+      Dir.mktmpdir do |home|
+        Dir.mktmpdir do |repo|
+          alpha = member("alpha", repo)
+          write_installed(home, "ast-crispr", "7.1.10")
+          # `gem uninstall` leaves cache/<name>-<version>.gem behind, and bundler
+          # reinstalls from it without the network. Observed live: four gems
+          # uninstalled by this command were back after one bundle install.
+          cache_dir = File.join(home, "cache")
+          FileUtils.mkdir_p(cache_dir)
+          FileUtils.touch(File.join(cache_dir, "ast-crispr-7.1.10.gem"))
+          FileUtils.touch(File.join(cache_dir, "ast-crispr-7.1.10-x86_64-linux.gem"))
+          with_gem_homes([home])
+          with_blockers("alpha" => [["ast-crispr", "7.1.10"]])
+          runner = runner_that_removes(home)
+
+          results = described_class.new(members: [alpha], execute: true, runner: runner).results
+
+          expect(results.last.success).to be(true)
+          expect(Dir.glob(File.join(cache_dir, "ast-crispr-7.1.10*.gem"))).to be_empty
+        end
+      end
+    end
   end
 
   describe "PATH-mode lockfiles" do
@@ -323,7 +415,7 @@ RSpec.describe Kettle::Family::BlockerCleanup do
           expect(result.success).to be(false)
           expect(result.skipped).to be(false)
           expect(result.reason).to include("batched gem uninstall including ast-crispr 7.1.10 failed")
-          expect(result.stderr).to include("still installed after gem uninstall: ast-crispr 7.1.10")
+          expect(result.stderr).to include("still present after gem uninstall: ast-crispr 7.1.10")
         end
       end
     end

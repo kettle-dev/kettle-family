@@ -349,7 +349,7 @@ RSpec.describe Kettle::Family::UnreleasedGemCleanup do
       # multi-member batch stays attributable; the verification detail rides in
       # stderr, where it names exactly which version survived.
       expect(result.reason).to eq("batched gem uninstall including alpha 1.0.1 failed")
-      expect(result.stderr).to include("still installed after gem uninstall: alpha 1.0.1")
+      expect(result.stderr).to include("still present after gem uninstall: alpha 1.0.1")
     end
   end
 

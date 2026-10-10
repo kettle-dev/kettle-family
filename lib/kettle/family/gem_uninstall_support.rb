@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "fileutils"
+
 module Kettle
   module Family
     # Shared machinery for uninstalling locally installed gem versions.
@@ -16,8 +18,16 @@ module Kettle
     #
     # 1. Enumerating what is actually installed, by scanning gem homes rather
     #    than asking RubyGems.
-    # 2. Building ONE batched `gem uninstall` invocation rather than one per gem.
-    # 3. Verifying removal afterwards, because `gem uninstall` exits 0 when it
+    # 2. Building ONE batched `gem uninstall` invocation rather than one per gem,
+    #    and retrying once with `--ignore-dependencies` when the batch aborts on
+    #    a dependent that is not part of the batch.
+    # 3. Removing the cached .gem as well as the installed specification:
+    #    `gem uninstall` leaves cache/<name>-<version>.gem behind, and the next
+    #    `bundle install` reinstalls the same unreleased version from that cache
+    #    without touching the network -- observed live, four gems uninstalled by
+    #    clean-blockers were back after one bundle install. A cleanup that leaves
+    #    the cache intact does not hold.
+    # 4. Verifying removal afterwards, because `gem uninstall` exits 0 when it
     #    removes nothing.
     #
     # See +UnreleasedGemCleanup+'s class comment for the full reasoning behind
@@ -117,11 +127,17 @@ module Kettle
       # @return [CommandResult]
       def verified_uninstall_outcome(candidates:, host:, command:)
         outcome = runner.call(member: host, phase: uninstall_phase, command: command)
+        outcome = retry_uninstall_ignoring_dependencies(candidates: candidates, host: host, outcome: outcome)
         return outcome unless outcome.success && !outcome.skipped
 
-        remaining = candidates.select { |name, version| installed_versions(name).include?(version) }
-        return outcome if remaining.empty?
+        remove_cached_gem_files(candidates)
 
+        remaining = candidates.select { |name, version| installed_versions(name).include?(version) }
+        surviving_cache = candidates.flat_map { |name, version| surviving_cache_files(name, version) }
+        return outcome if remaining.empty? && surviving_cache.empty?
+
+        survivors = describe_gem_versions(remaining)
+        survivors = "#{survivors}, cached .gem left: #{surviving_cache.join(", ")}" unless surviving_cache.empty?
         CommandResult.new(
           member_name: nil,
           phase: uninstall_phase,
@@ -130,11 +146,31 @@ module Kettle
           status: outcome.status,
           success: false,
           stdout: outcome.stdout.to_s,
-          stderr: "#{outcome.stderr}still installed after gem uninstall: #{describe_gem_versions(remaining)}".strip,
+          stderr: "#{outcome.stderr}still present after gem uninstall: #{survivors}".strip,
           elapsed_seconds: outcome.elapsed_seconds,
           skipped: false,
-          reason: "gem uninstall reported success but #{describe_gem_versions(remaining)} remains installed"
+          reason: "gem uninstall reported success but #{survivors} remains"
         )
+      end
+
+      # Cached .gem files for +name+ at +version+ surviving in a gem home,
+      # including platform variants (name-version-x86_64-linux.gem).
+      #
+      # @return [Array<String>]
+      def surviving_cache_files(name, version)
+        Gem.path.flat_map do |root|
+          Dir.glob(File.join(root.to_s, "cache", "#{name}-#{version}{,*}.gem"))
+        end
+      end
+
+      # Removes the cached .gem files for the candidates. Direct filesystem
+      # removal, like #installed_versions: this is local state RubyGems owns
+      # only loosely, and there is no `gem` subcommand for pruning one cached
+      # version.
+      def remove_cached_gem_files(candidates)
+        candidates.flat_map { |name, version| surviving_cache_files(name, version) }.each do |path|
+          FileUtils.rm_f(path)
+        end
       end
 
       # The dry-run counterpart to #verified_uninstall_outcome: names the command
@@ -154,6 +190,49 @@ module Kettle
           elapsed_seconds: 0.0,
           skipped: true,
           reason: "dry-run; pass --execute to run"
+        )
+      end
+
+      # Retries a failed batch once with `--ignore-dependencies`.
+      #
+      # `gem uninstall` aborts the whole batch with Gem::DependencyRemovalException
+      # when an installed gem OUTSIDE the batch depends on one being removed
+      # (dependents inside the batch are handled by RubyGems topologically
+      # sorting the requested set). The candidates are unreleased development
+      # versions whose dependents are restored by the next `install` run, so the
+      # refusal protects nothing the cleanup must preserve -- but the abort may
+      # already have removed part of the batch, so the retry re-batches only
+      # what is still installed. The escalation is recorded in stderr so the
+      # weaker guarantee is visible rather than silent.
+      #
+      # @return [CommandResult] the retried outcome, or the original when no
+      #   retry applies
+      def retry_uninstall_ignoring_dependencies(candidates:, host:, outcome:)
+        return outcome if outcome.success || outcome.skipped
+        return outcome unless outcome.stderr.to_s.include?("Gem::DependencyRemovalException")
+
+        remaining = candidates.select { |name, version| installed_versions(name).include?(version) }
+        return outcome if remaining.empty?
+
+        command = batched_uninstall_command(remaining) + ["--ignore-dependencies"]
+        retried = runner.call(member: host, phase: uninstall_phase, command: command)
+        return retried unless retried.success
+
+        CommandResult.new(
+          member_name: nil,
+          phase: uninstall_phase,
+          command: command,
+          workdir: host.root,
+          status: retried.status,
+          success: true,
+          stdout: retried.stdout.to_s,
+          stderr: [
+            retried.stderr.to_s,
+            "initial batch aborted on an out-of-batch dependent (Gem::DependencyRemovalException); retried with --ignore-dependencies"
+          ].reject(&:empty?).join("\n"),
+          elapsed_seconds: outcome.elapsed_seconds + retried.elapsed_seconds,
+          skipped: false,
+          reason: retried.reason
         )
       end
 

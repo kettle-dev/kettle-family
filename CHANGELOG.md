@@ -40,6 +40,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Add a structured CommandResult#diagnostics channel carrying complete, machine-readable findings. stdout is a human summary truncated to its last 20 lines, so a JSON consumer parsing it to decide what to act on silently acted on an incomplete set: a real cross-family release reported 28 unpublished lockfile pins and the JSON carried only 20, losing 8 gems. PublishedVersionCheck now emits each pin as gem, version, remote, member, and lockfile data alongside its message.
 
+- clean-blockers (and clean-unreleased, sharing GemUninstallSupport): two uninstall bugs fixed. The batched gem uninstall now retries once with --ignore-dependencies when RubyGems aborts on a dependent outside the batch (Gem::DependencyRemovalException), re-batching only what survived the abort; the dependency refusal previously left a partial cleanup reported as failure. And the cleanup now removes the cached .gem files as well as the installed specifications -- gem uninstall leaves cache/<name>-<version>.gem behind, and the next bundle install was reinstalling the same unreleased versions from that cache without touching the network, so the cleanup did not hold.
+
 ### Security
 
 ## [1.3.7] - 2026-10-09
