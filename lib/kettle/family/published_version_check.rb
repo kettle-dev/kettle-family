@@ -31,6 +31,9 @@ module Kettle
       PHASE = "published_version_check"
 
       # Process-local memo of registry answers, keyed by [gem name, remote].
+      # Scope and the full cache map live at
+      # Kettle::Dev::RubyGemsVersions (kettle-dev) — this is layer 2, the
+      # snapshot memo.
       #
       # Two reasons this is safe and desirable:
       #

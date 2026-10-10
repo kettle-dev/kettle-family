@@ -47,6 +47,8 @@ module Kettle
         @members = members
         @execute = execute
         @runner = runner || CommandRunner.new(execute: execute)
+        # Layer 3 of the registry cache map (see Kettle::Dev::RubyGemsVersions):
+        # a run-level memo whose nil value is this command's fail-open sentinel.
         @published = {}
       end
 
