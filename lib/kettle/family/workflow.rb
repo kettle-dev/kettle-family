@@ -2858,6 +2858,22 @@ module Kettle
         return unless execute && publish
         return if dependent_members.empty?
 
+        # Bundler resolves from installed specs first, so an unreleased gem in
+        # the gem home silently wins resolution even under release env: an
+        # installed kettle-jem 7.1.29 pins ast-merge = 7.1.10 exactly, the
+        # registry only has 7.1.9, and the lock ends up checksumming the local
+        # build. Removing unpublished installs first makes the same `bundle
+        # lock` resolve against the registry (verified live: uninstalling
+        # kettle-jem 7.1.29 dropped the lock to 7.1.28 + ast-merge 7.1.9).
+        pre_clean = ReleasePreClean.new(
+          config: config,
+          members: dependent_members.map(&:first),
+          execute: execute,
+          runner: runner
+        ).results
+        memo.concat(pre_clean)
+        return if pre_clean.any? && !pre_clean.all?(&:ok?)
+
         dependent_members.each do |member, released_members|
           memo << wait_for_dependency_floor_lockfiles_result(member: member, released_members: released_members, runner: runner)
           break unless memo.last.ok?
