@@ -14,6 +14,7 @@ module Kettle
         bup
         bupb
         check
+        clean-blockers
         clean-unreleased
         docs
         gha-sha-pins

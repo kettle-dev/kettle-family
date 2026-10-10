@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- New `clean-blockers` command uninstalls locally installed gems, from any family, whose unreleased versions are pinned by members’ lockfiles. Unlike `clean-unreleased`, which can only remove a family sibling newer than its latest release, it removes cross-family offenders: a kettle-dev member blocked by unreleased StructuredMerge gems, or vice versa.
+
 ### Changed
 
 ### Deprecated

@@ -46,6 +46,8 @@ module Kettle
       PHASE = "clean_unreleased"
       UNKNOWN_RELEASED_MESSAGE = "latest released version is unknown; no cleanup attempted"
 
+      include GemUninstallSupport
+
       def initialize(config:, members:, execute: false, runner: nil)
         @config = config
         @members = members
@@ -78,6 +80,11 @@ module Kettle
       private
 
       attr_reader :config, :members, :execute, :runner
+
+      # GemUninstallSupport reports the uninstall under this command's phase.
+      def uninstall_phase
+        PHASE
+      end
 
       def release_state_by_member
         ReleaseStateCheck.new(config: config, members: members).results.each_with_object({}) do |result, memo|
@@ -131,117 +138,28 @@ module Kettle
         nil
       end
 
-      # Versions present in a gem home, oldest first.
-      #
-      # This scans the filesystem rather than asking RubyGems, because every
-      # RubyGems enumeration API is bundle-scoped: under `bundle exec`,
-      # find_all_by_name, stubs_for and Specification.all all report only the
-      # versions the active bundle resolves. An unreleased version installed in
-      # the gem home but not pinned by the lockfile is therefore invisible, which
-      # makes cleanup blind in exactly the state it exists to correct — once the
-      # lockfile re-resolves to released versions, the offenders it should remove
-      # stop being enumerated and the run reports "no unreleased installed
-      # versions found" with outcome success while leaving them installed.
-      # Observed live with kettle-rb: `gem list` showed 0.1.14, 0.1.15 and
-      # 0.1.16, while find_all_by_name under bundle exec returned only 0.1.15.
-      def installed_versions(name)
-        gem_home_specification_dirs.flat_map { |dir| installed_spec_versions_in(dir, name) }.uniq.sort
-      end
-
-      # Only specification directories under a Gem.path root are scanned. A PATH
-      # or git source checkout that bundler put on the load path is not in a gem
-      # home, so it stays excluded: `gem uninstall` cannot remove one, and one
-      # bogus candidate would abort the whole batch.
-      def gem_home_specification_dirs
-        Gem::Specification.dirs.select do |dir|
-          path = dir.to_s
-          !path.empty? && Gem.path.any? { |root| path.start_with?("#{root}#{File::SEPARATOR}") }
-        end
-      end
-
-      # Specifications are stored as `name-VERSION.gemspec`, or
-      # `name-VERSION-PLATFORM.gemspec` for a native gem. The version is the part
-      # before the first hyphen, which matches Gem::Specification#version and so
-      # excludes the platform exactly as the previous implementation did. A
-      # filename whose version part does not parse is skipped rather than guessed
-      # at, so a similarly named gem (name-extra) cannot become a candidate.
-      def installed_spec_versions_in(dir, name)
-        prefix = "#{name}-"
-        Dir.glob(File.join(dir, "#{prefix}*.gemspec")).filter_map do |file|
-          version_text = File.basename(file, ".gemspec").delete_prefix(prefix).split("-", 2).first.to_s
-          version = parse_version(version_text)
-          version unless version.nil?
-        end
-      end
-
-      def parse_version(text)
-        Gem::Version.new(text)
-      rescue ArgumentError, TypeError
-        nil
-      end
-
       # Runs the batch once, then reports that one outcome against every member
       # whose gems were in it. See the class comment for why per-member results
       # are required even though only one command runs.
+      #
+      # Installed-spec scanning, command construction and post-uninstall
+      # verification live in GemUninstallSupport so `clean-blockers` reuses the
+      # same machinery instead of reimplementing it.
       def batched_cleanup_results(contributors)
         candidates = contributors.flat_map { |entry| entry.fetch(:candidates) }
-        # Versions are given as `name:version` arguments rather than `--version`,
-        # which RubyGems rejects alongside multiple gems. See the class comment
-        # for why `--all` is omitted.
-        command = ["gem", "uninstall", *candidates.map { |name, version| "#{name}:#{version}" }, "--executables"]
+        command = batched_uninstall_command(candidates)
         # gem uninstall does not depend on the working directory, so the first
         # contributing member provides a real directory to execute in.
         host = contributors.first.fetch(:member)
-        outcome = execute ? verified_outcome(candidates, host, command) : dry_run_outcome(command)
+        outcome = if execute
+          verified_uninstall_outcome(candidates: candidates, host: host, command: command)
+        else
+          dry_run_uninstall_outcome(command: command)
+        end
 
         contributors.map do |entry|
           member_result(entry.fetch(:member), outcome, entry.fetch(:candidates))
         end
-      end
-
-      # `gem uninstall` exits 0 and prints "Gem 'name' is not installed" when it
-      # removes nothing, so the exit status alone cannot distinguish a completed
-      # cleanup from one that found the wrong gem home and silently did nothing.
-      # Reporting ok in that case is the same failure mode as the enumeration bug
-      # this class exists to prevent: a success verdict over work that never
-      # happened. The candidates are therefore re-enumerated after the batch, and
-      # any version still present turns the outcome into a failure that names it.
-      def verified_outcome(candidates, host, command)
-        outcome = runner.call(member: host, phase: PHASE, command: command)
-        return outcome unless outcome.success && !outcome.skipped
-
-        remaining = candidates.select { |name, version| installed_versions(name).include?(version) }
-        return outcome if remaining.empty?
-
-        CommandResult.new(
-          member_name: nil,
-          phase: PHASE,
-          command: command,
-          workdir: host.root,
-          status: outcome.status,
-          success: false,
-          stdout: outcome.stdout.to_s,
-          stderr: "#{outcome.stderr}still installed after gem uninstall: #{describe(remaining)}".strip,
-          elapsed_seconds: outcome.elapsed_seconds,
-          skipped: false,
-          reason: "gem uninstall reported success but #{describe(remaining)} remains installed"
-        )
-      end
-
-      def dry_run_outcome(command)
-        CommandResult.new(
-          member_name: nil,
-          phase: PHASE,
-          command: command,
-          workdir: nil,
-          status: nil,
-          success: true,
-          stdout: nil,
-          stderr: "",
-          elapsed_seconds: 0.0,
-          skipped: true,
-          reason: "dry-run; pass --execute to run"
-        )
       end
 
       # One member's view of the shared batch outcome. The command and exit state
@@ -249,7 +167,7 @@ module Kettle
       # so the per-member report stays readable and a failure names every gem
       # that member contributed.
       def member_result(member, outcome, own_candidates)
-        own = describe(own_candidates)
+        own = describe_gem_versions(own_candidates)
         outcome_reason = outcome.reason
         # Equivalent to `ok? ? reason : (own.empty? ? reason : batch message)`,
         # with outcome.reason read once instead of twice.
@@ -264,10 +182,6 @@ module Kettle
           copy.stdout = outcome.skipped ? "would uninstall #{own}" : outcome.stdout
           copy.reason = reason
         end
-      end
-
-      def describe(candidates)
-        candidates.map { |name, version| "#{name} #{version}" }.join(", ")
       end
 
       def informational_result(member:, message:)
