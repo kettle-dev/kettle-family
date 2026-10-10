@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - New `clean-blockers` command uninstalls locally installed gems, from any family, whose unreleased versions are pinned by members’ lockfiles. Unlike `clean-unreleased`, which can only remove a family sibling newer than its latest release, it removes cross-family offenders: a kettle-dev member blocked by unreleased StructuredMerge gems, or vice versa.
 
+- Add clean-installed: the deterministic inverse of install. Uninstalls each selected member's current source version (plus configured install local_dependencies, which install also covers) when that version is unreleased, including cached .gem files. The other two cleanups cannot see this pollution class: clean-unreleased derives candidates from release state and can miss versions it judges released, and clean-blockers only sees lockfile pins, so an installed-but-unpinned gem (observed: commonmarker-merge 7.1.10) survives and then breaks gem activation with a dangling exact pin once the rest of its series is removed. Release state comes from the same ReleaseStateCheck clean-unreleased uses; members at a released source version are left alone. Also extracts MemberLoader from LocalInstall so install and clean-installed construct members identically.
+
 ### Changed
 
 - [kc] kettle-jem/prepare: updated 2 project files:

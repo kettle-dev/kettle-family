@@ -11,7 +11,7 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[version mise-trust discover plan report metadata check clean-blockers clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
+      COMMANDS = %w[version mise-trust discover plan report metadata check clean-blockers clean-installed clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
       WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb update-bundler bex release push pull sync up].freeze
 
       command_name "kettle-family"
@@ -359,6 +359,12 @@ module Kettle
         description "Uninstall locally installed gems, from any family, whose unreleased versions are pinned by members' lockfiles."
       end
 
+      class CleanInstalled < WorkflowCommand
+        command_name "clean-installed"
+        usage "[options]"
+        description "Uninstall the exact gem versions install installs: each member's current source version, when unreleased, including cached .gem files."
+      end
+
       class ReconcileReleases < BaseCommand
         include ExecutionOptions
 
@@ -664,6 +670,7 @@ module Kettle
       command Metadata
       command Check
       command CleanBlockers
+      command CleanInstalled
       command CleanUnreleased
       command ReconcileReleases
       command Reset
@@ -878,6 +885,7 @@ module Kettle
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
         return clean_blockers_results(members: members, options: options) if command == "clean-blockers"
+        return clean_installed_results(config: config, members: members, options: options) if command == "clean-installed"
         return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members, jobs: options[:jobs], event_handler: state_event_handler) if command == "release-state"
@@ -1371,6 +1379,10 @@ module Kettle
 
       def clean_blockers_results(members:, options:)
         BlockerCleanup.new(members: members, execute: options[:execute]).results
+      end
+
+      def clean_installed_results(config:, members:, options:)
+        CleanInstalled.new(config: config, members: members, execute: options[:execute]).results
       end
 
       def reconcile_release_results(config:, members:, options:)

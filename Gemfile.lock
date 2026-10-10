@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    kettle-family (1.3.7)
+    kettle-family (1.3.8)
       command_kit (~> 0.6)
       command_kit-completion (~> 0.1)
       kettle-changelog (~> 1.0, >= 1.0.8)
@@ -21,80 +21,6 @@ PATH
       tsort (~> 0.2)
       tty-screen (~> 0.8)
       unicode-display_width (~> 2.6)
-      version_gem (~> 1.1, >= 1.1.15)
-
-PATH
-  remote: /var/home/pboling/src/my/kettle-dev/kettle-changelog
-  specs:
-    kettle-changelog (1.0.9)
-      ast-crispr-markdown-markly (~> 7.1, >= 7.1.1)
-      kettle-dev (~> 3.1, >= 3.1.8)
-      version_gem (~> 1.1, >= 1.1.15)
-
-PATH
-  remote: /var/home/pboling/src/my/kettle-dev/kettle-dev
-  specs:
-    kettle-dev (3.1.9)
-      emoji_regex (>= 15.0)
-      kettle-gha-pins (~> 0.3, >= 0.3.16)
-      kettle-ndjson (~> 0.1, >= 0.1.18)
-      kettle-rb (~> 0.1, >= 0.1.15)
-      kettle-test (~> 2.0, >= 2.0.23)
-      ruby-progressbar (~> 1.13)
-      tty-progressbar (~> 0.18)
-      version_gem (~> 1.1, >= 1.1.15)
-
-PATH
-  remote: /var/home/pboling/src/my/kettle-dev/kettle-drift
-  specs:
-    kettle-drift (1.0.16)
-      version_gem (~> 1.1, >= 1.1.15)
-
-PATH
-  remote: /var/home/pboling/src/my/kettle-dev/kettle-gha-pins
-  specs:
-    kettle-gha-pins (0.3.17)
-      ruby-progressbar (~> 1.13)
-      tty-progressbar (~> 0.18)
-      version_gem (~> 1.1, >= 1.1.15)
-
-PATH
-  remote: /var/home/pboling/src/my/kettle-dev/kettle-ndjson
-  specs:
-    kettle-ndjson (0.1.19)
-      version_gem (~> 1.1, >= 1.1.15)
-
-PATH
-  remote: /var/home/pboling/src/my/kettle-dev/kettle-rb
-  specs:
-    kettle-rb (0.1.16)
-
-PATH
-  remote: /var/home/pboling/src/my/kettle-dev/kettle-soup-cover
-  specs:
-    kettle-soup-cover (3.0.12)
-      kettle-wash (~> 0.1, >= 0.1.9)
-      simplecov (>= 1.0)
-      simplecov-cobertura (>= 4.0)
-      simplecov-console (~> 0.9, >= 0.9.5)
-      simplecov-rcov (~> 0.3, >= 0.3.7)
-      simplecov_lcov_formatter (~> 0.9, >= 0.9.0)
-      version_gem (~> 1.1, >= 1.1.15)
-
-PATH
-  remote: /var/home/pboling/src/my/kettle-dev/kettle-test
-  specs:
-    kettle-test (2.0.24)
-      appraisal2 (~> 3.0, >= 3.0.6)
-      backports (~> 3.0)
-      rspec (~> 3.0)
-      rspec-block_is_expected (~> 1.0, >= 1.0.6)
-      rspec-pending_for (~> 0.1, >= 0.1.20)
-      rspec-stubbed_env (~> 1.0, >= 1.0.6)
-      rspec_junit_formatter (~> 0.6)
-      silent_stream (~> 1.0, >= 1.0.12)
-      timecop-rspec (~> 1.0, >= 1.0.3)
-      turbo_tests2 (~> 3.1, >= 3.1.12)
       version_gem (~> 1.1, >= 1.1.15)
 
 PATH
@@ -222,7 +148,7 @@ PATH
       kettle-dev (~> 3.1, >= 3.1.8)
       kettle-gha-pins (~> 0.3, >= 0.3.14)
       kettle-ndjson (~> 0.1, >= 0.1.13)
-      kettle-rb (~> 0.1, >= 0.1.11)
+      kettle-rb (~> 0.1, >= 0.1.17)
       markdown-merge (~> 7.1, >= 7.1.8)
       markly-merge (~> 7.1, >= 7.1.8)
       parslet (~> 2.0)
@@ -473,6 +399,48 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     json (3.0.2)
+    kettle-changelog (1.0.9)
+      ast-crispr-markdown-markly (~> 7.1, >= 7.1.1)
+      kettle-dev (~> 3.1, >= 3.1.8)
+      version_gem (~> 1.1, >= 1.1.15)
+    kettle-dev (3.1.9)
+      emoji_regex (>= 15.0)
+      kettle-gha-pins (~> 0.3, >= 0.3.16)
+      kettle-ndjson (~> 0.1, >= 0.1.18)
+      kettle-rb (~> 0.1, >= 0.1.15)
+      kettle-test (~> 2.0, >= 2.0.23)
+      ruby-progressbar (~> 1.13)
+      tty-progressbar (~> 0.18)
+      version_gem (~> 1.1, >= 1.1.15)
+    kettle-drift (1.0.16)
+      version_gem (~> 1.1, >= 1.1.15)
+    kettle-gha-pins (0.3.17)
+      ruby-progressbar (~> 1.13)
+      tty-progressbar (~> 0.18)
+      version_gem (~> 1.1, >= 1.1.15)
+    kettle-ndjson (0.1.19)
+      version_gem (~> 1.1, >= 1.1.15)
+    kettle-rb (0.1.17)
+    kettle-soup-cover (3.0.12)
+      kettle-wash (~> 0.1, >= 0.1.9)
+      simplecov (>= 1.0)
+      simplecov-cobertura (>= 4.0)
+      simplecov-console (~> 0.9, >= 0.9.5)
+      simplecov-rcov (~> 0.3, >= 0.3.7)
+      simplecov_lcov_formatter (~> 0.9, >= 0.9.0)
+      version_gem (~> 1.1, >= 1.1.15)
+    kettle-test (2.0.24)
+      appraisal2 (~> 3.0, >= 3.0.6)
+      backports (~> 3.0)
+      rspec (~> 3.0)
+      rspec-block_is_expected (~> 1.0, >= 1.0.6)
+      rspec-pending_for (~> 0.1, >= 0.1.20)
+      rspec-stubbed_env (~> 1.0, >= 1.0.6)
+      rspec_junit_formatter (~> 0.6)
+      silent_stream (~> 1.0, >= 1.0.12)
+      timecop-rspec (~> 1.0, >= 1.0.3)
+      turbo_tests2 (~> 3.1, >= 3.1.12)
+      version_gem (~> 1.1, >= 1.1.15)
     kettle-wash (0.1.10)
       version_gem (~> 1.1, >= 1.1.15)
     kramdown (2.5.2)
@@ -493,8 +461,6 @@ GEM
     nokogiri (1.19.4-aarch64-linux-musl)
       racc (~> 1.4)
     nokogiri (1.19.4-arm64-darwin)
-      racc (~> 1.4)
-    nokogiri (1.19.4-x86_64-darwin)
       racc (~> 1.4)
     nokogiri (1.19.4-x86_64-linux-gnu)
       racc (~> 1.4)
@@ -719,8 +685,6 @@ GEM
       sorbet-runtime (~> 0.5)
     tree_sitter_language_pack (1.21.0-arm64-darwin)
       sorbet-runtime (~> 0.5)
-    tree_sitter_language_pack (1.21.0-x86_64-darwin)
-      sorbet-runtime (~> 0.5)
     tree_sitter_language_pack (1.21.0-x86_64-linux)
       sorbet-runtime (~> 0.5)
     tsort (0.2.0)
@@ -770,7 +734,7 @@ PLATFORMS
   aarch64-linux-gnu
   aarch64-linux-musl
   arm64-darwin
-  x86_64-darwin
+  x86_64-linux
   x86_64-linux-gnu
   x86_64-linux-musl
 
@@ -801,16 +765,10 @@ DEPENDENCIES
   html-merge!
   irb (~> 1.17)
   json-merge!
-  kettle-changelog!
-  kettle-dev!
-  kettle-drift!
+  kettle-drift (~> 1.0, >= 1.0.15)
   kettle-family!
-  kettle-gha-pins!
   kettle-jem!
-  kettle-ndjson!
-  kettle-rb!
-  kettle-soup-cover!
-  kettle-test!
+  kettle-soup-cover (~> 3.0, >= 3.0.11)
   kramdown (~> 2.5, >= 2.5.2)
   kramdown-parser-gfm (~> 1.1)
   markdown-merge!
@@ -916,11 +874,11 @@ CHECKSUMS
   kettle-changelog (1.0.9)
   kettle-dev (3.1.9)
   kettle-drift (1.0.16)
-  kettle-family (1.3.7)
+  kettle-family (1.3.8)
   kettle-gha-pins (0.3.17)
   kettle-jem (7.1.29)
   kettle-ndjson (0.1.19)
-  kettle-rb (0.1.16)
+  kettle-rb (0.1.17)
   kettle-soup-cover (3.0.12)
   kettle-test (2.0.24)
   kettle-wash (0.1.10)
@@ -937,7 +895,6 @@ CHECKSUMS
   nokogiri (1.19.4-aarch64-linux-gnu) sha256=1269fb644a6de405057a53dd5c762b1209b43ca7424f839454d3dbc677c31a8f
   nokogiri (1.19.4-aarch64-linux-musl) sha256=35c65b9ce72b3bb03207bdbe7067915019dc18c1b9b59139684bd6690fdd01af
   nokogiri (1.19.4-arm64-darwin) sha256=a46db9853286e6597b36ebc6953817d15acf3a299583eb3f89fdc6f91dd63527
-  nokogiri (1.19.4-x86_64-darwin) sha256=7fd17057d3e1f00e9954a74b3cd76595d3d4a5ef233b7ed9599047c204f70551
   nokogiri (1.19.4-x86_64-linux-gnu) sha256=379fae440b28915e3f19d752ce2dcf8465ed2b2fbefd2a7ca0dd497bc981a06a
   nokogiri (1.19.4-x86_64-linux-musl) sha256=17dfb7c1fa194ae02fbf7c51a7afc8d278045ab3fdacfd86f91d02d7b274470b
   nomono (1.1.7)
@@ -1030,7 +987,6 @@ CHECKSUMS
   tree_haver (7.1.10)
   tree_sitter_language_pack (1.21.0-aarch64-linux) sha256=4a95133b7b8de3e91f3461b94386ec006f9c6ba5302a718ff41dacab79024fb1
   tree_sitter_language_pack (1.21.0-arm64-darwin) sha256=c2d289d59bde21d918106b18f476ecd5838d44a694346875616f04c2b4cf09a2
-  tree_sitter_language_pack (1.21.0-x86_64-darwin) sha256=ed31954c9c073a089496d765b18077883ff5e2e1a66d3a983fe076f29fd656da
   tree_sitter_language_pack (1.21.0-x86_64-linux) sha256=9ab552dca45f343376ff409a2daf38ca32bda946f82162d2f4c3e57c9f2d8d03
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
   tty-cursor (0.7.1) sha256=79534185e6a777888d88628b14b6a1fdf5154a603f285f80b1753e1908e0bf48

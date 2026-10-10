@@ -673,6 +673,7 @@ RSpec.describe Kettle::Family::Workflow do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    stub_env("KETTLE_DEV_DEV" => "true")
 
     workflow = described_class.new(
       command: "bup",
@@ -696,6 +697,7 @@ RSpec.describe Kettle::Family::Workflow do
     YAML
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
+    stub_env("STRUCTUREDMERGE_DEV" => "false")
 
     workflow = described_class.new(command: "bup", config: config, members: [member])
 
@@ -710,6 +712,7 @@ RSpec.describe Kettle::Family::Workflow do
     YAML
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
+    stub_env("KETTLE_DEV_DEV" => "yes")
 
     workflow = described_class.new(
       command: "bupb",
