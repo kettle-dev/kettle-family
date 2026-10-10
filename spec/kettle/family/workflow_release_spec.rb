@@ -821,7 +821,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(diagnostics).to be_empty
   end
 
-  it "launches monorepo member releases from the family tool bundle" do
+  it "launches monorepo member releases from the member's own environment in release mode" do
     File.write(File.join(@tmpdir, "Gemfile"), "source \"https://gem.coop\"\n")
     monorepo_gems = File.join(@tmpdir, "gems")
     FileUtils.mkdir_p(monorepo_gems)
@@ -840,9 +840,9 @@ RSpec.describe Kettle::Family::Workflow do
     member = ready_member("alpha")
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
 
-    expect(workflow.send(:release_env_for_member, member)).to include(
-      "BUNDLE_GEMFILE" => File.join(@tmpdir, "Gemfile")
-    )
+    # Same release-mode policy as sibling repos: the family-root dev bundle
+    # pins unreleased monorepo members, so the child must not inherit it.
+    expect(workflow.send(:release_env_for_member, member)).not_to include("BUNDLE_GEMFILE")
   end
 
   it "uses the configured monorepo member root for the shared changelog suite by default" do
@@ -1684,16 +1684,18 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
-  it "launches sibling member releases from the family tool bundle" do
+  it "launches sibling member releases from the member's own environment in release mode" do
     File.write(File.join(@tmpdir, "Gemfile"), "source 'https://gem.coop'\n")
     write_release_config(publish_command: "bundle exec kettle-release")
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = ready_member("alpha")
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
 
-    expect(workflow.send(:release_env_for_member, member)).to include(
-      "BUNDLE_GEMFILE" => File.join(@tmpdir, "Gemfile")
-    )
+    # The family-root dev bundle resolves the family's own members, which are
+    # unreleased while any member is being released; handing it to the child
+    # makes the child's kettle-release unbootable. In release mode the child
+    # resolves kettle-release from its own released dependency instead.
+    expect(workflow.send(:release_env_for_member, member)).not_to include("BUNDLE_GEMFILE")
     expect(workflow.send(:release_bootstrap_execution_profile).name).to eq(:release_bootstrap)
   end
 

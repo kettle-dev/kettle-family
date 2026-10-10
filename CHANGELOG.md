@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- release: stop handing member kettle-release children the family-root dev bundle via BUNDLE_GEMFILE in release mode. That bundle resolves the family's own members, which are unreleased while any member is being released, so the child's kettle-release died booting (observed: "Could not find kettle-family-1.3.9 ... in locally installed gems" for every member). In release mode the child now resolves kettle-release from its own released dependency; local release tooling (KETTLE_DEV_DEV set) still pins the local kettle-dev bundle.
+
 ### Security
 
 ## [1.3.9] - 2026-10-10
