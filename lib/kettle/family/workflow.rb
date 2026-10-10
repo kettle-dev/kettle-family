@@ -577,6 +577,11 @@ module Kettle
         update_family_root_bundle(runner: runner, memo: results) if %w[bup bupb update-bundler].include?(command)
         return results unless results.all?(&:ok?)
 
+        if %w[bup bupb update-bundler].include?(command) && release_mode_bundle_update?
+          results.concat(release_pre_clean_results(runner: runner))
+          return results unless results.last.nil? || results.last.ok?
+        end
+
         if command == "gha-sha-pins" && execute
           return results unless review_gha_sha_pins(workflow_members, runner: runner, memo: results)
         end
@@ -4481,6 +4486,31 @@ module Kettle
         env = workflow_env.merge(release_lockfile_local_path_env_overrides)
         explicit_local_path_env_overrides.each { |key, value| env[key] = value }
         env
+      end
+
+      # A bundle update that will re-resolve against registries only (release
+      # mode): the family's own local-path switch resolves to disabled, so the
+      # update is expected to produce a publishable lockfile. Local-mode
+      # updates (deps-local, bup with the switch enabled) intentionally keep
+      # local pins and must not trigger the pre-clean.
+      def release_mode_bundle_update?
+        name = config.family_local_path_env_name
+        return false unless name
+
+        value = bundle_update_env.fetch(name, "")
+        !local_path_env_value?(value)
+      end
+
+      # Removes unreleased installed gems before a release-mode re-resolution
+      # pins them again. No-ops when everything installed is published; see
+      # ReleasePreClean for why this must run before, not after, the update.
+      def release_pre_clean_results(runner:)
+        ReleasePreClean.new(
+          config: config,
+          members: members,
+          execute: execute,
+          runner: runner
+        ).results
       end
 
       def explicit_local_path_env_overrides

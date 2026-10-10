@@ -114,7 +114,8 @@ module Kettle
       def unpublished_message(name:, version:, remote:)
         "release lockfile pins #{name} #{version}, " \
           "which is not published on #{remote} " \
-          "(locally installed but unreleased; run a release-mode dependency update to re-resolve)"
+          "(locally installed but unreleased; bup's release-mode pre-clean should have removed it — " \
+          "run `kettle-family clean-installed --execute`, then repeat the release-mode dependency update)"
       end
 
       def unpublished?(spec)
