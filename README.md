@@ -501,6 +501,8 @@ The command names below are available from `kettle-family --help`:
 | `metadata` | Print member version, Ruby floor, license, and author metadata. |
 | `check` | Run internal read-only readiness checks. |
 | `clean-unreleased` | Uninstall locally installed family versions newer than released versions. |
+| `clean-blockers` | Uninstall unreleased gems, from any family, pinned by members' lockfiles — removes cross-family blockers such as an unreleased StructuredMerge gem pinned by a kettle-dev member. |
+| `clean-installed` | The deterministic inverse of `install`: uninstall each selected member's current source version (plus configured install local dependencies) when that version is unreleased, including cached `.gem` files. Sees installed-but-unpinned pollution the other two cleanups miss. |
 | `reconcile-releases` | Create verified missing GitHub Releases for published tags. |
 | `reset` | Reset a managed family artifact, such as release lockfiles. |
 | `test` | Run the configured test workflow for each selected member. |
@@ -750,6 +752,22 @@ kettle-family clean-unreleased --execute
 The cleanup command compares installed local gem versions with each member's
 latest released version and uninstalls only versions newer than the release
 state reports.
+
+Two companion cleanups cover what `clean-unreleased` cannot see:
+
+```console
+kettle-family clean-blockers --execute
+kettle-family clean-installed --execute
+```
+
+`clean-blockers` targets cross-family pollution: unreleased gems from any
+family whose versions are pinned by members' lockfiles (e.g. an unreleased
+StructuredMerge gem pinned by a kettle-dev member). `clean-installed` is the
+deterministic inverse of `install` — it uninstalls a selected member's own
+current source version, and the local dependencies `install` covers, whenever
+that version is unreleased, including cached `.gem` files. Use it when an
+installed-but-unpinned version survives both other cleanups and breaks gem
+activation with a dangling exact pin.
 
 If a member lockfile has captured local sibling paths or checksum-less gem
 versions from local development, reset the selected members' `Gemfile.lock`
