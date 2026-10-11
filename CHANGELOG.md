@@ -28,11 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.3.10] - 2026-10-11
+
+- TAG: [v1.3.10][1.3.10t]
+- COVERAGE: 93.42% -- 7072/7570 lines in 43 files
+- BRANCH COVERAGE: 77.96% -- 2837/3639 branches in 43 files
+- 35.42% documented
+
+### Fixed
+
 - Family release now tapes every child and aggregate event
 
 - the release command creates a ReleaseStateEventTape in execute mode and relays command_step, github_release, secret_provider and ci_monitor child events plus aggregate github_release events into it with the member attached; the tape preserves origin event type instead of rewriting it to release_state
-
-### Security
 
 ## [1.3.9] - 2026-10-10
 
@@ -2968,7 +2977,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.9...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.10...HEAD
+[1.3.10]: https://github.com/kettle-dev/kettle-family/compare/v1.3.9...v1.3.10
+[1.3.10t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.10
 [1.3.9]: https://github.com/kettle-dev/kettle-family/compare/v1.3.7...v1.3.9
 [1.3.9t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.9
 [1.3.7]: https://github.com/kettle-dev/kettle-family/compare/v1.3.6...v1.3.7
