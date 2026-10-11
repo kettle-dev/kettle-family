@@ -5712,7 +5712,11 @@ module Kettle
         end
         return false unless spec&.source.is_a?(Bundler::Source::Path)
 
-        Paths.same?(spec.source.path.to_s, File.join(template_local_kettle_jem_root, "kettle-jem"))
+        # The lockfile records the source path as the member Gemfile saw it —
+        # often relative ("." for a gemspec-declared self), so expand it
+        # against the member root before comparing with the local checkout.
+        locked_path = File.expand_path(spec.source.path.to_s, member.root)
+        Paths.same?(locked_path, File.join(template_local_kettle_jem_root, "kettle-jem"))
       rescue Bundler::LockfileError, Errno::ENOENT
         false
       end
