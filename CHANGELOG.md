@@ -28,6 +28,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family release now tapes every child and aggregate event
+
+- the release command creates a ReleaseStateEventTape in execute mode and relays command_step, github_release, secret_provider and ci_monitor child events plus aggregate github_release events into it with the member attached; the tape preserves origin event type instead of rewriting it to release_state
+
 ### Security
 
 ## [1.3.9] - 2026-10-10
