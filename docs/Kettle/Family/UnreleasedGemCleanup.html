@@ -89,6 +89,11 @@
   
   
   
+  <dl>
+      <dt>Includes:</dt>
+      <dd><span class='object_link'><a href="GemUninstallSupport.html" title="Kettle::Family::GemUninstallSupport (module)">GemUninstallSupport</a></span></dd>
+  </dl>
+  
   
 
   
@@ -239,7 +244,14 @@ the form its own error message prescribes.</p>
     
   
 
-<div id="constructor_details" class="method_details_list">
+
+  
+  
+  
+  
+  
+  
+  <div id="constructor_details" class="method_details_list">
   <h2>Constructor Details</h2>
   
     <div class="method_details first">
@@ -267,15 +279,15 @@ the form its own error message prescribes.</p>
       <pre class="lines">
 
 
-49
-50
 51
 52
 53
-54</pre>
+54
+55
+56</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/unreleased_gem_cleanup.rb', line 49</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/unreleased_gem_cleanup.rb', line 51</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>runner:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
@@ -310,8 +322,6 @@ the form its own error message prescribes.</p>
       <pre class="lines">
 
 
-56
-57
 58
 59
 60
@@ -330,10 +340,12 @@ the form its own error message prescribes.</p>
 73
 74
 75
-76</pre>
+76
+77
+78</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/unreleased_gem_cleanup.rb', line 56</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/unreleased_gem_cleanup.rb', line 58</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='id identifier rubyid_release_states'>release_states</span> <span class='op'>=</span> <span class='id identifier rubyid_release_state_by_member'>release_state_by_member</span>
