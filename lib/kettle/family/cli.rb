@@ -781,6 +781,7 @@ module Kettle
           options: options,
           start_at: start_at,
           state_event_handler: state_event_handler,
+          state_event_tape: state_event_tape,
           release_state_results: release_state_results
         )
         state_progress&.finish
@@ -807,7 +808,7 @@ module Kettle
 
       StartAt = Struct.new(:member, :branch)
 
-      def command_results(command:, config:, members:, family_members:, options:, start_at:, state_event_handler: nil, release_state_results: nil)
+      def command_results(command:, config:, members:, family_members:, options:, start_at:, state_event_handler: nil, state_event_tape: nil, release_state_results: nil)
         if branch_target_command?(command, config)
           return branch_target_command_results(
             command: command,
@@ -839,6 +840,7 @@ module Kettle
           options: options,
           start_at: start_at,
           state_event_handler: state_event_handler,
+          state_event_tape: state_event_tape,
           release_state_results: release_state_results
         )
       end
@@ -879,7 +881,7 @@ module Kettle
         members
       end
 
-      def command_results_for_current_branch(command:, config:, members:, options:, family_members: members, start_at: StartAt.new(nil, nil), state_event_handler: nil, release_state_results: nil)
+      def command_results_for_current_branch(command:, config:, members:, options:, family_members: members, start_at: StartAt.new(nil, nil), state_event_handler: nil, state_event_tape: nil, release_state_results: nil)
         return mise_trust_results(config: config, members: members) if command == "mise-trust"
         return bump_version_results(config: config, members: members, options: options, phase: command, release_state_results: release_state_results) if %w[bump bump-version].include?(command)
         return add_changelog_results(members: members, options: options) if command == "add-changelog"
@@ -935,6 +937,7 @@ module Kettle
           bex_args: options[:bex_args],
           start_member: start_at.member,
           start_branch: start_at.branch,
+          event_tape: state_event_tape,
           release_state_results: release_state_results
         ).results
       end
@@ -1398,7 +1401,10 @@ module Kettle
       end
 
       def release_state_event_tape(command:, config:, options:)
-        return unless command == "release-state"
+        return unless %w[release release-state].include?(command)
+        # Release event taping requires execute mode: dry-run release has no
+        # child event streams to tape.
+        return if command == "release" && !options[:execute]
 
         tape = ReleaseStateEventTape.new(root: config.root, stream: options[:events] ? stdout : nil)
         stderr.puts("release state event tapes: #{tape.directory}") unless options[:events]

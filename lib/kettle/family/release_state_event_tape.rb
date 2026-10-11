@@ -21,12 +21,15 @@ module Kettle
       end
 
       def call(event)
+        # Preserve the origin event type when taping relayed child events
+        # (command_step, github_release, ...); emit our own type only for
+        # family-level state events that arrive without one.
         payload = event.merge(
           "event_version" => 1,
-          "type" => "release_state",
           "timestamp" => @wall_clock.call,
           "elapsed_seconds" => @clock.call - @started_at
         )
+        payload["type"] = "release_state" if payload["type"].to_s.empty?
         target = target_key(payload)
         @mutex.synchronize do
           @sequence_by_member[target] += 1

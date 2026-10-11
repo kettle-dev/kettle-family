@@ -108,7 +108,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, release_state_results: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, release_state_results: nil, event_tape: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -163,6 +163,7 @@ module Kettle
         @start_member = start_member
         @start_branch = start_branch
         @release_state_results = Array(release_state_results)
+        @event_tape = event_tape
         @template_commit_mutex = Mutex.new
       end
 
@@ -3919,6 +3920,7 @@ module Kettle
           event = parse_template_event(line)
           next false unless event && event["type"] == "github_release"
 
+          @event_tape&.call(event.merge("member" => member.name))
           emit_template_event_line(member, github_release_event_mark(event), github_release_event_label(event)) if progress_io
           true
         end
@@ -4842,6 +4844,8 @@ module Kettle
           if event["type"] == "command_step" && event["phase"] == "release" && event["status"] == "failed"
             state[:failed_step] = event["resume_step"].to_i if state && event["resume_step"].to_s.match?(/\A\d+\z/)
           end
+
+          @event_tape&.call(event.merge("member" => member.name))
 
           if progress_io
             if suppress_release_secret_provider_event?(event, progress: progress)

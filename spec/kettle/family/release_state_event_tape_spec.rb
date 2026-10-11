@@ -27,6 +27,18 @@ RSpec.describe Kettle::Family::ReleaseStateEventTape do
     end
   end
 
+  it "preserves an explicit event type instead of rewriting it to release_state" do
+    Dir.mktmpdir("kettle-family-state-events") do |root|
+      tape = described_class.new(root: root)
+
+      taped = tape.call("member" => "ast-template", "type" => "github_release", "action" => "create", "status" => "ok")
+
+      expect(taped).to include("type" => "github_release", "member" => "ast-template")
+      event = JSON.parse(File.read(File.join(tape.directory, "ast-template.ndjson")))
+      expect(event).to include("type" => "github_release", "action" => "create", "sequence" => 1)
+    end
+  end
+
   it "writes each branch target to a separate tape while preserving member and branch fields" do
     Dir.mktmpdir("kettle-family-state-events") do |root|
       tape = described_class.new(root: root)
