@@ -888,6 +888,21 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).phase).to eq("commit_bex")
   end
 
+  it "pins every bundler-update command in the workflow source to a stable version" do
+    # Regression guard for the recurring prerelease-Bundler infection: bare
+    # `bundle update --bundler` resolves to whatever RubyGems reports as
+    # newest (including betas), and Bundler then auto-installs that version
+    # everywhere the lockfile travels. Every bundler-update command string in
+    # this file must carry an explicit `--bundler=<version>` pin. Commands
+    # that interpolate the pin via pinned_bundler_update_command are exercised
+    # by the bupb/recovery specs above.
+    source = File.read(File.join(__dir__, "..", "..", "..", "lib", "kettle", "family", "workflow.rb"))
+    call_sites = source.scan(/%w\[[^\]]*update[^\]]*--bundler\](?!.*bundler=)/)
+    expect(call_sites).to be_empty,
+      "unpinned bundler-update command found in workflow.rb: #{call_sites.inspect}. " \
+      "Use pinned_bundler_update_command instead — a bare --bundler installs prereleases."
+  end
+
   it "skips bundle exec commits when commits are disabled" do
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")

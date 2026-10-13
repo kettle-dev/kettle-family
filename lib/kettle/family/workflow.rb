@@ -1350,7 +1350,7 @@ module Kettle
           memo << runner.call(
             member: member,
             phase: "template_bootstrap_dependencies",
-            command: %w[bundle update nomono --bundler],
+            command: pinned_bundler_update_command(extra_gems: %w[nomono]),
             env: template_bootstrap_dependency_env(member)
           )
           break memo unless memo.last.ok?
@@ -4263,6 +4263,16 @@ module Kettle
           .max
       end
 
+      # A bare `--bundler` lets RubyGems resolve the NEWEST bundler including
+      # prereleases — the recurring 4.1.0.betaN infection vector. Always pin
+      # the update to the newest installed stable bundler.
+      def pinned_bundler_update_command(extra_gems: [])
+        version = stable_bundler_version
+        raise Error, "bundler update requires an installed stable Bundler version" unless version
+
+        ["bundle", "_#{version}_", "update", *extra_gems, "--bundler=#{version}"]
+      end
+
       def bupb_appraisal_results(member:, runner:, memo:)
         return unless File.file?(File.join(member.root, "Appraisal.root.gemfile"))
 
@@ -5336,7 +5346,7 @@ module Kettle
           recovery = runner.call(
             member: member,
             phase: "#{phase}_bundler_recovery",
-            command: %w[bundle update --bundler],
+            command: pinned_bundler_update_command,
             env: env
           )
           memo << recovery
