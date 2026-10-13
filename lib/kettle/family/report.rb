@@ -297,8 +297,22 @@ module Kettle
       end
 
       def streamed_recommended_fix(result)
-        line = streamed_output_lines(result).reverse.find { |candidate| candidate.match?(/\ARecommended fix:\s+/) }
-        line&.sub(/\ARecommended fix:\s+/, "")
+        lines = streamed_output_lines(result)
+        line = lines.reverse.find { |candidate| candidate.match?(/\ARecommended fix:\s+/) }
+        return nil unless line
+
+        # Some hints are incomplete without their follow-up step (e.g. the
+        # kettle-gha-pins pin refresh must be committed + pushed BEFORE
+        # re-running the release resume command). Pull the continuation line
+        # immediately after the hint into the report so the operator sees the
+        # full ordered fix, not just the first command.
+        idx = lines.rindex(line)
+        follow_up = idx && lines[idx + 1]
+        if follow_up && follow_up.match?(/\A(?:Then|After|Next|Once)\b/)
+          "#{line.sub(/\ARecommended fix:\s+/, "")}; #{follow_up.sub(/\A\w+ /, "")}"
+        else
+          line.sub(/\ARecommended fix:\s+/, "")
+        end
       end
 
       def streamed_output_lines(result)
