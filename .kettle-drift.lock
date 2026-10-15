@@ -1,4 +1,31 @@
 {
+  "- code and tests (1)\n- documentation (1)": [
+    {
+      "file": "CHANGELOG.md",
+      "lines": [
+        30,
+        77
+      ]
+    }
+  ],
+  "- documentation (1)\n- other (1)": [
+    {
+      "file": "CHANGELOG.md",
+      "lines": [
+        31,
+        78
+      ]
+    }
+  ],
+  "- ruby: \"ruby\"\nappraisal: \"current\"": [
+    {
+      "file": ".github/workflows/current.yml",
+      "lines": [
+        41,
+        47
+      ]
+    }
+  ],
   "command_path = File.join(directory, name)\nif Gem.win_platform?": [
     {
       "file": "spec/spec_helper.rb",
@@ -12,8 +39,8 @@
     {
       "file": ".github/workflows/current.yml",
       "lines": [
-        43,
-        49
+        44,
+        50
       ]
     }
   ],
