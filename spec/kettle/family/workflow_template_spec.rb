@@ -1264,6 +1264,7 @@ RSpec.describe Kettle::Family::Workflow do
     write_nomono_bundle(alpha, floor: "1.1.0", locked: "1.1.0")
     write_nomono_bundle(beta, floor: "1.1.1", locked: "1.1.1")
     captured_calls = []
+    stub_stable_bundler_version
     stub_latest_nomono("1.1.1")
     stub_successful_runner(captured_calls)
 
@@ -1279,7 +1280,7 @@ RSpec.describe Kettle::Family::Workflow do
       ["beta", "template"]
     ])
     bundle_update = captured_calls.find do |call|
-      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == %w[bundle update nomono --bundler]
+      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == pinned_bundler_update_argv("nomono")
     end
     expect(bundle_update).not_to be_nil
     expect(bundle_update.fetch(:env)).to include(family_local_env_name => @tmpdir)
@@ -1296,6 +1297,7 @@ RSpec.describe Kettle::Family::Workflow do
     alpha = member_at("alpha")
     write_nomono_bundle(alpha, floor: "1.1.0", locked: "1.1.0")
     captured_calls = []
+    stub_stable_bundler_version
     stub_latest_nomono("1.1.1")
     stub_successful_runner(captured_calls)
 
@@ -1309,7 +1311,7 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     bundle_update = captured_calls.find do |call|
-      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == %w[bundle update nomono --bundler]
+      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == pinned_bundler_update_argv("nomono")
     end
     expect(bundle_update.fetch(:env)).to include(family_local_env_name => "/workspace/family")
     expect(bundle_update.fetch(:env)).to include("KETTLE_DEV_SKIP_CHANGELOG_DEPENDENCY" => "false")
@@ -1361,6 +1363,7 @@ RSpec.describe Kettle::Family::Workflow do
     alpha.dependencies = ["beta"]
     write_nomono_bundle(alpha, floor: "1.1.0", locked: "1.1.0")
     captured_calls = []
+    stub_stable_bundler_version
     stub_latest_nomono("1.1.1")
     stub_successful_runner(captured_calls)
 
@@ -1373,7 +1376,7 @@ RSpec.describe Kettle::Family::Workflow do
     ).results
 
     bundle_update = captured_calls.find do |call|
-      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == %w[bundle update nomono --bundler]
+      call.fetch(:phase) == "template_bootstrap_dependencies" && call.fetch(:command) == pinned_bundler_update_argv("nomono")
     end
     expect(bundle_update.fetch(:env)).to include(
       "EXAMPLE_FAMILY_DEV" => @tmpdir,
@@ -2175,6 +2178,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "updates Bundler and retries checksum-aware template normalization when required" do
+    stub_stable_bundler_version
     write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])
     config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
     config_hash.fetch("template")["normalize_lockfiles_command"] = %w[bundle lock --update --add-checksums]
@@ -2210,7 +2214,7 @@ RSpec.describe Kettle::Family::Workflow do
       "prepare_lockfiles_bundler_recovery",
       "prepare_lockfiles"
     )
-    expect(calls.fetch(1).fetch(:command)).to eq(%w[bundle update --bundler])
+    expect(calls.fetch(1).fetch(:command)).to eq(pinned_bundler_update_argv)
     expect(calls.fetch(2).fetch(:command)).to eq(%w[bundle lock --update])
     expect(calls.count { |call| call[:phase] == "prepare_lockfiles" }).to eq(2)
   end
@@ -2618,6 +2622,16 @@ RSpec.describe Kettle::Family::Workflow do
 
   def stub_latest_nomono(version)
     allow(Kettle::Dev::RubyGemsVersions).to receive(:fetch).with("nomono").and_return([{"number" => version}])
+  end
+
+  def stub_stable_bundler_version(version = "4.0.22")
+    allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: Gem::Version.new(version))})
+    allow(Gem::Specification).to receive(:find_all_by_name).and_call_original
+    allow(Gem::Specification).to receive(:find_all_by_name).with("bundler").and_return([double(version: Gem::Version.new(version))])
+  end
+
+  def pinned_bundler_update_argv(*extra_gems, version: "4.0.22")
+    ["bundle", "_#{version}_", "update", *extra_gems, "--bundler=#{version}"]
   end
 
   def stub_successful_runner(captured_calls)
