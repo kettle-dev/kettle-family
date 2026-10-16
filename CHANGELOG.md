@@ -34,6 +34,10 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - ReleasePreClean confirms a cache-missing installed version with a version-hinted registry re-fetch before uninstalling: the memoized TTL cache lags fast publishers (sorbet-runtime ships daily), and the stale read uninstalled a published, lockfile-pinned gem out from under the release tooling bundle; a fresh answer also updates the per-process memo
 
+- ReleasePreClean pre-uninstall confirmation uses the registry confirm read when the installed kettle-dev offers it (feature-detected, hint-bust otherwise): a cached absence never alone justifies an uninstall
+
+- Release flow probes the local tooling bundle after the pre-clean (bundle check, repaired via bundle install) so a pre-clean removal can no longer strand the bundle member children boot from; the committed lockfile, not the registry cache, is the authority on what the tooling bundle needs
+
 ### Security
 
 ## [1.3.11] - 2026-10-15

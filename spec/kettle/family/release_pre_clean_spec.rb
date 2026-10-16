@@ -31,7 +31,7 @@ RSpec.describe Kettle::Family::ReleasePreClean do
   end
 
   def with_registry(published)
-    allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |name|
+    allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |name, **|
       published[name]
     end
   end
@@ -119,7 +119,7 @@ RSpec.describe Kettle::Family::ReleasePreClean do
       # The memoized answer predates the installed 1.3.1 — the TTL'd registry
       # cache lags a gem that publishes daily — while the hinted re-fetch that
       # must precede a destructive uninstall sees it published.
-      allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |_name, version: nil|
+      allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |_name, version: nil, **|
         version.nil? ? ["1.2.0"] : ["1.2.0", "1.3.1"]
       end
       runner = runner_that_removes(home)

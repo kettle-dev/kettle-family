@@ -2812,6 +2812,68 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow).not_to have_received(:sleep)
   end
 
+  describe "release tool bundle probe" do
+    def probe_runner(outcomes, captured = nil)
+      runner = instance_double(Kettle::Family::CommandRunner)
+      allow(runner).to receive(:call) do |member:, phase:, command:, env: {}|
+        captured&.push([phase, command, env])
+        ok = outcomes.fetch(phase)
+        Kettle::Family::CommandResult.new(member.name, phase, command, member.root, ok ? 0 : 1, ok, "", "", 0.0, false, nil)
+      end
+      runner
+    end
+
+    it "does nothing when no local tooling gemfile is configured" do
+      write_release_config
+      stub_env("KETTLE_DEV_DEV" => "false")
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+      workflow = described_class.new(command: "release", config: config, members: [alpha])
+      runner = probe_runner({})
+
+      expect(workflow.send(:release_tool_bundle_probe, runner: runner, member: alpha)).to eq([])
+      expect(runner).not_to have_received(:call)
+    end
+
+    it "passes with bundle check alone when the tooling bundle is satisfied" do
+      write_release_config
+      tooling = File.join(@tmpdir, "kettle-dev")
+      FileUtils.mkdir_p(tooling)
+      File.write(File.join(tooling, "Gemfile"), "source \"https://gem.coop\"\n")
+      stub_env("KETTLE_DEV_DEV" => File.dirname(tooling))
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+      workflow = described_class.new(command: "release", config: config, members: [alpha])
+      runner = probe_runner("release_tool_bundle_check" => true)
+
+      results = workflow.send(:release_tool_bundle_probe, runner: runner, member: alpha)
+
+      expect(results.map(&:phase)).to eq(%w[release_tool_bundle_check])
+      expect(results).to all(be_ok)
+    end
+
+    it "repairs a stranded tooling bundle with bundle install" do
+      write_release_config
+      tooling = File.join(@tmpdir, "kettle-dev")
+      FileUtils.mkdir_p(tooling)
+      File.write(File.join(tooling, "Gemfile"), "source \"https://gem.coop\"\n")
+      stub_env("KETTLE_DEV_DEV" => File.dirname(tooling))
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+      workflow = described_class.new(command: "release", config: config, members: [alpha])
+      runner = probe_runner({"release_tool_bundle_check" => false, "release_tool_bundle_repair" => true}, captured = [])
+
+      results = workflow.send(:release_tool_bundle_probe, runner: runner, member: alpha)
+
+      expect(results.map(&:phase)).to eq(%w[release_tool_bundle_check release_tool_bundle_repair])
+      expect(results.last).to be_ok
+      expect(captured.map { |(_phase, command, env)| [command, env.fetch("BUNDLE_GEMFILE")] }).to eq([
+        [["bundle", "check"], File.join(tooling, "Gemfile")],
+        [["bundle", "install"], File.join(tooling, "Gemfile")]
+      ])
+    end
+  end
+
   it "does not reconcile published family dependencies for monorepo releases" do
     write_release_config
     File.write(

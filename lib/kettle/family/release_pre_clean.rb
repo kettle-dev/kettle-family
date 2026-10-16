@@ -117,15 +117,26 @@ module Kettle
 
       # A hinted re-fetch: the version hint busts the registry cache when the
       # cached answer predates the candidate, and a fresh answer replaces the
-      # memo so later members see it too.
+      # memo so later members see it too. When the installed kettle-dev offers
+      # the confirm read, use it: the destructive uninstall then never rests
+      # on a cached absence at all — the registry revalidates (cheaply, via
+      # validators), and an unconfirmable answer fails open to "keep".
       def fresh_published_versions(name, version)
-        set = fetch_published_set(name, version: version)
+        set = fetch_published_set(name, version: version, confirm: confirm_reads_supported?)
         @published[name] = set if set
         set
       end
 
-      def fetch_published_set(name, version: nil)
-        Kettle::Dev::RubyGemsVersions.published_version_numbers(name, version: version)&.then { |versions| Set.new(versions) }
+      def confirm_reads_supported?
+        Kettle::Dev::RubyGemsVersions.method(:published_version_numbers).parameters.any? { |kind, name| kind == :key && name == :confirm }
+      end
+
+      def fetch_published_set(name, version: nil, confirm: false)
+        if confirm
+          Kettle::Dev::RubyGemsVersions.published_version_numbers(name, version: version, confirm: true)&.then { |versions| Set.new(versions) }
+        else
+          Kettle::Dev::RubyGemsVersions.published_version_numbers(name, version: version)&.then { |versions| Set.new(versions) }
+        end
       end
 
       def synthetic_host

@@ -2855,6 +2855,23 @@ module Kettle
         stdout.lines.map(&:strip).reject(&:empty?).uniq
       end
 
+      # Boots the release tooling bundle the member children will use, when
+      # local kettle-dev tooling is in play, so a pre-clean removal that
+      # stranded it is repaired (bundle install restores the lockfile's pins)
+      # before the first child dies at boot. Returns the results to append:
+      # empty when no tooling gemfile is configured, otherwise the passing
+      # check or the repair attempt.
+      def release_tool_bundle_probe(runner:, member:)
+        gemfile = release_tool_gemfile_path(ENV.fetch("KETTLE_DEV_DEV", "").to_s.strip)
+        return [] unless gemfile && member
+
+        env = {"BUNDLE_GEMFILE" => gemfile}
+        check = runner.call(member: member, phase: "release_tool_bundle_check", command: ["bundle", "check"], env: env)
+        return [check] if check.ok?
+
+        [check, runner.call(member: member, phase: "release_tool_bundle_repair", command: ["bundle", "install"], env: env)]
+      end
+
       def append_dependency_floor_lockfile_results(dependent_members:, runner:, memo:)
         return unless execute && publish
         return if dependent_members.empty?
@@ -2874,6 +2891,17 @@ module Kettle
         ).results
         memo.concat(pre_clean)
         return if pre_clean.any? && !pre_clean.all?(&:ok?)
+
+        # The pre-clean uninstalls gems it judges unpublished, and a wrong or
+        # stale registry answer can strand the tooling bundle the member
+        # children boot from (BUNDLE_GEMFILE=<kettle-dev checkout>/Gemfile in
+        # local tooling mode). That bundle's committed lockfile — not the
+        # registry cache — is the authority on what it needs, so probe it
+        # after the destructive step and reinstall missing pins rather than
+        # letting the first release child discover the breakage at boot.
+        probe = release_tool_bundle_probe(runner: runner, member: dependent_members.map(&:first).first)
+        memo.concat(probe)
+        return if probe.any? && !probe.last.ok?
 
         dependent_members.each do |member, released_members|
           memo << wait_for_dependency_floor_lockfiles_result(member: member, released_members: released_members, runner: runner)
