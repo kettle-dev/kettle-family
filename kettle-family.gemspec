@@ -97,11 +97,11 @@ Gem::Specification.new do |spec|
   # Utilities
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
-  spec.add_dependency("kettle-changelog", "~> 1.0", ">= 1.0.10")             # ruby >= 4.0.0, release-state and family changelog commands
-  spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.13")                 # ruby >= 3.2.0
-  spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.17")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow
+  spec.add_dependency("kettle-changelog", "~> 1.0", ">= 1.0.12")             # ruby >= 4.0.0, release-state and family changelog commands
+  spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.14")                 # ruby >= 3.2.0
+  spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.18")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow
   spec.add_dependency("kettle-jem", "~> 7.1", ">= 7.1.28")                    # ruby >= 4.0.0, built-in templating workflow
-  spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.24")              # ruby >= 2.4
+  spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.27")              # ruby >= 2.4
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("tty-screen", "~> 0.8")                                  # ruby >= 2.0.0
   spec.add_dependency("unicode-display_width", "~> 2.6")                        # ruby >= 2.3.0
