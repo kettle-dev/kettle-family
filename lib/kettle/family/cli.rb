@@ -4,7 +4,6 @@ require "command_kit"
 require "command_kit/commands"
 require "fileutils"
 require "optparse"
-require "rubygems/dependency_installer"
 
 module Kettle
   module Family
@@ -476,14 +475,9 @@ module Kettle
         private
 
         def install_latest_stable_bundler
-          original_sources = Gem.sources.to_a
-          Gem.sources = ["https://rubygems.org"]
-          Gem::DependencyInstaller.new(domain: :remote, prerelease: false, document: []).install("bundler")
-          Gem::Specification.reset
+          Kettle::Dev::BundlerPinning.install_stable
         rescue => error
           raise Error, "could not install latest stable Bundler from RubyGems: #{error.message}"
-        ensure
-          Gem.sources = original_sources if original_sources
         end
       end
 

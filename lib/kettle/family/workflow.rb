@@ -4277,18 +4277,11 @@ module Kettle
         version = stable_bundler_version
         raise Error, "bupb requires an installed stable Bundler version" unless version
 
-        ["bundle", "_#{version}_", "update", "--bundler=#{version}"]
+        Kettle::Dev::BundlerPinning.update_argv(version)
       end
 
       def stable_bundler_version
-        active_version = Gem.loaded_specs["bundler"]&.version
-        Gem::Specification
-          .find_all_by_name("bundler")
-          .map(&:version)
-          .push(active_version)
-          .compact
-          .reject(&:prerelease?)
-          .max
+        Kettle::Dev::BundlerPinning.installed_stable
       end
 
       # A bare `--bundler` lets RubyGems resolve the NEWEST bundler including
@@ -4298,7 +4291,7 @@ module Kettle
         version = stable_bundler_version
         raise Error, "bundler update requires an installed stable Bundler version" unless version
 
-        ["bundle", "_#{version}_", "update", *extra_gems, "--bundler=#{version}"]
+        Kettle::Dev::BundlerPinning.update_argv(version, extra_gems: extra_gems)
       end
 
       def bupb_appraisal_results(member:, runner:, memo:)

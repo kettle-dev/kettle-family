@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Bundler maintenance now delegates to Kettle::Dev::BundlerPinning (kettle-dev >= 3.1.15): stable_bundler_version, bupb_command, pinned_bundler_update_command, and update-bundler share the single implementation with kettle-release instead of a divergent copy
+
 ### Deprecated
 
 ### Removed

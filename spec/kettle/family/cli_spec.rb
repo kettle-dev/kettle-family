@@ -391,7 +391,7 @@ RSpec.describe Kettle::Family::CLI do
     write_gem("alpha")
     out = StringIO.new
 
-    expect(Gem::DependencyInstaller).not_to receive(:new)
+    expect(Kettle::Dev::BundlerPinning).not_to receive(:install_stable)
     status = described_class.call(["update-bundler", "--root", @tmpdir, "--json"], out: out, err: StringIO.new)
 
     expect(status).to eq(0)
@@ -400,22 +400,20 @@ RSpec.describe Kettle::Family::CLI do
     expect(report.fetch("results").first.fetch("phase")).to eq("update-bundler")
   end
 
-  it "installs Bundler from RubyGems without enabling prereleases" do
-    installer = instance_double(Gem::DependencyInstaller)
-    original_sources = Gem.sources.to_a
+  it "delegates the Bundler install to Kettle::Dev::BundlerPinning" do
     command = described_class::UpdateBundler.new(stdout: StringIO.new, stderr: StringIO.new)
 
-    allow(Gem::DependencyInstaller).to receive(:new)
-      .with(domain: :remote, prerelease: false, document: [])
-      .and_return(installer)
-    allow(installer).to receive(:install).with("bundler")
+    expect(Kettle::Dev::BundlerPinning).to receive(:install_stable).with(no_args)
 
     command.send(:install_latest_stable_bundler)
+  end
 
-    expect(Gem::DependencyInstaller).to have_received(:new)
-      .with(domain: :remote, prerelease: false, document: [])
-    expect(installer).to have_received(:install).with("bundler")
-    expect(Gem.sources.to_a).to eq(original_sources)
+  it "wraps an install failure in a family Error" do
+    command = described_class::UpdateBundler.new(stdout: StringIO.new, stderr: StringIO.new)
+    allow(Kettle::Dev::BundlerPinning).to receive(:install_stable).and_raise(StandardError, "boom")
+
+    expect { command.send(:install_latest_stable_bundler) }
+      .to raise_error(Kettle::Family::Error, /could not install latest stable Bundler.*boom/)
   end
 
   it "plans bundle exec commands with bex" do
