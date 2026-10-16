@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- stub_stable_bundler_version now also stubs Gem::Specification.find_all_by_name("bundler"): the helper only stubbed loaded_specs, so stable_bundler_version fell through to the newest bundler installed on the runner and the bupb specs failed on CI images carrying a newer bundler (4.0.23) than local dev (4.0.22)
+
 ### Security
 
 ## [1.3.12] - 2026-10-16
