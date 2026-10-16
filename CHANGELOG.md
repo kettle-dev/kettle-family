@@ -22,6 +22,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.11] - 2026-10-15
+
+- TAG: [v1.3.11][1.3.11t]
+- COVERAGE: 93.43% -- 7082/7580 lines in 43 files
+- BRANCH COVERAGE: 77.90% -- 2838/3643 branches in 43 files
+- 35.42% documented
+
+### Changed
+
 - [kc] kettle-jem/prepare: updated 8 project files:
   - configuration (1)
   - dependencies (7)
@@ -32,13 +49,11 @@ Please file a bug if you notice a violation of semantic versioning.
   - other (1)
   - workflows (8)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
-### Security
+- Pin every bundler-update spawn to the installed stable bundler: template_bootstrap_dependencies and the lockfile-reset bundler_recovery now go through pinned_bundler_update_command (bundle _<stable>_ update --bundler=<stable>), closing the recurring prerelease-Bundler infection vector
+
+- Surface follow-up steps in streamed recommended-fix hints: merge an immediately-following Then/After/Next/Once continuation line into the reported fix so the console shows the full ordered remediation
 
 ## [1.3.10] - 2026-10-11
 
@@ -2987,7 +3002,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.10...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.11...HEAD
+[1.3.11]: https://github.com/kettle-dev/kettle-family/compare/v1.3.10...v1.3.11
+[1.3.11t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.11
 [1.3.10]: https://github.com/kettle-dev/kettle-family/compare/v1.3.9...v1.3.10
 [1.3.10t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.10
 [1.3.9]: https://github.com/kettle-dev/kettle-family/compare/v1.3.7...v1.3.9

@@ -253,6 +253,54 @@ not practical for the current toolchain.</p>
 
 </details>
 
+<h3 id="runtime-and-platform-support">Runtime and Platform Support</h3>
+
+<p>Support tiers describe what this project’s CI actually exercises, not what may<br>
+work in an untested environment:</p>
+
+<ul>
+  <li>
+<strong>Parallel support</strong>: CI runs the test suite with multiple workers available.</li>
+  <li>
+<strong>Unsupported</strong>: the engine/platform combination is not covered by CI and is<br>
+ not a project compatibility claim.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Ruby engine/version</th>
+      <th>Linux</th>
+      <th>macOS</th>
+      <th>Windows</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>MRI 4.0-4.0</td>
+      <td>Parallel support</td>
+      <td>Unsupported</td>
+      <td>Unsupported</td>
+      <td>Versioned Ruby workflows run on Linux.</td>
+    </tr>
+    <tr>
+      <td>MRI current</td>
+      <td>Parallel support</td>
+      <td>Parallel support</td>
+      <td>Unsupported</td>
+      <td>Current Ruby workflow covers the declared OS platforms.</td>
+    </tr>
+    <tr>
+      <td>MRI head</td>
+      <td>Parallel support</td>
+      <td>Unsupported</td>
+      <td>Unsupported</td>
+      <td>CI is allowed to fail while Ruby is in development.</td>
+    </tr>
+  </tbody>
+</table>
+
 <h3 id="federated-dvcs">Federated DVCS</h3>
 
 <details>
