@@ -32,6 +32,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Spec suite can no longer trigger real 1Password authorization prompts: a globally included with-mocked-release-secrets shared context stubs Secrets::Factory.build to the no-op base provider, with :real_release_secrets as the opt-out tag for provider-construction specs
 
+- ReleasePreClean confirms a cache-missing installed version with a version-hinted registry re-fetch before uninstalling: the memoized TTL cache lags fast publishers (sorbet-runtime ships daily), and the stale read uninstalled a published, lockfile-pinned gem out from under the release tooling bundle; a fresh answer also updates the per-process memo
+
 ### Security
 
 ## [1.3.11] - 2026-10-15

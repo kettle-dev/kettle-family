@@ -108,6 +108,30 @@ RSpec.describe Kettle::Family::ReleasePreClean do
     end
   end
 
+  it "confirms a cache-missing version with a hinted re-fetch before uninstalling" do
+    Dir.mktmpdir do |home|
+      alpha = member("alpha", version: "1.2.0")
+      allow(File).to receive(:file?).and_call_original
+      allow(File).to receive(:file?).with("/repo/alpha/Gemfile.lock").and_return(false)
+      write_installed(home, "alpha", "1.2.0", "1.3.1")
+      with_gem_homes([home])
+
+      # The memoized answer predates the installed 1.3.1 — the TTL'd registry
+      # cache lags a gem that publishes daily — while the hinted re-fetch that
+      # must precede a destructive uninstall sees it published.
+      allow(Kettle::Dev::RubyGemsVersions).to receive(:published_version_numbers) do |_name, version: nil|
+        version.nil? ? ["1.2.0"] : ["1.2.0", "1.3.1"]
+      end
+      runner = runner_that_removes(home)
+
+      results = described_class.new(config: config_double, members: [alpha], execute: true, runner: runner).results
+
+      expect(results).to be_empty
+      expect(runner).not_to have_received(:call)
+      expect(File.exist?(File.join(home, "specifications", "alpha-1.3.1.gemspec"))).to be(true)
+    end
+  end
+
   it "fails open when the registry cannot be consulted" do
     Dir.mktmpdir do |home|
       alpha = member("alpha", version: "1.3.0")

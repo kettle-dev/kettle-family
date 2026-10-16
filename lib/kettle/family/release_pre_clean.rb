@@ -90,11 +90,19 @@ module Kettle
       # heavily across members, and one command run should see one snapshot.
       def unreleased_installed_candidates
         policed_gem_names.flat_map do |name|
-          published = published_versions(name)
-          next [] if published.nil?
-
           installed_versions(name).filter_map do |version|
-            [name, version] unless published.include?(version.version)
+            published = published_versions(name)
+            next nil if published.nil?
+            next nil if published.include?(version.version)
+
+            # The memoized answer can lag a fast publisher (sorbet-runtime
+            # ships daily): a version missing from the cache is confirmed with
+            # a hinted re-fetch before a destructive uninstall, never trusted
+            # on the stale read alone.
+            fresh = fresh_published_versions(name, version.version)
+            next nil if fresh.nil? || fresh.include?(version.version)
+
+            [name, version]
           end
         end
       end
@@ -104,7 +112,20 @@ module Kettle
       # blip. The post-update PublishedVersionCheck still reports anything
       # real that survives.
       def published_versions(name)
-        @published[name] ||= Kettle::Dev::RubyGemsVersions.published_version_numbers(name)&.then { |versions| Set.new(versions) }
+        @published[name] ||= fetch_published_set(name)
+      end
+
+      # A hinted re-fetch: the version hint busts the registry cache when the
+      # cached answer predates the candidate, and a fresh answer replaces the
+      # memo so later members see it too.
+      def fresh_published_versions(name, version)
+        set = fetch_published_set(name, version: version)
+        @published[name] = set if set
+        set
+      end
+
+      def fetch_published_set(name, version: nil)
+        Kettle::Dev::RubyGemsVersions.published_version_numbers(name, version: version)&.then { |versions| Set.new(versions) }
       end
 
       def synthetic_host
