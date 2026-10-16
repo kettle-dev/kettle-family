@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Sync bundler-update command-shape specs with the pinned spawn: the nomono-bootstrap and lockfile-recovery specs now stub the installed stable bundler and assert the pinned argv (bundle _<stable>_ update [gems] --bundler=<stable>) that v1.3.11 shipped, un-red main
+
 ### Security
 
 ## [1.3.11] - 2026-10-15
