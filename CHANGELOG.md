@@ -28,6 +28,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.3.12] - 2026-10-16
+
+- TAG: [v1.3.12][1.3.12t]
+- COVERAGE: 93.44% -- 7104/7603 lines in 43 files
+- BRANCH COVERAGE: 77.91% -- 2849/3657 branches in 43 files
+- 35.42% documented
+
+### Fixed
+
 - Sync bundler-update command-shape specs with the pinned spawn: the nomono-bootstrap and lockfile-recovery specs now stub the installed stable bundler and assert the pinned argv (bundle _<stable>_ update [gems] --bundler=<stable>) that v1.3.11 shipped, un-red main
 
 - Spec suite can no longer trigger real 1Password authorization prompts: a globally included with-mocked-release-secrets shared context stubs Secrets::Factory.build to the no-op base provider, with :real_release_secrets as the opt-out tag for provider-construction specs
@@ -37,8 +48,6 @@ Please file a bug if you notice a violation of semantic versioning.
 - ReleasePreClean pre-uninstall confirmation uses the registry confirm read when the installed kettle-dev offers it (feature-detected, hint-bust otherwise): a cached absence never alone justifies an uninstall
 
 - Release flow probes the local tooling bundle after the pre-clean (bundle check, repaired via bundle install) so a pre-clean removal can no longer strand the bundle member children boot from; the committed lockfile, not the registry cache, is the authority on what the tooling bundle needs
-
-### Security
 
 ## [1.3.11] - 2026-10-15
 
@@ -3012,7 +3021,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.11...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.12...HEAD
+[1.3.12]: https://github.com/kettle-dev/kettle-family/compare/v1.3.11...v1.3.12
+[1.3.12t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.12
 [1.3.11]: https://github.com/kettle-dev/kettle-family/compare/v1.3.10...v1.3.11
 [1.3.11t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.11
 [1.3.10]: https://github.com/kettle-dev/kettle-family/compare/v1.3.9...v1.3.10
