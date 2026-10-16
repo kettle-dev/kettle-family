@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Sync bundler-update command-shape specs with the pinned spawn: the nomono-bootstrap and lockfile-recovery specs now stub the installed stable bundler and assert the pinned argv (bundle _<stable>_ update [gems] --bundler=<stable>) that v1.3.11 shipped, un-red main
 
+- Spec suite can no longer trigger real 1Password authorization prompts: a globally included with-mocked-release-secrets shared context stubs Secrets::Factory.build to the no-op base provider, with :real_release_secrets as the opt-out tag for provider-construction specs
+
 ### Security
 
 ## [1.3.11] - 2026-10-15

@@ -36,6 +36,7 @@ end
 require "kettle/test/rspec"
 # `kettle/test/rspec` installs harness helpers documented in spec/README.md.
 require "kettle/family"
+require_relative "support/shared_contexts/with_mocked_release_secrets"
 
 module KettleFamilySpecSupport
   def write_fake_ruby_executable(directory, name, source)
@@ -97,6 +98,7 @@ SENSITIVE_ENV_KEYS = %w[
 
 RSpec.configure do |config|
   config.include KettleFamilySpecSupport
+  config.include_context "with mocked release secrets"
   config.before do
     hide_env(*SENSITIVE_ENV_KEYS)
     stub_env_hash_accessors

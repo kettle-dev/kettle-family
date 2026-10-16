@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe Kettle::Family::Secrets do
+RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
   it "builds an interactive provider when no release secrets are configured" do
     config = instance_double(Kettle::Family::Config, release_secrets: {})
 
