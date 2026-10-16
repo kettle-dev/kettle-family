@@ -2831,7 +2831,7 @@ RSpec.describe Kettle::Family::Workflow do
       workflow = described_class.new(command: "release", config: config, members: [alpha])
       runner = probe_runner({})
 
-      expect(workflow.send(:release_tool_bundle_probe, runner: runner, member: alpha)).to eq([])
+      expect(workflow.send(:release_tool_bundle_probe, runner: runner, member: alpha)).to be_empty
       expect(runner).not_to have_received(:call)
     end
 
