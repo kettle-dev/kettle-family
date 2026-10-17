@@ -20,7 +20,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Kettle::Family::MiseTasks — slice-1044 family mise tasks primitive: ensure a destination root mise.toml references the managed TOML task file via [task_config].includes, detect task redefinitions between root and managed file (warn; redefinition allowed, root wins), and opt-in --clean duplicate removal; all edits through ast-crispr Actors with the ast-crispr-toml adapter; validated end-to-end against real mise on a family-root canary
+- [kc] mise-tasks-command: kettle-family mise-tasks command — ensures the destination root mise.toml includes the kettle-family managed TOML task file ([task_config].includes), creates the managed file from the shipped baseline, warns on task redefinitions (redefinition allowed, root wins), and removes duplicates with opt-in --clean; backed by Kettle::Family::MiseTasks and ast-crispr-toml
 
 ### Changed
 

@@ -179,7 +179,7 @@ module Kettle
 
         def add_include(context, task_file_name)
           content = context.content
-          block = "[task_config]\nincludes = [\"#{task_file_name}\"]"
+          block = "[task_config]\nincludes = [\"#{task_file_name}\"]\n"
 
           table = context.structural_owners(owner_scope: :tables).find { |owner| owner.name == "task_config" }
           if table.nil?
@@ -199,7 +199,7 @@ module Kettle
               Ast::Crispr::Replace.result(
                 content: content,
                 target: TomlSelectors.table(path: "task_config"),
-                replacement: block,
+                replacement: block.rstrip + "\n",
                 source_label: "mise.toml"
               )
             else
@@ -207,7 +207,7 @@ module Kettle
               Ast::Crispr::Replace.result(
                 content: content,
                 target: TomlSelectors.pair(path: "task_config.#{last.key_name}"),
-                replacement: "#{last.text}\nincludes = [\"#{task_file_name}\"]",
+                replacement: "#{last.text}\nincludes = [\"#{task_file_name}\"]\n",
                 source_label: "mise.toml"
               )
             end

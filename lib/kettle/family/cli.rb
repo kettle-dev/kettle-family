@@ -10,7 +10,7 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[version mise-trust discover plan report metadata check clean-blockers clean-installed clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
+      COMMANDS = %w[version mise-trust mise-tasks discover plan report metadata check clean-blockers clean-installed clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
       WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb update-bundler bex release push pull sync up].freeze
 
       command_name "kettle-family"
@@ -261,6 +261,74 @@ module Kettle
         def run(*args)
           unexpected_arguments!(args)
           run_family("mise-trust", execute: true)
+        end
+      end
+
+      class MiseTasks < BaseCommand
+        command_name "mise-tasks"
+        usage "[options]"
+        description "Ensure the root mise.toml includes the kettle-family managed task file; warn on redefinitions."
+
+        option :task_file, long: "--task-file", value: {type: String, usage: "PATH"},
+          desc: "Managed TOML task file name, relative to the root (default: mise-family.tasks.toml)"
+        option :clean, long: "--clean", desc: "Remove task definitions from the root mise.toml that duplicate the managed file (opt-in; default warns only)"
+
+        DEFAULT_TASK_FILE = "mise-family.tasks.toml"
+
+        def run(*args)
+          unexpected_arguments!(args)
+          require "fileutils"
+          root = File.expand_path(options[:root] || Dir.pwd)
+          task_file_name = options[:task_file] || DEFAULT_TASK_FILE
+          root_mise = File.join(root, "mise.toml")
+          task_file_path = File.join(root, task_file_name)
+
+          unless File.file?(root_mise)
+            stderr.puts("kettle-family: no mise.toml at #{root_mise}")
+            return 1
+          end
+
+          unless File.file?(task_file_path)
+            baseline = File.join(__dir__, "templates", "mise-family.tasks.toml")
+            FileUtils.cp(baseline, task_file_path)
+            stdout.puts("created #{task_file_name} from the kettle-family baseline")
+          end
+
+          root_content = File.read(root_mise)
+          task_file_content = File.file?(task_file_path) ? File.read(task_file_path) : nil
+
+          result = if options[:clean]
+            Kettle::Family::MiseTasks.clean_redefinitions(
+              root_content: root_content,
+              task_file_content: task_file_content,
+              task_file_name: task_file_name
+            )
+          else
+            Kettle::Family::MiseTasks.ensure_include(
+              root_content: root_content,
+              task_file_name: task_file_name,
+              task_file_content: task_file_content
+            )
+          end
+
+          if result.changed
+            File.write(root_mise, result.content)
+            stdout.puts("updated mise.toml")
+          else
+            stdout.puts("mise.toml already up to date")
+          end
+
+          if result.redefinitions.empty?
+            stdout.puts("no task redefinitions")
+          else
+            result.redefinitions.each do |name|
+              winner = options[:clean] ? "managed task file" : "root mise.toml (redefinition allowed; use --clean to restore the managed definition)"
+              stderr.puts("kettle-family: task #{name.inspect} is defined in both mise.toml and #{task_file_name}; #{winner} wins")
+            end
+            return 1 if options[:clean] && !result.redefinitions.empty?
+          end
+
+          0
         end
       end
 
@@ -659,6 +727,7 @@ module Kettle
       command Discover
       command Version
       command MiseTrust
+      command MiseTasks
       command Plan
       command "report", ReportCommand
       command Metadata

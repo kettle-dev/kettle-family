@@ -1,0 +1,11 @@
+# kettle-family managed family mise tasks (slice-1044 baseline)
+#
+# This file is owned by kettle-family and is overwritten on template updates.
+# It uses the mise-task schema: each top-level table is a task, addressable
+# from the destination root mise.toml via [task_config] includes.
+#
+# Define family tasks below. Example:
+#
+# [family-lint]
+# description = "Run the family lint gate"
+# run = "mise run lint"
