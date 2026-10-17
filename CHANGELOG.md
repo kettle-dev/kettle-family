@@ -22,23 +22,19 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Bundler maintenance now delegates to Kettle::Dev::BundlerPinning (kettle-dev >= 3.1.15): stable_bundler_version, bupb_command, pinned_bundler_update_command, and update-bundler share the single implementation with kettle-release instead of a divergent copy
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
-- stub_stable_bundler_version now also stubs Gem::Specification.find_all_by_name("bundler"): the helper only stubbed loaded_specs, so stable_bundler_version fell through to the newest bundler installed on the runner and the bupb specs failed on CI images carrying a newer bundler (4.0.23) than local dev (4.0.22)
-
 ### Security
 
 ## [1.3.12] - 2026-10-16
 
 - TAG: [v1.3.12][1.3.12t]
-- COVERAGE: 93.44% -- 7104/7603 lines in 43 files
-- BRANCH COVERAGE: 77.91% -- 2849/3657 branches in 43 files
+- COVERAGE: 93.44% -- 7099/7597 lines in 43 files
+- BRANCH COVERAGE: 77.91% -- 2846/3653 branches in 43 files
 - 35.42% documented
 
 ### Fixed
@@ -52,6 +48,12 @@ Please file a bug if you notice a violation of semantic versioning.
 - ReleasePreClean pre-uninstall confirmation uses the registry confirm read when the installed kettle-dev offers it (feature-detected, hint-bust otherwise): a cached absence never alone justifies an uninstall
 
 - Release flow probes the local tooling bundle after the pre-clean (bundle check, repaired via bundle install) so a pre-clean removal can no longer strand the bundle member children boot from; the committed lockfile, not the registry cache, is the authority on what the tooling bundle needs
+
+- stub_stable_bundler_version now also stubs Gem::Specification.find_all_by_name("bundler"): the helper only stubbed loaded_specs, so stable_bundler_version fell through to the newest bundler installed on the runner and the bupb specs failed on CI images carrying a newer bundler (4.0.23) than local dev (4.0.22)
+
+### Changed
+
+- Bundler maintenance now delegates to Kettle::Dev::BundlerPinning (kettle-dev >= 3.1.15): stable_bundler_version, bupb_command, pinned_bundler_update_command, and update-bundler share the single implementation with kettle-release instead of a divergent copy
 
 ## [1.3.11] - 2026-10-15
 
