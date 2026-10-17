@@ -70,6 +70,7 @@ structuredmerge_local_gems = %w[
   ast-crispr
   ast-crispr-markdown-markly
   ast-crispr-ruby-prism
+  ast-crispr-toml
 ]
 
 kettle_dev_local_gems = %w[
