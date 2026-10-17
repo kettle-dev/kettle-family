@@ -104,6 +104,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.18")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow
   spec.add_dependency("kettle-jem", "~> 7.1", ">= 7.1.28")                    # ruby >= 4.0.0, built-in templating workflow
   spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.27")              # ruby >= 2.4
+  spec.add_dependency("psych-merge", "~> 7.1", ">= 7.1.4")                     # ruby >= 4.0.0, YAML owners for kettle-jem config registration
   spec.add_dependency("toml-merge", "~> 7.1", ">= 7.1.11")                     # ruby >= 4.0.0, TOML file analysis
   spec.add_dependency("tsort", "~> 0.2")                                      # ruby >= 2.5.0
   spec.add_dependency("tty-screen", "~> 0.8")                                  # ruby >= 2.0.0

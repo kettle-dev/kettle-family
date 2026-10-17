@@ -2,6 +2,7 @@
 
 require "ast/crispr"
 require "ast/crispr/toml"
+require "psych/merge"
 
 module Kettle
   module Family
@@ -64,6 +65,39 @@ module Kettle
           names << pair.name.to_s if pair.full_path == "tasks"
         end
         names.compact.reject(&:empty?).uniq
+      end
+
+      # Register the managed task file as kettle-jem template-managed in the
+      # destination's kettle-jem config. The registration is a template-side
+      # fragment merged into the destination YAML with psych-merge:
+      # destination entries always win, so an existing strategy choice is
+      # never overridden — only a missing registration is added.
+      #
+      # Skips silently (changed: false) when the destination has no
+      # kettle-jem config: a project that is not kettle-jem-templated has
+      # nothing to register.
+      #
+      # @param config_content [String] destination kettle-jem config YAML
+      # @param task_file_name [String] managed task file name
+      # @return [Result]-shaped Struct (changed, include_present, content, redefinitions: [])
+      def self.register_in_jem_config(config_content:, task_file_name:)
+        fragment = <<~YAML
+          files:
+            #{task_file_name}:
+              strategy: keep_destination
+        YAML
+
+        merge_result = Psych::Merge.merge_yaml(
+          fragment,
+          config_content,
+          "yaml",
+          add_template_only_nodes: true,
+          preference: :destination
+        )
+        raise Error, Array(merge_result[:diagnostics]).map { |d| d[:message] || d["message"] }.join("; ") unless merge_result[:ok]
+
+        updated = merge_result[:output]
+        Result.new(changed: updated != config_content, include_present: true, content: updated, redefinitions: [])
       end
 
       # Task names defined in BOTH the root mise.toml and the managed task file.

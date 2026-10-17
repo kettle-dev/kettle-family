@@ -103,6 +103,49 @@ RSpec.describe Kettle::Family::MiseTasks do
     end
   end
 
+  describe ".register_in_jem_config" do
+    let(:config) do
+      <<~YAML
+        defaults:
+          preference: "template"
+        files:
+          Gemfile:
+            strategy: accept_template
+      YAML
+    end
+
+    it "adds a keep_destination registration for the managed task file" do
+      result = described_class.register_in_jem_config(config_content: config, task_file_name: "mise-family.tasks.toml")
+
+      expect(result.changed).to be(true)
+      require "yaml"
+      parsed = YAML.safe_load(result.content)
+      expect(parsed.dig("files", "mise-family.tasks.toml", "strategy")).to eq("keep_destination")
+      # destination-owned entries are untouched
+      expect(parsed.dig("files", "Gemfile", "strategy")).to eq("accept_template")
+      expect(parsed.dig("defaults", "preference")).to eq("template")
+    end
+
+    it "is idempotent when the registration already exists" do
+      first = described_class.register_in_jem_config(config_content: config, task_file_name: "mise-family.tasks.toml")
+      second = described_class.register_in_jem_config(config_content: first.content, task_file_name: "mise-family.tasks.toml")
+
+      expect(second.changed).to be(false)
+      expect(second.content).to eq(first.content)
+    end
+
+    it "keeps the destination strategy when the file is already registered differently" do
+      override = config.gsub("strategy: accept_template", "strategy: merge") if config.include?("accept_template")
+      pre_registered = described_class.register_in_jem_config(config_content: override, task_file_name: "mise-family.tasks.toml")
+      tweaked = pre_registered.content.sub("keep_destination", "merge")
+
+      second = described_class.register_in_jem_config(config_content: tweaked, task_file_name: "mise-family.tasks.toml")
+
+      expect(second.changed).to be(false)
+      expect(second.content).to include("strategy: merge")
+    end
+  end
+
   describe ".redefinitions" do
     it "finds table and trivial-pair collisions" do
       root = "#{root_without}\n[tasks.family-lint]\nrun = \"echo local\"\n"

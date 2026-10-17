@@ -20,7 +20,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- [kc] mise-tasks-command: kettle-family mise-tasks command — ensures the destination root mise.toml includes the kettle-family managed TOML task file ([task_config].includes), creates the managed file from the shipped baseline, warns on task redefinitions (redefinition allowed, root wins), and removes duplicates with opt-in --clean; backed by Kettle::Family::MiseTasks and ast-crispr-toml
+- [kc] mise-tasks-command: kettle-family mise-tasks command — ensures the destination root mise.toml includes the kettle-family managed TOML task file ([task_config].includes), creates the managed file from the shipped baseline, warns on task redefinitions (redefinition allowed, root wins), removes duplicates with opt-in --clean, and registers the managed file as template-managed (keep_destination) in the destination kettle-jem config via psych-merge; backed by Kettle::Family::MiseTasks, ast-crispr-toml, and psych-merge
 
 ### Changed
 

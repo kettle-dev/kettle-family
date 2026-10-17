@@ -328,6 +328,25 @@ module Kettle
             return 1 if options[:clean] && !result.redefinitions.empty?
           end
 
+          # Register the managed file in the destination's kettle-jem config
+          # when the project is kettle-jem-templated.
+          %w[.structuredmerge/kettle-jem.yml .kettle-jem.yml].each do |config_relative|
+            config_path = File.join(root, config_relative)
+            next unless File.file?(config_path)
+
+            registration = Kettle::Family::MiseTasks.register_in_jem_config(
+              config_content: File.read(config_path),
+              task_file_name: task_file_name
+            )
+            if registration.changed
+              File.write(config_path, registration.content)
+              stdout.puts("registered #{task_file_name} in #{config_relative}")
+            else
+              stdout.puts("#{task_file_name} already registered in #{config_relative}")
+            end
+            break
+          end
+
           0
         end
       end
