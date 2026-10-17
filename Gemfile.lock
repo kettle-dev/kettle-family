@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    kettle-family (1.3.12)
+    kettle-family (1.3.13)
       command_kit (~> 0.6)
       command_kit-completion (~> 0.1)
       kettle-changelog (~> 1.0, >= 1.0.12)
@@ -489,7 +489,7 @@ GEM
       delegate (~> 0.1)
       rspec (~> 3.0)
       timecop (>= 0.7, < 1)
-    token-resolver (2.0.13)
+    token-resolver (2.0.14)
       parslet (~> 2.0)
       version_gem (~> 1.1, >= 1.1.15)
     toml-merge (7.1.10)
@@ -668,7 +668,7 @@ CHECKSUMS
   json-merge (7.1.10) sha256=f90ec2df9512ed67cd4b3d27af773f8126a0bb30f0838a87a3d401a397061a75
   kettle-changelog (1.0.12) sha256=bc781518653db3c71cda40fe45d10c6f3f0e94d5d72ba3e4547942151c0a10fb
   kettle-dev (3.1.15) sha256=1a4ff5219c7b4aba7183063a78171593e2cfced90e8ed8491a5c3e6e8f28254e
-  kettle-family (1.3.12)
+  kettle-family (1.3.13)
   kettle-gha-pins (0.3.18) sha256=7e1aab36c248bab6b55e6c9d79b9efb8233c14a5e33e0d8013a874c49030046a
   kettle-jem (7.1.30) sha256=3e98c8a9988ce1f4f0424edf02e1ef2982fbbec073faa7c03007a0fd0033b6a0
   kettle-ndjson (0.1.20) sha256=75c366059d43a2d73a32a87e7e5fd28ccfacf658753469845601e03557290eab
@@ -772,7 +772,7 @@ CHECKSUMS
   thor (1.5.0) sha256=e3a9e55fe857e44859ce104a84675ab6e8cd59c650a49106a05f55f136425e73
   timecop (0.9.11) sha256=41284dc6e5041f2184f781ace766f942108c842f8d8c1386a26e6343decc7542
   timecop-rspec (1.0.3) sha256=005f14841bb606dcaefb060e321b5388e2e59537742bee8b3a9a9a40e598fab9
-  token-resolver (2.0.13) sha256=aba890ce6be32ff7226e991f9f54d7bd99df312849c119482de48661280e33a5
+  token-resolver (2.0.14) sha256=b50ac4ff67a2a220b77836f3b943ba5ac5d52f2961aae13a3b75663282af71e6
   toml-merge (7.1.10) sha256=f30c47b8b7ed11fdc8a1376c3f391c709efd09638cabfc89a7e80eaa08cc2611
   toml-rb (4.2.2) sha256=b41cf36117bafab84c72017697ab49fe49a065e2bcfa6dffb704389fb7b0a60a
   tree_haver (7.1.10) sha256=47f2121d709fce1df3952b4e03a60b43a5812a08d24f0d5a02ea67f95b2e69ed
