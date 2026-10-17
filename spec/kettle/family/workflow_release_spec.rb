@@ -2615,6 +2615,32 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("[#{config.family_name}] > github_release:asset_upload:alpha-1.2.3.gem:1/3")
   end
 
+  it "routes aggregate GitHub Release events into the TTY member row instead of raw lines" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    progress = StringIO.new
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], progress_io: progress)
+    tty_progress = Kettle::Family::WorkflowProgress.new(io: Class.new(StringIO) { def tty? = true }.new, label: "release", total: 1, jobs: 1)
+    tty_progress.start
+    workflow.instance_variable_set(:@release_progress, tty_progress)
+
+    handled = workflow.send(:aggregate_github_release_event_line_handler, workflow.send(:family_member)).call(
+      JSON.generate(
+        event_version: 1,
+        type: "github_release",
+        action: "asset_upload",
+        status: "retrying",
+        asset: "alpha-1.2.3.gem",
+        attempt: 1,
+        attempts: 3
+      )
+    )
+
+    expect(handled).to be(true)
+    expect(progress.string).not_to include("github_release:asset_upload")
+    expect(tty_progress.instance_variable_get(:@member_statuses).values.join(" ")).to include("github_release")
+  end
+
   it "consumes release NDJSON events when progress rendering is disabled" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

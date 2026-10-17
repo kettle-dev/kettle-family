@@ -3949,7 +3949,24 @@ module Kettle
           next false unless event && event["type"] == "github_release"
 
           @event_tape&.call(event.merge("member" => member.name))
-          emit_template_event_line(member, github_release_event_mark(event), github_release_event_label(event)) if progress_io
+          next true unless progress_io
+
+          if verbose || debug
+            emit_template_event_line(member, github_release_event_mark(event), github_release_event_label(event))
+          elsif @release_progress&.tty?
+            # Route into the redraw-block member row instead of spraying raw
+            # lines between pane redraws — same policy as the per-member
+            # release event handler.
+            @release_progress.update(
+              member,
+              status: github_release_event_label(event),
+              mark: github_release_event_mark(event),
+              key: member.name,
+              label: member.name
+            )
+          else
+            emit_template_event_line(member, github_release_event_mark(event), github_release_event_label(event))
+          end
           true
         end
       end
