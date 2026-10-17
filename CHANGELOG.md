@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Route aggregate GitHub Release NDJSON events into the TTY member row instead of printing raw step lines between pane redraws during family release (raw lines remain for --verbose/--debug and non-TTY output)
-
 ### Security
+
+## [1.3.13] - 2026-10-17
+
+- TAG: [v1.3.13][1.3.13t]
+- COVERAGE: 93.44% -- 7099/7597 lines in 43 files
+- BRANCH COVERAGE: 77.91% -- 2846/3653 branches in 43 files
+- 35.42% documented
+
+### Fixed
+
+- Route aggregate GitHub Release NDJSON events into the TTY member row instead of printing raw step lines between pane redraws during family release (raw lines remain for --verbose/--debug and non-TTY output)
 
 ## [1.3.12] - 2026-10-16
 
@@ -3029,7 +3038,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.12...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.13...HEAD
+[1.3.13]: https://github.com/kettle-dev/kettle-family/compare/v1.3.12...v1.3.13
+[1.3.13t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.13
 [1.3.12]: https://github.com/kettle-dev/kettle-family/compare/v1.3.11...v1.3.12
 [1.3.12t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.12
 [1.3.11]: https://github.com/kettle-dev/kettle-family/compare/v1.3.10...v1.3.11
