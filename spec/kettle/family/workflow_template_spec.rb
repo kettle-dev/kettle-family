@@ -1320,6 +1320,8 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "honors an explicit changelog dependency opt-out during nomono bootstrap" do
+    skip_for(engine: "ruby", versions: "head", reason: "requires an installed stable Bundler version")
+
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],
       normalize_lockfiles: false,
@@ -1385,6 +1387,8 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "honors an explicit configured family selector override during nomono bootstrap" do
+    skip_for(engine: "ruby", versions: "head", reason: "requires an installed stable Bundler version")
+
     write_template_config(
       command: ["bundle", "exec", "kettle-jem", "install"],
       normalize_lockfiles: false,
@@ -2220,6 +2224,8 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "preserves shell operators when retrying a checksum-aware compound command" do
+    skip_for(engine: "ruby", versions: "head", reason: "requires an installed stable Bundler version")
+
     write_template_config(command: [RbConfig.ruby, "-e", "puts 'templated'"])
     config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
     config_hash.fetch("template")["normalize_lockfiles_command"] = "bundle update nomono --bundler && bundle lock --add-checksums"

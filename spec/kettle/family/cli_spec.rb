@@ -388,6 +388,8 @@ RSpec.describe Kettle::Family::CLI do
   end
 
   it "plans update-bundler without installing gems" do
+    skip_for(engine: "ruby", versions: "head", reason: "requires an installed stable Bundler version")
+
     write_gem("alpha")
     out = StringIO.new
 
