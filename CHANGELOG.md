@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- branch_dependencies config (dep_member -> branch -> dependent_member): branch-stack facts for sibling-repo families live in family config, never inferred from member names. Workflow checks out the mapped dependency branch before member phases and exports KETTLE_JEM_LOCAL_GEM_EXCLUSIONS during templating so _local.gemfile wiring skips dependencies whose checkout branch cannot satisfy the member requirement.
-
 ### Changed
 
 ### Deprecated
@@ -31,6 +29,17 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.3.16] - 2026-10-18
+
+- TAG: [v1.3.16][1.3.16t]
+- COVERAGE: 93.00% -- 7251/7797 lines in 44 files
+- BRANCH COVERAGE: 77.28% -- 2894/3745 branches in 44 files
+- 37.01% documented
+
+### Added
+
+- branch_dependencies config (dep_member -> branch -> dependent_member): branch-stack facts for sibling-repo families live in family config, never inferred from member names. Workflow checks out the mapped dependency branch before member phases and exports KETTLE_JEM_LOCAL_GEM_EXCLUSIONS during templating so _local.gemfile wiring skips dependencies whose checkout branch cannot satisfy the member requirement.
 
 ## [1.3.15] - 2026-10-18
 
@@ -3066,7 +3075,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.15...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.16...HEAD
+[1.3.16]: https://github.com/kettle-dev/kettle-family/compare/v1.3.15...v1.3.16
+[1.3.16t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.16
 [1.3.15]: https://github.com/kettle-dev/kettle-family/compare/v1.3.14...v1.3.15
 [1.3.15t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.15
 [1.3.14]: https://github.com/kettle-dev/kettle-family/compare/v1.3.13...v1.3.14
