@@ -48,7 +48,7 @@ module Kettle
         return branch_results(event_handler: event_handler) unless release_target_branches.empty?
         if shared_changelog?
           results = parallel_map(members) { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) }
-          return normalize_shared_version_bump(results)
+          return normalize_lockstep_version_bump(normalize_shared_version_bump(results))
         end
 
         member_results = parallel_map(members) do |member|
@@ -829,22 +829,30 @@ module Kettle
 
       # Version-locked siblings move in lockstep. Members not declared
       # independently releasable (release.aggregate_validation.exclude_members)
-      # share the family version line, so when any of them needs a version
-      # bump, all of them do — including members without unreleased changelog
-      # entries of their own and brand-new members that have never been
-      # released (empty latest_released). Independently releasable members
-      # keep per-member bump semantics: they bump only when their own
-      # unreleased entries require it.
+      # share the family version line, so:
+      #   1. when any of them needs a version bump, all of them do — including
+      #      members without unreleased changelog entries of their own and
+      #      brand-new members that have never been released (empty
+      #      latest_released);
+      #   2. a member whose checkout version sits behind the cohort's version
+      #      line (e.g. a cohort that already bumped while it stayed put) needs
+      #      a catch-up bump on its own.
+      # Independently releasable members keep per-member bump semantics: they
+      # bump only when their own unreleased entries require it. Members whose
+      # checkout version already moved past their last release are mid-prep
+      # and are never double-bumped.
       def normalize_lockstep_version_bump(results)
         excluded = Array(config&.release_aggregate_validation_excluded_members).map(&:to_s)
         return results if excluded.empty?
 
-        pending_lockstep = results.any? do |result|
-          result.ok? &&
-            !excluded.include?(result.member_name.to_s) &&
-            result.state["bump_release_pending"] == true
+        aggregate = results.select do |result|
+          result.ok? && !excluded.include?(result.member_name.to_s)
         end
-        return results unless pending_lockstep
+        return results if aggregate.empty?
+
+        cohort_version = aggregate.filter_map { |result| lockstep_version(result.state["version"]) }.max
+        pending_cohort = aggregate.any? { |result| result.state["bump_release_pending"] == true }
+        return results if cohort_version.nil? && !pending_cohort
 
         results.map do |result|
           next result unless result.ok? && !excluded.include?(result.member_name.to_s)
@@ -852,10 +860,12 @@ module Kettle
           state = result.state
           next result if state["bump_release_pending"] == true
 
-          # A member whose checkout version already moved past its last
-          # release is mid-prep; do not double-bump it.
-          latest_released = state["latest_released"].to_s
-          next result if !latest_released.empty? && state["version"].to_s != latest_released
+          version = lockstep_version(state["version"])
+          latest_released = lockstep_version(state["latest_released"])
+          catch_up = !cohort_version.nil? && !version.nil? && version < cohort_version
+          mid_prep = !latest_released.nil? && !version.nil? && version > latest_released
+          next result if mid_prep && !catch_up
+          next result if !catch_up && !pending_cohort
 
           result.class.new(
             member_name: result.member_name,
@@ -871,6 +881,15 @@ module Kettle
             branch: result.branch
           )
         end
+      end
+
+      def lockstep_version(value)
+        text = value.to_s
+        return nil if text.empty?
+
+        Gem::Version.new(text)
+      rescue ArgumentError
+        nil
       end
 
       def normalize_shared_version_bump(results)
