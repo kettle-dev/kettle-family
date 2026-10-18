@@ -26,7 +26,7 @@ RSpec.describe Kettle::Family::MiseTasks do
 
   describe ".ensure_include" do
     before do
-      skip_for(engine: "ruby", versions: "head", reason: "tree_sitter_language_pack does not publish a native extension for Ruby head's unstable ABI")
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
     end
 
     it "appends the task_config block when absent" do
@@ -87,7 +87,7 @@ RSpec.describe Kettle::Family::MiseTasks do
 
   describe ".task_names" do
     before do
-      skip_for(engine: "ruby", versions: "head", reason: "tree_sitter_language_pack does not publish a native extension for Ruby head's unstable ABI")
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
     end
 
     it "parses a managed TOML task file using bare top-level task tables" do
@@ -156,7 +156,7 @@ RSpec.describe Kettle::Family::MiseTasks do
 
   describe ".redefinitions" do
     before do
-      skip_for(engine: "ruby", versions: "head", reason: "tree_sitter_language_pack does not publish a native extension for Ruby head's unstable ABI")
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
     end
 
     it "finds table and trivial-pair collisions" do
@@ -174,7 +174,7 @@ RSpec.describe Kettle::Family::MiseTasks do
 
   describe ".clean_redefinitions" do
     before do
-      skip_for(engine: "ruby", versions: "head", reason: "tree_sitter_language_pack does not publish a native extension for Ruby head's unstable ABI")
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
     end
 
     it "removes duplicate table definitions from the root" do

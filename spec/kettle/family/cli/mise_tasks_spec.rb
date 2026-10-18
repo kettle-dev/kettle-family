@@ -25,7 +25,7 @@ RSpec.describe Kettle::Family::CLI::MiseTasks do
   end
 
   it "creates the managed task file from the baseline and ensures the include" do
-    skip_for(engine: "ruby", versions: "head", reason: "tree_sitter_language_pack does not publish a native extension for Ruby head's unstable ABI")
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
 
     expect(run_command("--root", tmp_root)).to eq(0)
 
@@ -38,7 +38,7 @@ RSpec.describe Kettle::Family::CLI::MiseTasks do
   end
 
   it "is idempotent on a second run" do
-    skip_for(engine: "ruby", versions: "head", reason: "tree_sitter_language_pack does not publish a native extension for Ruby head's unstable ABI")
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
 
     run_command("--root", tmp_root)
     before = File.read(root_mise)
@@ -48,7 +48,7 @@ RSpec.describe Kettle::Family::CLI::MiseTasks do
   end
 
   it "warns on redefinitions and exits 0 (redefinition allowed)" do
-    skip_for(engine: "ruby", versions: "head", reason: "tree_sitter_language_pack does not publish a native extension for Ruby head's unstable ABI")
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
 
     run_command("--root", tmp_root)
     File.write(root_mise, File.read(root_mise) + "\n[tasks.family-lint]\nrun = \"echo local\"\n")
@@ -58,7 +58,7 @@ RSpec.describe Kettle::Family::CLI::MiseTasks do
   end
 
   it "removes redefinitions with --clean" do
-    skip_for(engine: "ruby", versions: "head", reason: "tree_sitter_language_pack does not publish a native extension for Ruby head's unstable ABI")
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
 
     run_command("--root", tmp_root)
     # The managed file must define the task too -- --clean only removes
