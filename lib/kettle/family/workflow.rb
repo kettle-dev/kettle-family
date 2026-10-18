@@ -4705,12 +4705,16 @@ module Kettle
       end
 
       def start_release_progress(release_members)
+        wave_numbers = release_waves(release_members).each_with_index.flat_map do |wave, index|
+          wave.map { |member| [member.name, index + 1] }
+        end.to_h
         progress = WorkflowProgress.new(
           io: progress_io,
           label: release_progress_label,
           total: release_members.length,
           jobs: release_jobs(release_members),
-          members: release_members
+          members: release_members,
+          waves: wave_numbers
         )
         progress.start
         progress

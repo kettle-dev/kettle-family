@@ -15,7 +15,7 @@ module Kettle
       DEFAULT_TERMINAL_WIDTH = 80
       ELLIPSIS = "..."
 
-      def initialize(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil)
+      def initialize(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil, waves: {})
         @io = io
         @label = label
         @total = total.to_i
@@ -23,11 +23,19 @@ module Kettle
         @heading = heading
         @clock = clock || lambda { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
         @enabled = enabled && !!io
+        # Lines render in the order the caller passes: the task's actual
+        # execution order (wave plan for release, dependency order elsewhere).
+        # The pane is a schedule view, so it reflects reality, unlike the
+        # alphabetical summary lists in the report.
         @line_order = members.map(&:name)
+        # When the task runs in waves, prefix each member with its wave number
+        # ("2.kettle-jem") so the wave structure is visible instead of the
+        # ordering looking arbitrary.
+        @waves = waves.to_h.transform_values { |wave| wave.to_i }
         @started = false
         @stopped = false
         @member_totals = {}
-        @member_labels = @line_order.to_h { |member_name| [member_name, member_name] }
+        @member_labels = @line_order.to_h { |member_name| [member_name, wave_label(member_name)] }
         @member_counts = Hash.new(0)
         @member_started_at = {}
         @member_finished_elapsed = {}
@@ -60,7 +68,7 @@ module Kettle
         return unless @enabled
 
         synchronize do
-          @member_labels[key] = label
+          store_label(key, label)
           @member_totals[key] = total.to_i
           @member_counts[key] = 0
           @member_started_at[key] ||= monotonic_now
@@ -77,7 +85,7 @@ module Kettle
         return unless @enabled
 
         synchronize do
-          @member_labels[key] = label
+          store_label(key, label)
           event_mark = mark || (success ? "." : "F")
           increment_member_count(key)
           if @tty
@@ -94,7 +102,7 @@ module Kettle
         return if status.to_s.empty?
 
         synchronize do
-          @member_labels[key] = label
+          store_label(key, label)
           if @tty
             append_event(key, mark) if mark
             render(key, status: status)
@@ -108,7 +116,7 @@ module Kettle
         return unless @enabled
 
         synchronize do
-          @member_labels[key] = label
+          store_label(key, label)
           total = @member_totals[key].to_i
           @member_counts[key] = total if total.positive?
           @member_finished_elapsed[key] = elapsed_seconds_by_name(key)
@@ -172,6 +180,20 @@ module Kettle
       end
 
       private
+
+      # "2.kettle-jem" when the member belongs to wave 2, otherwise the bare
+      # name. Wave numbers come from the caller's `waves:` mapping.
+      def wave_label(member_name)
+        wave = @waves[member_name]
+        wave ? "#{wave}.#{member_name}" : member_name
+      end
+
+      # Store a display label, re-applying the wave prefix when the caller
+      # passes the bare member name, so updates never strip "2." from
+      # "2.kettle-jem". Explicit custom labels are stored verbatim.
+      def store_label(key, label)
+        @member_labels[key] = (@waves[key] && label == key) ? wave_label(key) : label
+      end
 
       def render(member_key, status:)
         render_name(member_key, status: status)

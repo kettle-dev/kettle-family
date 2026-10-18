@@ -24,6 +24,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Release progress pane renders member lines in execution order with wave-number labels (e.g. 2.kettle-jem), and all report summary lists (succeeded/skipped/failed/pending) are now alphabetical regardless of parallel completion order
+
 ### Deprecated
 
 ### Removed

@@ -975,14 +975,16 @@ RSpec.describe Kettle::Family::Report do
 
     # Pending members are ordered AHEAD of the failure, so they are not a suffix:
     # no --start-at value can select them without also dropping finished work.
+    # Pending (like every summary list) displays alphabetically, but the set is
+    # still interleaved through the plan order, which is what bans --start-at.
     pending = summary.fetch("pending").map { |entry| entry.fetch("member") }
-    expect(pending).to eq(%w[kettle-dev kettle-changelog kettle-family kettle-soup-cover])
-    expect(pending.map { |name| ordered.index(name) }).to eq([5, 7, 8, 10])
-    expect(pending).not_to eq(ordered.last(pending.length))
-
+    expect(pending).to eq(%w[kettle-changelog kettle-dev kettle-family kettle-soup-cover])
+    plan_positions = pending.map { |name| ordered.index(name) }
+    expect(plan_positions).to eq([7, 5, 8, 10])
+    expect(plan_positions.sort).not_to eq(((ordered.length - pending.length)...ordered.length).to_a)
     expect(summary.fetch("resume_hints")).to eq([
       "kettle-family template --only nomono",
-      "kettle-family template --only kettle-dev,kettle-changelog,kettle-family,kettle-soup-cover"
+      "kettle-family template --only kettle-changelog,kettle-dev,kettle-family,kettle-soup-cover"
     ])
   end
 
@@ -1089,5 +1091,31 @@ RSpec.describe Kettle::Family::Report do
     ])
     expect(text).to include("succeeded: alpha")
     expect(text).to include("pending: gamma release (not run after earlier failure)")
+  end
+
+  it "orders summary lists alphabetically regardless of completion order" do
+    roster = %w[zulu mid alpha].map { |name| member(name) }
+    report = described_class.new(
+      family_name: "example",
+      order_mode: "dependency",
+      members: roster,
+      selected_members: roster,
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      results: [
+        # Completion order (parallel jobs): zulu failed first, mid succeeded,
+        # alpha failed last. The summary still lists members alphabetically.
+        result("zulu", phase: "release_publish", success: false, reason: "OTP failed"),
+        result("mid", phase: "release_publish"),
+        result("alpha", phase: "release_publish", success: false, reason: "CI failed")
+      ]
+    )
+
+    summary = report.to_h.fetch("summary")
+
+    expect(summary.fetch("succeeded")).to eq(%w[mid])
+    expect(summary.fetch("failed").map { |entry| entry.fetch("member") }).to eq(%w[alpha zulu])
+    expect(report.to_text).to include("failed: alpha release_publish (CI failed)")
   end
 end

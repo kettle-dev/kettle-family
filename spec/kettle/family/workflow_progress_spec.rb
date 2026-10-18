@@ -278,4 +278,33 @@ RSpec.describe Kettle::Family::WorkflowProgress do
 
     expect(progress.tty?).to be(false)
   end
+
+  it "renders release progress in execution order with wave-number labels" do
+    output = progress_output_class.new
+    zulu = instance_double(Kettle::Family::Member, name: "zulu")
+    alpha = instance_double(Kettle::Family::Member, name: "alpha")
+    # Execution order: zulu runs in wave 1, alpha in wave 2. The pane is a
+    # schedule view, so lines follow reality, not alphabetical order.
+    progress = described_class.new(
+      io: output,
+      label: "publishing",
+      total: 2,
+      jobs: 2,
+      members: [zulu, alpha],
+      waves: {"zulu" => 1, "alpha" => 2}
+    )
+
+    progress.start
+    progress.start_member(zulu, total: 1, status: "check")
+    progress.start_member(alpha, total: 1, status: "check")
+    progress.update(zulu, status: "release_build", mark: ".")
+    progress.stop
+
+    lines = output.string.lines
+    zulu_lines = lines.select { |line| line.include?("zulu") }
+    alpha_lines = lines.select { |line| line.include?("alpha") }
+    expect(lines.index(zulu_lines.first)).to be < lines.index(alpha_lines.first)
+    expect(zulu_lines).to all(include("[1.zulu]"))
+    expect(alpha_lines).to all(include("[2.alpha]"))
+  end
 end

@@ -442,11 +442,12 @@ module Kettle
       def selected_member_results
         return {} unless member_result_command?
 
-        visible_results.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |result, memo|
+        built = visible_results.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |result, memo|
           next unless selected_names.include?(result.member_name)
 
           memo[result.member_name] << result
         end
+        built.sort.to_h
       end
 
       def summary_succeeded
@@ -475,7 +476,8 @@ module Kettle
       end
 
       def summary_failed
-        visible_results.reject(&:ok?).map do |result|
+        # Alphabetical summary lists, regardless of parallel completion order.
+        visible_results.reject(&:ok?).sort_by.with_index { |result, index| [result.member_name, index] }.map do |result|
           {
             "member" => result.member_name,
             "phase" => result.phase,
@@ -490,7 +492,7 @@ module Kettle
 
         ran = summary_ran_member_names
         reason = pending_reason
-        (selected_names - ran).map do |member_name|
+        (selected_names - ran).sort.map do |member_name|
           {
             "member" => member_name,
             "phase" => command,
@@ -518,11 +520,11 @@ module Kettle
 
         return selected_member_results.keys unless command == "release"
 
-        failed = visible_results.reject(&:ok?).map(&:member_name)
+        failed = visible_results.reject(&:ok?).map(&:member_name).uniq.sort
         terminal = selected_member_results.filter_map do |member_name, member_results|
           member_name if member_results.any? { |result| release_terminal_result?(result) }
         end
-        (failed + terminal).uniq
+        (failed + terminal.sort).uniq
       end
 
       def summary_terminal_member_results(member_results)
