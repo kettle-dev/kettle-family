@@ -399,6 +399,12 @@ module Kettle
         fetch_path("branch_lanes") || fetch_path("branches", "lanes") || {}
       end
 
+      # Returns a hash of dep_member_name -> { branch_name -> dependent_member_name }
+      # Used to compute local_gem_exclusions during templating to avoid version-satisfiability cycles.
+      def branch_dependencies
+        fetch_path("branch_dependencies") || {}
+      end
+
       private
 
       def path_within_root?(path)

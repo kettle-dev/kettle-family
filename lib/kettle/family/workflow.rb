@@ -1447,7 +1447,7 @@ module Kettle
             member: member,
             phase: command,
             command: workflow_command(member),
-            env: template_command_env(wave_jobs: wave_jobs),
+            env: template_command_env(wave_jobs: wave_jobs, member: member),
             stdout_line_handler: template_event_line_handler(member, progress: progress, progress_key: progress_key, progress_label: progress_label)
           )
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label)
@@ -2509,6 +2509,7 @@ module Kettle
       def release_results_for_member(member, runner:, wave_jobs: 1)
         progress = @release_progress
         progress&.start_member(member, total: release_phase_total(member), status: "check")
+        checkout_branch_stack_for_member(member, runner)
         [].tap do |memo|
           if skip_already_released?(member)
             memo << already_released_result(member)
@@ -3350,6 +3351,51 @@ module Kettle
         )
         result.branch = branch
         result
+      end
+
+      # Check out the correct branch of a dependency when running with a _DEV
+      # env engaged (branch stack support). For example, when running `bup` on
+      # `rubocop-ruby1_8` with `RUBOCOP_LTS_DEV` set, checkout the
+      # corresponding `r1_8-even-v0` branch of `rubocop-lts`.
+      def checkout_branch_stack_for_member(member, runner)
+        dev_env_name = config.family_local_path_env_name
+        return unless dev_env_name
+
+        # Check if the _DEV env is engaged (either from env_overrides or ENV)
+        dev_value = env_overrides.fetch(dev_env_name, ENV.fetch(dev_env_name, ""))
+        return unless local_path_env_value?(dev_value)
+
+        # Get the dependency member that owns the _DEV path
+        dep_member = family_members.find { |m| m.root == File.expand_path(dev_value) }
+        return unless dep_member
+
+        # Find the branch stack mapping for this member
+        branch = branch_stack_branch_for(member, dep_member)
+        return unless branch
+
+        # Checkout the branch in the dependency's repo
+        runner.call(
+          member: dep_member,
+          phase: "branch_stack_checkout",
+          command: ["git", "checkout", branch],
+          log_path: nil
+        )
+      rescue => e
+        warn "Warning: branch stack checkout failed for #{member.name} -> #{dep_member.name}@#{branch}: #{e.message}"
+      end
+
+      # Determine the branch stack branch for a member's dependency.
+      # The branch stack facts live in config (branch_dependencies mapping
+      # dep_member -> branch -> dependent_member); this tool never infers
+      # family shape from member names.
+      def branch_stack_branch_for(member, dep_member)
+        target_branches = config.member_release_target_branches[dep_member.name]
+        return unless target_branches
+
+        branch_deps = config.branch_dependencies
+        dep_member_branches = branch_deps[dep_member.name] || {}
+        explicit_branch = dep_member_branches.find { |_branch, dep| dep.to_s == member.name }
+        explicit_branch&.first
       end
 
       def tag_branch_results(results, branch)
@@ -5724,6 +5770,10 @@ module Kettle
         env = execution_profile(template_execution_profile, workflow_env).merge(
           "KETTLE_FAMILY_WAVE_JOBS" => wave_jobs.to_s
         )
+        if member
+          exclusions = compute_local_gem_exclusions(member)
+          env["KETTLE_JEM_LOCAL_GEM_EXCLUSIONS"] = exclusions.join(",") unless exclusions.empty?
+        end
         tool_gemfile = local_kettle_jem_gemfile if member && local_nomono_path_locked?(member)
         # Nomono's existing generated bootstrap can activate an installed
         # release before Bundler resolves a path-locked local Nomono. Start
@@ -5733,8 +5783,8 @@ module Kettle
         env
       end
 
-      def template_command_env(wave_jobs: 1)
-        (command == "template") ? template_prepare_env(wave_jobs: wave_jobs) : command_env
+      def template_command_env(wave_jobs: 1, member: nil)
+        (command == "template") ? template_prepare_env(wave_jobs: wave_jobs, member: member) : command_env
       end
 
       def template_bundler_update_env(env, member)
@@ -5757,6 +5807,77 @@ module Kettle
         env
       rescue ArgumentError
         env
+      end
+
+      # Compute local gem exclusions for a member to avoid version-satisfiability cycles.
+      # When a dep_member (e.g., rubocop-lts) is checked out on a branch that has a
+      # runtime dependency on the current member (e.g., rubocop-ruby1_8), and the
+      # dep_member's version on that branch doesn't satisfy the member's declared
+      # requirement, wiring it locally creates an unresolvable cycle.
+      # Returns an array of gem names to exclude from local_gems in _local.gemfile.
+      def compute_local_gem_exclusions(member)
+        exclusions = []
+
+        # Find the dep_member that owns the family _DEV path
+        dev_env_name = config.family_local_path_env_name
+        return exclusions unless dev_env_name
+
+        dev_value = env_overrides.fetch(dev_env_name, ENV.fetch(dev_env_name, ""))
+        return exclusions unless local_path_env_value?(dev_value)
+
+        dep_member = family_members.find { |m| m.root == File.expand_path(dev_value) }
+        return exclusions unless dep_member
+
+        # Get the branch that will be checked out for this member
+        branch = branch_stack_branch_for(member, dep_member)
+        return exclusions unless branch
+
+        # Get branch_dependencies from config (dep_member -> branch -> dependent_member)
+        branch_deps = config.branch_dependencies
+        dep_member_branches = branch_deps[dep_member.name] || {}
+
+        # Check if this branch maps to this member (explicit config)
+        mapped_member = dep_member_branches[branch]
+        if mapped_member
+          # Config explicitly says this branch of dep_member depends on mapped_member
+          if mapped_member.to_s == member.name
+            exclusions << dep_member.name
+            return exclusions
+          end
+        else
+          # Fallback: infer from dep_member's gemspec on that branch
+          # Read the gemspec from the branch to check runtime dependencies
+          runtime_deps = dep_member_runtime_dependencies_on_branch(dep_member, branch)
+          if runtime_deps.include?(member.name)
+            exclusions << dep_member.name
+          end
+        end
+
+        exclusions
+      end
+
+      # Read runtime dependencies from dep_member's gemspec on a specific branch
+      def dep_member_runtime_dependencies_on_branch(dep_member, branch)
+        # Use git show to read the gemspec from the branch
+        gemspec_path = find_gemspec(dep_member.root)
+        return [] unless gemspec_path
+
+        gemspec_content = `git -C #{Shellwords.escape(dep_member.root)} show #{Shellwords.escape(branch)}:#{Shellwords.escape(gemspec_path)} 2>/dev/null`
+        return [] unless $?.success? && !gemspec_content.empty?
+
+        # Parse runtime dependencies from gemspec content
+        # Look for spec.add_dependency or spec.add_runtime_dependency
+        deps = []
+        gemspec_content.scan(/spec\.add_(?:runtime_)?dependency\s*\(\s*["']([^"']+)["']/) do |match|
+          deps << match[0]
+        end
+        deps
+      rescue
+        []
+      end
+
+      def find_gemspec(root)
+        Dir.glob(File.join(root, "*.gemspec")).first
       end
 
       def local_kettle_jem_locked_for_member?(member)

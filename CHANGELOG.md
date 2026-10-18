@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- branch_dependencies config (dep_member -> branch -> dependent_member): branch-stack facts for sibling-repo families live in family config, never inferred from member names. Workflow checks out the mapped dependency branch before member phases and exports KETTLE_JEM_LOCAL_GEM_EXCLUSIONS during templating so _local.gemfile wiring skips dependencies whose checkout branch cannot satisfy the member requirement.
+
 ### Changed
 
 ### Deprecated
