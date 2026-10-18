@@ -25,6 +25,10 @@ RSpec.describe Kettle::Family::MiseTasks do
   end
 
   describe ".ensure_include" do
+    before do
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
+    end
+
     it "appends the task_config block when absent" do
       result = described_class.ensure_include(root_content: root_without, task_file_name: "mise-family.tasks.toml")
 
@@ -82,6 +86,10 @@ RSpec.describe Kettle::Family::MiseTasks do
   end
 
   describe ".task_names" do
+    before do
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
+    end
+
     it "parses a managed TOML task file using bare top-level task tables" do
       managed = <<~TOML
         [family-canary]
@@ -147,6 +155,10 @@ RSpec.describe Kettle::Family::MiseTasks do
   end
 
   describe ".redefinitions" do
+    before do
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
+    end
+
     it "finds table and trivial-pair collisions" do
       root = "#{root_without}\n[tasks.family-lint]\nrun = \"echo local\"\n"
       managed = "#{task_file}\n[clean]\nrun = \"echo managed clean\"\n"
@@ -161,6 +173,10 @@ RSpec.describe Kettle::Family::MiseTasks do
   end
 
   describe ".clean_redefinitions" do
+    before do
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
+    end
+
     it "removes duplicate table definitions from the root" do
       root_with_duplicates = "#{root_without}\n[tasks.family-lint]\nrun = \"echo local\"\n"
       result = described_class.clean_redefinitions(

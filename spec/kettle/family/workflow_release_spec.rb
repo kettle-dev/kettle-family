@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "shellwords"
 require "stringio"
 require "tmpdir"
 require "yaml"
@@ -4006,7 +4007,10 @@ RSpec.describe Kettle::Family::Workflow do
 
   def fake_bundle_env(body = "")
     bin_dir = File.join(@tmpdir, "fake-bin")
+    home_dir = File.join(@tmpdir, "fake-home")
     FileUtils.mkdir_p(bin_dir)
+    FileUtils.mkdir_p(home_dir)
+    File.write(File.join(home_dir, ".profile"), "PATH=#{Shellwords.escape(bin_dir)}:\"$PATH\"\nexport PATH\n")
     script_path = File.join(bin_dir, "bundle.sh")
     File.write(script_path, <<~BASH)
       #!/usr/bin/env bash
@@ -4031,6 +4035,7 @@ RSpec.describe Kettle::Family::Workflow do
     end
     {
       "PATH" => [bin_dir, ENV.fetch("PATH")].join(File::PATH_SEPARATOR),
+      "HOME" => home_dir,
       "BUNDLE_ATTEMPTS_FILE" => File.join(@tmpdir, "bundle-attempts")
     }
   end
