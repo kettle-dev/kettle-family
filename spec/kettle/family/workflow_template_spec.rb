@@ -2631,7 +2631,8 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   def stub_stable_bundler_version(version = "4.0.22")
-    allow(Gem).to receive(:loaded_specs).and_return({"bundler" => double(version: Gem::Version.new(version))})
+    loaded_specs = {"bundler" => double(version: Gem::Version.new(version))}
+    allow(Gem).to receive_messages(loaded_specs: loaded_specs, path: [])
     allow(Gem::Specification).to receive(:find_all_by_name).and_call_original
     allow(Gem::Specification).to receive(:find_all_by_name).with("bundler").and_return([double(version: Gem::Version.new(version))])
   end
