@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Convert registered worktree owner PIDs to integers before checking process liveness on Ruby 4.
-
 ### Security
+
+## [1.3.15] - 2026-10-18
+
+- TAG: [v1.3.15][1.3.15t]
+- COVERAGE: 93.39% -- 7228/7740 lines in 44 files
+- BRANCH COVERAGE: 77.69% -- 2883/3711 branches in 44 files
+- 36.88% documented
+
+### Fixed
+
+- Convert registered worktree owner PIDs to integers before checking process liveness on Ruby 4.
 
 ## [1.3.14] - 2026-10-17
 
@@ -3055,7 +3064,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.14...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.15...HEAD
+[1.3.15]: https://github.com/kettle-dev/kettle-family/compare/v1.3.14...v1.3.15
+[1.3.15t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.15
 [1.3.14]: https://github.com/kettle-dev/kettle-family/compare/v1.3.13...v1.3.14
 [1.3.14t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.14
 [1.3.13]: https://github.com/kettle-dev/kettle-family/compare/v1.3.12...v1.3.13
