@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Convert registered worktree owner PIDs to integers before checking process liveness on Ruby 4.
+
 ### Security
 
 ## [1.3.14] - 2026-10-17

@@ -922,7 +922,7 @@ module Kettle
       end
 
       def process_alive?(pid)
-        Process.kill(0, pid)
+        Process.kill(0, Integer(pid, 10))
         true
       rescue Errno::ESRCH
         false

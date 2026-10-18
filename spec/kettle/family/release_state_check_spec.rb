@@ -859,6 +859,14 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(File.file?(File.join(@tmpdir, ".git", "kettle-family-worktree.lock"))).to be(true)
   end
 
+  it "checks registered worktree owner PIDs as integers" do
+    check = described_class.new(members: [])
+    allow(Process).to receive(:kill).with(0, Process.pid).and_return(1)
+
+    expect(check.send(:process_alive?, Process.pid.to_s)).to be(true)
+    expect(Process).to have_received(:kill).with(0, Process.pid)
+  end
+
   it "checks a shared root changelog once per monorepo member" do
     alpha = member("alpha", version_file: File.join(@tmpdir, "gems", "alpha", "lib", "alpha", "version.rb"))
     beta = member("beta", version_file: File.join(@tmpdir, "gems", "beta", "lib", "beta", "version.rb"))
