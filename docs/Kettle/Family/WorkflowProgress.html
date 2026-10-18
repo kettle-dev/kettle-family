@@ -240,7 +240,7 @@
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil)  &#x21d2; WorkflowProgress </a>
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil, waves: {})  &#x21d2; WorkflowProgress </a>
     
 
     
@@ -433,7 +433,7 @@
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::WorkflowProgress (class)">WorkflowProgress</a></span></tt> 
+    #<strong>initialize</strong>(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil, waves: {})  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::WorkflowProgress (class)">WorkflowProgress</a></span></tt> 
   
 
   
@@ -479,12 +479,20 @@
 39
 40
 41
-42</pre>
+42
+43
+44
+45
+46
+47
+48
+49
+50</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 18</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>io:</span><span class='comma'>,</span> <span class='label'>label:</span><span class='comma'>,</span> <span class='label'>total:</span><span class='comma'>,</span> <span class='label'>jobs:</span><span class='comma'>,</span> <span class='label'>members:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>enabled:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>clock:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>heading:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>io:</span><span class='comma'>,</span> <span class='label'>label:</span><span class='comma'>,</span> <span class='label'>total:</span><span class='comma'>,</span> <span class='label'>jobs:</span><span class='comma'>,</span> <span class='label'>members:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>enabled:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>clock:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>heading:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>waves:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span>
   <span class='ivar'>@io</span> <span class='op'>=</span> <span class='id identifier rubyid_io'>io</span>
   <span class='ivar'>@label</span> <span class='op'>=</span> <span class='id identifier rubyid_label'>label</span>
   <span class='ivar'>@total</span> <span class='op'>=</span> <span class='id identifier rubyid_total'>total</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span>
@@ -492,11 +500,19 @@
   <span class='ivar'>@heading</span> <span class='op'>=</span> <span class='id identifier rubyid_heading'>heading</span>
   <span class='ivar'>@clock</span> <span class='op'>=</span> <span class='id identifier rubyid_clock'>clock</span> <span class='op'>||</span> <span class='id identifier rubyid_lambda'>lambda</span> <span class='lbrace'>{</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
   <span class='ivar'>@enabled</span> <span class='op'>=</span> <span class='id identifier rubyid_enabled'>enabled</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='op'>!</span><span class='id identifier rubyid_io'>io</span>
-  <span class='ivar'>@line_order</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:name</span><span class='rparen'>)</span>
+  <span class='comment'># Lines render in the order the caller passes: the task&#39;s actual
+</span>  <span class='comment'># execution order (wave plan for release, dependency order elsewhere).
+</span>  <span class='comment'># The pane is a schedule view, so it reflects reality, unlike the
+</span>  <span class='comment'># alphabetical summary lists in the report.
+</span>  <span class='ivar'>@line_order</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:name</span><span class='rparen'>)</span>
+  <span class='comment'># When the task runs in waves, prefix each member with its wave number
+</span>  <span class='comment'># (&quot;2.kettle-jem&quot;) so the wave structure is visible instead of the
+</span>  <span class='comment'># ordering looking arbitrary.
+</span>  <span class='ivar'>@waves</span> <span class='op'>=</span> <span class='id identifier rubyid_waves'>waves</span><span class='period'>.</span><span class='id identifier rubyid_to_h'>to_h</span><span class='period'>.</span><span class='id identifier rubyid_transform_values'>transform_values</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_wave'>wave</span><span class='op'>|</span> <span class='id identifier rubyid_wave'>wave</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span> <span class='rbrace'>}</span>
   <span class='ivar'>@started</span> <span class='op'>=</span> <span class='kw'>false</span>
   <span class='ivar'>@stopped</span> <span class='op'>=</span> <span class='kw'>false</span>
   <span class='ivar'>@member_totals</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
-  <span class='ivar'>@member_labels</span> <span class='op'>=</span> <span class='ivar'>@line_order</span><span class='period'>.</span><span class='id identifier rubyid_to_h'>to_h</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member_name'>member_name</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_member_name'>member_name</span><span class='comma'>,</span> <span class='id identifier rubyid_member_name'>member_name</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
+  <span class='ivar'>@member_labels</span> <span class='op'>=</span> <span class='ivar'>@line_order</span><span class='period'>.</span><span class='id identifier rubyid_to_h'>to_h</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_member_name'>member_name</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='id identifier rubyid_member_name'>member_name</span><span class='comma'>,</span> <span class='id identifier rubyid_wave_label'>wave_label</span><span class='lparen'>(</span><span class='id identifier rubyid_member_name'>member_name</span><span class='rparen'>)</span><span class='rbracket'>]</span> <span class='rbrace'>}</span>
   <span class='ivar'>@member_counts</span> <span class='op'>=</span> <span class='const'>Hash</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='int'>0</span><span class='rparen'>)</span>
   <span class='ivar'>@member_started_at</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@member_finished_elapsed</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
@@ -536,30 +552,30 @@
       <pre class="lines">
 
 
-76
-77
-78
-79
-80
-81
-82
-83
 84
 85
 86
 87
 88
 89
-90</pre>
+90
+91
+92
+93
+94
+95
+96
+97
+98</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 76</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 84</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_advance'>advance</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>status:</span><span class='comma'>,</span> <span class='label'>success:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>mark:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>key:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='label'>label:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
 
   <span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
-    <span class='ivar'>@member_labels</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_label'>label</span>
+    <span class='id identifier rubyid_store_label'>store_label</span><span class='lparen'>(</span><span class='id identifier rubyid_key'>key</span><span class='comma'>,</span> <span class='id identifier rubyid_label'>label</span><span class='rparen'>)</span>
     <span class='id identifier rubyid_event_mark'>event_mark</span> <span class='op'>=</span> <span class='id identifier rubyid_mark'>mark</span> <span class='op'>||</span> <span class='lparen'>(</span><span class='id identifier rubyid_success'>success</span> <span class='op'>?</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.</span><span class='tstring_end'>&quot;</span></span> <span class='op'>:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>F</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
     <span class='id identifier rubyid_increment_member_count'>increment_member_count</span><span class='lparen'>(</span><span class='id identifier rubyid_key'>key</span><span class='rparen'>)</span>
     <span class='kw'>if</span> <span class='ivar'>@tty</span>
@@ -602,20 +618,20 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-136
-137
-138
-139
-140
-141
-142
-143
 144
 145
-146</pre>
+146
+147
+148
+149
+150
+151
+152
+153
+154</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 136</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 144</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_finish'>finish</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -648,30 +664,30 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-107
-108
-109
-110
-111
-112
-113
-114
 115
 116
 117
 118
 119
 120
-121</pre>
+121
+122
+123
+124
+125
+126
+127
+128
+129</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 107</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 115</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_finish_member'>finish_member</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>success:</span><span class='comma'>,</span> <span class='label'>status:</span><span class='comma'>,</span> <span class='label'>key:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='label'>label:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
 
   <span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
-    <span class='ivar'>@member_labels</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_label'>label</span>
+    <span class='id identifier rubyid_store_label'>store_label</span><span class='lparen'>(</span><span class='id identifier rubyid_key'>key</span><span class='comma'>,</span> <span class='id identifier rubyid_label'>label</span><span class='rparen'>)</span>
     <span class='id identifier rubyid_total'>total</span> <span class='op'>=</span> <span class='ivar'>@member_totals</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span>
     <span class='ivar'>@member_counts</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_total'>total</span> <span class='kw'>if</span> <span class='id identifier rubyid_total'>total</span><span class='period'>.</span><span class='id identifier rubyid_positive?'>positive?</span>
     <span class='ivar'>@member_finished_elapsed</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_elapsed_seconds_by_name'>elapsed_seconds_by_name</span><span class='lparen'>(</span><span class='id identifier rubyid_key'>key</span><span class='rparen'>)</span>
@@ -702,21 +718,21 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-161
-162
-163
-164
-165
-166
-167
-168
 169
 170
 171
-172</pre>
+172
+173
+174
+175
+176
+177
+178
+179
+180</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 161</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 169</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_notification'>notification</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -750,23 +766,23 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-44
-45
-46
-47
-48
-49
-50
-51
 52
 53
 54
 55
 56
-57</pre>
+57
+58
+59
+60
+61
+62
+63
+64
+65</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 44</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 52</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_start'>start</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -802,14 +818,6 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-59
-60
-61
-62
-63
-64
-65
-66
 67
 68
 69
@@ -817,16 +825,24 @@ redraw block instead of making the terminal cursor its first row.</p>
 71
 72
 73
-74</pre>
+74
+75
+76
+77
+78
+79
+80
+81
+82</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 59</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 67</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_start_member'>start_member</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>total:</span><span class='comma'>,</span> <span class='label'>status:</span><span class='comma'>,</span> <span class='label'>key:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='label'>label:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
 
   <span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
-    <span class='ivar'>@member_labels</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_label'>label</span>
+    <span class='id identifier rubyid_store_label'>store_label</span><span class='lparen'>(</span><span class='id identifier rubyid_key'>key</span><span class='comma'>,</span> <span class='id identifier rubyid_label'>label</span><span class='rparen'>)</span>
     <span class='ivar'>@member_totals</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_total'>total</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span>
     <span class='ivar'>@member_counts</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='int'>0</span>
     <span class='ivar'>@member_started_at</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>||=</span> <span class='id identifier rubyid_monotonic_now'>monotonic_now</span>
@@ -858,18 +874,18 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-123
-124
-125
-126
-127
-128
-129
-130
-131</pre>
+131
+132
+133
+134
+135
+136
+137
+138
+139</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 123</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 131</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_stop'>stop</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -900,17 +916,17 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-152
-153
-154
-155
-156
-157
-158
-159</pre>
+160
+161
+162
+163
+164
+165
+166
+167</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 152</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 160</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_summary'>summary</span><span class='lparen'>(</span><span class='id identifier rubyid_message'>message</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
@@ -963,12 +979,12 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-148
-149
-150</pre>
+156
+157
+158</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 148</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 156</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_tty?'>tty?</span>
   <span class='ivar'>@tty</span>
@@ -993,30 +1009,30 @@ redraw block instead of making the terminal cursor its first row.</p>
       <pre class="lines">
 
 
-92
-93
-94
-95
-96
-97
-98
-99
 100
 101
 102
 103
 104
-105</pre>
+105
+106
+107
+108
+109
+110
+111
+112
+113</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 92</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow_progress.rb', line 100</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_update'>update</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>status:</span><span class='comma'>,</span> <span class='label'>mark:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>key:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='label'>label:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='kw'>unless</span> <span class='ivar'>@enabled</span>
   <span class='kw'>return</span> <span class='kw'>if</span> <span class='id identifier rubyid_status'>status</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
 
   <span class='id identifier rubyid_synchronize'>synchronize</span> <span class='kw'>do</span>
-    <span class='ivar'>@member_labels</span><span class='lbracket'>[</span><span class='id identifier rubyid_key'>key</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_label'>label</span>
+    <span class='id identifier rubyid_store_label'>store_label</span><span class='lparen'>(</span><span class='id identifier rubyid_key'>key</span><span class='comma'>,</span> <span class='id identifier rubyid_label'>label</span><span class='rparen'>)</span>
     <span class='kw'>if</span> <span class='ivar'>@tty</span>
       <span class='id identifier rubyid_append_event'>append_event</span><span class='lparen'>(</span><span class='id identifier rubyid_key'>key</span><span class='comma'>,</span> <span class='id identifier rubyid_mark'>mark</span><span class='rparen'>)</span> <span class='kw'>if</span> <span class='id identifier rubyid_mark'>mark</span>
       <span class='id identifier rubyid_render'>render</span><span class='lparen'>(</span><span class='id identifier rubyid_key'>key</span><span class='comma'>,</span> <span class='label'>status:</span> <span class='id identifier rubyid_status'>status</span><span class='rparen'>)</span>

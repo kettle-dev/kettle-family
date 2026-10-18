@@ -20,11 +20,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- [kc] mise-tasks-command: kettle-family mise-tasks command — ensures the destination root mise.toml includes the kettle-family managed TOML task file ([task_config].includes), creates the managed file from the shipped baseline, warns on task redefinitions (redefinition allowed, root wins), removes duplicates with opt-in --clean, and registers the managed file as template-managed (keep_destination) in the destination kettle-jem config via psych-merge; backed by Kettle::Family::MiseTasks, ast-crispr-toml, and psych-merge
-
 ### Changed
-
-- Release progress pane renders member lines in execution order with wave-number labels (e.g. 2.kettle-jem), and all report summary lists (succeeded/skipped/failed/pending) are now alphabetical regardless of parallel completion order
 
 ### Deprecated
 
@@ -33,6 +29,21 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.3.14] - 2026-10-17
+
+- TAG: [v1.3.14][1.3.14t]
+- COVERAGE: 93.36% -- 7226/7740 lines in 44 files
+- BRANCH COVERAGE: 77.69% -- 2883/3711 branches in 44 files
+- 36.88% documented
+
+### Added
+
+- [kc] mise-tasks-command: kettle-family mise-tasks command — ensures the destination root mise.toml includes the kettle-family managed TOML task file ([task_config].includes), creates the managed file from the shipped baseline, warns on task redefinitions (redefinition allowed, root wins), removes duplicates with opt-in --clean, and registers the managed file as template-managed (keep_destination) in the destination kettle-jem config via psych-merge; backed by Kettle::Family::MiseTasks, ast-crispr-toml, and psych-merge
+
+### Changed
+
+- Release progress pane renders member lines in execution order with wave-number labels (e.g. 2.kettle-jem), and all report summary lists (succeeded/skipped/failed/pending) are now alphabetical regardless of parallel completion order
 
 ## [1.3.13] - 2026-10-17
 
@@ -3042,7 +3053,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.13...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.14...HEAD
+[1.3.14]: https://github.com/kettle-dev/kettle-family/compare/v1.3.13...v1.3.14
+[1.3.14t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.14
 [1.3.13]: https://github.com/kettle-dev/kettle-family/compare/v1.3.12...v1.3.13
 [1.3.13t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.13
 [1.3.12]: https://github.com/kettle-dev/kettle-family/compare/v1.3.11...v1.3.12
