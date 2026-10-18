@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Version-locked siblings bump in lockstep: when any member of an aggregate release (members not listed in release.aggregate_validation.exclude_members) needs a version bump, every member of that aggregate is marked bump-pending — including members without unreleased changelog entries of their own and brand-new members that have never been released. Independently releasable members (e.g. kettle-jem in structuredmerge-ruby) keep per-member bump semantics, and members already mid-prep (checkout version past their last release) are never double-bumped.
-
 ### Security
+
+## [1.3.17] - 2026-10-18
+
+- TAG: [v1.3.17][1.3.17t]
+- COVERAGE: 93.01% -- 7264/7810 lines in 44 files
+- BRANCH COVERAGE: 77.32% -- 2905/3757 branches in 44 files
+- 37.01% documented
+
+### Fixed
+
+- Version-locked siblings bump in lockstep: when any member of an aggregate release (members not listed in release.aggregate_validation.exclude_members) needs a version bump, every member of that aggregate is marked bump-pending — including members without unreleased changelog entries of their own and brand-new members that have never been released. Independently releasable members (e.g. kettle-jem in structuredmerge-ruby) keep per-member bump semantics, and members already mid-prep (checkout version past their last release) are never double-bumped.
 
 ## [1.3.16] - 2026-10-18
 
@@ -3077,7 +3086,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.16...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.17...HEAD
+[1.3.17]: https://github.com/kettle-dev/kettle-family/compare/v1.3.16...v1.3.17
+[1.3.17t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.17
 [1.3.16]: https://github.com/kettle-dev/kettle-family/compare/v1.3.15...v1.3.16
 [1.3.16t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.16
 [1.3.15]: https://github.com/kettle-dev/kettle-family/compare/v1.3.14...v1.3.15
