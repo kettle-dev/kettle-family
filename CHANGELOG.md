@@ -30,6 +30,17 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Security
 
+## [1.3.18] - 2026-10-18
+
+- TAG: [v1.3.18][1.3.18t]
+- COVERAGE: 93.01% -- 7275/7822 lines in 44 files
+- BRANCH COVERAGE: 77.31% -- 2909/3763 branches in 44 files
+- 37.01% documented
+
+### Fixed
+
+- Lockstep bump catches up siblings left behind the cohort line: a version-locked member whose checkout version sits behind the aggregate's version line is bump-pending on its own, independent of whether a sibling is actively bump-pending (the case after a cohort bump skips a brand-new member). The shared-changelog path (changelog mode: root) now applies lockstep normalization, and blank latest_released no longer parses as version 0 (Gem::Version.new("") => 0), which had made never-released members look mid-prep.
+
 ## [1.3.17] - 2026-10-18
 
 - TAG: [v1.3.17][1.3.17t]
@@ -3086,7 +3097,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.17...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.18...HEAD
+[1.3.18]: https://github.com/kettle-dev/kettle-family/compare/v1.3.17...v1.3.18
+[1.3.18t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.18
 [1.3.17]: https://github.com/kettle-dev/kettle-family/compare/v1.3.16...v1.3.17
 [1.3.17t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.17
 [1.3.16]: https://github.com/kettle-dev/kettle-family/compare/v1.3.15...v1.3.16
