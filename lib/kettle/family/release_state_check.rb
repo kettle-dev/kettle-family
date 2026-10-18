@@ -55,7 +55,7 @@ module Kettle
           member_branch_results = member_local_branch_results(member, event_handler: event_handler)
           member_branch_results || check_member(member, event_handler: event_handler)
         end
-        member_results.flat_map { |result| Array(result) }
+        normalize_lockstep_version_bump(member_results.flat_map { |result| Array(result) })
       end
 
       private
@@ -825,6 +825,52 @@ module Kettle
 
       def shared_changelog?
         config&.shared_changelog?
+      end
+
+      # Version-locked siblings move in lockstep. Members not declared
+      # independently releasable (release.aggregate_validation.exclude_members)
+      # share the family version line, so when any of them needs a version
+      # bump, all of them do — including members without unreleased changelog
+      # entries of their own and brand-new members that have never been
+      # released (empty latest_released). Independently releasable members
+      # keep per-member bump semantics: they bump only when their own
+      # unreleased entries require it.
+      def normalize_lockstep_version_bump(results)
+        excluded = Array(config&.release_aggregate_validation_excluded_members).map(&:to_s)
+        return results if excluded.empty?
+
+        pending_lockstep = results.any? do |result|
+          result.ok? &&
+            !excluded.include?(result.member_name.to_s) &&
+            result.state["bump_release_pending"] == true
+        end
+        return results unless pending_lockstep
+
+        results.map do |result|
+          next result unless result.ok? && !excluded.include?(result.member_name.to_s)
+
+          state = result.state
+          next result if state["bump_release_pending"] == true
+
+          # A member whose checkout version already moved past its last
+          # release is mid-prep; do not double-bump it.
+          latest_released = state["latest_released"].to_s
+          next result if !latest_released.empty? && state["version"].to_s != latest_released
+
+          result.class.new(
+            member_name: result.member_name,
+            command: result.command,
+            workdir: result.workdir,
+            status: result.status,
+            success: result.success,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            elapsed_seconds: result.elapsed_seconds,
+            state: state.merge("bump_release_pending" => true),
+            reason: result.reason,
+            branch: result.branch
+          )
+        end
       end
 
       def normalize_shared_version_bump(results)

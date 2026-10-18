@@ -167,6 +167,46 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, true])
   end
 
+  it "propagates a required bump to version-locked siblings, including never-released members" do
+    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: ["independent"])
+    check = described_class.new(members: [member("alpha"), member("beta"), member("independent")], config: config)
+    results = [
+      release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
+      release_state_result("beta", "version" => "1.2.3", "latest_released" => "", "unreleased_entries" => false, "bump_release_pending" => false),
+      release_state_result("independent", "version" => "9.9.0", "latest_released" => "9.9.0", "unreleased_entries" => false, "bump_release_pending" => false)
+    ]
+
+    normalized = check.send(:normalize_lockstep_version_bump, results)
+
+    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, true, false])
+  end
+
+  it "does not double-bump a version-locked sibling whose version already moved past its release" do
+    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: ["independent"])
+    check = described_class.new(members: [member("alpha"), member("beta")], config: config)
+    results = [
+      release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
+      release_state_result("beta", "version" => "1.2.4", "latest_released" => "1.2.3", "unreleased_entries" => false, "bump_release_pending" => false)
+    ]
+
+    normalized = check.send(:normalize_lockstep_version_bump, results)
+
+    expect(normalized.map { |result| result.state["bump_release_pending"] }).to eq([true, false])
+  end
+
+  it "leaves results unchanged when no independently releasable members are declared" do
+    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: [])
+    check = described_class.new(members: [member("alpha"), member("beta")], config: config)
+    results = [
+      release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
+      release_state_result("beta", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => false, "bump_release_pending" => false)
+    ]
+
+    normalized = check.send(:normalize_lockstep_version_bump, results)
+
+    expect(normalized).to eq(results)
+  end
+
   it "keeps member-local changelog bump state independent from a shared version" do
     alpha = member("alpha")
     beta = member("beta")
@@ -1049,7 +1089,8 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       release_target_branches: release_target_branches,
       shared_changelog?: shared_changelog,
       changelog_workdir: nil,
-      changelog_env: changelog_env
+      changelog_env: changelog_env,
+      release_aggregate_validation_excluded_members: []
     )
   end
 

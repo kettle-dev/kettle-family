@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Version-locked siblings bump in lockstep: when any member of an aggregate release (members not listed in release.aggregate_validation.exclude_members) needs a version bump, every member of that aggregate is marked bump-pending — including members without unreleased changelog entries of their own and brand-new members that have never been released. Independently releasable members (e.g. kettle-jem in structuredmerge-ruby) keep per-member bump semantics, and members already mid-prep (checkout version past their last release) are never double-bumped.
+
 ### Security
 
 ## [1.3.16] - 2026-10-18
