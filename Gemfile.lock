@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    kettle-family (1.3.22)
+    kettle-family (1.3.23)
       ast-crispr (~> 7.1, >= 7.1.11)
       ast-crispr-toml (~> 7.1, >= 7.1.11)
       command_kit (~> 0.6)
@@ -683,7 +683,7 @@ CHECKSUMS
   json-merge (7.1.12) sha256=9c406cdc84d82a445e411d25e0fe248716cc16e96e7bb728d88b7e39692e571a
   kettle-changelog (1.0.13) sha256=34be2385fd44032c7e0761d68aa26986984118ad00fdfe877ae445afef3953bd
   kettle-dev (3.1.18) sha256=4542563d77d01d763c53de05c85970735a45b8c86d942de8e1e7113ca3585f53
-  kettle-family (1.3.22)
+  kettle-family (1.3.23)
   kettle-gha-pins (0.3.18) sha256=7e1aab36c248bab6b55e6c9d79b9efb8233c14a5e33e0d8013a874c49030046a
   kettle-jem (7.1.32) sha256=a0acdbe8b75c3b0d4534d6cc437dfd3e20b146eea4a30120e379d691ee82851d
   kettle-ndjson (0.1.20) sha256=75c366059d43a2d73a32a87e7e5fd28ccfacf658753469845601e03557290eab
