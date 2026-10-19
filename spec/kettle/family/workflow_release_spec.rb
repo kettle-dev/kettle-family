@@ -130,6 +130,28 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "targets template prepare changelog entries at the family changelog" do
+    write_release_config(changelog: {"mode" => "root", "path" => "CHANGELOG.md"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [member])
+
+    env = workflow.send(:template_prepare_env, member: member)
+
+    expect(env.fetch("K_CHANGELOG_PATH")).to eq(File.join(@tmpdir, "CHANGELOG.md"))
+  end
+
+  it "targets template prepare changelog entries at the member changelog for member-local families" do
+    write_release_config(changelog: {"mode" => "member_local", "path" => "CHANGELOG.md"})
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "template", config: config, members: [member])
+
+    env = workflow.send(:template_prepare_env, member: member)
+
+    expect(env.fetch("K_CHANGELOG_PATH")).to eq(File.join(member.root, "CHANGELOG.md"))
+  end
+
   it "executes the release tool from the family root bundle in release mode" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

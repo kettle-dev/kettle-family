@@ -5776,6 +5776,20 @@ module Kettle
           exclusions = compute_local_gem_exclusions(member)
           env["KETTLE_JEM_LOCAL_GEM_EXCLUSIONS"] = exclusions.join(",") unless exclusions.empty?
         end
+        # Template dependency preparation records what it changed as changelog
+        # entries. Changelogs go where the family config says they go — the
+        # family root changelog for shared-changelog families, each member's
+        # own otherwise — exactly like add-changelog. Without this, prepare
+        # writes transferred entries into a member-local CHANGELOG.md even
+        # when the family shares one, splitting a lock-step member into its
+        # own release lane.
+        if kettle_jem_template_command?(config.template_command || default_template_command(member))
+          if config&.shared_changelog?
+            env["K_CHANGELOG_PATH"] = File.expand_path(config.changelog_path, config.root)
+          else
+            env["K_CHANGELOG_PATH"] = File.join(member.root, "CHANGELOG.md") if member
+          end
+        end
         tool_gemfile = local_kettle_jem_gemfile if member && local_nomono_path_locked?(member)
         # Nomono's existing generated bootstrap can activate an installed
         # release before Bundler resolves a path-locked local Nomono. Start

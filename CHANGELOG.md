@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Template dependency preparation records its changelog entries where the family config says changelogs go (K_CHANGELOG_PATH resolved from changelog mode/path), so a shared-changelog family no longer gets transferred template entries written into a member-local CHANGELOG.md — which split a lock-step member into its own release lane.
+
 ### Security
 
 ## [1.3.22] - 2026-10-19
