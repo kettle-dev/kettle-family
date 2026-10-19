@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family releases execute kettle-release from the family root bundle (BUNDLE_GEMFILE points member children at the family root Gemfile), so a stale member worktree lock can never resolve an ancient kettle-release whose fixes silently never load (observed: a member lock pinning kettle-dev 3.1.16 / kettle-family 1.3.11 skipped 3.1.17's task-lockfile materialization and the build failed on kettle-family 1.3.13).
+
 ### Security
 
 ## [1.3.21] - 2026-10-18

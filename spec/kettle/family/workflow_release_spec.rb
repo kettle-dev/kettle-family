@@ -130,6 +130,39 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "executes the release tool from the family root bundle in release mode" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+    family_gemfile = File.join(@tmpdir, "Gemfile")
+    File.write(family_gemfile, "source 'https://gem.coop/'\ngem 'kettle-dev'\n")
+
+    expect(workflow.send(:release_tool_gemfile_path, "")).to eq(family_gemfile)
+  end
+
+  it "returns nil for the release tool bundle when the family root has no Gemfile" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+
+    expect(workflow.send(:release_tool_gemfile_path, "")).to be_nil
+  end
+
+  it "prefers the local kettle-dev checkout bundle in local development" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member])
+    local_root = File.join(@tmpdir, "kettle-dev")
+    local_gemfile = File.join(local_root, "Gemfile")
+    FileUtils.mkdir_p(local_root)
+    File.write(local_gemfile, "source 'https://gem.coop/'\n")
+
+    expect(workflow.send(:release_tool_gemfile_path, local_root)).to eq(local_gemfile)
+  end
+
   it "preserves an explicit TurboTests2 release process ceiling" do
     write_release_config(release_env: {"TURBO_TESTS2_MAX_PROCESSES" => "2"})
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -841,9 +874,12 @@ RSpec.describe Kettle::Family::Workflow do
     member = ready_member("alpha")
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
 
-    # Same release-mode policy as sibling repos: the family-root dev bundle
-    # pins unreleased monorepo members, so the child must not inherit it.
-    expect(workflow.send(:release_env_for_member, member)).not_to include("BUNDLE_GEMFILE")
+    # The family root Gemfile is the version-managed home for the release
+    # tool: children execute kettle-release from it, so a stale member
+    # worktree lock can never resolve an ancient kettle-release.
+    expect(workflow.send(:release_env_for_member, member)).to include(
+      "BUNDLE_GEMFILE" => File.join(@tmpdir, "Gemfile")
+    )
   end
 
   it "uses the configured monorepo member root for the shared changelog suite by default" do
@@ -1692,11 +1728,12 @@ RSpec.describe Kettle::Family::Workflow do
     member = ready_member("alpha")
     workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
 
-    # The family-root dev bundle resolves the family's own members, which are
-    # unreleased while any member is being released; handing it to the child
-    # makes the child's kettle-release unbootable. In release mode the child
-    # resolves kettle-release from its own released dependency instead.
-    expect(workflow.send(:release_env_for_member, member)).not_to include("BUNDLE_GEMFILE")
+    # The family root Gemfile is the version-managed home for the release
+    # tool: children execute kettle-release from it, so a stale member
+    # worktree lock can never resolve an ancient kettle-release.
+    expect(workflow.send(:release_env_for_member, member)).to include(
+      "BUNDLE_GEMFILE" => File.join(@tmpdir, "Gemfile")
+    )
     expect(workflow.send(:release_bootstrap_execution_profile).name).to eq(:release_bootstrap)
   end
 

@@ -3919,15 +3919,17 @@ module Kettle
         local_kettle_dev_gemfile = local_kettle_dev_gemfile_path(local_kettle_dev)
         return local_kettle_dev_gemfile if local_kettle_dev_gemfile
 
-        # Release mode: do NOT hand the member child the family-root dev
-        # bundle. That bundle resolves the family's own members, which are
-        # unreleased by definition while any member is being released — a
-        # released-only child bundle cannot materialize it (observed:
-        # "Could not find kettle-family-1.3.9 ... in locally installed gems"
-        # killed every member's kettle-release). Without BUNDLE_GEMFILE the
-        # child resolves kettle-release from its own released dependency.
-        return nil unless local_path_env_value?(local_kettle_dev)
-
+        # Execute the release tool from the family root bundle. Each family
+        # has a Gemfile and must be allowed to version-manage its release
+        # tooling there. The member child worktree lockfile is NOT
+        # authoritative for the release tool itself: a stale member lock
+        # resolves an ancient kettle-release whose fixes can never load
+        # (observed: a member lock pinning kettle-dev 3.1.16 and
+        # kettle-family 1.3.11 meant 3.1.17's task-lockfile materialization
+        # never ran, and the build then died with "Could not find
+        # kettle-family-1.3.13 in locally installed gems"). The child env
+        # disables the family's local-path toggles, so the family root
+        # Gemfile resolves its registry declarations — released gems only.
         family_gemfile = File.join(config.root, "Gemfile")
         family_gemfile if File.file?(family_gemfile)
       end
