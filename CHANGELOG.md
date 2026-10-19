@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Managed family mise task suite generated from family config facts via a kettle-jem plugin: comprehensive delegations (test, lint, state, release-state, template, bump, changelog) plus bup/bupb/update-bundler with env wiring derived from family.local_path_env, release.disable_local_path_env, and family.members_root, replacing per-family hand-copied task definitions (and the buggy shell-spawned bundler pinning).
 
+- mise-tasks registers the kettle-family plugin in the destination kettle-jem config (psych-merge, destination-wins sequence append), so templating runs load it and materialize the managed task suite with no hand-edited configs.
+
 ### Changed
 
 ### Deprecated

@@ -329,7 +329,9 @@ module Kettle
           end
 
           # Register the managed file in the destination's kettle-jem config
-          # when the project is kettle-jem-templated.
+          # when the project is kettle-jem-templated, and ensure kettle-family
+          # itself is listed under `plugins:` so templating runs load it and
+          # materialize the managed task suite automatically.
           %w[.structuredmerge/kettle-jem.yml .kettle-jem.yml].each do |config_relative|
             config_path = File.join(root, config_relative)
             next unless File.file?(config_path)
@@ -343,6 +345,16 @@ module Kettle
               stdout.puts("registered #{task_file_name} in #{config_relative}")
             else
               stdout.puts("#{task_file_name} already registered in #{config_relative}")
+            end
+
+            plugin_registration = Kettle::Family::MiseTasks.register_plugin_in_jem_config(
+              config_content: File.read(config_path)
+            )
+            if plugin_registration.changed
+              File.write(config_path, plugin_registration.content)
+              stdout.puts("registered kettle-family plugin in #{config_relative}")
+            else
+              stdout.puts("kettle-family plugin already registered in #{config_relative}")
             end
             break
           end

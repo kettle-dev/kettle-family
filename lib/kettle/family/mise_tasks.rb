@@ -104,6 +104,35 @@ module Kettle
         Result.new(changed: updated != config_content, include_present: true, content: updated, redefinitions: [])
       end
 
+      # Ensure kettle-family is listed under `plugins:` in the destination's
+      # kettle-jem config, so templating runs load it and materialize the
+      # managed task suite. Appends to an existing `plugins:` list without
+      # disturbing entries already there (sequence items present only in the
+      # fragment are added; destination items always win); a no-op when the
+      # plugin is already listed.
+      #
+      # @param config_content [String] destination kettle-jem config YAML
+      # @return [Result]-shaped Struct (changed, include_present, content, redefinitions: [])
+      def self.register_plugin_in_jem_config(config_content:)
+        fragment = <<~YAML
+          plugins:
+            - kettle-family
+        YAML
+
+        merge_result = Psych::Merge.merge_yaml(
+          fragment,
+          config_content,
+          "yaml",
+          add_template_only_nodes: true,
+          add_template_only_sequence_items: true,
+          preference: :destination
+        )
+        raise Error, Array(merge_result[:diagnostics]).map { |d| d[:message] || d["message"] }.join("; ") unless merge_result[:ok]
+
+        updated = merge_result[:output]
+        Result.new(changed: updated != config_content, include_present: true, content: updated, redefinitions: [])
+      end
+
       # Task names defined in BOTH the root mise.toml and the managed task file.
       #
       # @param root_content [String] destination mise.toml content

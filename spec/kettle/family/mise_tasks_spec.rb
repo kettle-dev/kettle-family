@@ -134,6 +134,42 @@ RSpec.describe Kettle::Family::MiseTasks do
       expect(parsed.dig("defaults", "preference")).to eq("template")
     end
 
+    it "registers the kettle-family plugin, appending to an existing list" do
+      with_plugins = <<~YAML
+        files:
+          Gemfile:
+            strategy: accept_template
+        plugins:
+          - kettle-drift
+      YAML
+
+      result = described_class.register_plugin_in_jem_config(config_content: with_plugins)
+
+      expect(result.changed).to be(true)
+      require "yaml"
+      parsed = YAML.safe_load(result.content)
+      expect(parsed.fetch("plugins")).to include("kettle-family", "kettle-drift")
+    end
+
+    it "creates the plugins list when absent" do
+      result = described_class.register_plugin_in_jem_config(config_content: config)
+
+      expect(result.changed).to be(true)
+      require "yaml"
+      parsed = YAML.safe_load(result.content)
+      expect(parsed.fetch("plugins")).to eq(["kettle-family"])
+      expect(parsed.dig("files", "Gemfile", "strategy")).to eq("accept_template")
+    end
+
+    it "is idempotent when the plugin is already listed" do
+      first = described_class.register_plugin_in_jem_config(config_content: config)
+      second = described_class.register_plugin_in_jem_config(config_content: first.content)
+
+      expect(second.changed).to be(false)
+      require "yaml"
+      expect(YAML.safe_load(second.content).fetch("plugins")).to eq(["kettle-family"])
+    end
+
     it "is idempotent when the registration already exists" do
       first = described_class.register_in_jem_config(config_content: config, task_file_name: "mise-family.tasks.toml")
       second = described_class.register_in_jem_config(config_content: first.content, task_file_name: "mise-family.tasks.toml")
