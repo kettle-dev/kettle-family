@@ -20,10 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Managed family mise task suite generated from family config facts via a kettle-jem plugin: comprehensive delegations (test, lint, state, release-state, template, bump, changelog) plus bup/bupb/update-bundler with env wiring derived from family.local_path_env, release.disable_local_path_env, and family.members_root, replacing per-family hand-copied task definitions (and the buggy shell-spawned bundler pinning).
-
-- mise-tasks registers the kettle-family plugin in the destination kettle-jem config (psych-merge, destination-wins sequence append), so templating runs load it and materialize the managed task suite with no hand-edited configs.
-
 ### Changed
 
 ### Deprecated
@@ -33,6 +29,19 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.3.21] - 2026-10-18
+
+- TAG: [v1.3.21][1.3.21t]
+- COVERAGE: 92.98% -- 7347/7902 lines in 44 files
+- BRANCH COVERAGE: 77.22% -- 2929/3793 branches in 44 files
+- 37.55% documented
+
+### Added
+
+- Managed family mise task suite generated from family config facts via a kettle-jem plugin: comprehensive delegations (test, lint, state, release-state, template, bump, changelog) plus bup/bupb/update-bundler with env wiring derived from family.local_path_env, release.disable_local_path_env, and family.members_root, replacing per-family hand-copied task definitions (and the buggy shell-spawned bundler pinning).
+
+- mise-tasks registers the kettle-family plugin in the destination kettle-jem config (psych-merge, destination-wins sequence append), so templating runs load it and materialize the managed task suite with no hand-edited configs.
 
 ## [1.3.18] - 2026-10-18
 
@@ -3101,7 +3110,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.18...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.21...HEAD
+[1.3.21]: https://github.com/kettle-dev/kettle-family/compare/v1.3.18...v1.3.21
+[1.3.21t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.21
 [1.3.18]: https://github.com/kettle-dev/kettle-family/compare/v1.3.17...v1.3.18
 [1.3.18t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.18
 [1.3.17]: https://github.com/kettle-dev/kettle-family/compare/v1.3.16...v1.3.17

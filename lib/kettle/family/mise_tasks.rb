@@ -405,7 +405,7 @@ module Kettle
         def members_root_relative
           require "pathname"
           Pathname.new(config.members_root.to_s)
-                  .relative_path_from(Pathname.new(config.root.to_s)).to_s
+            .relative_path_from(Pathname.new(config.root.to_s)).to_s
         rescue ArgumentError
           nil
         end
