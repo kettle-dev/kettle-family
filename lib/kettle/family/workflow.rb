@@ -578,6 +578,9 @@ module Kettle
         update_family_root_bundle(runner: runner, memo: results) if %w[bup bupb update-bundler].include?(command)
         return results unless results.all?(&:ok?)
 
+        results.concat(bup_bootstrap_dependency_results(workflow_members, runner: runner, memo: results)) if %w[bup bupb update-bundler].include?(command)
+        return results unless results.all?(&:ok?)
+
         if %w[bup bupb update-bundler].include?(command) && release_mode_bundle_update?
           results.concat(release_pre_clean_results(runner: runner))
           return results unless results.last.nil? || results.last.ok?
@@ -1321,6 +1324,49 @@ module Kettle
           elapsed_seconds: 0.0,
           skipped: false,
           reason: "template member worktree failed"
+        )
+      end
+
+      # Before a bundle update resolves the dependency graph, the member's
+      # bootstrap must declare and lock the newest Nomono floor, otherwise the
+      # generated bootstrap activates an older installed release and Bundler
+      # rejects the duplicate requirement raised by the family-root floor bump.
+      # This is the bup analogue of template_bootstrap_dependency_results.
+      def bup_bootstrap_dependency_results(workflow_members, runner:, memo:)
+        return [] if workflow_members.empty?
+
+        candidate_members = workflow_members.select { |member| nomono_bootstrap_candidate?(member) }
+        return [] if candidate_members.empty?
+
+        latest_nomono_version = latest_released_nomono_version
+        bootstrap = NomonoBootstrap.new(latest_version: latest_nomono_version, mode: :execute)
+        candidate_members.each_with_object([]) do |member, results|
+          next unless bootstrap.member_needs_bootstrap?(member)
+
+          floor_result = bootstrap.bootstrap_member(member)
+          results << floor_result
+          break results unless results.last.ok?
+
+          results << runner.call(
+            member: member,
+            phase: "bup_bootstrap_dependencies",
+            command: pinned_bundler_update_command(extra_gems: %w[nomono]),
+            env: bup_bootstrap_dependency_env(member)
+          )
+          break results unless results.last.ok?
+        end
+      rescue => error
+        [template_bootstrap_failure_result(workflow_members.first, error.message)]
+      end
+
+      def bup_bootstrap_dependency_env(member)
+        bundle_update_env.merge(
+          # A standalone update re-resolves against the member's own bundle. The
+          # member Gemfile bootstrap floor has already been bumped; here we only
+          # reconcile the member lockfile for that gem, so the subsequent member
+          # Gemfile.lock is not stale and the new floor resolves from the family
+          # root local path instead of activating an older installed release.
+          "BUNDLE_GEMFILE" => "#{member.root}/Gemfile"
         )
       end
 
