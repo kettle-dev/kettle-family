@@ -5786,8 +5786,8 @@ module Kettle
         if kettle_jem_template_command?(config.template_command || default_template_command(member))
           if config&.shared_changelog?
             env["K_CHANGELOG_PATH"] = File.expand_path(config.changelog_path, config.root)
-          else
-            env["K_CHANGELOG_PATH"] = File.join(member.root, "CHANGELOG.md") if member
+          elsif member
+            env["K_CHANGELOG_PATH"] = File.join(member.root, "CHANGELOG.md")
           end
         end
         tool_gemfile = local_kettle_jem_gemfile if member && local_nomono_path_locked?(member)

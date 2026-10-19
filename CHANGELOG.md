@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Template dependency preparation records its changelog entries where the family config says changelogs go (K_CHANGELOG_PATH resolved from changelog mode/path), so a shared-changelog family no longer gets transferred template entries written into a member-local CHANGELOG.md — which split a lock-step member into its own release lane.
-
 ### Security
+
+## [1.3.23] - 2026-10-19
+
+- TAG: [v1.3.23][1.3.23t]
+- COVERAGE: 93.00% -- 7352/7905 lines in 44 files
+- BRANCH COVERAGE: 77.31% -- 2937/3799 branches in 44 files
+- 37.55% documented
+
+### Fixed
+
+- Template dependency preparation records its changelog entries where the family config says changelogs go (K_CHANGELOG_PATH resolved from changelog mode/path), so a shared-changelog family no longer gets transferred template entries written into a member-local CHANGELOG.md — which split a lock-step member into its own release lane.
 
 ## [1.3.22] - 2026-10-19
 
@@ -3123,7 +3132,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.22...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.23...HEAD
+[1.3.23]: https://github.com/kettle-dev/kettle-family/compare/v1.3.22...v1.3.23
+[1.3.23t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.23
 [1.3.22]: https://github.com/kettle-dev/kettle-family/compare/v1.3.21...v1.3.22
 [1.3.22t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.22
 [1.3.21]: https://github.com/kettle-dev/kettle-family/compare/v1.3.18...v1.3.21
