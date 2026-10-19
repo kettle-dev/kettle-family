@@ -1973,6 +1973,41 @@ RSpec.describe Kettle::Family::CLI do
     stdout
   end
 
+  describe "#changelog_target_env" do
+    let(:cli) { described_class.allocate }
+
+    it "targets the family root changelog for shared-changelog families" do
+      config = instance_double(
+        Kettle::Family::Config,
+        shared_changelog?: true,
+        changelog_path: "CHANGELOG.md",
+        root: "/fam"
+      )
+      member = instance_double(Kettle::Family::Member, root: "/fam/gems/alpha")
+
+      env = cli.send(:changelog_target_env, config: config, member: member)
+
+      expect(env).to eq("K_CHANGELOG_PATH" => "/fam/CHANGELOG.md")
+    end
+
+    it "targets each member's own changelog for member-local families" do
+      config = instance_double(Kettle::Family::Config, shared_changelog?: false)
+      member = instance_double(Kettle::Family::Member, root: "/fam/alpha")
+
+      env = cli.send(:changelog_target_env, config: config, member: member)
+
+      expect(env).to eq("K_CHANGELOG_PATH" => "/fam/alpha/CHANGELOG.md")
+    end
+
+    it "falls back to the member changelog when config is absent" do
+      member = instance_double(Kettle::Family::Member, root: "/fam/alpha")
+
+      env = cli.send(:changelog_target_env, config: nil, member: member)
+
+      expect(env).to eq("K_CHANGELOG_PATH" => "/fam/alpha/CHANGELOG.md")
+    end
+  end
+
   def clean_entrypoint_env
     {
       "DEBUG" => nil,

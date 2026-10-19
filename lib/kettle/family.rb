@@ -42,5 +42,17 @@ require_relative "family/version"
 module Kettle
   module Family
     class Error < StandardError; end
+
+    # kettle-jem plugin registration (kettle-jem-appraisals pattern). The gem
+    # name "kettle-family" resolves to this module as the plugin handle, and
+    # kettle-jem calls +register_kettle_jem_plugin(registrar)+ on it when the
+    # family opts in via `plugins: [kettle-family]` in its kettle-jem config.
+    module_function
+
+    def register_kettle_jem_plugin(registrar)
+      registrar.on_phase("remaining_files", timing: :after) do |context:|
+        MiseTasks.materialize_managed_suite(context: context)
+      end
+    end
   end
 end

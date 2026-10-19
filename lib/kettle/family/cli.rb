@@ -966,7 +966,7 @@ module Kettle
       def command_results_for_current_branch(command:, config:, members:, options:, family_members: members, start_at: StartAt.new(nil, nil), state_event_handler: nil, state_event_tape: nil, release_state_results: nil)
         return mise_trust_results(config: config, members: members) if command == "mise-trust"
         return bump_version_results(config: config, members: members, options: options, phase: command, release_state_results: release_state_results) if %w[bump bump-version].include?(command)
-        return add_changelog_results(members: members, options: options) if command == "add-changelog"
+        return add_changelog_results(config: config, members: members, options: options) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options) if command == "clean-unreleased"
         return clean_blockers_results(members: members, options: options) if command == "clean-blockers"
         return clean_installed_results(config: config, members: members, options: options) if command == "clean-installed"
@@ -1411,7 +1411,7 @@ module Kettle
         Kettle::Dev::VersionBump.resolve_target_version(options[:target_version].to_s, current.to_s)
       end
 
-      def add_changelog_results(members:, options:)
+      def add_changelog_results(config:, members:, options:)
         section = options[:changelog_section].to_s
         entry = options[:changelog_entry].to_s
         raise Error, "add-changelog requires --section" if section.empty?
@@ -1422,10 +1422,25 @@ module Kettle
           memo << runner.call(
             member: member,
             phase: "add-changelog",
-            command: [installed_executable("kettle-changelog"), "--add-unreleased-entry", "--section", section, "--entry", entry]
+            command: [installed_executable("kettle-changelog"), "--add-unreleased-entry", "--section", section, "--entry", entry],
+            env: changelog_target_env(config: config, member: member)
           )
           break memo unless memo.last.ok?
         end
+      end
+
+      # Changelogs go where the family config says they go: a shared-changelog
+      # family writes its family root changelog, a member-local family writes
+      # each member's own. The env is explicit because kettle-changelog falls
+      # back to the invoking directory's CHANGELOG.md when K_CHANGELOG_PATH is
+      # unset, which is only correct for member-local families by accident.
+      def changelog_target_env(config:, member:)
+        path = if config&.shared_changelog?
+          File.expand_path(config.changelog_path, config.root)
+        else
+          File.join(member.root, "CHANGELOG.md")
+        end
+        {"K_CHANGELOG_PATH" => path}
       end
 
       def installed_executable(name)

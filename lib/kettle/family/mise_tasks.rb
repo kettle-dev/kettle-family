@@ -19,6 +19,10 @@ module Kettle
     module MiseTasks
       TomlSelectors = Ast::Crispr::Toml::Selectors
 
+      # Managed task file name, relative to the family root (the directory
+      # containing .kettle-family.yml and the root mise.toml that includes it).
+      DEFAULT_TASK_FILE_NAME = "mise-family.tasks.toml"
+
       # changed:         the root content was modified
       # include_present: the include reference is (now) present and correct
       # content:         the resulting root mise.toml content
@@ -252,6 +256,152 @@ module Kettle
           raise Error, result.error.to_s unless result.success?
 
           result.updated_content
+        end
+      end
+
+      # kettle-jem plugin hook (kettle-jem-appraisals pattern). During
+      # templating of a family root, materialize the comprehensive managed
+      # task suite from the family config facts and ensure the root mise.toml
+      # includes it. Skips non-family roots (member dirs have no
+      # .kettle-family.yml).
+      #
+      # @param context [Hash] kettle-jem plugin context (:project_root)
+      def self.materialize_managed_suite(context:)
+        root = context[:project_root].to_s
+        return if root.empty?
+
+        root = File.expand_path(root)
+        return unless File.file?(File.join(root, ".kettle-family.yml"))
+
+        config = Config.load(root: root)
+        content = ManagedSuite.new(config).content
+        content += "\n" unless content.end_with?("\n")
+
+        task_file_path = File.join(root, DEFAULT_TASK_FILE_NAME)
+        File.write(task_file_path, content) unless File.exist?(task_file_path) && File.read(task_file_path) == content
+
+        root_mise = File.join(root, "mise.toml")
+        return unless File.file?(root_mise)
+
+        result = ensure_include(
+          root_content: File.read(root_mise),
+          task_file_name: DEFAULT_TASK_FILE_NAME,
+          task_file_content: content
+        )
+        File.write(root_mise, result.content) if result.changed
+      rescue Error, SystemCallError => e
+        warn("kettle-family: could not materialize managed mise tasks: #{e.class}: #{e.message}")
+      end
+
+      # Comprehensive managed family mise task suite, generated from family
+      # config facts. Tasks are thin delegations to kettle-family commands,
+      # which resolve changelog targets, local-path env, and members_root
+      # from the family config at run time. The bup/bupb env wiring is the
+      # one piece of shape baked at generation time, derived from the same
+      # config the workflow uses (family.local_path_env,
+      # release.disable_local_path_env, family.mode, family.members_root).
+      class ManagedSuite
+        TASK_DESCRIPTIONS = {
+          "test" => "Run each member gem suite with its own bundle",
+          "lint" => "Run read-only lint checks across family members",
+          "state" => "Report release state for every family member",
+          "release-state" => "Report changelog release state for every family member",
+          "template" => "Apply kettle-jem templates across family members",
+          "bump" => "Bump member gem versions",
+          "changelog" => "Add a structured entry to the family changelog",
+          "bup" => "Update dependencies and commit lockfiles; pass gems or options after --",
+          "bupb" => "Install latest stable Bundler and update family lockfiles; pass options after --",
+          "update-bundler" => "Install latest stable Bundler and update family lockfiles; pass options after --"
+        }.freeze
+
+        attr_reader :config
+
+        def initialize(config)
+          @config = config
+        end
+
+        def content
+          tasks = {
+            "test" => "bundle exec kettle-family test --execute",
+            "lint" => "bundle exec kettle-family lint",
+            "state" => "bundle exec kettle-family release-state",
+            "release-state" => "bundle exec kettle-family release-state",
+            "template" => "bundle exec kettle-family template",
+            "bump" => "bundle exec kettle-family bump --execute",
+            # Targeting is resolved by kettle-family from the family config:
+            # shared-changelog families write the root changelog, member-local
+            # families write each member's own.
+            "changelog" => "bundle exec kettle-family add-changelog --execute"
+          }
+          tasks["bup"] = "bundle exec kettle-family bup --execute --commit"
+          tasks["bupb"] = "bundle exec kettle-family update-bundler --execute --commit"
+          tasks["update-bundler"] = tasks["bupb"]
+
+          neutral = neutralize_assignments
+          wiring = env_wiring_flags
+          %w[bup bupb].each do |name|
+            prefix = neutral.empty? ? "" : "env #{neutral} -- "
+            tasks[name] = "#{prefix}#{tasks[name]}#{wiring}"
+          end
+          tasks["update-bundler"] = tasks["bupb"]
+
+          render(tasks)
+        end
+
+        private
+
+        # Neutralize ambient local-path wiring so the command starts from the
+        # family config, then hand kettle-family the intended overrides.
+        def neutralize_assignments
+          pairs = {}
+          if (name = config.family_local_path_env_name)
+            pairs[name] = "false"
+          end
+          config.release_disable_local_path_env.each { |name| pairs[name] = "false" }
+          pairs.map { |name, value| "#{name}=#{value}" }.join(" ")
+        end
+
+        def env_wiring_flags
+          flags = +""
+          return flags unless config.family_mode == "monorepo"
+          return flags unless (relative = members_root_relative)
+
+          if (name = config.family_local_path_env_name)
+            flags << " --env #{name}={{config_root}}/#{relative}"
+          end
+          flags << " --env K_JEM_TEMPLATING=true"
+          flags
+        end
+
+        def members_root_relative
+          require "pathname"
+          Pathname.new(config.members_root.to_s)
+                  .relative_path_from(Pathname.new(config.root.to_s)).to_s
+        rescue ArgumentError
+          nil
+        end
+
+        def render(tasks)
+          out = +<<~HEADER
+            # kettle-family managed family mise tasks
+            #
+            # This file is owned by kettle-family and is overwritten on
+            # template updates (and on kettle-jem templating runs for this
+            # family). It uses the mise-task schema: each top-level table is a
+            # task, addressable from the destination root mise.toml via
+            # [task_config] includes.
+            #
+            # Family-specific tasks (for example a release task with the
+            # family's publish flags and secrets provider) belong in the root
+            # mise.toml, where they shadow the managed definitions.
+          HEADER
+          tasks.each do |name, run|
+            out << "\n[#{name}]\n"
+            out << "description = #{TASK_DESCRIPTIONS.fetch(name).inspect}\n"
+            out << "raw = true\n"
+            out << "run = #{run.inspect}\n"
+          end
+          out
         end
       end
     end

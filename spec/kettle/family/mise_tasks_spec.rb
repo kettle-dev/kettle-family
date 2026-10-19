@@ -206,4 +206,137 @@ RSpec.describe Kettle::Family::MiseTasks do
       expect(result.content).not_to include("echo local")
     end
   end
+
+  describe ".materialize_managed_suite" do
+    before do
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
+    end
+
+    around do |example|
+      Dir.mktmpdir("kettle-family-mise-suite") do |dir|
+        @tmpdir = dir
+        example.run
+      end
+    end
+
+    it "is a no-op on a non-family root" do
+      described_class.materialize_managed_suite(context: {project_root: @tmpdir})
+
+      expect(File.exist?(File.join(@tmpdir, described_class::DEFAULT_TASK_FILE_NAME))).to be(false)
+    end
+
+    it "writes the managed suite and includes it from the root mise.toml" do
+      File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+        family:
+          mode: monorepo
+          local_path_env: STRUCTUREDMERGE_DEV
+        release:
+          disable_local_path_env:
+            - K_JEM_TEMPLATING
+        members:
+          root: gems
+      YAML
+      File.write(File.join(@tmpdir, "mise.toml"), "[tasks.clean]\nrun = \"echo clean\"\n")
+
+      described_class.materialize_managed_suite(context: {project_root: @tmpdir})
+
+      task_file = File.join(@tmpdir, described_class::DEFAULT_TASK_FILE_NAME)
+      expect(File).to exist(task_file)
+      content = File.read(task_file)
+      expect(described_class.task_names(content, managed: true)).to include("bup", "bupb", "changelog", "test")
+      root_content = File.read(File.join(@tmpdir, "mise.toml"))
+      result = described_class.ensure_include(root_content: root_content, task_file_name: described_class::DEFAULT_TASK_FILE_NAME, task_file_content: content)
+      expect(result.include_present).to be(true)
+      expect(result.changed).to be(false)
+    end
+
+    it "is idempotent" do
+      File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
+      File.write(File.join(@tmpdir, "mise.toml"), "")
+
+      described_class.materialize_managed_suite(context: {project_root: @tmpdir})
+      first = File.read(File.join(@tmpdir, described_class::DEFAULT_TASK_FILE_NAME))
+      described_class.materialize_managed_suite(context: {project_root: @tmpdir})
+      second = File.read(File.join(@tmpdir, described_class::DEFAULT_TASK_FILE_NAME))
+
+      expect(second).to eq(first)
+    end
+  end
+
+  describe "Kettle::Family.register_kettle_jem_plugin" do
+    it "registers a remaining_files phase hook" do
+      registrar = Object.new
+      captured = nil
+      allow(registrar).to receive(:on_phase) do |phase, **_opts, &block|
+        captured = [phase, block]
+      end
+
+      Kettle::Family.register_kettle_jem_plugin(registrar)
+
+      expect(captured[0]).to eq("remaining_files")
+      expect(captured[1]).to respond_to(:call)
+    end
+  end
+
+  describe "Kettle::Family::ManagedSuite" do
+    let(:monorepo_config) do
+      instance_double(
+        Kettle::Family::Config,
+        root: "/fam",
+        members_root: "/fam/gems",
+        family_mode: "monorepo",
+        family_local_path_env_name: "STRUCTUREDMERGE_DEV",
+        release_disable_local_path_env: %w[K_JEM_TEMPLATING TSLP_DEV]
+      )
+    end
+
+    let(:sibling_config) do
+      instance_double(
+        Kettle::Family::Config,
+        root: "/fam",
+        members_root: "/fam",
+        family_mode: "sibling_repos",
+        family_local_path_env_name: "KETTLE_DEV_DEV",
+        release_disable_local_path_env: []
+      )
+    end
+
+    it "wires monorepo bup/bupb from facts: neutralized local-path env plus members_root override" do
+      content = described_class::ManagedSuite.new(monorepo_config).content
+
+      expect(content).to include(
+        "run = \"env STRUCTUREDMERGE_DEV=false K_JEM_TEMPLATING=false TSLP_DEV=false -- " \
+        "bundle exec kettle-family bup --execute --commit " \
+        "--env STRUCTUREDMERGE_DEV={{config_root}}/gems --env K_JEM_TEMPLATING=true\""
+      )
+      expect(content).not_to include("ruby -e")
+      expect(content).not_to include("installed_stable")
+    end
+
+    it "keeps delegations shape-agnostic: changelog carries no env scoping" do
+      content = described_class::ManagedSuite.new(monorepo_config).content
+
+      expect(content).to include("run = \"bundle exec kettle-family add-changelog --execute\"")
+      expect(content).not_to include("K_CHANGELOG_PATH")
+      expect(content).not_to include("[release]")
+    end
+
+    it "emits sibling_repos bup/bupb without members_root env" do
+      content = described_class::ManagedSuite.new(sibling_config).content
+
+      expect(content).to include(
+        "run = \"env KETTLE_DEV_DEV=false -- bundle exec kettle-family bup --execute --commit\""
+      )
+      expect(content).not_to include("--env")
+      expect(content).not_to include("{{config_root}}")
+    end
+
+    it "renders TOML that parses as a managed task file" do
+      content = described_class::ManagedSuite.new(monorepo_config).content
+
+      expect(described_class.task_names(content, managed: true)).to contain_exactly(
+        "test", "lint", "state", "release-state", "template", "bump", "changelog", "bup", "bupb", "update-bundler"
+      )
+    end
+  end
 end

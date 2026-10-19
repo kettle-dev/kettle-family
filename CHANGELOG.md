@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Managed family mise task suite generated from family config facts via a kettle-jem plugin: comprehensive delegations (test, lint, state, release-state, template, bump, changelog) plus bup/bupb/update-bundler with env wiring derived from family.local_path_env, release.disable_local_path_env, and family.members_root, replacing per-family hand-copied task definitions (and the buggy shell-spawned bundler pinning).
+
 ### Changed
 
 ### Deprecated
