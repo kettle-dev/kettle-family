@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- [kc] bup-nomono-bootstrap: Add a bup bootstrap phase that bumps stale nomono floors and reconciles member lockfiles with a pinned nomono update before member bundle update --all, so family-root floor raises no longer deadlock on older activated nomono releases. Dry-run bup plans the reconciliation without editing files.
-
 ### Security
+
+## [1.3.24] - 2026-10-19
+
+- TAG: [v1.3.24][1.3.24t]
+- COVERAGE: 93.01% -- 7372/7926 lines in 44 files
+- BRANCH COVERAGE: 77.25% -- 2947/3815 branches in 44 files
+- 37.55% documented
+
+### Fixed
+
+- [kc] bup-nomono-bootstrap: Add a bup bootstrap phase that bumps stale nomono floors and reconciles member lockfiles with a pinned nomono update before member bundle update --all, so family-root floor raises no longer deadlock on older activated nomono releases. Dry-run bup plans the reconciliation without editing files.
 
 ## [1.3.23] - 2026-10-19
 
@@ -3134,7 +3143,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.23...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.24...HEAD
+[1.3.24]: https://github.com/kettle-dev/kettle-family/compare/v1.3.23...v1.3.24
+[1.3.24t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.24
 [1.3.23]: https://github.com/kettle-dev/kettle-family/compare/v1.3.22...v1.3.23
 [1.3.23t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.23
 [1.3.22]: https://github.com/kettle-dev/kettle-family/compare/v1.3.21...v1.3.22
