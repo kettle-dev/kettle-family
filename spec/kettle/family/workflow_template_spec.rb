@@ -593,6 +593,33 @@ RSpec.describe Kettle::Family::Workflow do
     expect(waves.map { |wave| wave.map(&:name) }).to eq([["alpha", "independent"], ["beta"]])
   end
 
+  it "registers template member starts in queue order before concurrent work runs" do
+    write_template_config(command: "kettle-jem install", normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    workflow = described_class.new(command: "template", config: config, members: [alpha, beta], execute: true, jobs: 2)
+    output = StringIO.new
+    progress = Kettle::Family::WorkflowProgress.new(io: output, label: "templating", total: 2, jobs: 2, members: [alpha, beta])
+    allow(workflow).to receive(:monorepo_template_worktrees?).and_return(false)
+    allow(workflow).to receive(:template_results_for_member) do |member, progress:, progress_started: false, **|
+      sleep 0.05 if member == alpha
+      unless progress_started
+        progress.start_member(member, total: 1, status: "template")
+      end
+      result = Kettle::Family::CommandResult.new(member.name, "template", [], member.root, 0, true, "", "", 0.0, false, nil)
+      progress.finish_member(member, success: true, status: "complete")
+      [result]
+    end
+
+    progress.start
+    workflow.send(:template_results_for_wave, [alpha, beta], progress: progress)
+
+    starts = output.string.lines.select { |line| line.include?(" > ") }
+    expect(starts.first).to include("[alpha]")
+    expect(starts.last).to include("[beta]")
+  end
+
   it "keeps shared-checkout template scheduling serial when only one worker is requested" do
     write_template_config(command: "kettle-jem install", normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -709,7 +736,9 @@ RSpec.describe Kettle::Family::Workflow do
     allow(workflow).to receive(:git_upstream_for).and_return(nil)
     allow(workflow).to receive(:template_member_bootstrap_results).with([alpha, beta]).and_return([alpha_bootstrap, beta_bootstrap])
     branch_progress = instance_double(Kettle::Family::WorkflowProgress)
-    allow(workflow).to receive(:template_results_for_member) do |member, progress:, progress_key:, progress_label:, wave_jobs:|
+    allow(branch_progress).to receive(:start_member)
+    allow(workflow).to receive(:template_results_for_member) do |member, progress:, progress_key:, progress_label:, progress_started:, wave_jobs:|
+      expect(progress_started).to be(true)
       expect(wave_jobs).to eq(2)
       expect(progress).to be(branch_progress)
       expect(progress_key).to eq("#{member.name}@#{(member == alpha) ? "r1" : "r2"}")

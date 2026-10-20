@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Register template progress starts atomically with queue dispatch, and render progress rows in dependency-queue order.
+
 ### Security
 
 ## [1.3.25] - 2026-10-20

@@ -943,8 +943,9 @@ module Kettle
         bootstrap_results = template_member_bootstrap_results(workflow_members)
         return bootstrap_results unless bootstrap_results.all?(&:ok?)
 
-        template_progress = start_template_progress(workflow_members)
-        results = template_dependency_waves(workflow_members).each_with_object([]) do |wave, memo|
+        template_waves = template_dependency_waves(workflow_members)
+        template_progress = start_template_progress(template_waves.flatten)
+        results = template_waves.each_with_object([]) do |wave, memo|
           wave_results = template_results_for_wave(wave, progress: template_progress)
           memo.concat(wave_results)
           break memo unless wave_results.all?(&:ok?)
@@ -998,9 +999,21 @@ module Kettle
         Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- family templating intentionally runs independent members concurrently.
             loop do
-              break if mutex.synchronize { stop }
-              index, member = queue.pop(true)
-              member_results = template_results_for_member(member, progress: progress, wave_jobs: wave_jobs)
+              assignment = mutex.synchronize do
+                next if stop
+
+                begin
+                  index, member = queue.pop(true)
+                  start_template_member_progress(progress, member)
+                  [index, member]
+                rescue ThreadError
+                  nil
+                end
+              end
+              break unless assignment
+
+              index, member = assignment
+              member_results = template_results_for_member(member, progress: progress, progress_started: true, wave_jobs: wave_jobs)
               mutex.synchronize do
                 ordered_results[index] = member_results
                 stop = true unless member_results.all?(&:ok?)
@@ -1130,12 +1143,24 @@ module Kettle
         Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- detached worktrees isolate concurrent monorepo template members.
             loop do
-              break if mutex.synchronize { stop }
+              assignment = mutex.synchronize do
+                next if stop
 
-              index, entry = queue.pop(true)
+                begin
+                  index, entry = queue.pop(true)
+                  start_template_member_progress(progress, entry.fetch(:member))
+                  [index, entry]
+                rescue ThreadError
+                  nil
+                end
+              end
+              break unless assignment
+
+              index, entry = assignment
               member_results = template_results_for_member(
                 entry.fetch(:member),
                 progress: progress,
+                progress_started: true,
                 commit_changes: false,
                 wave_jobs: wave_jobs
               )
@@ -1486,15 +1511,10 @@ module Kettle
         )
       end
 
-      def template_results_for_member(member, progress: nil, progress_key: nil, progress_label: nil, commit_changes: true, wave_jobs: 1)
+      def template_results_for_member(member, progress: nil, progress_key: nil, progress_label: nil, progress_started: false, commit_changes: true, wave_jobs: 1)
         progress_key ||= member.name
         progress_label ||= member.name
-        progress&.start_member(
-          member,
-          total: template_phase_total(member),
-          status: template_initial_status(member),
-          **template_progress_identity_options(member, progress_key, progress_label)
-        )
+        start_template_member_progress(progress, member, progress_key: progress_key, progress_label: progress_label) unless progress_started
         runner = CommandRunner.new(execute: execute, accept: accept)
         [].tap do |memo|
           if config.normalize_lockfiles?
@@ -1769,9 +1789,26 @@ module Kettle
         Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- independent branch worktrees are safe to template concurrently.
             loop do
-              break if mutex.synchronize { stop }
-              index, entry = queue.pop(true)
-              branch_results = template_branch_worktree_entry_results(entry, progress: progress, wave_jobs: wave_jobs)
+              assignment = mutex.synchronize do
+                next if stop
+
+                begin
+                  index, entry = queue.pop(true)
+                  start_template_member_progress(
+                    progress,
+                    entry.fetch(:member),
+                    progress_key: template_branch_progress_key(entry),
+                    progress_label: template_branch_progress_label(entry)
+                  )
+                  [index, entry]
+                rescue ThreadError
+                  nil
+                end
+              end
+              break unless assignment
+
+              index, entry = assignment
+              branch_results = template_branch_worktree_entry_results(entry, progress: progress, progress_started: true, wave_jobs: wave_jobs)
               mutex.synchronize do
                 ordered_results[index] = branch_results
                 stop = true unless branch_results.all?(&:ok?)
@@ -1784,7 +1821,7 @@ module Kettle
         results + ordered_results.compact.flatten
       end
 
-      def template_branch_worktree_entry_results(entry, progress: nil, wave_jobs: 1)
+      def template_branch_worktree_entry_results(entry, progress: nil, progress_started: false, wave_jobs: 1)
         member = entry.fetch(:member)
         branch = entry.fetch(:branch)
         # Bootstrap and upstream synchronization are deliberately performed
@@ -1795,6 +1832,7 @@ module Kettle
           progress: progress,
           progress_key: template_branch_progress_key(entry),
           progress_label: template_branch_progress_label(entry),
+          progress_started: progress_started,
           wave_jobs: wave_jobs
         )
         tag_branch_results(results, branch)
@@ -4820,6 +4858,15 @@ module Kettle
         )
         progress.start
         progress
+      end
+
+      def start_template_member_progress(progress, member, progress_key: member.name, progress_label: member.name)
+        progress&.start_member(
+          member,
+          total: template_phase_total(member),
+          status: template_initial_status(member),
+          **template_progress_identity_options(member, progress_key, progress_label)
+        )
       end
 
       def start_release_progress(release_members)
