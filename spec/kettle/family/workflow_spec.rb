@@ -562,6 +562,70 @@ RSpec.describe Kettle::Family::Workflow do
     expect(root_commit.command.join(" ")).to include("-- Gemfile.lock")
   end
 
+  it "plans a nomono floor reconciliation before member bundle updates without editing files" do
+    stub_stable_bundler_version
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gem "nomono", "~> 1.1", ">= 1.1.8", require: false
+    RUBY
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    workflow = described_class.new(command: "bup", config: config, members: [member])
+    allow(workflow).to receive(:latest_released_nomono_version).and_return(Gem::Version.new("1.1.13"))
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(
+      %w[bup_bootstrap_dependencies bup_bootstrap_dependencies bup commit_bundle_update]
+    )
+    expect(results.first(2)).to all(have_attributes(skipped: true))
+    expect(File.read(File.join(member.root, "Gemfile"))).to include(">= 1.1.8")
+  end
+
+  it "bumps a stale nomono floor and reconciles its lockfile before the member bundle update" do
+    stub_stable_bundler_version
+    fake_bin = File.join(@tmpdir, "bin")
+    call_log = File.join(@tmpdir, "bundle-calls.log")
+    FileUtils.mkdir_p(fake_bin)
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
+      File.open(ENV.fetch("BUNDLE_CALL_LOG"), "a") do |file|
+        file.puts([Dir.pwd, *ARGV].join("|"))
+      end
+    RUBY
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile"), <<~RUBY)
+      source "https://gem.coop"
+      gem "nomono", "~> 1.1", ">= 1.1.8", require: false
+    RUBY
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    workflow = described_class.new(
+      command: "bup",
+      config: config,
+      members: [member],
+      execute: true,
+      commit: false,
+      env_overrides: {
+        "BUNDLE_CALL_LOG" => call_log,
+        "PATH" => prepend_path(fake_bin)
+      }
+    )
+    allow(workflow).to receive(:latest_released_nomono_version).and_return(Gem::Version.new("1.1.13"))
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(
+      %w[bup_bootstrap_dependencies bup_bootstrap_dependencies bup]
+    )
+    expect(File.read(File.join(member.root, "Gemfile"))).to include('gem "nomono", "~> 1.1", ">= 1.1.13"')
+    canonical_member_root = Kettle::Family::Paths.canonical(member.root)
+    expect(File.readlines(call_log, chomp: true)).to eq([
+      "#{canonical_member_root}|_4.0.22_|update|nomono|--bundler=4.0.22",
+      "#{canonical_member_root}|update|--all"
+    ])
+  end
+
   it "updates the family root with bupb before member Bundler updates" do
     stub_stable_bundler_version
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "sibling_repos"}}))

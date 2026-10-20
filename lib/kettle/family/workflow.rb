@@ -1339,7 +1339,11 @@ module Kettle
         return [] if candidate_members.empty?
 
         latest_nomono_version = latest_released_nomono_version
-        bootstrap = NomonoBootstrap.new(latest_version: latest_nomono_version, mode: :execute)
+        bootstrap = NomonoBootstrap.new(
+          latest_version: latest_nomono_version,
+          mode: execute ? :execute : :dry_run,
+          phase: "bup_bootstrap_dependencies"
+        )
         candidate_members.each_with_object([]) do |member, results|
           next unless bootstrap.member_needs_bootstrap?(member)
 

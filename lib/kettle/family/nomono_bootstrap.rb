@@ -10,12 +10,13 @@ module Kettle
     class NomonoBootstrap
       GEM_NAME = "nomono"
 
-      def initialize(latest_version:, mode: :dry_run)
+      def initialize(latest_version:, mode: :dry_run, phase: "template_bootstrap_dependencies")
         @latest_version = Gem::Version.new(latest_version.to_s)
         @mode = mode
+        @phase = phase
       end
 
-      attr_reader :latest_version, :mode
+      attr_reader :latest_version, :mode, :phase
 
       def member_needs_bootstrap?(member)
         !!(gemfile_floor_outdated?(member) || lockfile_version_outdated?(member))
@@ -26,7 +27,7 @@ module Kettle
         write_edits(edits)
         CommandResult.new(
           member.name,
-          "template_bootstrap_dependencies",
+          phase,
           ["internal", "nomono-bootstrap", latest_version.to_s],
           member.root,
           0,
