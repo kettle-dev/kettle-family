@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Register template progress starts atomically with queue dispatch, and render progress rows in dependency-queue order.
-
 ### Security
+
+## [1.3.26] - 2026-10-20
+
+- TAG: [v1.3.26][1.3.26t]
+- COVERAGE: 93.00% -- 7399/7956 lines in 44 files
+- BRANCH COVERAGE: 77.40% -- 2962/3827 branches in 44 files
+- 37.68% documented
+
+### Fixed
+
+- Register template progress starts atomically with queue dispatch, and render progress rows in dependency-queue order.
 
 ## [1.3.25] - 2026-10-20
 
@@ -3156,7 +3165,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.25...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.26...HEAD
+[1.3.26]: https://github.com/kettle-dev/kettle-family/compare/v1.3.25...v1.3.26
+[1.3.26t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.26
 [1.3.25]: https://github.com/kettle-dev/kettle-family/compare/v1.3.24...v1.3.25
 [1.3.25t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.25
 [1.3.24]: https://github.com/kettle-dev/kettle-family/compare/v1.3.23...v1.3.24
