@@ -10,13 +10,13 @@ GIT
 PATH
   remote: .
   specs:
-    kettle-family (1.3.24)
+    kettle-family (1.3.25)
       ast-crispr (~> 7.1, >= 7.1.11)
       ast-crispr-toml (~> 7.1, >= 7.1.11)
       command_kit (~> 0.6)
       command_kit-completion (~> 0.1)
       kettle-changelog (~> 1.0, >= 1.0.13)
-      kettle-dev (~> 3.1, >= 3.1.18)
+      kettle-dev (~> 3.1, >= 3.1.19)
       kettle-gha-pins (~> 0.3, >= 0.3.18)
       kettle-jem (~> 7.1, >= 7.1.28)
       kettle-test (~> 2.0, >= 2.0.27)
@@ -171,7 +171,7 @@ GEM
       ast-crispr-markdown-markly (~> 7.1, >= 7.1.1)
       kettle-dev (~> 3.1, >= 3.1.16)
       version_gem (~> 1.1, >= 1.1.15)
-    kettle-dev (3.1.18)
+    kettle-dev (3.1.19)
       emoji_regex (>= 15.0)
       kettle-gha-pins (~> 0.3, >= 0.3.18)
       kettle-ndjson (~> 0.1, >= 0.1.20)
@@ -682,8 +682,8 @@ CHECKSUMS
   json (3.1.0) sha256=3ce7ccf8fde58960177a3a756c31f292a4c1e1dedee884547096a5b0604e3bd8
   json-merge (7.1.13) sha256=8af96b750623b5860cc772f068104ce5d46ebcd07f82798d819a0d4748020af9
   kettle-changelog (1.0.13) sha256=34be2385fd44032c7e0761d68aa26986984118ad00fdfe877ae445afef3953bd
-  kettle-dev (3.1.18) sha256=4542563d77d01d763c53de05c85970735a45b8c86d942de8e1e7113ca3585f53
-  kettle-family (1.3.24)
+  kettle-dev (3.1.19) sha256=d1d702cdb8db04730c021d7309b052e88f5847b806dd5e7b988484cba3246cac
+  kettle-family (1.3.25)
   kettle-gha-pins (0.3.18) sha256=7e1aab36c248bab6b55e6c9d79b9efb8233c14a5e33e0d8013a874c49030046a
   kettle-jem (7.1.33) sha256=1e5d2f98651ed70b121669204b4574c8f049503b124c35ff25bfe68bd4d87cac
   kettle-ndjson (0.1.20) sha256=75c366059d43a2d73a32a87e7e5fd28ccfacf658753469845601e03557290eab
