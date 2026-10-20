@@ -1347,6 +1347,7 @@ module Kettle
         candidate_members.each_with_object([]) do |member, results|
           next unless bootstrap.member_needs_bootstrap?(member)
 
+          floor_paths = bootstrap.paths_to_update(member)
           floor_result = bootstrap.bootstrap_member(member)
           results << floor_result
           break results unless results.last.ok?
@@ -1358,9 +1359,28 @@ module Kettle
             env: bup_bootstrap_dependency_env(member)
           )
           break results unless results.last.ok?
+
+          results << commit_bup_bootstrap(member: member, paths: floor_paths, runner: runner) if commit
+          break results unless results.last.ok? || !commit
         end
       rescue => error
         [template_bootstrap_failure_result(workflow_members.first, error.message)]
+      end
+
+      def commit_bup_bootstrap(member:, paths:, runner:)
+        paths = (Array(paths) + ["Gemfile.lock"]).uniq
+        pathspecs = paths.map { |path| Shellwords.escape(path) }.join(" ")
+        runner.call(
+          member: member,
+          phase: "commit_bup_bootstrap",
+          command: [
+            "sh",
+            "-lc",
+            "git add -- #{pathspecs} && " \
+              "if git diff --cached --quiet -- #{pathspecs}; then exit 0; fi; " \
+              "git commit --only -m '🔒️ Update nomono bootstrap' -- #{pathspecs}"
+          ]
+        )
       end
 
       def bup_bootstrap_dependency_env(member)

@@ -577,9 +577,9 @@ RSpec.describe Kettle::Family::Workflow do
     results = workflow.results
 
     expect(results.map(&:phase)).to eq(
-      %w[bup_bootstrap_dependencies bup_bootstrap_dependencies bup commit_bundle_update]
+      %w[bup_bootstrap_dependencies bup_bootstrap_dependencies commit_bup_bootstrap bup commit_bundle_update]
     )
-    expect(results.first(2)).to all(have_attributes(skipped: true))
+    expect(results.fetch(2)).to have_attributes(skipped: true)
     expect(File.read(File.join(member.root, "Gemfile"))).to include(">= 1.1.8")
   end
 
@@ -624,6 +624,65 @@ RSpec.describe Kettle::Family::Workflow do
       "#{canonical_member_root}|_4.0.22_|update|nomono|--bundler=4.0.22",
       "#{canonical_member_root}|update|--all"
     ])
+  end
+
+  it "commits nomono floor edits and its reconciled lockfile before the full member update" do
+    stub_stable_bundler_version
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    write_fake_ruby_executable(fake_bin, "bundle", <<~RUBY)
+      if ARGV.include?("nomono")
+        lockfile = File.read("Gemfile.lock")
+        File.write("Gemfile.lock", lockfile.sub("nomono (1.1.13)", "nomono (1.1.14)"))
+      end
+    RUBY
+    member = member_at("alpha")
+    gemfile = File.join(member.root, "Gemfile")
+    local_gemfile = File.join(member.root, "gemfiles/modular/templating_local.gemfile")
+    lockfile = File.join(member.root, "Gemfile.lock")
+    FileUtils.mkdir_p(File.dirname(local_gemfile))
+    File.write(gemfile, <<~RUBY)
+      source "https://gem.coop"
+      gem "nomono", "~> 1.1", ">= 1.1.13"
+    RUBY
+    File.write(local_gemfile, <<~RUBY)
+      nomono_activation_requirements = ["~> 1.1", ">= 1.1.13"]
+    RUBY
+    File.write(lockfile, <<~LOCK)
+      GEM
+        remote: https://gem.coop/
+        specs:
+          nomono (1.1.13)
+
+      DEPENDENCIES
+        nomono (~> 1.1, >= 1.1.13)
+    LOCK
+    system("git", "-C", member.root, "init", "--quiet", exception: true)
+    system("git", "-C", member.root, "config", "user.email", "kettle-family@example.test", exception: true)
+    system("git", "-C", member.root, "config", "user.name", "Kettle Family", exception: true)
+    system("git", "-C", member.root, "add", ".", exception: true)
+    system("git", "-C", member.root, "commit", "--quiet", "-m", "Initial", exception: true)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    workflow = described_class.new(
+      command: "bup",
+      config: config,
+      members: [member],
+      execute: true,
+      env_overrides: {"PATH" => prepend_path(fake_bin)}
+    )
+    allow(workflow).to receive(:latest_released_nomono_version).and_return(Gem::Version.new("1.1.14"))
+
+    results = workflow.results
+
+    expect(results.map(&:phase)).to eq(
+      %w[bup_bootstrap_dependencies bup_bootstrap_dependencies commit_bup_bootstrap bup bundle_update_readiness commit_bundle_update]
+    )
+    commit_subject = `git -C #{Shellwords.escape(member.root)} log -1 --format=%s`.strip
+    expect(commit_subject).to eq("🔒️ Update nomono bootstrap")
+    committed_paths = `git -C #{Shellwords.escape(member.root)} show --format= --name-only HEAD`.lines.map(&:strip)
+    expect(committed_paths).to contain_exactly("Gemfile", "Gemfile.lock", "gemfiles/modular/templating_local.gemfile")
+    expect(Kettle::Family::GitStatus.dirty_paths(member.root)).to be_empty
   end
 
   it "updates the family root with bupb before member Bundler updates" do

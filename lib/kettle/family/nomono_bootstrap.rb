@@ -22,6 +22,12 @@ module Kettle
         !!(gemfile_floor_outdated?(member) || lockfile_version_outdated?(member))
       end
 
+      # Return the project-relative Gemfile paths whose Nomono floor this
+      # bootstrap will raise. Capture before bootstrap_member writes them.
+      def paths_to_update(member)
+        gemfile_edits(member).map { |edit| Paths.relative(edit.fetch(:path), member.root) }.compact.uniq
+      end
+
       def bootstrap_member(member)
         edits = gemfile_edits(member)
         write_edits(edits)

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- [kc] bup-nomono-bootstrap: Reconcile stale nomono floors and lockfiles before member bup; commit each bootstrap
+
 ### Security
 
 ## [1.3.24] - 2026-10-19
