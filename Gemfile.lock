@@ -10,7 +10,7 @@ GIT
 PATH
   remote: .
   specs:
-    kettle-family (1.3.23)
+    kettle-family (1.3.24)
       ast-crispr (~> 7.1, >= 7.1.11)
       ast-crispr-toml (~> 7.1, >= 7.1.11)
       command_kit (~> 0.6)
@@ -271,7 +271,7 @@ GEM
       racc (~> 1.4)
     nokogiri (1.19.4-x86_64-linux-musl)
       racc (~> 1.4)
-    nomono (1.1.8)
+    nomono (1.1.13)
       version_gem (~> 1.1, >= 1.1.15)
     openssl (4.0.2)
     ostruct (0.6.3)
@@ -683,7 +683,7 @@ CHECKSUMS
   json-merge (7.1.13) sha256=8af96b750623b5860cc772f068104ce5d46ebcd07f82798d819a0d4748020af9
   kettle-changelog (1.0.13) sha256=34be2385fd44032c7e0761d68aa26986984118ad00fdfe877ae445afef3953bd
   kettle-dev (3.1.18) sha256=4542563d77d01d763c53de05c85970735a45b8c86d942de8e1e7113ca3585f53
-  kettle-family (1.3.23)
+  kettle-family (1.3.24)
   kettle-gha-pins (0.3.18) sha256=7e1aab36c248bab6b55e6c9d79b9efb8233c14a5e33e0d8013a874c49030046a
   kettle-jem (7.1.33) sha256=1e5d2f98651ed70b121669204b4574c8f049503b124c35ff25bfe68bd4d87cac
   kettle-ndjson (0.1.20) sha256=75c366059d43a2d73a32a87e7e5fd28ccfacf658753469845601e03557290eab
@@ -707,7 +707,7 @@ CHECKSUMS
   nokogiri (1.19.4-x86_64-darwin) sha256=7fd17057d3e1f00e9954a74b3cd76595d3d4a5ef233b7ed9599047c204f70551
   nokogiri (1.19.4-x86_64-linux-gnu) sha256=379fae440b28915e3f19d752ce2dcf8465ed2b2fbefd2a7ca0dd497bc981a06a
   nokogiri (1.19.4-x86_64-linux-musl) sha256=17dfb7c1fa194ae02fbf7c51a7afc8d278045ab3fdacfd86f91d02d7b274470b
-  nomono (1.1.8) sha256=da74163cc5ed960d04832857b4cc24798d298606000cf1c6c20568d79148e7c1
+  nomono (1.1.13) sha256=c4e65583387bfdb9542371126a1615fd7bc6d1a318106a2234a37073f26915ea
   openssl (4.0.2) sha256=1037ad2868ae58df9ad917891c0c0f9815a1172f6846d4bcdd508e4c2ee747c2
   ostruct (0.6.3) sha256=95a2ed4a4bd1d190784e666b47b2d3f078e4a9efda2fccf18f84ddc6538ed912
   parallel (1.28.0) sha256=33e6de1484baf2524792d178b0913fc8eb94c628d6cfe45599ad4458c638c970
