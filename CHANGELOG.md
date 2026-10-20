@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- [kc] bup-nomono-bootstrap: Add a bup bootstrap phase that bumps stale nomono floors and reconciles member lockfiles with a pinned nomono update before member bundle update --all, so family-root floor raises no longer deadlock on older activated nomono releases. Dry-run bup plans the reconciliation without editing files.
+
 ### Security
 
 ## [1.3.23] - 2026-10-19
