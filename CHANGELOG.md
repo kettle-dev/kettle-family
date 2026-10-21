@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Preserve branch identity in template reports and exact-branch resume hints, and support MEMBER@BRANCH selection and resume targets.
 
+- Retry template preparation once when Bundler reports a cached gemspec evaluating to nil.
+
 ### Security
 
 ## [1.3.26] - 2026-10-20

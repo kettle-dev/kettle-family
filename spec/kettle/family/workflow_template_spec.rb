@@ -2096,6 +2096,51 @@ RSpec.describe Kettle::Family::Workflow do
     expect(calls.map { |call| call[:phase] }).not_to include("template_lockfile_recovery")
   end
 
+  it "retries template preparation once when Bundler reads a broken cached gemspec" do
+    write_template_config(command: "bundle exec kettle-jem install")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    calls = []
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      calls << {phase: phase, command: command, env: env}
+      failure = phase == "prepare_template_dependencies" && calls.count { |call| call[:phase] == phase } == 1
+      output = if failure
+        <<~ERROR
+          [/path/to/rubocop-packaging.gemspec] isn't a Gem::Specification (NilClass instead).
+          The gemspec for rubocop-packaging-0.6.0 was missing or broken. (Bundler::GemspecError)
+        ERROR
+      else
+        ""
+      end
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        failure ? 1 : 0,
+        !failure,
+        "",
+        output,
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+
+    results = workflow.results
+
+    expect(results).to all(be_ok)
+    expect(calls.map { |call| call[:phase] }).to include(
+      "prepare_template_dependencies",
+      "prepare_template_dependencies_retry"
+    )
+    expect(calls.map { |call| call[:phase] }).not_to include("prepare_template_dependencies_recovery")
+  end
+
   it "resets and retries template preparation when its bundled executable cannot boot" do
     write_template_config(command: "bundle exec kettle-jem install")
     config = Kettle::Family::Config.load(root: @tmpdir)

@@ -107,6 +107,7 @@ module Kettle
       RUBY
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
+      TEMPLATE_GEMSPEC_RETRY_DELAY_SECONDS = 0.25
 
       def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, **options)
         @command = command
@@ -5599,6 +5600,13 @@ module Kettle
         commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "reset", force: true)
       end
 
+      def transient_cached_gemspec_failure?(result)
+        return false unless execute && result && !result.ok?
+
+        output = [result.stdout, result.stderr].join("\n")
+        output.include?("Bundler::GemspecError") && output.match?(/isn't a Gem::Specification \(NilClass instead\)/)
+      end
+
       def recoverable_bundle_failure?(result)
         return false unless execute && !result.ok?
 
@@ -5798,6 +5806,19 @@ module Kettle
           command: template_prepare_command(member),
           env: template_prepare_env(wave_jobs: wave_jobs, member: member)
         )
+        if transient_cached_gemspec_failure?(result)
+          sleep(TEMPLATE_GEMSPEC_RETRY_DELAY_SECONDS)
+          retry_result = runner.call(
+            member: member,
+            phase: "prepare_template_dependencies_retry",
+            command: template_prepare_command(member),
+            env: template_prepare_env(wave_jobs: wave_jobs, member: member)
+          )
+          unless retry_result.ok?
+            retry_result.stderr = [result.stderr, "Initial attempt failed with a transient cached-gemspec error.", retry_result.stderr].compact.reject(&:empty?).join("\n")
+          end
+          result = retry_result
+        end
         if recoverable_bundle_failure?(result)
           recover_template_lockfiles(
             member: member,
