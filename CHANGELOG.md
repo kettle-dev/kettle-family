@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Release: the closing full-cohort aggregate GitHub Release now runs on execute runs, not only dry-runs. Per-member finalization appends only cover members published in the current run, so a resumed wave (--only on the unpublished remainder) previously never contributed artifacts published by earlier interrupted waves to the shared release. kettle-gh-release skips existing assets, so the full-cohort pass stays cheap on complete waves
-
 ### Security
+
+## [1.3.29] - 2026-10-21
+
+- TAG: [v1.3.29][1.3.29t]
+- COVERAGE: 93.07% -- 7464/8020 lines in 44 files
+- BRANCH COVERAGE: 77.56% -- 2996/3863 branches in 44 files
+- 37.45% documented
+
+### Fixed
+
+- Release: the closing full-cohort aggregate GitHub Release now runs on execute runs, not only dry-runs. Per-member finalization appends only cover members published in the current run, so a resumed wave (--only on the unpublished remainder) previously never contributed artifacts published by earlier interrupted waves to the shared release. kettle-gh-release skips existing assets, so the full-cohort pass stays cheap on complete waves
 
 ## [1.3.28] - 2026-10-21
 
@@ -3191,7 +3200,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.28...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.29...HEAD
+[1.3.29]: https://github.com/kettle-dev/kettle-family/compare/v1.3.28...v1.3.29
+[1.3.29t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.29
 [1.3.28]: https://github.com/kettle-dev/kettle-family/compare/v1.3.27...v1.3.28
 [1.3.28t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.28
 [1.3.27]: https://github.com/kettle-dev/kettle-family/compare/v1.3.26...v1.3.27
