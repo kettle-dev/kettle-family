@@ -49,7 +49,7 @@ module Kettle
 
       module SelectionOptions
         def self.included(base)
-          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members, or release-state tokens: unreleased/unrel, prepared/prep, pending/pend, bump"
+          base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members or branch targets (MEMBER@BRANCH), or release-state tokens: unreleased/unrel, prepared/prep, pending/pend, bump"
           base.option :exclude, value: {type: String, usage: "MEMBERS"}, desc: "Exclude comma-separated members"
           base.option :start_at, long: "--start-at", value: {type: String, usage: "MEMBER[@BRANCH]"}, desc: "Select from member through the end of order"
         end
@@ -823,7 +823,7 @@ module Kettle
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
         start_at = parse_start_at(options[:start_at])
-        Selection.validate_positional_start_at!(command, start_at.member)
+        Selection.validate_positional_start_at!(command, start_at.member, branch: start_at.branch)
         effective_only = default_only_filter(command: command, only: options[:only])
         discovery = Discovery.new(
           config: config,
@@ -841,6 +841,7 @@ module Kettle
           Orderer.new(members: members, mode: config.order_mode, hints: config.order_hints).ordered(allow_cycles: command == "release-state")
         end
         state_event_tape = release_state_event_tape(command: command, config: config, options: options)
+        branch_selection = template_branch_selection(command: command, config: config, members: ordered, only: effective_only)
         Selection.validate_release_state_only_filter!(effective_only)
         release_state_results = release_state_results_for_selection(
           command: command,
@@ -855,6 +856,7 @@ module Kettle
           members: ordered,
           release_state_results: release_state_results
         ).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
+        options = options.merge(template_branch_selection: branch_selection)
         result_members = selected
         display_members = display_members_for(command: command, config: config, members: ordered, selected_members: selected)
         display_selected_members = display_members_for(command: command, config: config, members: selected, selected_members: selected)
@@ -889,7 +891,7 @@ module Kettle
           config_path: config.path,
           branch_lanes: config.branch_lanes,
           release_target_branches: release_target_branches(command: command, config: config, start_at: start_at),
-          member_release_target_branches: member_release_target_branches(command: command, members: selected, config: config, start_at: start_at),
+          member_release_target_branches: member_release_target_branches(command: command, members: selected, config: config, start_at: start_at, branch_selection: branch_selection),
           release_mode: release_mode(command: command, options: options),
           release_resume_arguments: release_resume_arguments(command: command, options: options),
           command: command,
@@ -955,7 +957,32 @@ module Kettle
         names = only.to_s.split(",").map(&:strip).reject(&:empty?)
         return nil if names.empty? || names.any? { |name| Selection.status_token?(name) }
 
-        names
+        Selection.member_names(only)
+      end
+
+      def template_branch_selection(command:, config:, members:, only:)
+        selectors = Selection.branch_selectors(only)
+        unless command == "template"
+          raise Error, "MEMBER@BRANCH selectors are only supported for template" unless selectors.empty?
+
+          return {}
+        end
+        return {} if selectors.empty?
+
+        by_name = members.to_h { |member| [member.name, member] }
+        selectors.group_by(&:first).transform_values do |member_selectors|
+          member_name = member_selectors.first.first
+          member = by_name[member_name]
+          member_config = member && member_release_config(member: member, config: config)
+          branches = member_config && BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches)
+          raise Error, "member #{member_name.inspect} has no template branch targets" unless branches
+
+          selected_branches = member_selectors.map(&:last).uniq
+          unknown = selected_branches - branches
+          raise Error, "unknown branch target(s) for #{member_name}: #{unknown.join(", ")}" unless unknown.empty?
+
+          selected_branches
+        end
       end
 
       def display_members_for(command:, config:, members:, selected_members:)
@@ -1031,6 +1058,7 @@ module Kettle
           bex_args: options[:bex_args],
           start_member: start_at.member,
           start_branch: start_at.branch,
+          template_branch_selection: options[:template_branch_selection],
           event_tape: state_event_tape,
           release_state_results: release_state_results
         ).results
@@ -1560,10 +1588,18 @@ module Kettle
         slice_branch_targets(branch_targets, start_at.branch)
       end
 
-      def member_release_target_branches(command:, members:, config:, start_at:)
+      def member_release_target_branches(command:, members:, config:, start_at:, branch_selection: {})
         members.each_with_object({}) do |member, memo|
           member_config = member_release_config(member: member, config: config)
-          memo[member.name] = member_branch_targets(command: command, member: member, member_config: member_config, start_at: start_at) if member_config
+          next unless member_config
+
+          branches = if command == "template" && branch_selection.key?(member.name)
+            branch_selection.fetch(member.name)
+          else
+            member_branch_targets(command: command, member: member, member_config: member_config, start_at: start_at)
+          end
+          branches = slice_branch_targets(branches, start_at.branch) if command == "template" && start_at.branch && start_at.member == member.name
+          memo[member.name] = branches
         end
       end
 

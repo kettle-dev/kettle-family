@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Preserve branch identity in template reports and exact-branch resume hints, and support MEMBER@BRANCH selection and resume targets.
+
 ### Security
 
 ## [1.3.26] - 2026-10-20

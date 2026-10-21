@@ -108,7 +108,7 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, release_state_results: nil, event_tape: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -162,6 +162,7 @@ module Kettle
         @bex_args = bex_args
         @start_member = start_member
         @start_branch = start_branch
+        @template_branch_selection = template_branch_selection
         @release_state_results = Array(release_state_results)
         @event_tape = event_tape
         @template_commit_mutex = Mutex.new
@@ -1634,7 +1635,10 @@ module Kettle
       # linked worktrees avoids repeatedly switching the primary checkout and
       # allows the branch stack to use the requested template worker budget.
       def template_branch_worktree_results(member:, member_config:)
-        branches = BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches)
+        branches = @template_branch_selection.fetch(member.name) do
+          BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches)
+        end
+        branches = slice_branch_targets(branches, start_branch) if start_member == member.name && start_branch
         return [] if branches.empty?
 
         entries = []

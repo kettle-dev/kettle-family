@@ -21,6 +21,40 @@ RSpec.describe Kettle::Family::Report do
     )
   end
 
+  it "reports branch-stack template failures and retries by exact unfinished branches" do
+    succeeded = result("rubocop-lts", phase: "template", success: true)
+    succeeded.branch = "r1_8-even-v0"
+    failed = result("rubocop-lts", phase: "template", success: false, reason: "appraisal failed")
+    failed.branch = "r2_2-even-v8"
+    report = described_class.new(
+      family_name: "rubocop-lts",
+      order_mode: "dependency",
+      members: [member("rubocop-lts")],
+      selected_members: [member("rubocop-lts")],
+      config_path: nil,
+      command: "template",
+      results: [succeeded, failed],
+      member_release_target_branches: {
+        "rubocop-lts" => %w[r1_8-even-v0 r1_9-even-v2 r2_2-even-v8 r2_3-even-v10]
+      }
+    )
+
+    expect(report.to_text).to include("failed rubocop-lts@r2_2-even-v8 template")
+    expect(report.to_text).to include("resume: kettle-family template --only rubocop-lts@r2_2-even-v8")
+    expect(report.to_h.dig("summary", "succeeded")).to eq(["rubocop-lts@r1_8-even-v0"])
+    expect(report.to_h.dig("summary", "failed")).to eq([
+      {"member" => "rubocop-lts@r2_2-even-v8", "phase" => "template", "reason" => "appraisal failed"}
+    ])
+    expect(report.to_h.dig("summary", "pending")).to eq([
+      {"member" => "rubocop-lts@r1_9-even-v2", "phase" => "template", "reason" => "not run after earlier failure"},
+      {"member" => "rubocop-lts@r2_3-even-v10", "phase" => "template", "reason" => "not run after earlier failure"}
+    ])
+    expect(report.to_h.fetch("resume_hints")).to contain_exactly(
+      "kettle-family template --only rubocop-lts@r2_2-even-v8",
+      "kettle-family template --only rubocop-lts@r1_9-even-v2,rubocop-lts@r2_3-even-v10"
+    )
+  end
+
   it "prints the loaded kettle-family version in text reports" do
     report = described_class.new(
       family_name: "rubocop-lts",

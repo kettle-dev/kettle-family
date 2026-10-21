@@ -122,7 +122,7 @@ module Kettle
 
         lines << "results:"
         visible_results.each do |result|
-          lines << "  #{result_state(result)} #{result.member_name} #{result.phase} #{result.reason || ""}".rstrip
+          lines << "  #{result_state(result)} #{result_identity(result)} #{result.phase} #{result.reason || ""}".rstrip
           append_result_stdout(lines, result)
           append_indented_output(lines, result.stderr) if !result.ok? && !result.stderr.to_s.empty?
           resume_hint = resume_hint_for(result)
@@ -436,18 +436,37 @@ module Kettle
       end
 
       def selected_names
-        selected_members.map(&:name)
+        return selected_members.map(&:name) unless branch_stack_template?
+
+        selected_members.flat_map do |member|
+          branches = member_release_target_branches[member.name]
+          branches ? branches.map { |branch| "#{member.name}@#{branch}" } : [member.name]
+        end
       end
 
       def selected_member_results
         return {} unless member_result_command?
 
+        selected_identities = selected_names
         built = visible_results.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |result, memo|
-          next unless selected_names.include?(result.member_name)
+          identity = result_identity(result)
+          next unless selected_identities.include?(identity)
 
-          memo[result.member_name] << result
+          memo[identity] << result
         end
         built.sort.to_h
+      end
+
+      def result_identity(result)
+        if branch_stack_template? && result.branch && member_release_target_branches.fetch(result.member_name, []).include?(result.branch)
+          "#{result.member_name}@#{result.branch}"
+        else
+          result.member_name
+        end
+      end
+
+      def branch_stack_template?
+        command == "template" && !member_release_target_branches.empty?
       end
 
       def summary_succeeded
@@ -479,7 +498,7 @@ module Kettle
         # Alphabetical summary lists, regardless of parallel completion order.
         visible_results.reject(&:ok?).sort_by.with_index { |result, index| [result.member_name, index] }.map do |result|
           {
-            "member" => result.member_name,
+            "member" => result_identity(result),
             "phase" => result.phase,
             "reason" => result.reason || "command failed"
           }
@@ -511,9 +530,9 @@ module Kettle
 
       def summary_ran_member_names
         if command == "template"
-          failed = visible_results.reject(&:ok?).map(&:member_name)
-          templated = selected_member_results.filter_map do |member_name, member_results|
-            member_name if member_results.any? { |result| result.phase == "template" }
+          failed = visible_results.reject(&:ok?).map { |result| result_identity(result) }
+          templated = selected_member_results.filter_map do |identity, member_results|
+            identity if member_results.any? { |result| result.phase == "template" }
           end
           return (failed + templated).uniq
         end
@@ -778,7 +797,7 @@ module Kettle
         return "kettle-family #{command}" if family_root_phase?(result.phase)
         # A positional --start-at would silently drop pending members that are
         # ordered ahead of this one, so wave-dispatched commands resume by name.
-        return "kettle-family #{command} --only #{result.member_name}" if non_positional_dispatch?
+        return "kettle-family #{command} --only #{result_identity(result)}" if non_positional_dispatch?
 
         "kettle-family #{command} --start-at #{result.member_name}"
       end

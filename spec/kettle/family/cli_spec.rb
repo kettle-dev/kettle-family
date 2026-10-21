@@ -29,6 +29,54 @@ RSpec.describe Kettle::Family::CLI do
     expect(report.fetch("selected_members")).to eq(["alpha"])
   end
 
+  it "selects exact template branch sub-members through --only" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        member_target_branches:
+          alpha: [r1, r2, r3]
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["template", "--root", @tmpdir, "--only", "alpha@r2", "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    expect(report.fetch("selected_members")).to eq(["alpha"])
+    expect(report.fetch("member_release_target_branches")).to eq("alpha" => ["r2"])
+  end
+
+  it "slices template branch stacks from a branch-qualified --start-at" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        member_target_branches:
+          alpha: [r1, r2, r3]
+    YAML
+    out = StringIO.new
+
+    status = described_class.call(["template", "--root", @tmpdir, "--start-at", "alpha@r2", "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    report = JSON.parse(out.string)
+    expect(report.fetch("member_release_target_branches")).to eq("alpha" => %w[r2 r3])
+  end
+
+  it "rejects unknown template branch sub-members before dispatch" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        member_target_branches:
+          alpha: [r1, r2]
+    YAML
+    err = StringIO.new
+
+    status = described_class.call(["template", "--root", @tmpdir, "--only", "alpha@missing"], out: StringIO.new, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("unknown branch target(s) for alpha: missing")
+  end
+
   it "reports unlisted discovered members without excluding them from operation" do
     write_gem("alpha")
     write_gem("beta")

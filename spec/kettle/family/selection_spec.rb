@@ -235,6 +235,15 @@ RSpec.describe Kettle::Family::Selection do
       }.to raise_error(Kettle::Family::Error, /Use --only nomono/)
     end
 
+    it "allows branch-qualified start-at for template branch stacks only" do
+      expect {
+        described_class.validate_positional_start_at!("template", "rubocop-lts", branch: "r2_2-even-v8")
+      }.not_to raise_error
+      expect {
+        described_class.validate_positional_start_at!("test", "rubocop-lts", branch: "r2_2-even-v8")
+      }.to raise_error(Kettle::Family::Error, /--start-at is not supported for test/)
+    end
+
     it "allows start-at for sequentially dispatched commands" do
       %w[lint bup check docs install sync push pull bump release].each do |command|
         expect { described_class.validate_positional_start_at!(command, "beta") }.not_to raise_error
@@ -254,6 +263,25 @@ RSpec.describe Kettle::Family::Selection do
       # not classified here and keeps its own release-specific hints.
       expect(described_class.non_positional_dispatch?("release")).to be(false)
     end
+  end
+
+  it "selects the parent member when --only names a branch sub-member" do
+    rubocop = member("rubocop-lts")
+    other = member("other")
+    selection = described_class.new(members: [rubocop, other])
+
+    expect(selection.apply(only: "rubocop-lts@r2_2-even-v8")).to eq([rubocop])
+    expect(described_class.branch_selectors("rubocop-lts@r2_2-even-v8,rubocop-lts@main")).to eq([
+      ["rubocop-lts", "r2_2-even-v8"],
+      ["rubocop-lts", "main"]
+    ])
+  end
+
+  it "rejects malformed branch sub-member selectors" do
+    expect { described_class.branch_selectors("rubocop-lts@") }
+      .to raise_error(Kettle::Family::Error, /invalid branch selector/)
+    expect { described_class.branch_selectors("@r2_2-even-v8") }
+      .to raise_error(Kettle::Family::Error, /invalid branch selector/)
   end
 
   it "rejects empty selections" do

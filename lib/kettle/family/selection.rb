@@ -41,13 +41,18 @@ module Kettle
       # than letting it silently drop members. Mirrors the class-method validation
       # convention used by validate_release_state_only_filter! so callers in the CLI
       # do not have to know which commands are affected.
-      def self.validate_positional_start_at!(command, start_at)
+      def self.validate_positional_start_at!(command, start_at, branch: nil)
         return if start_at.nil? || start_at.to_s.empty?
         return unless non_positional_dispatch?(command)
+        return if command == "template" && !branch.to_s.empty?
 
+        detail = if command == "template"
+          "Use --only #{start_at} (or the prior report's retry hint), or MEMBER@BRANCH for a branch-stack resume."
+        else
+          "Use --only #{start_at} (or the resume hint from the previous report) instead."
+        end
         raise Error, "--start-at is not supported for #{command}: members are dispatched in dependency " \
-                     "waves, so a positional resume would silently skip members that never ran. " \
-                     "Use --only #{start_at} (or the resume hint from the previous report) instead."
+                     "waves, so a positional resume would silently skip members that never ran. #{detail}"
       end
 
       def self.status_tokens
@@ -71,6 +76,20 @@ module Kettle
         Array(release_state_results).select do |result|
           result.member_name == member_name && keys.all? { |key| result.state[key] == true }
         end.map(&:branch).compact.uniq
+      end
+
+      def self.member_names(only)
+        Array(only.to_s.split(",").map(&:strip).reject(&:empty?)).map { |selector| selector.split("@", 2).first }
+      end
+
+      def self.branch_selectors(only)
+        only.to_s.split(",").map(&:strip).reject(&:empty?).filter_map do |selector|
+          member_name, branch = selector.split("@", 2)
+          next unless branch
+          raise Error, "invalid branch selector #{selector.inspect}; expected MEMBER@BRANCH" if member_name.empty? || branch.empty?
+
+          [member_name, branch]
+        end
       end
 
       def self.validate_release_state_only_filter!(only)
@@ -112,9 +131,10 @@ module Kettle
           return select_release_state_status(selected, status_tokens)
         end
 
-        unknown = names - members.map(&:name)
+        unknown = self.class.member_names(only) - members.map(&:name)
         raise Error, "unknown member(s): #{unknown.join(", ")}" unless unknown.empty?
 
+        names = self.class.member_names(only)
         selected.select { |candidate| names.include?(candidate.name) }
       end
 

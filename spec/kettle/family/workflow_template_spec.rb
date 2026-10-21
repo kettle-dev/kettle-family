@@ -620,6 +620,32 @@ RSpec.describe Kettle::Family::Workflow do
     expect(starts.last).to include("[beta]")
   end
 
+  it "templates only branch sub-members selected by name" do
+    write_template_config(normalize_lockfiles: false)
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    initialize_git_repo(member.root, branches: %w[r1 r2 r3])
+    workflow = described_class.new(
+      command: "template",
+      config: config,
+      members: [member],
+      execute: true,
+      template_branch_selection: {"alpha" => ["r2"]}
+    )
+    member_config = instance_double(Kettle::Family::Config, release_target_branches: %w[r1 r2 r3])
+    observed_branches = nil
+    allow(workflow).to receive(:member_local_release_config).with(member).and_return(member_config)
+    allow(workflow).to receive(:template_branch_worktree_entries_results) do |entries, progress:|
+      observed_branches = entries.map { |entry| entry.fetch(:branch) }
+      []
+    end
+
+    workflow.send(:template_branch_worktree_results, member: member, member_config: member_config)
+
+    expect(observed_branches).to eq(["r2"])
+    expect(git_output(member.root, "worktree", "list", "--porcelain").scan(/^worktree /).length).to eq(1)
+  end
+
   it "keeps shared-checkout template scheduling serial when only one worker is requested" do
     write_template_config(command: "kettle-jem install", normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
