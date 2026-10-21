@@ -625,6 +625,30 @@ RSpec.describe Kettle::Family::Workflow do
     expect(progress.string).to include("github_release:asset_upload:alpha-1.2.3.gem:1/3")
   end
 
+  it "lists release progress members in wave execution order" do
+    # Queueing order (alpha, beta, gamma) disagrees with execution order
+    # (gamma in wave 1; alpha, beta in wave 2). The pane is a schedule view,
+    # so rows must follow the wave plan, not the raw member list.
+    write_release_config(release_waves: [["gamma"], %w[alpha beta]])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha")
+    beta = ready_member("beta")
+    gamma = ready_member("gamma")
+    progress = StringIO.new
+    allow(progress).to receive(:tty?).and_return(true)
+    workflow = described_class.new(command: "release", config: config, members: [alpha, beta, gamma], progress_io: progress)
+
+    workflow.send(:start_release_progress, [alpha, beta, gamma])
+
+    text = progress.string
+    gamma_at = text.index("1.gamma")
+    alpha_at = text.index("2.alpha")
+    beta_at = text.index("2.beta")
+    expect([gamma_at, alpha_at, beta_at]).to all(be_a(Integer))
+    expect(gamma_at).to be < alpha_at
+    expect(alpha_at).to be < beta_at
+  end
+
   it "keeps raw kettle-release output in the transcript by default" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

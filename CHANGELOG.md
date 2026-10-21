@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Order the release progress pane by wave plan (execution order), then queueing order within each wave, instead of raw member order
+
 ### Security
 
 ## [1.3.27] - 2026-10-20
