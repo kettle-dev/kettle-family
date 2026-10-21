@@ -1573,6 +1573,70 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:aggregate_github_release_members)).to eq([alpha, beta])
   end
 
+  it "runs the closing full-cohort aggregate GitHub release on an execute resume" do
+    write_release_config(
+      family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"},
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      aggregate_validation: {"enabled" => true, "exclude_members" => ["kettle-jem"]},
+      changelog: {"mode" => "root", "path" => "CHANGELOG.md", "version_file" => "alpha/lib/alpha/version.rb"}
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha", version: "7.1.6")
+    beta = ready_member("beta", version: "7.1.6")
+    kettle_jem = ready_member("kettle-jem", version: "7.1.13")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [beta, kettle_jem],
+      family_members: [alpha, beta, kettle_jem],
+      execute: true,
+      publish: true
+    )
+    published = Kettle::Family::CommandResult.new("beta", "release_publish", ["internal"], beta.root, 0, true, "", "", 0.0, false, nil)
+    aggregate = Kettle::Family::CommandResult.new("example", "aggregate_github_release", ["internal"], @tmpdir, 0, true, "", "", 0.0, false, nil)
+
+    allow(workflow).to receive_messages(
+      release_preflight_results: [],
+      release_dependency_floor_reconciliation_results: [],
+      release_member_results: [published]
+    )
+    allow(workflow).to receive(:aggregate_monorepo_github_release).and_return(aggregate)
+
+    expect(workflow.results.last).to eq(aggregate)
+    expect(workflow).to have_received(:aggregate_monorepo_github_release).with([alpha, beta])
+  end
+
+  it "skips the closing aggregate on an execute run without publish" do
+    write_release_config(
+      family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"},
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      aggregate_validation: {"enabled" => true, "exclude_members" => ["kettle-jem"]},
+      changelog: {"mode" => "root", "path" => "CHANGELOG.md", "version_file" => "alpha/lib/alpha/version.rb"}
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha", version: "7.1.6")
+    beta = ready_member("beta", version: "7.1.6")
+    workflow = described_class.new(
+      command: "release",
+      config: config,
+      members: [beta],
+      family_members: [alpha, beta],
+      execute: true
+    )
+    built = Kettle::Family::CommandResult.new("beta", "release_build", ["internal"], beta.root, 0, true, "", "", 0.0, false, nil)
+
+    allow(workflow).to receive_messages(
+      release_preflight_results: [],
+      release_dependency_floor_reconciliation_results: [],
+      release_member_results: [built]
+    )
+    expect(workflow).not_to receive(:aggregate_monorepo_github_release)
+
+    expect(workflow.results.last).to eq(built)
+  end
+
   it "rejects fast recovery members that are not selected" do
     write_release_config(publish_command: "bundle exec kettle-release")
     config = Kettle::Family::Config.load(root: @tmpdir)

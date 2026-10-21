@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release: the closing full-cohort aggregate GitHub Release now runs on execute runs, not only dry-runs. Per-member finalization appends only cover members published in the current run, so a resumed wave (--only on the unpublished remainder) previously never contributed artifacts published by earlier interrupted waves to the shared release. kettle-gh-release skips existing assets, so the full-cohort pass stays cheap on complete waves
+
 ### Security
 
 ## [1.3.28] - 2026-10-21

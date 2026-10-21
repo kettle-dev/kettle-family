@@ -535,10 +535,18 @@ module Kettle
           return results unless results.all?(&:ok?)
 
           results.concat(release_member_results(workflow_members, include_family_changelog: !skip_changelog))
-          return results unless !execute && explicit_monorepo_mode? && results.all?(&:ok?)
+          return results unless explicit_monorepo_mode? && results.all?(&:ok?)
 
+          # Per-member appends during finalization only cover members published
+          # in THIS run. A resumed wave selects only the unpublished remainder,
+          # so the closing aggregate must always span the full shared-version
+          # cohort to contribute artifacts published by earlier interrupted
+          # waves. Existing assets are skipped by kettle-gh-release, so the
+          # full-cohort pass is cheap on a complete wave.
           selected_aggregate_members = aggregate_release_members(workflow_members)
-          results << aggregate_monorepo_github_release(aggregate_github_release_members) unless selected_aggregate_members.empty?
+          if selected_aggregate_members.any? && (!execute || publish)
+            results << aggregate_monorepo_github_release(aggregate_github_release_members)
+          end
           return results
         end
         return git_sync_results(workflow_members) if GIT_SYNC_COMMANDS.key?(command)
