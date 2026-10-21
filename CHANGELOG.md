@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Order the release progress pane by wave plan (execution order), then queueing order within each wave, instead of raw member order
-
 ### Security
+
+## [1.3.28] - 2026-10-21
+
+- TAG: [v1.3.28][1.3.28t]
+- COVERAGE: 93.04% -- 7461/8019 lines in 44 files
+- BRANCH COVERAGE: 77.50% -- 2994/3863 branches in 44 files
+- 37.45% documented
+
+### Fixed
+
+- Order the release progress pane by wave plan (execution order), then queueing order within each wave, instead of raw member order
 
 ## [1.3.27] - 2026-10-20
 
@@ -3180,7 +3189,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.27...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.28...HEAD
+[1.3.28]: https://github.com/kettle-dev/kettle-family/compare/v1.3.27...v1.3.28
+[1.3.28t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.28
 [1.3.27]: https://github.com/kettle-dev/kettle-family/compare/v1.3.26...v1.3.27
 [1.3.27t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.27
 [1.3.26]: https://github.com/kettle-dev/kettle-family/compare/v1.3.25...v1.3.26
