@@ -14,6 +14,48 @@ RSpec.describe Kettle::Family::Workflow do
     end
   end
 
+  it "refreshes the sibling family root tasks after successful member templating" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
+    File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
+    File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# old placeholder\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [], execute: true)
+    allow(workflow).to receive_messages(
+      branch_checkout_dirty_preflight_results: [],
+      template_dirty_worktree_preflight_results: [],
+      template_worktree_sync_results: [[], []],
+      current_branch_results: [],
+      restore_template_autostashes: []
+    )
+
+    expect(workflow.results).to all(be_ok)
+    expect(File.read(File.join(@tmpdir, "mise-family.tasks.toml"))).to include("kettle-family update-bundler --execute --commit")
+    expect(File.read(File.join(@tmpdir, "mise.toml"))).not_to include("old bundler command")
+  end
+
+  it "commits migrated monorepo root tasks without leaving generated files dirty" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: monorepo\n")
+    File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
+    File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# old placeholder\n")
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [], execute: true)
+    allow(workflow).to receive_messages(
+      branch_checkout_dirty_preflight_results: [],
+      template_dirty_worktree_preflight_results: [],
+      template_worktree_sync_results: [[], []],
+      current_branch_results: [],
+      restore_template_autostashes: []
+    )
+
+    results = workflow.results
+    expect(results).to all(be_ok), results.map(&:stderr).join("\n")
+    expect(git_output(@tmpdir, "status", "--short")).to eq("")
+    expect(git_output(@tmpdir, "log", "-1", "--format=%s")).to include("Refresh managed family mise tasks")
+    expect(File.read(File.join(@tmpdir, "mise-family.tasks.toml"))).to include("kettle-family update-bundler --execute --commit")
+    expect(File.read(File.join(@tmpdir, "mise.toml"))).not_to include("old bundler command")
+  end
+
   it "normalizes paths from git status lines" do
     expect(Kettle::Family::GitStatus.path_from_status_line(" M lib/example.rb")).to eq("lib/example.rb")
     expect(Kettle::Family::GitStatus.path_from_status_line("?? spec/example_spec.rb")).to eq("spec/example_spec.rb")

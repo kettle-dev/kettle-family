@@ -60,7 +60,7 @@ RSpec.describe Kettle::Family::MiseTasks do
       result = described_class.ensure_include(root_content: root_with, task_file_name: "mise-family.tasks.toml")
 
       expect(result.changed).to be(true)
-      expect(result.content).to include('includes = ["other.toml"]')
+      expect(result.content).to include('includes = ["other.toml", "mise-family.tasks.toml"]')
       expect(result.content).to include('"mise-family.tasks.toml"')
       analysis = ::Toml::Merge::FileAnalysis.new(result.content)
       expect(analysis).to be_valid
@@ -286,6 +286,39 @@ RSpec.describe Kettle::Family::MiseTasks do
       expect(result.changed).to be(false)
     end
 
+    it "replaces the legacy placeholder and migrates tasks while preserving family customizations" do
+      File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n  local_path_env: RUBOCOP_LTS_DEV\n")
+      File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# legacy placeholder\n")
+      File.write(File.join(@tmpdir, "mise.toml"), <<~TOML)
+        [env]
+        FORGE_ORG = "rubocop-lts"
+        [tools]
+        ruby = "4.0.7"
+        [tasks.bupb]
+        run = "bundle _$(ruby broken.rb)_ exec kettle-family update-bundler"
+        [tasks.bupb.env]
+        CUSTOM_LEGACY_ENV = "old"
+        [tasks.lint]
+        run = "old lint command"
+        [tasks.release]
+        run = "bundle exec kettle-family release --execute --publish --secrets-provider op"
+        [tasks.my-custom-task]
+        run = "echo custom"
+      TOML
+
+      described_class.materialize_managed_suite(context: {project_root: @tmpdir})
+      root = File.read(File.join(@tmpdir, "mise.toml"))
+      managed = File.read(File.join(@tmpdir, "mise-family.tasks.toml"))
+      expect(described_class.redefinitions(root_content: root, task_file_content: managed)).to be_empty
+      expect(root).to include('FORGE_ORG = "rubocop-lts"', 'ruby = "4.0.7"', "[tasks.release]", "[tasks.my-custom-task]")
+      expect(root).not_to include("broken.rb", "old lint command", "CUSTOM_LEGACY_ENV")
+      expect(managed).to include("kettle-family lint --execute", "kettle-family template --execute")
+      expect(managed).not_to include("ruby broken.rb")
+      before = [root, managed]
+      described_class.materialize_managed_suite(context: {project_root: @tmpdir})
+      expect([File.read(File.join(@tmpdir, "mise.toml")), File.read(File.join(@tmpdir, "mise-family.tasks.toml"))]).to eq(before)
+    end
+
     it "is idempotent" do
       File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
       File.write(File.join(@tmpdir, "mise.toml"), "")
@@ -341,7 +374,7 @@ RSpec.describe Kettle::Family::MiseTasks do
       content = described_class::ManagedSuite.new(monorepo_config).content
 
       expect(content).to include(
-        "run = \"env STRUCTUREDMERGE_DEV=false K_JEM_TEMPLATING=false TSLP_DEV=false -- " \
+        "run = \"env -- STRUCTUREDMERGE_DEV=false K_JEM_TEMPLATING=false TSLP_DEV=false " \
         "bundle exec kettle-family bup --execute --commit " \
         "--env STRUCTUREDMERGE_DEV={{config_root}}/gems --env K_JEM_TEMPLATING=true\""
       )
@@ -361,16 +394,29 @@ RSpec.describe Kettle::Family::MiseTasks do
       content = described_class::ManagedSuite.new(sibling_config).content
 
       expect(content).to include(
-        "run = \"env KETTLE_DEV_DEV=false -- bundle exec kettle-family bup --execute --commit\""
+        "run = \"env -- KETTLE_DEV_DEV=false bundle exec kettle-family bup --execute --commit\""
       )
       expect(content).not_to include("--env")
       expect(content).not_to include("{{config_root}}")
     end
 
+    it "executes the generated env wrapper and forwards arguments to bundle" do
+      Dir.mktmpdir("managed-task-command") do |dir|
+        File.write(File.join(dir, "bundle"), "#!/bin/sh\nprintf '%s\\n' \"$KETTLE_DEV_DEV\" \"$@\"\n")
+        FileUtils.chmod(0o755, File.join(dir, "bundle"))
+        analysis = ::Toml::Merge::FileAnalysis.new(described_class::ManagedSuite.new(sibling_config).content)
+        task = analysis.tables.find { |table| table.table_name == "bupb" }
+        command = JSON.parse(task.pairs.find { |pair| pair.key_name == "run" }.value_node.text)
+        output, status = Open3.capture2({"PATH" => [dir, ENV.fetch("PATH")].join(File::PATH_SEPARATOR)}, "sh", "-c", "#{command} --only alpha")
+        expect(status.success?).to be(true)
+        expect(output.lines.map(&:strip)).to eq(%w[false exec kettle-family update-bundler --execute --commit --only alpha])
+      end
+    end
+
     it "renders TOML that parses as a managed task file" do
       content = described_class::ManagedSuite.new(monorepo_config).content
 
-      expect(described_class.task_names(content, managed: true)).to contain_exactly(
+      expect(described_class.task_names(content, managed: true)).to include(
         "test", "lint", "state", "release-state", "template", "bump", "changelog", "bup", "bupb", "update-bundler"
       )
     end

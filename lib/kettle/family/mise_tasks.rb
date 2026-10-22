@@ -9,11 +9,9 @@ module Kettle
     # Slice-1044 family mise tasks primitive: ensure a destination root
     # `mise.toml` references the kettle-family-managed TOML task file via
     # `[task_config] includes`, and report (optionally clean) task
-    # redefinitions between the root file and the managed file.
-    #
-    # Precedence contract (mise): a task defined in the root `mise.toml` wins
-    # over the same name from a task file. Redefinition is therefore allowed
-    # and only reported; `clean` is always opt-in.
+    # redefinitions between the root file and the managed file. Family
+    # refreshes migrate managed task names out of the root so old commands
+    # cannot shadow generated fixes. Other tasks and settings remain local.
     #
     # All edits go through ast-crispr Actors with the ast-crispr-toml adapter.
     module MiseTasks
@@ -168,7 +166,7 @@ module Kettle
       end
 
       # Remove duplicate task definitions from the root mise.toml.
-      # Opt-in (`--clean`); never runs implicitly.
+      # Used by family refreshes and the explicit non-family `--clean` path.
       #
       # @param root_content [String] the destination's mise.toml content
       # @param task_file_content [String] managed task file content
@@ -180,10 +178,11 @@ module Kettle
         redefs.each do |name|
           # A task can be defined as a `[tasks.<name>]` table block or as a
           # trivial `name = "…"` pair inside `[tasks]`; try both owners.
-          [
-            TomlSelectors.table(path: "tasks.#{name}"),
-            TomlSelectors.pair(path: "tasks.#{name}")
-          ].each do |target|
+          tables = document_context(content).structural_owners(owner_scope: :tables)
+          paths = tables.map(&:name).select { |path| path == "tasks.#{name}" || path.start_with?("tasks.#{name}.") }
+          targets = paths.reverse.map { |path| TomlSelectors.table(path: path) }
+          targets << TomlSelectors.pair(path: "tasks.#{name}")
+          targets.each do |target|
             result = Ast::Crispr::Delete.result(
               content: content,
               target: target,
@@ -261,6 +260,16 @@ module Kettle
           end
 
           pairs = table.wrapper.pairs
+          if pairs.any? { |pair| pair.key_name.to_s == "includes" }
+            entries = includes_entries(context) + [task_file_name]
+            result = Ast::Crispr::Replace.result(
+              content: content,
+              target: TomlSelectors.pair(path: "task_config.includes"),
+              replacement: "includes = [#{entries.map(&:inspect).join(", ")}]\n",
+              source_label: "mise.toml"
+            )
+            return fail_or(result)
+          end
           result =
             if pairs.empty?
               Ast::Crispr::Replace.result(
@@ -295,31 +304,30 @@ module Kettle
       # .kettle-family.yml).
       #
       # @param context [Hash] kettle-jem plugin context (:project_root)
-      def self.materialize_managed_suite(context:)
+      def self.materialize_managed_suite(context:, task_file_name: DEFAULT_TASK_FILE_NAME, **options)
         root = context[:project_root].to_s
         return if root.empty?
 
         root = File.expand_path(root)
         return unless File.file?(File.join(root, ".kettle-family.yml"))
 
+        root_mise = File.join(root, "mise.toml")
+        return unless File.file?(root_mise)
+
         config = Config.load(root: root)
         content = ManagedSuite.new(config).content
         content += "\n" unless content.end_with?("\n")
 
-        task_file_path = File.join(root, DEFAULT_TASK_FILE_NAME)
-        File.write(task_file_path, content) unless File.exist?(task_file_path) && File.read(task_file_path) == content
-
-        root_mise = File.join(root, "mise.toml")
-        return unless File.file?(root_mise)
-
-        result = ensure_include(
-          root_content: File.read(root_mise),
-          task_file_name: DEFAULT_TASK_FILE_NAME,
+        task_file_path = File.join(root, task_file_name)
+        original = File.read(root_mise)
+        included = ensure_include(root_content: original, task_file_name: task_file_name)
+        result = clean_redefinitions(
+          root_content: included.content,
+          task_file_name: task_file_name,
           task_file_content: content
         )
-        File.write(root_mise, result.content) if result.changed
-      rescue Error, SystemCallError => e
-        warn("kettle-family: could not materialize managed mise tasks: #{e.class}: #{e.message}")
+        File.write(task_file_path, content) unless File.exist?(task_file_path) && File.read(task_file_path) == content
+        File.write(root_mise, result.content) unless result.content == original
       end
 
       # Comprehensive managed family mise task suite, generated from family
@@ -352,16 +360,25 @@ module Kettle
         def content
           tasks = {
             "test" => "bundle exec kettle-family test --execute",
-            "lint" => "bundle exec kettle-family lint",
+            "lint" => "bundle exec kettle-family lint --execute",
             "state" => "bundle exec kettle-family release-state",
             "release-state" => "bundle exec kettle-family release-state",
-            "template" => "bundle exec kettle-family template",
+            "template" => "bundle exec kettle-family template --execute",
             "bump" => "bundle exec kettle-family bump --execute",
             # Targeting is resolved by kettle-family from the family config:
             # shared-changelog families write the root changelog, member-local
             # families write each member's own.
             "changelog" => "bundle exec kettle-family add-changelog --execute"
           }
+          %w[install docs clean-unreleased gha-sha-pins bex branch-lanes discover metadata report pull push up sync reset mise-trust reconcile-releases].each do |command|
+            name = {"clean-unreleased" => "clean", "gha-sha-pins" => "pins"}.fetch(command, command)
+            flags = %w[branch-lanes discover metadata report mise-trust].include?(command) ? "" : " --execute"
+            flags += " --upgrade major" if name == "pins"
+            tasks[name] = "bundle exec kettle-family #{command}#{flags}"
+          end
+          tasks["readiness"] = "bundle exec kettle-family check --execute"
+          tasks["deps"] = "bundle exec kettle-family bup --execute --no-commit"
+          tasks["lint-fix"] = "bundle exec kettle-family bex --execute --no-commit -- bin/rake rubocop_gradual:autocorrect"
           tasks["bup"] = "bundle exec kettle-family bup --execute --commit"
           tasks["bupb"] = "bundle exec kettle-family update-bundler --execute --commit"
           tasks["update-bundler"] = tasks["bupb"]
@@ -369,7 +386,7 @@ module Kettle
           neutral = neutralize_assignments
           wiring = env_wiring_flags
           %w[bup bupb].each do |name|
-            prefix = neutral.empty? ? "" : "env #{neutral} -- "
+            prefix = neutral.empty? ? "" : "env -- #{neutral} "
             tasks[name] = "#{prefix}#{tasks[name]}#{wiring}"
           end
           tasks["update-bundler"] = tasks["bupb"]
@@ -422,11 +439,13 @@ module Kettle
             #
             # Family-specific tasks (for example a release task with the
             # family's publish flags and secrets provider) belong in the root
-            # mise.toml, where they shadow the managed definitions.
+            # mise.toml. Standard task names are managed here and migrated out
+            # of that file during refreshes.
           HEADER
+          out << "\n[check]\ndescription = \"Run readiness, lint, and tests\"\ndepends = [\"readiness\", \"lint\", \"test\"]\nrun = \"true\"\n"
           tasks.each do |name, run|
             out << "\n[#{name}]\n"
-            out << "description = #{TASK_DESCRIPTIONS.fetch(name).inspect}\n"
+            out << "description = #{TASK_DESCRIPTIONS.fetch(name) { "Run family #{name}" }.inspect}\n"
             out << "raw = true\n"
             out << "run = #{run.inspect}\n"
           end

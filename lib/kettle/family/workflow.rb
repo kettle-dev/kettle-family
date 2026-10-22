@@ -256,7 +256,26 @@ module Kettle
           runner: runner,
           preserve_members: template_cleanup ? [] : failed_members
         )
-        checkout_preflight + sync_results + workflow_results + rollback_results + restore_results
+        results = checkout_preflight + sync_results + workflow_results + rollback_results + restore_results
+        if results.all?(&:ok?)
+          MiseTasks.materialize_managed_suite(context: {project_root: config.root})
+          if File.file?(File.join(config.root, "mise.toml"))
+            results << runner.call(
+              member: family_member, phase: "family_mise_trust",
+              command: ["mise", "trust", "-C", config.root], raw: true
+            )
+          end
+          if results.all?(&:ok?) && family_root_bundle_commit? && File.file?(File.join(config.root, "mise.toml"))
+            results << runner.call(
+              member: family_member,
+              phase: "commit_family_mise_tasks",
+              command: ["sh", "-lc", "files=$(git ls-files --modified --others --exclude-standard -- mise.toml mise-family.tasks.toml); " \
+                "if [ -n \"$files\" ]; then git add -- mise.toml mise-family.tasks.toml && " \
+                "git commit --only -m '🔧 Refresh managed family mise tasks' -- mise.toml mise-family.tasks.toml; fi"]
+            )
+          end
+        end
+        results
       end
 
       def template_worktree_sync_results(runner:)

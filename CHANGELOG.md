@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family templating and mise-tasks now refresh the generated family task suite and migrate standard task definitions out of mise.toml, preserving custom tasks and family release settings. Generated lint/template commands execute their workflows, and dependency-task env wrappers use valid shell syntax.
+
 ### Security
 
 ## [1.3.29] - 2026-10-21

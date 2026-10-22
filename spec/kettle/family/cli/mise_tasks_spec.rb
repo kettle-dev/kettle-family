@@ -37,6 +37,15 @@ RSpec.describe Kettle::Family::CLI::MiseTasks do
     expect(content).to include("[tasks.clean]")
   end
 
+  it "refreshes an existing family placeholder and migrates root tasks" do
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is unsupported by the parser native gem")
+    File.write(File.join(tmp_root, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
+    File.write(File.join(tmp_root, "mise-family.tasks.toml"), "# legacy placeholder\n")
+    expect(run_command("--root", tmp_root)).to eq(0)
+    expect(File.read(File.join(tmp_root, "mise-family.tasks.toml"))).to include("[bupb]", "[clean]")
+    expect(File.read(root_mise)).not_to include("[tasks.clean]")
+  end
+
   it "is idempotent on a second run" do
     skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
 

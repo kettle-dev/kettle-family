@@ -267,7 +267,7 @@ module Kettle
       class MiseTasks < BaseCommand
         command_name "mise-tasks"
         usage "[options]"
-        description "Ensure the root mise.toml includes the kettle-family managed task file; warn on redefinitions."
+        description "Refresh managed family tasks and migrate standard root definitions; ensure the task-file include."
 
         option :task_file, long: "--task-file", value: {type: String, usage: "PATH"},
           desc: "Managed TOML task file name, relative to the root (default: mise-family.tasks.toml)"
@@ -286,6 +286,13 @@ module Kettle
           unless File.file?(root_mise)
             stderr.puts("kettle-family: no mise.toml at #{root_mise}")
             return 1
+          end
+
+          if File.file?(File.join(root, ".kettle-family.yml"))
+            Kettle::Family::MiseTasks.materialize_managed_suite(
+              context: {project_root: root}, task_file_name: task_file_name
+            )
+            stdout.puts("refreshed managed family tasks and migrated standard root definitions")
           end
 
           unless File.file?(task_file_path)
