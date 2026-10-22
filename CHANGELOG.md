@@ -28,20 +28,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Family templating no longer crashes with Errno::ENOENT when the mise executable is not installed: the post-template family root mise trust step is skipped when mise is not on PATH (it only enables subsequent nested mise runs).
-
 ### Security
 
 ## [1.3.30] - 2026-10-22
 
 - TAG: [v1.3.30][1.3.30t]
-- COVERAGE: 93.07% -- 7490/8048 lines in 44 files
-- BRANCH COVERAGE: 77.59% -- 3008/3877 branches in 44 files
+- COVERAGE: 93.08% -- 7495/8052 lines in 44 files
+- BRANCH COVERAGE: 77.61% -- 3009/3877 branches in 44 files
 - 37.45% documented
 
 ### Fixed
 
 - Family templating and mise-tasks now refresh the generated family task suite and migrate standard task definitions out of mise.toml, preserving custom tasks and family release settings. Generated lint/template commands execute their workflows, and dependency-task env wrappers use valid shell syntax.
+
+- Family templating no longer crashes with Errno::ENOENT when the mise executable is not installed: the post-template family root mise trust step is skipped when mise is not on PATH (it only enables subsequent nested mise runs).
 
 ## [1.3.29] - 2026-10-21
 
