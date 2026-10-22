@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family templating no longer crashes with Errno::ENOENT when the mise executable is not installed: the post-template family root mise trust step is skipped when mise is not on PATH (it only enables subsequent nested mise runs).
+
 ### Security
 
 ## [1.3.30] - 2026-10-22

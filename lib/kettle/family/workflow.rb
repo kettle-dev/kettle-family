@@ -259,7 +259,10 @@ module Kettle
         results = checkout_preflight + sync_results + workflow_results + rollback_results + restore_results
         if results.all?(&:ok?)
           MiseTasks.materialize_managed_suite(context: {project_root: config.root})
-          if File.file?(File.join(config.root, "mise.toml"))
+          # `mise trust` requires the mise executable; spec environments and
+          # minimal CI images may not have it installed. Trust is only an
+          # enabler for subsequent nested mise runs, so skip when absent.
+          if mise_available? && File.file?(File.join(config.root, "mise.toml"))
             results << runner.call(
               member: family_member, phase: "family_mise_trust",
               command: ["mise", "trust", "-C", config.root], raw: true
@@ -688,6 +691,17 @@ module Kettle
 
       def family_root_bundle_commit?
         commit && config.family_mode == "monorepo"
+      end
+
+      # Whether the mise executable is reachable on PATH. Family orchestration
+      # only shells out to `mise` for trust after root task materialization;
+      # everywhere else tasks are managed as TOML documents, so a missing mise
+      # binary must not fail the workflow.
+      def mise_available?
+        ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |dir|
+          path = File.join(dir, "mise")
+          File.file?(path) && File.executable?(path)
+        end
       end
 
       # Sibling repositories have isolated working trees and can run their

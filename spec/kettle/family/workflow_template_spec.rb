@@ -33,6 +33,28 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(File.join(@tmpdir, "mise.toml"))).not_to include("old bundler command")
   end
 
+  it "skips family root mise trust when the mise executable is unavailable" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
+    File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
+    File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# old placeholder\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [], execute: true)
+    allow(workflow).to receive_messages(
+      branch_checkout_dirty_preflight_results: [],
+      template_dirty_worktree_preflight_results: [],
+      template_worktree_sync_results: [[], []],
+      current_branch_results: [],
+      restore_template_autostashes: [],
+      mise_available?: false
+    )
+
+    results = workflow.results
+    expect(results).to all(be_ok)
+    expect(results.map(&:command).flatten.compact.map(&:to_s)).not_to include("mise")
+    expect(File.read(File.join(@tmpdir, "mise-family.tasks.toml"))).to include("kettle-family update-bundler --execute --commit")
+    expect(File.read(File.join(@tmpdir, "mise.toml"))).not_to include("old bundler command")
+  end
+
   it "commits migrated monorepo root tasks without leaving generated files dirty" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: monorepo\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
