@@ -41,7 +41,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Family templating and mise-tasks now refresh the generated family task suite and migrate standard task definitions out of mise.toml, preserving custom tasks and family release settings. Generated lint/template commands execute their workflows, and dependency-task env wrappers use valid shell syntax.
 
-- Family templating no longer crashes with Errno::ENOENT when the mise executable is not installed: the post-template family root mise trust step is skipped when mise is not on PATH (it only enables subsequent nested mise runs).
+- Family templating no longer crashes with Errno::ENOENT when the mise executable is unavailable to the spawned command environment: the post-template family root mise trust step resolves mise to an absolute PATH-derived path (spawned envs strip the orchestrator's Ruby/gem bin dirs from PATH) and is skipped entirely when mise is not installed (it only enables subsequent nested mise runs).
 
 ## [1.3.29] - 2026-10-21
 

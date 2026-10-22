@@ -45,7 +45,7 @@ RSpec.describe Kettle::Family::Workflow do
       template_worktree_sync_results: [[], []],
       current_branch_results: [],
       restore_template_autostashes: [],
-      mise_available?: false
+      mise_executable: nil
     )
 
     results = workflow.results

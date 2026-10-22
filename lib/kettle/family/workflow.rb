@@ -262,10 +262,15 @@ module Kettle
           # `mise trust` requires the mise executable; spec environments and
           # minimal CI images may not have it installed. Trust is only an
           # enabler for subsequent nested mise runs, so skip when absent.
-          if mise_available? && File.file?(File.join(config.root, "mise.toml"))
+          # Resolve to an absolute path: the spawned command env strips the
+          # orchestrator's Ruby/gem bin dirs from PATH (see
+          # CommandRunner#mise_member_path), and a bare "mise" argv is
+          # unresolvable when the binary lives in one of those directories.
+          mise_executable = self.mise_executable
+          if mise_executable && File.file?(File.join(config.root, "mise.toml"))
             results << runner.call(
               member: family_member, phase: "family_mise_trust",
-              command: ["mise", "trust", "-C", config.root], raw: true
+              command: [mise_executable, "trust", "-C", config.root], raw: true
             )
           end
           if results.all?(&:ok?) && family_root_bundle_commit? && File.file?(File.join(config.root, "mise.toml"))
@@ -693,15 +698,18 @@ module Kettle
         commit && config.family_mode == "monorepo"
       end
 
-      # Whether the mise executable is reachable on PATH. Family orchestration
-      # only shells out to `mise` for trust after root task materialization;
-      # everywhere else tasks are managed as TOML documents, so a missing mise
-      # binary must not fail the workflow.
-      def mise_available?
-        ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |dir|
+      # Absolute path to the mise executable, or nil when it is not on PATH.
+      # Family orchestration only shells out to `mise` for trust after root
+      # task materialization; everywhere else tasks are managed as TOML
+      # documents, so a missing mise binary must not fail the workflow. The
+      # absolute path is required because spawned command environments strip
+      # the orchestrator's Ruby/gem bin dirs from PATH.
+      def mise_executable
+        ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).each do |dir|
           path = File.join(dir, "mise")
-          File.file?(path) && File.executable?(path)
+          return path if File.file?(path) && File.executable?(path)
         end
+        nil
       end
 
       # Sibling repositories have isolated working trees and can run their
