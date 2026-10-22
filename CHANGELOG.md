@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Family templating and mise-tasks now refresh the generated family task suite and migrate standard task definitions out of mise.toml, preserving custom tasks and family release settings. Generated lint/template commands execute their workflows, and dependency-task env wrappers use valid shell syntax.
-
 ### Security
+
+## [1.3.30] - 2026-10-22
+
+- TAG: [v1.3.30][1.3.30t]
+- COVERAGE: 93.07% -- 7490/8048 lines in 44 files
+- BRANCH COVERAGE: 77.59% -- 3008/3877 branches in 44 files
+- 37.45% documented
+
+### Fixed
+
+- Family templating and mise-tasks now refresh the generated family task suite and migrate standard task definitions out of mise.toml, preserving custom tasks and family release settings. Generated lint/template commands execute their workflows, and dependency-task env wrappers use valid shell syntax.
 
 ## [1.3.29] - 2026-10-21
 
@@ -3202,7 +3211,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.29...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.30...HEAD
+[1.3.30]: https://github.com/kettle-dev/kettle-family/compare/v1.3.29...v1.3.30
+[1.3.30t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.30
 [1.3.29]: https://github.com/kettle-dev/kettle-family/compare/v1.3.28...v1.3.29
 [1.3.29t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.29
 [1.3.28]: https://github.com/kettle-dev/kettle-family/compare/v1.3.27...v1.3.28

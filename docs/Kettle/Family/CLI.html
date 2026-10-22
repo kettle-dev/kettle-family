@@ -406,13 +406,13 @@ instance modifier does not apply to <code>def self.</code> definitions.</p>
       <pre class="lines">
 
 
-802
-803
-804
-805</pre>
+809
+810
+811
+812</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 802</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 809</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_on_unknown_command'>on_unknown_command</span><span class='lparen'>(</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='id identifier rubyid__argv'>_argv</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_stderr'>stderr</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family: unknown command </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_inspect'>inspect</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
@@ -438,15 +438,15 @@ instance modifier does not apply to <code>def self.</code> definitions.</p>
       <pre class="lines">
 
 
-795
-796
-797
-798
-799
-800</pre>
+802
+803
+804
+805
+806
+807</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 795</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 802</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_run'>run</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span> <span class='op'>=</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_invoke'>invoke</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='rparen'>)</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span>
@@ -474,22 +474,22 @@ instance modifier does not apply to <code>def self.</code> definitions.</p>
       <pre class="lines">
 
 
-807
-808
-809
-810
-811
-812
-813
 814
 815
 816
 817
 818
-819</pre>
+819
+820
+821
+822
+823
+824
+825
+826</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 807</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 814</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_run_command'>run_command</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_report'>report</span> <span class='op'>=</span> <span class='id identifier rubyid_build_report'>build_report</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='comma'>,</span> <span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>

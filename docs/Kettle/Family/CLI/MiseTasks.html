@@ -325,7 +325,14 @@
 360
 361
 362
-363</pre>
+363
+364
+365
+366
+367
+368
+369
+370</pre>
     </td>
     <td>
       <pre class="code"><span class="info file"># File 'lib/kettle/family/cli.rb', line 278</span>
@@ -341,6 +348,13 @@
   <span class='kw'>unless</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_file?'>file?</span><span class='lparen'>(</span><span class='id identifier rubyid_root_mise'>root_mise</span><span class='rparen'>)</span>
     <span class='id identifier rubyid_stderr'>stderr</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family: no mise.toml at </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_root_mise'>root_mise</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
     <span class='kw'>return</span> <span class='int'>1</span>
+  <span class='kw'>end</span>
+
+  <span class='kw'>if</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_file?'>file?</span><span class='lparen'>(</span><span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_root'><span class='object_link'><a href="../../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.kettle-family.yml</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='rparen'>)</span>
+    <span class='const'><span class='object_link'><a href="../../../Kettle.html" title="Kettle (module)">Kettle</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../../Family.html" title="Kettle::Family (module)">Family</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="../MiseTasks.html" title="Kettle::Family::MiseTasks (module)">MiseTasks</a></span></span><span class='period'>.</span><span class='id identifier rubyid_materialize_managed_suite'><span class='object_link'><a href="../MiseTasks.html#materialize_managed_suite-class_method" title="Kettle::Family::MiseTasks.materialize_managed_suite (method)">materialize_managed_suite</a></span></span><span class='lparen'>(</span>
+      <span class='label'>context:</span> <span class='lbrace'>{</span><span class='label'>project_root:</span> <span class='id identifier rubyid_root'><span class='object_link'><a href="../../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>task_file_name:</span> <span class='id identifier rubyid_task_file_name'>task_file_name</span>
+    <span class='rparen'>)</span>
+    <span class='id identifier rubyid_stdout'>stdout</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>refreshed managed family tasks and migrated standard root definitions</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
   <span class='kw'>end</span>
 
   <span class='kw'>unless</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_file?'>file?</span><span class='lparen'>(</span><span class='id identifier rubyid_task_file_path'>task_file_path</span><span class='rparen'>)</span>
