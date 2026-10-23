@@ -90,9 +90,9 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.30">v1.3.30</a>
 </li>
-  <li>COVERAGE: 93.09% – 7501/8058 lines in 44 files</li>
-  <li>BRANCH COVERAGE: 77.63% – 3013/3881 branches in 44 files</li>
-  <li>37.58% documented</li>
+  <li>COVERAGE: 93.05% – 7526/8088 lines in 45 files</li>
+  <li>BRANCH COVERAGE: 77.62% – 3020/3891 branches in 45 files</li>
+  <li>38.45% documented</li>
 </ul>
 
 <h3 id="fixed-1">Fixed</h3>
@@ -101,9 +101,8 @@ Please file a bug if you notice a violation of semantic versioning.</p>
   <li>
     <p>Family templating and mise-tasks now refresh the generated family task suite and migrate standard task definitions out of mise.toml, preserving custom tasks and family release settings. Generated lint/template commands execute their workflows, and dependency-task env wrappers use valid shell syntax.</p>
   </li>
-  <li>
-    <p>Family templating no longer crashes with Errno::ENOENT when the mise executable is unavailable to the spawned command environment: CommandRunner resolves mise to an absolute PATH-derived path for the <code>mise exec -C</code> wrapper prefix and the post-template family root trust step (spawned envs strip the orchestrator’s Ruby/gem bin dirs from PATH), runs commands UNWRAPPED when mise cannot be resolved at all (no member runtime exists to activate), and skips the trust step when mise is absent (it only enables subsequent nested mise runs).</p>
-  </li>
+  <li>Family templating no longer crashes with Errno::ENOENT when the mise executable is unavailable to the spawned command environment: CommandRunner resolves mise to an absolute PATH-derived path for the <code>mise exec -C</code> wrapper prefix and the post-template family root trust step (spawned envs strip the orchestrator’s Ruby/gem bin dirs from PATH), runs commands UNWRAPPED when mise cannot be resolved at all (no member runtime exists to activate), and skips the trust step when mise is absent (it only enables subsequent nested mise runs).</li>
+  <li>Mise is now optional everywhere the template flow can reach: the new <code>Kettle::Family::MiseAdapter</code> seam resolves the binary at runtime, wraps member commands in <code>mise exec</code> when available, and passes them through UNWRAPPED (with <code>env(1)</code> injection preserved) when absent — no ENOENT on mise-less CI. The post-template family root trust step and worktree bootstraps skip when unresolvable. The adapter is injectable via <code>mise_adapter:</code> kwarg on <code>CommandRunner</code> and <code>Workflow</code>, with a module-level <code>Kettle::Family.mise_adapter</code> default for deep CLI construction. All eight <code>CommandRunner.new</code> sites, the family-root trust phase, <code>worktree_mise_trust_results</code>, and <code>CLI.mise_trust_results</code> delegate to it. Specs default to the nil flavor (hermetic, identical locally and in CI); examples asserting wrapped argv shapes opt into an available adapter locally.</li>
 </ul>
 
 <h2 id="1329---2026-10-21">

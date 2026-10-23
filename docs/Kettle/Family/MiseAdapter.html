@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  Class: Kettle::Family::MiseAdapter
+  
+    &mdash; Documentation by YARD 0.9.45
+  
+</title>
+
+  <link rel="stylesheet" href="../../css/style.css" type="text/css">
+
+  <link rel="stylesheet" href="../../css/common.css" type="text/css">
+
+<script type="text/javascript">
+  pathId = "Kettle::Family::MiseAdapter";
+  relpath = '../../';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="../../js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="../../js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div id="main_progress" aria-hidden="true"></div>
+
+    <div class="nav_wrap">
+      <iframe id="nav" src="../../class_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="../../_index.html">Index (M)</a> &raquo;
+    <span class='title'><span class='object_link'><a href="../../Kettle.html" title="Kettle (module)">Kettle</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../Family.html" title="Kettle::Family (module)">Family</a></span></span>
+     &raquo; 
+    <span class="title">MiseAdapter</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="../../class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><h1>Class: Kettle::Family::MiseAdapter
+  
+  
+  
+</h1>
+<div class="box_info">
+  
+  <dl>
+    <dt>Inherits:</dt>
+    <dd>
+      <span class="inheritName">Object</span>
+      
+        <ul class="fullTree">
+          <li>Object</li>
+          
+            <li class="next">Kettle::Family::MiseAdapter</li>
+          
+        </ul>
+        <a href="#" class="inheritanceTree">show all</a>
+      
+    </dd>
+  </dl>
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+  <dl>
+    <dt>Defined in:</dt>
+    <dd>lib/kettle/family/mise_adapter.rb
+</dd>
+  </dl>
+  
+</div>
+
+<h2>Overview</h2><div class="docstring">
+  <div class="discussion">
+    <p>Adapter seam around the mise binary.</p>
+
+<p>Mise is operational glue, not a code dependency: family tooling uses it<br />
+for <code>mise trust -C &lt;root&gt;</code> after materializing managed task files, and<br />
+for <code>mise exec -C &lt;member.root&gt; -- &lt;cmd&gt;</code> when running member commands<br />
+under the member’s declared runtime. It is absent in CI and on mise-less<br />
+hosts, so every use degrades deliberately:</p>
+
+<ul>
+  <li><code>trust_argv</code> returns nil when mise is unavailable (callers skip the<br />
+trust phase — it only enables subsequent nested mise runs).</li>
+  <li><code>exec_argv</code> passes the command through unwrapped when mise is<br />
+unavailable (there is no member runtime to activate), preserving env<br />
+injection via env(1) (or the portable ruby script on Windows).</li>
+</ul>
+
+<p>Specs inject a fake or stubbed adapter rather than spawning the real<br />
+binary; only these adapter specs exercise the real PATH scan.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
+  
+    <h2>
+      Constant Summary
+      <small><a href="#" class="constants_summary_toggle">collapse</a></small>
+    </h2>
+
+    <dl class="constants">
+      
+        <dt id="WINDOWS_ENV_EXEC_SCRIPT-constant" class="">WINDOWS_ENV_EXEC_SCRIPT =
+          <div class="docstring">
+  <div class="discussion">
+    <p>Portable env-manipulation wrapper used when commands must run with env<br />
+changes on Windows (no env(1) there).</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
+        </dt>
+        <dd><pre class="code"><span class='heredoc_beg'>&lt;&lt;~RUBY</span>
+<span class='tstring_content'>  unset_count = Integer(ARGV.shift)
+</span><span class='tstring_content'>  unset_count.times { ENV.delete(ARGV.shift) }
+</span><span class='tstring_content'>  assignment_count = Integer(ARGV.shift)
+</span><span class='tstring_content'>  assignment_count.times do
+</span><span class='tstring_content'>    key, value = ARGV.shift.split(&quot;=&quot;, 2)
+</span><span class='tstring_content'>    ENV[key] = value
+</span><span class='tstring_content'>  end
+</span><span class='tstring_content'>  abort &quot;missing command after environment arguments&quot; if ARGV.shift != &quot;--&quot;
+</span><span class='tstring_content'>  exec(*ARGV)
+</span><span class='heredoc_end'>RUBY</span></pre></dd>
+      
+    </dl>
+  
+
+
+
+
+
+
+
+  
+    <h2>
+      Instance Method Summary
+      <small><a href="#" class="summary_toggle">collapse</a></small>
+    </h2>
+
+    <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#available%3F-instance_method" title="#available? (instance method)">#<strong>available?</strong>  &#x21d2; Boolean </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Whether mise-wrapping and trust are possible.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#exec_argv-instance_method" title="#exec_argv (instance method)">#<strong>exec_argv</strong>(member_root:, argv:, unset_env: [], set_env: {})  &#x21d2; Array&lt;String&gt; </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Build the argv for running a member command under the member’s mise-declared runtime.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#executable-instance_method" title="#executable (instance method)">#<strong>executable</strong>  &#x21d2; String<sup>?</sup> </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Absolute path to the mise executable resolved from the current PATH, or nil when mise is not installed.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#trust_argv-instance_method" title="#trust_argv (instance method)">#<strong>trust_argv</strong>(root)  &#x21d2; Array&lt;String&gt;<sup>?</sup> </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>argv for <code>mise trust -C &lt;root&gt;</code>, or nil when mise is unavailable.</p>
+</div></span>
+  
+</li>
+
+      
+    </ul>
+    
+  
+
+
+
+  <div id="instance_method_details" class="method_details_list">
+    <h2>Instance Method Details</h2>
+
+    
+      <div class="method_details first">
+  <h3 class="signature first" id="available?-instance_method">
+  
+    #<strong>available?</strong>  &#x21d2; <tt>Boolean</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Returns whether mise-wrapping and trust are possible.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>whether mise-wrapping and trust are possible</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+52
+53
+54</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_adapter.rb', line 52</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_available?'>available?</span>
+  <span class='op'>!</span><span class='id identifier rubyid_executable'>executable</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="exec_argv-instance_method">
+  
+    #<strong>exec_argv</strong>(member_root:, argv:, unset_env: [], set_env: {})  &#x21d2; <tt>Array&lt;String&gt;</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Build the argv for running a member command under the member’s<br />
+mise-declared runtime. Passes through unwrapped (preserving env<br />
+injection) when mise is unavailable.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>member_root</span>
+      
+      
+        <span class='type'>(<tt>String</tt>)</span>
+      
+      
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>argv</span>
+      
+      
+        <span class='type'>(<tt>Array&lt;String&gt;</tt>)</span>
+      
+      
+      
+        &mdash;
+        <div class='inline'><p>the normalized command</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>unset_env</span>
+      
+      
+        <span class='type'>(<tt>Array&lt;String&gt;</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>[]</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>env keys to unset in the child</p>
+</div>
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>set_env</span>
+      
+      
+        <span class='type'>(<tt>Hash{String =&gt; String}</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>{}</tt>)</em>
+      
+      
+        &mdash;
+        <div class='inline'><p>env assignments for the child</p>
+</div>
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Array&lt;String&gt;</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_adapter.rb', line 76</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_exec_argv'>exec_argv</span><span class='lparen'>(</span><span class='label'>member_root:</span><span class='comma'>,</span> <span class='label'>argv:</span><span class='comma'>,</span> <span class='label'>unset_env:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>set_env:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_injected_env'>injected_env</span> <span class='op'>=</span> <span class='lbracket'>[</span>
+    <span class='op'>*</span><span class='id identifier rubyid_unset_env'>unset_env</span><span class='period'>.</span><span class='id identifier rubyid_flat_map'>flat_map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_key'>key</span><span class='op'>|</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>-u</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='id identifier rubyid_key'>key</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='rbracket'>]</span> <span class='rbrace'>}</span><span class='comma'>,</span>
+    <span class='op'>*</span><span class='id identifier rubyid_set_env'>set_env</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_key'>key</span><span class='comma'>,</span> <span class='id identifier rubyid_value'>value</span><span class='op'>|</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_key'>key</span><span class='embexpr_end'>}</span><span class='tstring_content'>=</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_value'>value</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span>
+  <span class='rbracket'>]</span>
+
+  <span class='id identifier rubyid_exe'>exe</span> <span class='op'>=</span> <span class='id identifier rubyid_executable'>executable</span>
+  <span class='kw'>unless</span> <span class='id identifier rubyid_exe'>exe</span>
+    <span class='comment'># No mise executable: there is no member runtime to activate, and a
+</span>    <span class='comment'># wrapped spawn would be an unresolvable bare &quot;mise&quot; (ENOENT under
+</span>    <span class='comment'># the filtered child PATH). Run unwrapped, preserving env injection.
+</span>    <span class='kw'>return</span> <span class='id identifier rubyid_argv'>argv</span> <span class='kw'>if</span> <span class='id identifier rubyid_injected_env'>injected_env</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
+    <span class='kw'>return</span> <span class='id identifier rubyid_windows_env_argv'>windows_env_argv</span><span class='lparen'>(</span><span class='label'>unset_env:</span> <span class='id identifier rubyid_unset_env'>unset_env</span><span class='comma'>,</span> <span class='label'>set_env:</span> <span class='id identifier rubyid_set_env'>set_env</span><span class='comma'>,</span> <span class='label'>argv:</span> <span class='id identifier rubyid_argv'>argv</span><span class='rparen'>)</span> <span class='kw'>if</span> <span class='const'>Gem</span><span class='period'>.</span><span class='id identifier rubyid_win_platform?'>win_platform?</span>
+
+    <span class='kw'>return</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>env</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_injected_env'>injected_env</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='rbracket'>]</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_mise_argv'>mise_argv</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='id identifier rubyid_exe'>exe</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>exec</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>-C</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='id identifier rubyid_member_root'>member_root</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>--</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
+  <span class='kw'>return</span> <span class='lbracket'>[</span><span class='op'>*</span><span class='id identifier rubyid_mise_argv'>mise_argv</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='rbracket'>]</span> <span class='kw'>if</span> <span class='id identifier rubyid_injected_env'>injected_env</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
+  <span class='kw'>if</span> <span class='const'>Gem</span><span class='period'>.</span><span class='id identifier rubyid_win_platform?'>win_platform?</span>
+    <span class='kw'>return</span> <span class='lbracket'>[</span><span class='op'>*</span><span class='id identifier rubyid_mise_argv'>mise_argv</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_windows_env_argv'>windows_env_argv</span><span class='lparen'>(</span><span class='label'>unset_env:</span> <span class='id identifier rubyid_unset_env'>unset_env</span><span class='comma'>,</span> <span class='label'>set_env:</span> <span class='id identifier rubyid_set_env'>set_env</span><span class='comma'>,</span> <span class='label'>argv:</span> <span class='id identifier rubyid_argv'>argv</span><span class='rparen'>)</span><span class='rbracket'>]</span>
+  <span class='kw'>end</span>
+
+  <span class='lbracket'>[</span><span class='op'>*</span><span class='id identifier rubyid_mise_argv'>mise_argv</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>env</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_injected_env'>injected_env</span><span class='comma'>,</span> <span class='op'>*</span><span class='id identifier rubyid_argv'>argv</span><span class='rbracket'>]</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="executable-instance_method">
+  
+    #<strong>executable</strong>  &#x21d2; <tt>String</tt><sup>?</sup> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Absolute path to the mise executable resolved from the current PATH,<br />
+or nil when mise is not installed. The absolute path is required for<br />
+real spawns: CommandRunner’s child env strips the orchestrator’s<br />
+Ruby/gem bin dirs from PATH, so a bare “mise” argv is unresolvable<br />
+whenever the binary lives in one of those directories.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>String</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+43
+44
+45
+46
+47
+48
+49</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_adapter.rb', line 43</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_executable'>executable</span>
+  <span class='const'>ENV</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>PATH</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_split'>split</span><span class='lparen'>(</span><span class='const'>File</span><span class='op'>::</span><span class='const'>PATH_SEPARATOR</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_dir'>dir</span><span class='op'>|</span>
+    <span class='id identifier rubyid_path'>path</span> <span class='op'>=</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_dir'>dir</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>mise</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+    <span class='kw'>return</span> <span class='id identifier rubyid_path'>path</span> <span class='kw'>if</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_file?'>file?</span><span class='lparen'>(</span><span class='id identifier rubyid_path'>path</span><span class='rparen'>)</span> <span class='op'>&amp;&amp;</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_executable?'>executable?</span><span class='lparen'>(</span><span class='id identifier rubyid_path'>path</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+  <span class='kw'>nil</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="trust_argv-instance_method">
+  
+    #<strong>trust_argv</strong>(root)  &#x21d2; <tt>Array&lt;String&gt;</tt><sup>?</sup> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>argv for <code>mise trust -C &lt;root&gt;</code>, or nil when mise is unavailable.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>root</span>
+      
+      
+        <span class='type'>(<tt>String</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Array&lt;String&gt;</tt>, <tt>nil</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+60
+61
+62
+63
+64
+65</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_adapter.rb', line 60</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_trust_argv'>trust_argv</span><span class='lparen'>(</span><span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_exe'>exe</span> <span class='op'>=</span> <span class='id identifier rubyid_executable'>executable</span>
+  <span class='kw'>return</span> <span class='kw'>nil</span> <span class='kw'>unless</span> <span class='id identifier rubyid_exe'>exe</span>
+
+  <span class='lbracket'>[</span><span class='id identifier rubyid_exe'>exe</span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>trust</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>-C</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='rbracket'>]</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+  </div>
+
+</div>
+
+      <div id="footer">
+  Generated on Thu Oct 22 22:04:42 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.45 (ruby-4.0.7).
+</div>
+
+    </div>
+  </body>
+</html>
