@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- MiseTasks.materialize_managed_suite no longer silently deletes root mise.toml task definitions that duplicate the managed suite. Root redefinitions shadow the managed file under mise precedence and may be deliberate local overrides; they are now REPORTED (template workflow, kettle-jem plugin, and mise-tasks CLI all warn with the same message and remediation hint) and removal stays opt-in via kettle-family mise-tasks --clean. Previously the CLI's documented warn-by-default path was dead code: materialize cleaned before the warning check ran, so redefinitions vanished without notice on every template run.
+
 ### Security
 
 ## [1.3.31] - 2026-10-23

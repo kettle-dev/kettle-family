@@ -286,7 +286,7 @@ RSpec.describe Kettle::Family::MiseTasks do
       expect(result.changed).to be(false)
     end
 
-    it "replaces the legacy placeholder and migrates tasks while preserving family customizations" do
+    it "replaces the legacy placeholder, preserves root task redefinitions, and reports them" do
       File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n  local_path_env: RUBOCOP_LTS_DEV\n")
       File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# legacy placeholder\n")
       File.write(File.join(@tmpdir, "mise.toml"), <<~TOML)
@@ -306,12 +306,15 @@ RSpec.describe Kettle::Family::MiseTasks do
         run = "echo custom"
       TOML
 
-      described_class.materialize_managed_suite(context: {project_root: @tmpdir})
+      result = described_class.materialize_managed_suite(context: {project_root: @tmpdir})
       root = File.read(File.join(@tmpdir, "mise.toml"))
       managed = File.read(File.join(@tmpdir, "mise-family.tasks.toml"))
-      expect(described_class.redefinitions(root_content: root, task_file_content: managed)).to be_empty
+      # Root redefinitions shadow the managed definitions under mise
+      # precedence and may be deliberate local overrides: materialization
+      # reports them and leaves them in place; removal is `--clean` only.
+      expect(result.redefinitions).to eq(%w[bupb lint])
       expect(root).to include('FORGE_ORG = "rubocop-lts"', 'ruby = "4.0.7"', "[tasks.release]", "[tasks.my-custom-task]")
-      expect(root).not_to include("broken.rb", "old lint command", "CUSTOM_LEGACY_ENV")
+      expect(root).to include("broken.rb", "old lint command", "CUSTOM_LEGACY_ENV")
       expect(managed).to include("kettle-family lint --execute", "kettle-family template --execute")
       expect(managed).not_to include("ruby broken.rb")
       before = [root, managed]

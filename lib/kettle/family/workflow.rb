@@ -259,7 +259,8 @@ module Kettle
         )
         results = checkout_preflight + sync_results + workflow_results + rollback_results + restore_results
         if results.all?(&:ok?)
-          MiseTasks.materialize_managed_suite(context: {project_root: config.root})
+          suite_result = MiseTasks.materialize_managed_suite(context: {project_root: config.root})
+          MiseTasks.warn_redefinitions(suite_result&.redefinitions)
           # `mise trust` requires the mise executable; spec environments and
           # minimal CI images may not have it installed. Trust is only an
           # enabler for subsequent nested mise runs, so skip when absent.

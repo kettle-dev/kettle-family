@@ -8,10 +8,12 @@ module Kettle
   module Family
     # Slice-1044 family mise tasks primitive: ensure a destination root
     # `mise.toml` references the kettle-family-managed TOML task file via
-    # `[task_config] includes`, and report (optionally clean) task
-    # redefinitions between the root file and the managed file. Family
-    # refreshes migrate managed task names out of the root so old commands
-    # cannot shadow generated fixes. Other tasks and settings remain local.
+    # `[task_config] includes`, and report (never silently remove) task
+    # redefinitions between the root file and the managed file. Removal is
+    # the caller's explicit choice (`kettle-family mise-tasks --clean`): a
+    # root redefinition shadows the managed definition under mise precedence
+    # and may be a deliberate local override. Other tasks and settings remain
+    # local.
     #
     # All edits go through ast-crispr Actors with the ast-crispr-toml adapter.
     module MiseTasks
@@ -320,14 +322,23 @@ module Kettle
 
         task_file_path = File.join(root, task_file_name)
         original = File.read(root_mise)
-        included = ensure_include(root_content: original, task_file_name: task_file_name)
-        result = clean_redefinitions(
-          root_content: included.content,
-          task_file_name: task_file_name,
-          task_file_content: content
-        )
+        result = ensure_include(root_content: original, task_file_name: task_file_name, task_file_content: content)
         File.write(task_file_path, content) unless File.exist?(task_file_path) && File.read(task_file_path) == content
         File.write(root_mise, result.content) unless result.content == original
+        result
+      end
+
+      # Warn about each redefinition to the given stream. Shared by the CLI
+      # command, the template workflow, and the kettle-jem plugin so the
+      # message and remediation hint stay identical everywhere.
+      #
+      # @param redefinitions [Array<String>]
+      # @param task_file_name [String]
+      # @param err [IO]
+      def self.warn_redefinitions(redefinitions, task_file_name: DEFAULT_TASK_FILE_NAME, err: $stderr)
+        Array(redefinitions).each do |name|
+          err.puts("kettle-family: task #{name.inspect} is defined in both mise.toml and #{task_file_name}; root mise.toml wins (redefinition allowed; run `kettle-family mise-tasks --clean` to restore the managed definition)")
+        end
       end
 
       # Comprehensive managed family mise task suite, generated from family

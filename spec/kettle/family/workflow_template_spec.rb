@@ -36,9 +36,13 @@ RSpec.describe Kettle::Family::Workflow do
       restore_template_autostashes: []
     )
 
-    expect(workflow.results).to all(be_ok)
+    results = nil
+    expect { results = workflow.results }.to output(/task "bupb" is defined in both/).to_stderr
+    expect(results).to all(be_ok)
     expect(File.read(File.join(@tmpdir, "mise-family.tasks.toml"))).to include("kettle-family update-bundler --execute --commit")
-    expect(File.read(File.join(@tmpdir, "mise.toml"))).not_to include("old bundler command")
+    # Root redefinitions are preserved (they shadow the managed definition
+    # under mise precedence) and reported, never silently removed.
+    expect(File.read(File.join(@tmpdir, "mise.toml"))).to include("old bundler command")
   end
 
   it "runs family root mise trust when the mise executable is available" do
@@ -82,7 +86,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results).to all(be_ok)
     expect(results.map(&:command).flatten.compact.map(&:to_s)).not_to include("mise")
     expect(File.read(File.join(@tmpdir, "mise-family.tasks.toml"))).to include("kettle-family update-bundler --execute --commit")
-    expect(File.read(File.join(@tmpdir, "mise.toml"))).not_to include("old bundler command")
+    expect(File.read(File.join(@tmpdir, "mise.toml"))).to include("old bundler command")
   end
 
   it "commits migrated monorepo root tasks without leaving generated files dirty" do
@@ -105,7 +109,9 @@ RSpec.describe Kettle::Family::Workflow do
     expect(git_output(@tmpdir, "status", "--short")).to eq("")
     expect(git_output(@tmpdir, "log", "-1", "--format=%s")).to include("Refresh managed family mise tasks")
     expect(File.read(File.join(@tmpdir, "mise-family.tasks.toml"))).to include("kettle-family update-bundler --execute --commit")
-    expect(File.read(File.join(@tmpdir, "mise.toml"))).not_to include("old bundler command")
+    # The custom root bupb task is preserved (shadows the managed one) and
+    # reported as a redefinition; only `--clean` removes it.
+    expect(File.read(File.join(@tmpdir, "mise.toml"))).to include("old bundler command")
   end
 
   it "normalizes paths from git status lines" do

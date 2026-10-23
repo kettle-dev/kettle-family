@@ -71,7 +71,8 @@ module Kettle
 
     def register_kettle_jem_plugin(registrar)
       registrar.on_phase("remaining_files", timing: :after) do |context:|
-        MiseTasks.materialize_managed_suite(context: context)
+        suite_result = MiseTasks.materialize_managed_suite(context: context)
+        MiseTasks.warn_redefinitions(suite_result&.redefinitions)
       end
     end
   end
