@@ -3,6 +3,7 @@
 require_relative "family/member"
 require_relative "family/command_result"
 require_relative "family/release_state_result"
+require_relative "family/mise_adapter"
 require_relative "family/command_runner"
 require_relative "family/readiness_check"
 require_relative "family/published_version_check"
@@ -42,6 +43,25 @@ require_relative "family/version"
 module Kettle
   module Family
     class Error < StandardError; end
+
+    # Default MiseAdapter for the whole family stack. CommandRunner, Workflow,
+    # and CLI use this when no adapter is injected; specs swap it to control
+    # mise availability without spawning the real binary (mise is operational
+    # glue, absent in CI).
+    #
+    # @return [MiseAdapter]
+    # rubocop:disable ThreadSafety/ClassInstanceVariable
+    def self.mise_adapter
+      @mise_adapter ||= MiseAdapter.new
+    end
+    # rubocop:enable ThreadSafety/ClassInstanceVariable
+
+    # @param adapter [MiseAdapter]
+    # rubocop:disable ThreadSafety/ClassInstanceVariable
+    def self.mise_adapter=(adapter)
+      @mise_adapter = adapter
+    end
+    # rubocop:enable ThreadSafety/ClassInstanceVariable
 
     # kettle-jem plugin registration (kettle-jem-appraisals pattern). The gem
     # name "kettle-family" resolves to this module as the plugin handle, and

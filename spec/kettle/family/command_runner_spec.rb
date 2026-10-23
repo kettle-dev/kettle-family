@@ -6,11 +6,11 @@ require "tmpdir"
 require "timeout"
 
 RSpec.describe Kettle::Family::CommandRunner do
-  # The mise exec prefix resolves the executable from PATH; pin it to the
-  # historical bare "mise" so prefix-shape assertions stay literal. Examples
-  # exercising the resolution itself override this stub.
+  # The mise exec prefix resolves through the family MiseAdapter; pin the
+  # executable to bare "mise" so prefix-shape assertions stay literal.
+  # Examples exercising passthrough swap in an unavailable adapter.
   before do
-    allow(described_class).to receive(:mise_executable).and_return("mise")
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
   end
 
   around do |example|
@@ -51,7 +51,7 @@ RSpec.describe Kettle::Family::CommandRunner do
   it "wraps commands with mise when a member has mise.toml" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
-    allow(described_class).to receive(:mise_executable).and_return("/fake/bin/mise")
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "/fake/bin/mise")
 
     result = described_class.new.call(member: member, phase: "test", command: ["ruby", "-v"])
 
@@ -63,7 +63,7 @@ RSpec.describe Kettle::Family::CommandRunner do
   it "runs the command unwrapped when the mise executable cannot be resolved" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
-    allow(described_class).to receive(:mise_executable).and_return(nil)
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: nil)
 
     result = described_class.new.call(member: member, phase: "test", command: ["ruby", "-v"])
 
@@ -75,7 +75,7 @@ RSpec.describe Kettle::Family::CommandRunner do
   it "still injects env via env(1) when unwrapping an unresolvable mise" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
-    allow(described_class).to receive(:mise_executable).and_return(nil)
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: nil)
 
     result = described_class.new.call(
       member: member, phase: "test", command: ["ruby", "-v"],
@@ -87,32 +87,6 @@ RSpec.describe Kettle::Family::CommandRunner do
       expect(result.command).to include("K_JEM_TEMPLATING=true", "STRUCTUREDMERGE_DEV")
     else
       expect(result.command).to eq(["env", "-u", "STRUCTUREDMERGE_DEV", "K_JEM_TEMPLATING=true", "ruby", "-v"])
-    end
-  end
-
-  describe ".mise_executable" do
-    before do
-      allow(described_class).to receive(:mise_executable).and_call_original
-    end
-
-    it "returns the absolute path of the first executable mise on PATH" do
-      bin = File.join(@tmpdir, "bin")
-      FileUtils.mkdir_p(bin)
-      fake = File.join(bin, "mise")
-      File.write(fake, "#!/bin/sh\n")
-      FileUtils.chmod("u+x", fake)
-      stub_env("PATH" => bin)
-
-      expect(described_class.mise_executable).to eq(fake)
-    end
-
-    it "returns nil when PATH has no executable mise" do
-      bin = File.join(@tmpdir, "bin")
-      FileUtils.mkdir_p(bin)
-      File.write(File.join(bin, "mise"), "#!/bin/sh\n") # not executable
-      stub_env("PATH" => bin)
-
-      expect(described_class.mise_executable).to be_nil
     end
   end
 

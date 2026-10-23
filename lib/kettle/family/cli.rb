@@ -1072,11 +1072,28 @@ module Kettle
       end
 
       def mise_trust_results(config:, members:)
+        adapter = Kettle::Family.mise_adapter
         roots = [config.root, *members.map(&:root)].uniq
         runner = CommandRunner.new(execute: true, accept: true)
         roots.map.with_index do |root, index|
           member = members.find { |candidate| candidate.root == root } || Member.new("family", root, nil, nil, nil, [], [], nil, [], [])
-          runner.call(member: member, phase: "mise_trust", command: ["mise", "trust", "-C", root], env: {})
+          trust_argv = adapter.trust_argv(root)
+          unless trust_argv
+            next CommandResult.new(
+              member_name: member.name,
+              phase: "mise_trust",
+              command: [],
+              workdir: root,
+              status: nil,
+              success: true,
+              stdout: "",
+              stderr: "",
+              elapsed_seconds: 0.0,
+              skipped: true,
+              reason: "mise executable not available"
+            )
+          end
+          runner.call(member: member, phase: "mise_trust", command: trust_argv, env: {}, raw: true)
         end
       end
 

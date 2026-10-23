@@ -11,30 +11,7 @@ module Kettle
         "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE"
       ].freeze
       MISE_SESSION_ENV_PREFIX = "__MISE_"
-      WINDOWS_ENV_EXEC_SCRIPT = <<~RUBY
-        unset_count = Integer(ARGV.shift)
-        unset_count.times { ENV.delete(ARGV.shift) }
-        assignment_count = Integer(ARGV.shift)
-        assignment_count.times do
-          key, value = ARGV.shift.split("=", 2)
-          ENV[key] = value
-        end
-        abort "missing command after environment arguments" if ARGV.shift != "--"
-        exec(*ARGV)
-      RUBY
-
-      # Absolute path to the mise executable resolved from the current PATH,
-      # or nil when mise is not installed. Spawned children run with a
-      # filtered PATH (see #process_env / #mise_member_path), so a bare "mise"
-      # argv is ENOENT whenever the binary lives in a directory the filter
-      # strips; the absolute path survives the filtered spawn env.
-      def self.mise_executable
-        ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).each do |dir|
-          path = File.join(dir, "mise")
-          return path if File.file?(path) && File.executable?(path)
-        end
-        nil
-      end
+      WINDOWS_ENV_EXEC_SCRIPT = MiseAdapter::WINDOWS_ENV_EXEC_SCRIPT
 
       class OtpCoordinator
         def initialize(input: $stdin, output: $stdout, queue_total: nil, secrets_provider: nil, event_handler: nil)
@@ -248,11 +225,12 @@ module Kettle
       end
       private_constant :FailureStatus
 
-      def initialize(execute: false, accept: true, gem_signing_password: nil, otp_coordinator: nil)
+      def initialize(execute: false, accept: true, gem_signing_password: nil, otp_coordinator: nil, mise_adapter: nil)
         @execute = execute
         @accept = accept
         @gem_signing_password = gem_signing_password
         @otp_coordinator = otp_coordinator
+        @mise_adapter = mise_adapter || Kettle::Family.mise_adapter
       end
 
       def call(member:, phase:, command:, env: {}, interactive: false, raw: false, stdout_line_handler: nil, log_path: nil, passthrough_output: true)
@@ -701,60 +679,12 @@ module Kettle
 
         command_env = nonsensitive_env(env)
         unset_env, set_env = command_env.partition { |_key, value| value.nil? }
-        injected_env = [
-          *unset_env.flat_map { |key, _value| ["-u", key.to_s] },
-          *set_env.map { |key, value| "#{key}=#{value}" }
-        ]
-
-        # Without a mise executable there is no member runtime to activate;
-        # wrapping would spawn an unresolvable bare "mise" (ENOENT under the
-        # filtered child PATH), so run the command unwrapped — but preserve
-        # env injection through env(1) (or the portable ruby script on
-        # Windows), which the mise exec prefix otherwise carries.
-        resolved_mise = self.class.mise_executable
-        if resolved_mise.nil?
-          return argv if injected_env.empty?
-
-          if Gem.win_platform?
-            return [
-              "ruby",
-              "--disable=rubyopt",
-              "-e",
-              WINDOWS_ENV_EXEC_SCRIPT,
-              "--",
-              unset_env.length.to_s,
-              *unset_env.map { |key, _value| key.to_s },
-              set_env.length.to_s,
-              *set_env.map { |key, value| "#{key}=#{value}" },
-              "--",
-              *argv
-            ]
-          end
-
-          return ["env", *injected_env, *argv]
-        end
-
-        mise_argv = [resolved_mise, "exec", "-C", member.root, "--"]
-        return [*mise_argv, *argv] if injected_env.empty?
-
-        if Gem.win_platform?
-          return [
-            *mise_argv,
-            "ruby",
-            "--disable=rubyopt",
-            "-e",
-            WINDOWS_ENV_EXEC_SCRIPT,
-            "--",
-            unset_env.length.to_s,
-            *unset_env.map { |key, _value| key.to_s },
-            set_env.length.to_s,
-            *set_env.map { |key, value| "#{key}=#{value}" },
-            "--",
-            *argv
-          ]
-        end
-
-        [*mise_argv, "env", *injected_env, *argv]
+        @mise_adapter.exec_argv(
+          member_root: member.root,
+          argv: argv,
+          unset_env: unset_env.map { |key, _value| key },
+          set_env: set_env.to_h
+        )
       end
 
       def process_env(member:, env:)

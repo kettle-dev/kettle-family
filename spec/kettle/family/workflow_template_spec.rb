@@ -7,6 +7,14 @@ require "tmpdir"
 require "yaml"
 
 RSpec.describe Kettle::Family::Workflow do
+  # Hermetic default: no mise binary in spec runs (mise is operational glue,
+  # absent in CI). Trust phases skip and member commands pass through
+  # unwrapped; examples asserting wrapped argv shapes opt into an available
+  # adapter locally.
+  before do
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: nil)
+  end
+
   around do |example|
     Dir.mktmpdir("kettle-family-template-workflow-spec") do |dir|
       @tmpdir = dir
@@ -33,6 +41,29 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.read(File.join(@tmpdir, "mise.toml"))).not_to include("old bundler command")
   end
 
+  it "runs family root mise trust when the mise executable is available" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
+    File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
+    File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# old placeholder\n")
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [], execute: true)
+    fake_runner = recording_template_runner
+    allow(workflow).to receive_messages(
+      branch_checkout_dirty_preflight_results: [],
+      template_dirty_worktree_preflight_results: [],
+      template_worktree_sync_results: [[], []],
+      current_branch_results: [],
+      restore_template_autostashes: [],
+      command_runner: fake_runner
+    )
+
+    expect(workflow.results).to all(be_ok)
+    trust_call = fake_runner.calls.find { |call| call[:phase] == "family_mise_trust" }
+    expect(trust_call).not_to be_nil
+    expect(trust_call[:command]).to eq(["mise", "trust", "-C", @tmpdir])
+  end
+
   it "skips family root mise trust when the mise executable is unavailable" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
@@ -44,8 +75,7 @@ RSpec.describe Kettle::Family::Workflow do
       template_dirty_worktree_preflight_results: [],
       template_worktree_sync_results: [[], []],
       current_branch_results: [],
-      restore_template_autostashes: [],
-      mise_executable: nil
+      restore_template_autostashes: []
     )
 
     results = workflow.results
@@ -392,6 +422,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "trusts root and member mise configs before running a detached template worktree" do
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
     FileUtils.mkdir_p(alpha.root)
     File.write(File.join(@tmpdir, "mise.toml"), "[env]\n")
@@ -431,6 +462,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "does not invoke mise trust for a worktree without a mise configuration" do
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
     worktree_root = File.join(@tmpdir, "worktree")
     FileUtils.mkdir_p(File.join(worktree_root, "alpha"))
@@ -452,6 +484,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "uses the worktree member as the result owner when no original member is supplied" do
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
     worktree_root = File.join(@tmpdir, "worktree")
     member_root = File.join(worktree_root, "alpha")
@@ -476,6 +509,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "trusts a .mise.toml when the member is rooted at the disposable worktree" do
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
     worktree_root = File.join(@tmpdir, "worktree")
     FileUtils.mkdir_p(worktree_root)
@@ -504,6 +538,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "refuses to trust a member path outside the disposable worktree" do
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
     worktree_root = File.join(@tmpdir, "worktree")
     FileUtils.mkdir_p(worktree_root)
@@ -525,6 +560,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "tolerates a worktree removed before mise trust begins" do
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
     worktree_root = File.join(@tmpdir, "removed-worktree")
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -1560,7 +1596,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "passes explicit environment overrides through member mise execution" do
-    allow(Kettle::Family::CommandRunner).to receive(:mise_executable).and_return("mise")
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -1665,7 +1701,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "overrides noisy template debug environment unless debug is enabled" do
-    allow(Kettle::Family::CommandRunner).to receive(:mise_executable).and_return("mise")
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")

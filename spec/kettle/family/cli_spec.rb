@@ -8,10 +8,10 @@ require "tmpdir"
 require "yaml"
 
 RSpec.describe Kettle::Family::CLI do
-  # The mise exec prefix resolves the executable from PATH; pin the
-  # resolver to bare "mise" so prefix-shape assertions stay literal.
+  # The mise exec prefix resolves through the family MiseAdapter; pin the
+  # executable to bare "mise" so prefix-shape assertions stay literal.
   before do
-    allow(Kettle::Family::CommandRunner).to receive(:mise_executable).and_return("mise")
+    Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
   end
 
   around do |example|

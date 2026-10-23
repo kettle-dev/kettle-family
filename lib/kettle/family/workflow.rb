@@ -109,7 +109,7 @@ module Kettle
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
       TEMPLATE_GEMSPEC_RETRY_DELAY_SECONDS = 0.25
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, **options)
         @command = command
         @config = config
         @members = members
@@ -156,6 +156,7 @@ module Kettle
         @verbose = verbose
         @gem_signing_password = gem_signing_password
         @secrets_provider = secrets_provider || Secrets::Provider.new
+        @mise_adapter = mise_adapter || Kettle::Family.mise_adapter
         @jobs = jobs
         @progress_io = progress_io
         @reset_target = reset_target
@@ -262,15 +263,11 @@ module Kettle
           # `mise trust` requires the mise executable; spec environments and
           # minimal CI images may not have it installed. Trust is only an
           # enabler for subsequent nested mise runs, so skip when absent.
-          # Resolve to an absolute path: the spawned command env strips the
-          # orchestrator's Ruby/gem bin dirs from PATH (see
-          # CommandRunner#mise_member_path), and a bare "mise" argv is
-          # unresolvable when the binary lives in one of those directories.
-          mise_executable = self.mise_executable
-          if mise_executable && File.file?(File.join(config.root, "mise.toml"))
+          trust_argv = @mise_adapter.trust_argv(config.root)
+          if trust_argv && File.file?(File.join(config.root, "mise.toml"))
             results << runner.call(
               member: family_member, phase: "family_mise_trust",
-              command: [mise_executable, "trust", "-C", config.root], raw: true
+              command: trust_argv, raw: true
             )
           end
           if results.all?(&:ok?) && family_root_bundle_commit? && File.file?(File.join(config.root, "mise.toml"))
@@ -583,7 +580,7 @@ module Kettle
 
       def reset_member_results(workflow_members)
         target = normalized_reset_target
-        runner = CommandRunner.new(execute: execute, accept: accept)
+        runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
         workflow_members.each_with_object([]) do |member, memo|
           case target
           when "Gemfile.lock"
@@ -610,7 +607,7 @@ module Kettle
         return template_member_workflow_results(workflow_members) if command == "template" && execute
         return test_member_workflow_results(workflow_members) if command == "test" && execute
 
-        runner = CommandRunner.new(execute: execute, accept: accept)
+        runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
         results = []
         update_family_root_bundle(runner: runner, memo: results) if %w[bup bupb update-bundler].include?(command)
         return results unless results.all?(&:ok?)
@@ -698,16 +695,6 @@ module Kettle
         commit && config.family_mode == "monorepo"
       end
 
-      # Absolute path to the mise executable, or nil when it is not on PATH.
-      # Family orchestration only shells out to `mise` for trust after root
-      # task materialization; everywhere else tasks are managed as TOML
-      # documents, so a missing mise binary must not fail the workflow. The
-      # absolute path is required because spawned command environments strip
-      # the orchestrator's Ruby/gem bin dirs from PATH.
-      def mise_executable
-        CommandRunner.mise_executable
-      end
-
       # Sibling repositories have isolated working trees and can run their
       # tests concurrently. A monorepo's default kettle-test command normally
       # executes the shared root suite, so it is represented by one selected
@@ -727,7 +714,7 @@ module Kettle
 
         Array.new(wave_jobs) do
           Thread.new do # rubocop:disable ThreadSafety/NewThread -- sibling test suites run in isolated project roots.
-            runner = CommandRunner.new(execute: execute, accept: accept)
+            runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
             loop do
               break if mutex.synchronize { stop }
 
@@ -841,7 +828,7 @@ module Kettle
 
               index, entry = queue.pop(true)
               member = entry.fetch(:member)
-              result = CommandRunner.new(execute: execute, accept: accept).call(
+              result = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter).call(
                 member: member,
                 phase: command,
                 command: workflow_command(member),
@@ -1482,7 +1469,7 @@ module Kettle
         end
 
         bootstrap = NomonoBootstrap.new(latest_version: latest_nomono_version, mode: :execute)
-        runner = CommandRunner.new(execute: execute, accept: accept)
+        runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
         candidate_members.each_with_object([]) do |member, memo|
           next unless bootstrap.member_needs_bootstrap?(member)
 
@@ -1562,7 +1549,7 @@ module Kettle
         progress_key ||= member.name
         progress_label ||= member.name
         start_template_member_progress(progress, member, progress_key: progress_key, progress_label: progress_label) unless progress_started
-        runner = CommandRunner.new(execute: execute, accept: accept)
+        runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
         [].tap do |memo|
           if config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles", commit_changes: commit_changes)
@@ -1783,16 +1770,20 @@ module Kettle
       # tracks trust by config path. Trust every active config between the
       # worktree root and the member command directory before invoking a
       # command there. This bootstrap must run raw: wrapping it in `mise exec`
-      # would require the trust it is establishing.
+      # would require the trust it is establishing. Roots are skipped when the
+      # mise executable is unavailable (mise is operational glue, absent in CI).
       def worktree_mise_trust_results(entry, runner:, phase:)
         member = entry.fetch(:member)
         original_member = entry.fetch(:original_member, member)
         worktree_root = entry.fetch(:worktree_root)
-        mise_config_roots_in_worktree(worktree_root, member.root).map do |root|
+        mise_config_roots_in_worktree(worktree_root, member.root).filter_map do |root|
+          trust_argv = @mise_adapter.trust_argv(root)
+          next unless trust_argv
+
           result = runner.call(
             member: member,
             phase: phase,
-            command: ["mise", "trust", "-C", root],
+            command: trust_argv,
             raw: true
           )
           result.member_name = original_member.name
@@ -2738,7 +2729,7 @@ module Kettle
       end
 
       def command_runner
-        CommandRunner.new(execute: execute, accept: accept, gem_signing_password: @gem_signing_password)
+        CommandRunner.new(execute: execute, accept: accept, gem_signing_password: @gem_signing_password, mise_adapter: @mise_adapter)
       end
 
       def release_command_runner
@@ -2749,7 +2740,8 @@ module Kettle
           # RubyGems MFA belongs to the child release command. Keeping an OTP
           # coordinator here can make a family-level gem retry look successful
           # while skipping the child's checksums and GitHub release steps.
-          otp_coordinator: nil
+          otp_coordinator: nil,
+          mise_adapter: @mise_adapter
         )
       end
 

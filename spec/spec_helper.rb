@@ -39,6 +39,46 @@ require "kettle/family"
 require_relative "support/shared_contexts/with_mocked_release_secrets"
 
 module KettleFamilySpecSupport
+  # A real MiseAdapter with executable resolution pinned, so command argv
+  # shapes stay literal in assertions. `executable: nil` models mise-less
+  # hosts (CI): trust phases skip and member commands pass through unwrapped.
+  def build_mise_adapter(executable:)
+    Kettle::Family::MiseAdapter.new.tap do |adapter|
+      allow(adapter).to receive(:executable).and_return(executable)
+    end
+  end
+
+  # A CommandRunner-shaped test double that records calls and returns ok
+  # results without spawning anything — for specs asserting WHICH commands a
+  # workflow issues (the runner boundary is where real spawns stop).
+  def recording_template_runner
+    Class.new do
+      attr_reader :calls
+
+      def initialize
+        @calls = []
+      end
+
+      def call(**kwargs)
+        @calls << kwargs
+        member = kwargs[:member]
+        Kettle::Family::CommandResult.new(
+          member_name: member.name,
+          phase: kwargs[:phase],
+          command: kwargs[:command],
+          workdir: member.root,
+          status: nil,
+          success: true,
+          stdout: "",
+          stderr: "",
+          elapsed_seconds: 0.0,
+          skipped: false,
+          reason: nil
+        )
+      end
+    end.new
+  end
+
   def write_fake_ruby_executable(directory, name, source)
     name += ".cmd" if Gem.win_platform?
     command_path = File.join(directory, name)
@@ -104,6 +144,16 @@ RSpec.configure do |config|
   config.before do
     hide_env(*SENSITIVE_ENV_KEYS)
     stub_env_hash_accessors
+  end
+
+  # The family stack spawns mise through Kettle::Family.mise_adapter. Specs
+  # swap the adapter (build_mise_adapter) to control availability without the
+  # real binary; this hook restores the default after every example.
+  config.around do |example|
+    previous_adapter = Kettle::Family.mise_adapter
+    example.run
+  ensure
+    Kettle::Family.mise_adapter = previous_adapter
   end
 
   config.before(:each, :prism) do
