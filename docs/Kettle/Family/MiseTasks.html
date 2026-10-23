@@ -90,10 +90,12 @@
   <div class="discussion">
     <p>Slice-1044 family mise tasks primitive: ensure a destination root<br />
 <code>mise.toml</code> references the kettle-family-managed TOML task file via<br />
-<code>[task_config] includes</code>, and report (optionally clean) task<br />
-redefinitions between the root file and the managed file. Family<br />
-refreshes migrate managed task names out of the root so old commands<br />
-cannot shadow generated fixes. Other tasks and settings remain local.</p>
+<code>[task_config] includes</code>, and report (never silently remove) task<br />
+redefinitions between the root file and the managed file. Removal is<br />
+the caller’s explicit choice (<code>kettle-family mise-tasks --clean</code>): a<br />
+root redefinition shadows the managed definition under mise precedence<br />
+and may be a deliberate local override. Other tasks and settings remain<br />
+local.</p>
 
 <p>All edits go through ast-crispr Actors with the ast-crispr-toml adapter.</p>
 
@@ -360,6 +362,29 @@ table block or a <code>name = "…"</code> pair inside <code>[tasks]</code>.</p>
 </li>
 
       
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#warn_redefinitions-class_method" title="warn_redefinitions (class method)">.<strong>warn_redefinitions</strong>(redefinitions, task_file_name: DEFAULT_TASK_FILE_NAME, err: $stderr)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Warn about each redefinition to the given stream.</p>
+</div></span>
+  
+</li>
+
+      
     </ul>
     
   
@@ -458,8 +483,6 @@ Used by family refreshes and the explicit non-family <code>--clean</code> path.<
       <pre class="lines">
 
 
-175
-176
 177
 178
 179
@@ -485,10 +508,12 @@ Used by family refreshes and the explicit non-family <code>--clean</code> path.<
 199
 200
 201
-202</pre>
+202
+203
+204</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 175</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 177</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_clean_redefinitions'>clean_redefinitions</span><span class='lparen'>(</span><span class='label'>root_content:</span><span class='comma'>,</span> <span class='label'>task_file_content:</span><span class='comma'>,</span> <span class='label'>task_file_name:</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_redefs'>redefs</span> <span class='op'>=</span> <span class='id identifier rubyid_redefinitions'>redefinitions</span><span class='lparen'>(</span><span class='label'>root_content:</span> <span class='id identifier rubyid_root_content'>root_content</span><span class='comma'>,</span> <span class='label'>task_file_content:</span> <span class='id identifier rubyid_task_file_content'>task_file_content</span><span class='rparen'>)</span>
@@ -612,8 +637,6 @@ Used by family refreshes and the explicit non-family <code>--clean</code> path.<
       <pre class="lines">
 
 
-151
-152
 153
 154
 155
@@ -627,10 +650,12 @@ Used by family refreshes and the explicit non-family <code>--clean</code> path.<
 163
 164
 165
-166</pre>
+166
+167
+168</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 151</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 153</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_ensure_include'>ensure_include</span><span class='lparen'>(</span><span class='label'>root_content:</span><span class='comma'>,</span> <span class='label'>task_file_name:</span><span class='comma'>,</span> <span class='label'>task_file_content:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_redefs'>redefs</span> <span class='op'>=</span> <span class='id identifier rubyid_redefinitions'>redefinitions</span><span class='lparen'>(</span><span class='label'>root_content:</span> <span class='id identifier rubyid_root_content'>root_content</span><span class='comma'>,</span> <span class='label'>task_file_content:</span> <span class='id identifier rubyid_task_file_content'>task_file_content</span><span class='rparen'>)</span>
@@ -701,8 +726,6 @@ includes it. Skips non-family roots (member dirs have no<br />
       <pre class="lines">
 
 
-307
-308
 309
 310
 311
@@ -723,12 +746,10 @@ includes it. Skips non-family roots (member dirs have no<br />
 326
 327
 328
-329
-330
-331</pre>
+329</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 307</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 309</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_materialize_managed_suite'>materialize_managed_suite</span><span class='lparen'>(</span><span class='label'>context:</span><span class='comma'>,</span> <span class='label'>task_file_name:</span> <span class='const'><span class='object_link'><a href="#DEFAULT_TASK_FILE_NAME-constant" title="Kettle::Family::MiseTasks::DEFAULT_TASK_FILE_NAME (constant)">DEFAULT_TASK_FILE_NAME</a></span></span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span> <span class='op'>=</span> <span class='id identifier rubyid_context'>context</span><span class='lbracket'>[</span><span class='symbol'>:project_root</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span>
@@ -746,14 +767,10 @@ includes it. Skips non-family roots (member dirs have no<br />
 
   <span class='id identifier rubyid_task_file_path'>task_file_path</span> <span class='op'>=</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='comma'>,</span> <span class='id identifier rubyid_task_file_name'>task_file_name</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_original'>original</span> <span class='op'>=</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_read'>read</span><span class='lparen'>(</span><span class='id identifier rubyid_root_mise'>root_mise</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_included'>included</span> <span class='op'>=</span> <span class='id identifier rubyid_ensure_include'>ensure_include</span><span class='lparen'>(</span><span class='label'>root_content:</span> <span class='id identifier rubyid_original'>original</span><span class='comma'>,</span> <span class='label'>task_file_name:</span> <span class='id identifier rubyid_task_file_name'>task_file_name</span><span class='rparen'>)</span>
-  <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='id identifier rubyid_clean_redefinitions'>clean_redefinitions</span><span class='lparen'>(</span>
-    <span class='label'>root_content:</span> <span class='id identifier rubyid_included'>included</span><span class='period'>.</span><span class='id identifier rubyid_content'>content</span><span class='comma'>,</span>
-    <span class='label'>task_file_name:</span> <span class='id identifier rubyid_task_file_name'>task_file_name</span><span class='comma'>,</span>
-    <span class='label'>task_file_content:</span> <span class='id identifier rubyid_content'>content</span>
-  <span class='rparen'>)</span>
+  <span class='id identifier rubyid_result'>result</span> <span class='op'>=</span> <span class='id identifier rubyid_ensure_include'>ensure_include</span><span class='lparen'>(</span><span class='label'>root_content:</span> <span class='id identifier rubyid_original'>original</span><span class='comma'>,</span> <span class='label'>task_file_name:</span> <span class='id identifier rubyid_task_file_name'>task_file_name</span><span class='comma'>,</span> <span class='label'>task_file_content:</span> <span class='id identifier rubyid_content'>content</span><span class='rparen'>)</span>
   <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_write'>write</span><span class='lparen'>(</span><span class='id identifier rubyid_task_file_path'>task_file_path</span><span class='comma'>,</span> <span class='id identifier rubyid_content'>content</span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_exist?'>exist?</span><span class='lparen'>(</span><span class='id identifier rubyid_task_file_path'>task_file_path</span><span class='rparen'>)</span> <span class='op'>&amp;&amp;</span> <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_read'>read</span><span class='lparen'>(</span><span class='id identifier rubyid_task_file_path'>task_file_path</span><span class='rparen'>)</span> <span class='op'>==</span> <span class='id identifier rubyid_content'>content</span>
   <span class='const'>File</span><span class='period'>.</span><span class='id identifier rubyid_write'>write</span><span class='lparen'>(</span><span class='id identifier rubyid_root_mise'>root_mise</span><span class='comma'>,</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_content'>content</span><span class='rparen'>)</span> <span class='kw'>unless</span> <span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_content'>content</span> <span class='op'>==</span> <span class='id identifier rubyid_original'>original</span>
+  <span class='id identifier rubyid_result'>result</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -786,12 +803,12 @@ ensure_include outcome: a no-op means the reference was already correct.</p>
       <pre class="lines">
 
 
-211
-212
-213</pre>
+213
+214
+215</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 211</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 213</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_ok_result'>ok_result</span><span class='lparen'>(</span><span class='id identifier rubyid_content'>content</span><span class='comma'>,</span> <span class='id identifier rubyid_redefs'>redefs</span><span class='comma'>,</span> <span class='label'>changed:</span> <span class='kw'>false</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="MiseTasks/Result.html" title="Kettle::Family::MiseTasks::Result (class)">Result</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='label'>changed:</span> <span class='id identifier rubyid_changed'>changed</span><span class='comma'>,</span> <span class='label'>include_present:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>content:</span> <span class='id identifier rubyid_content'>content</span><span class='comma'>,</span> <span class='label'>redefinitions:</span> <span class='id identifier rubyid_redefs'>redefs</span><span class='rparen'>)</span>
@@ -877,14 +894,14 @@ ensure_include outcome: a no-op means the reference was already correct.</p>
       <pre class="lines">
 
 
-139
-140
 141
 142
-143</pre>
+143
+144
+145</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 139</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 141</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_redefinitions'>redefinitions</span><span class='lparen'>(</span><span class='label'>root_content:</span><span class='comma'>,</span> <span class='label'>task_file_content:</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='lbracket'>[</span><span class='rbracket'>]</span> <span class='kw'>if</span> <span class='id identifier rubyid_task_file_content'>task_file_content</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span>
@@ -993,8 +1010,6 @@ nothing to register.</p>
       <pre class="lines">
 
 
-85
-86
 87
 88
 89
@@ -1011,10 +1026,12 @@ nothing to register.</p>
 100
 101
 102
-103</pre>
+103
+104
+105</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 85</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 87</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_register_in_jem_config'>register_in_jem_config</span><span class='lparen'>(</span><span class='label'>config_content:</span><span class='comma'>,</span> <span class='label'>task_file_name:</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_fragment'>fragment</span> <span class='op'>=</span> <span class='heredoc_beg'>&lt;&lt;~YAML</span>
@@ -1119,8 +1136,6 @@ plugin is already listed.</p>
       <pre class="lines">
 
 
-114
-115
 116
 117
 118
@@ -1137,10 +1152,12 @@ plugin is already listed.</p>
 129
 130
 131
-132</pre>
+132
+133
+134</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 114</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 116</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_register_plugin_in_jem_config'>register_plugin_in_jem_config</span><span class='lparen'>(</span><span class='label'>config_content:</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_fragment'>fragment</span> <span class='op'>=</span> <span class='heredoc_beg'>&lt;&lt;~YAML</span>
@@ -1249,8 +1266,6 @@ IS a task (bare name), e.g. <code>[family-canary]</code>.</li>
       <pre class="lines">
 
 
-42
-43
 44
 45
 46
@@ -1277,10 +1292,12 @@ IS a task (bare name), e.g. <code>[family-canary]</code>.</li>
 67
 68
 69
-70</pre>
+70
+71
+72</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 42</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 44</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_task_names'>task_names</span><span class='lparen'>(</span><span class='id identifier rubyid_content'>content</span><span class='comma'>,</span> <span class='label'>managed:</span> <span class='kw'>false</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_context'>context</span> <span class='op'>=</span> <span class='const'>Ast</span><span class='op'>::</span><span class='const'>Crispr</span><span class='op'>::</span><span class='const'>Toml</span><span class='period'>.</span><span class='id identifier rubyid_document_context'>document_context</span><span class='lparen'>(</span><span class='label'>content:</span> <span class='id identifier rubyid_content'>content</span><span class='comma'>,</span> <span class='label'>source_label:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>mise.toml</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
@@ -1310,6 +1327,93 @@ IS a task (bare name), e.g. <code>[family-canary]</code>.</li>
     <span class='id identifier rubyid_names'>names</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_pair'>pair</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span> <span class='kw'>if</span> <span class='id identifier rubyid_pair'>pair</span><span class='period'>.</span><span class='id identifier rubyid_full_path'>full_path</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>tasks</span><span class='tstring_end'>&quot;</span></span>
   <span class='kw'>end</span>
   <span class='id identifier rubyid_names'>names</span><span class='period'>.</span><span class='id identifier rubyid_compact'>compact</span><span class='period'>.</span><span class='id identifier rubyid_reject'>reject</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:empty?</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_uniq'>uniq</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="warn_redefinitions-class_method">
+  
+    .<strong>warn_redefinitions</strong>(redefinitions, task_file_name: DEFAULT_TASK_FILE_NAME, err: $stderr)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Warn about each redefinition to the given stream. Shared by the CLI<br />
+command, the template workflow, and the kettle-jem plugin so the<br />
+message and remediation hint stay identical everywhere.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  <p class="tag_title">Parameters:</p>
+<ul class="param">
+  
+    <li>
+      
+        <span class='name'>redefinitions</span>
+      
+      
+        <span class='type'>(<tt>Array&lt;String&gt;</tt>)</span>
+      
+      
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>task_file_name</span>
+      
+      
+        <span class='type'>(<tt>String</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>DEFAULT_TASK_FILE_NAME</tt>)</em>
+      
+      
+    </li>
+  
+    <li>
+      
+        <span class='name'>err</span>
+      
+      
+        <span class='type'>(<tt>IO</tt>)</span>
+      
+      
+        <em class="default">(defaults to: <tt>$stderr</tt>)</em>
+      
+      
+    </li>
+  
+</ul>
+
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+338
+339
+340
+341
+342</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 338</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_warn_redefinitions'>warn_redefinitions</span><span class='lparen'>(</span><span class='id identifier rubyid_redefinitions'>redefinitions</span><span class='comma'>,</span> <span class='label'>task_file_name:</span> <span class='const'><span class='object_link'><a href="#DEFAULT_TASK_FILE_NAME-constant" title="Kettle::Family::MiseTasks::DEFAULT_TASK_FILE_NAME (constant)">DEFAULT_TASK_FILE_NAME</a></span></span><span class='comma'>,</span> <span class='label'>err:</span> <span class='gvar'>$stderr</span><span class='rparen'>)</span>
+  <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_redefinitions'>redefinitions</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_name'>name</span><span class='op'>|</span>
+    <span class='id identifier rubyid_err'>err</span><span class='period'>.</span><span class='id identifier rubyid_puts'>puts</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family: task </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_inspect'>inspect</span><span class='embexpr_end'>}</span><span class='tstring_content'> is defined in both mise.toml and </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_task_file_name'>task_file_name</span><span class='embexpr_end'>}</span><span class='tstring_content'>; root mise.toml wins (redefinition allowed; run `kettle-family mise-tasks --clean` to restore the managed definition)</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>

@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- MiseTasks.materialize_managed_suite no longer silently deletes root mise.toml task definitions that duplicate the managed suite. Root redefinitions shadow the managed file under mise precedence and may be deliberate local overrides; they are now REPORTED (template workflow, kettle-jem plugin, and mise-tasks CLI all warn with the same message and remediation hint) and removal stays opt-in via kettle-family mise-tasks --clean. Previously the CLI's documented warn-by-default path was dead code: materialize cleaned before the warning check ran, so redefinitions vanished without notice on every template run.
-
 ### Security
+
+## [1.3.32] - 2026-10-23
+
+- TAG: [v1.3.32][1.3.32t]
+- COVERAGE: 93.10% -- 7548/8107 lines in 45 files
+- BRANCH COVERAGE: 77.70% -- 3034/3905 branches in 45 files
+- 38.69% documented
+
+### Fixed
+
+- MiseTasks.materialize_managed_suite no longer silently deletes root mise.toml task definitions that duplicate the managed suite. Root redefinitions shadow the managed file under mise precedence and may be deliberate local overrides; they are now REPORTED (template workflow, kettle-jem plugin, and mise-tasks CLI all warn with the same message and remediation hint) and removal stays opt-in via kettle-family mise-tasks --clean. Previously the CLI's documented warn-by-default path was dead code: materialize cleaned before the warning check ran, so redefinitions vanished without notice on every template run.
 
 ## [1.3.31] - 2026-10-23
 
@@ -3227,7 +3236,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.31...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.32...HEAD
+[1.3.32]: https://github.com/kettle-dev/kettle-family/compare/v1.3.31...v1.3.32
+[1.3.32t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.32
 [1.3.31]: https://github.com/kettle-dev/kettle-family/compare/v1.3.30...v1.3.31
 [1.3.31t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.31
 [1.3.30]: https://github.com/kettle-dev/kettle-family/compare/v1.3.29...v1.3.30
