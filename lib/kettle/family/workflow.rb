@@ -2021,13 +2021,31 @@ module Kettle
       end
 
       def release_preflight_phases
+        maintenance_phase = {label: "pre-release maintenance", method: :release_preflight_maintenance_results} unless config.release_preflight_commands.empty?
         bump_phase = {label: "release version bump", method: :release_preflight_version_bump_results} unless release_state_results.empty?
         dirty_phase = {label: "branch checkout readiness", method: :release_preflight_branch_checkout_dirty_results}
         signing_phase = {label: "gem signing password", method: :release_preflight_signing_password_results}
         secrets_phase = release_secrets_authorization_required? ? {label: "secrets provider authorization", method: :release_preflight_secrets_authorization_results} : nil
         gha_sha_pins_phase = release_gha_sha_pins_review_required? ? {label: "GitHub Actions SHA pins", method: :release_preflight_gha_sha_pins_results} : nil
 
-        [bump_phase, secrets_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
+        [maintenance_phase, bump_phase, secrets_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
+      end
+
+      # Family-declared pre-release maintenance hooks (release.preflight_commands
+      # in the family config): run at the family root in declaration order,
+      # before any other preflight phase, so maintenance that edits floors or
+      # generated files lands before version/state validation. kettle-family
+      # ships only the mechanism — each family declares its own commands.
+      def release_preflight_maintenance_results
+        config.release_preflight_commands.map do |entry|
+          command_runner.call(
+            member: family_member,
+            phase: "release_preflight_command",
+            command: entry.fetch("command"),
+            env: command_env,
+            raw: true
+          )
+        end
       end
 
       def release_preflight_version_bump_results

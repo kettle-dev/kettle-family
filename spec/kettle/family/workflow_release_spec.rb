@@ -44,6 +44,63 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.skipped).to be(true)
   end
 
+  it "omits the pre-release maintenance phase when no commands are configured" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")])
+
+    expect(workflow.send(:release_preflight_phases).map { |phase| phase[:label] }).not_to include("pre-release maintenance")
+  end
+
+  it "runs family pre-release maintenance commands first, in declaration order" do
+    write_release_config(preflight_commands: [
+      {"name" => "floors", "command" => [RbConfig.ruby, "-e", "puts 'floors'"]},
+      {"name" => "pins", "command" => [RbConfig.ruby, "-e", "puts 'pins'"]}
+    ])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], execute: true)
+    runner = recording_template_runner
+    allow(workflow).to receive(:command_runner).and_return(runner)
+
+    phases = workflow.send(:release_preflight_phases).map { |phase| phase[:label] }
+    expect(phases.first).to eq("pre-release maintenance")
+
+    workflow.results
+
+    maintenance_calls = runner.calls.select { |call| call[:phase] == "release_preflight_command" }
+    expect(maintenance_calls.length).to eq(2)
+    expect(maintenance_calls.map { |call| call[:command] }).to eq([
+      [RbConfig.ruby, "-e", "puts 'floors'"],
+      [RbConfig.ruby, "-e", "puts 'pins'"]
+    ])
+    expect(maintenance_calls.map { |call| call[:raw] }).to eq([true, true])
+  end
+
+  it "blocks the release when a pre-release maintenance command fails" do
+    write_release_config(
+      preflight_commands: [{"name" => "floors", "command" => [RbConfig.ruby, "-e", "abort 'floors failed'"]}],
+      family_changelog: {"enabled" => true, "command" => [RbConfig.ruby, "-e", "abort 'should not run'"]}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    results = described_class.new(command: "release", config: config, members: [ready_member("alpha")], execute: true).results
+
+    expect(results.map(&:phase)).to eq(["release_preflight_command"])
+    expect(results.first).not_to be_ok
+  end
+
+  it "plans pre-release maintenance commands without executing them in dry-run" do
+    write_release_config(preflight_commands: [
+      {"name" => "floors", "command" => [RbConfig.ruby, "-e", "abort 'must not run'"]}
+    ])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    # The command would abort if executed; a clean dry-run proves it was not.
+    results = described_class.new(command: "release", config: config, members: [ready_member("alpha")]).results
+
+    expect(results).to all(be_ok)
+  end
+
   it "blocks release before changelog work when a selected member requires a version bump" do
     write_release_config(family_changelog: {"enabled" => true, "command" => [RbConfig.ruby, "-e", "abort 'should not run'"]})
     config = Kettle::Family::Config.load(root: @tmpdir)
@@ -4128,7 +4185,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family: nil, family_changelog: nil, aggregate_validation: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil, release_allowed_local_path_roots: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family: nil, family_changelog: nil, aggregate_validation: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil, release_allowed_local_path_roots: nil, preflight_commands: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -4136,6 +4193,7 @@ RSpec.describe Kettle::Family::Workflow do
       "push_command" => [RbConfig.ruby, "-e", "puts 'push'"]
     }
     release["target_branches"] = target_branches if target_branches
+    release["preflight_commands"] = preflight_commands if preflight_commands
     release["family_changelog"] = family_changelog if family_changelog
     release["aggregate_validation"] = aggregate_validation if aggregate_validation
     release["env"] = release_env if release_env

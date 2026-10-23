@@ -254,6 +254,45 @@ RSpec.describe Kettle::Family::Config do
     expect(config.release_publish_command).to eq("bundle exec kettle-release")
   end
 
+  it "defaults release preflight commands to empty" do
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_preflight_commands).to be_empty
+  end
+
+  it "reads release preflight commands from the family config" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        preflight_commands:
+          - name: template dependency floors
+            command: mise exec -C gems/kettle-jem -- bundle exec bin/kettle-jem-deps-floor --write
+          - name: template workflow pins
+            command: mise exec -C gems/kettle-jem -- bundle exec bin/kettle-jem-workflow-pins --write
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_preflight_commands).to eq([
+      {"name" => "template dependency floors", "command" => "mise exec -C gems/kettle-jem -- bundle exec bin/kettle-jem-deps-floor --write"},
+      {"name" => "template workflow pins", "command" => "mise exec -C gems/kettle-jem -- bundle exec bin/kettle-jem-workflow-pins --write"}
+    ])
+  end
+
+  it "drops malformed release preflight command entries" do
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      release:
+        preflight_commands:
+          - name: only a name
+          - command: only a command
+          - name: valid
+            command: true
+    YAML
+
+    config = described_class.load(root: @tmpdir)
+
+    expect(config.release_preflight_commands).to eq([{"name" => "valid", "command" => "true"}])
+  end
+
   it "enables release dependency floor updates by default" do
     config = described_class.load(root: @tmpdir)
 

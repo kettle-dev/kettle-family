@@ -272,6 +272,28 @@ module Kettle
         fetch_path("release", "publish_command") || command_for("release_publish") || "bundle exec kettle-release"
       end
 
+      # Family-declared pre-release maintenance commands (e.g. template
+      # dependency floors and workflow pins). Each entry is a map with `name`
+      # (displayed in preflight output) and `command` (run at the family root,
+      # raw — no mise exec wrapping). Commands run in declaration order before
+      # every other release preflight phase, so maintenance that edits floors
+      # or generated files lands before version/state validation. A failing
+      # command blocks the release. Tools that write are expected to
+      # self-commit; the hook does not commit on their behalf.
+      def release_preflight_commands
+        entries = fetch_path("release", "preflight_commands") || []
+        Array(entries).map do |entry|
+          map = entry.is_a?(Hash) ? stringify_keys(entry) : {}
+          name = map["name"].to_s
+          command = map["command"]
+          command = command.map(&:to_s) if command.is_a?(Array)
+          command = command.to_s unless command.is_a?(Array)
+          next nil if name.empty? || command.empty?
+
+          {"name" => name, "command" => command}
+        end.compact
+      end
+
       def release_required_remotes
         fetch_path("release", "required_remotes")
       end

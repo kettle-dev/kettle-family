@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- release.preflight_commands family config: a list of {name, command} maintenance hooks run at the family root, in declaration order, as the FIRST release preflight phase — so template dependency floors, workflow pins, and similar generated-state maintenance land before version/state validation instead of failing the wave mid-publish. Commands may be strings or argv arrays; a failing command blocks the release; dry-run plans without executing. kettle-family ships only the mechanism — each family declares its own maintenance in its own .kettle-family.yml.
+
 ### Changed
 
 ### Deprecated
