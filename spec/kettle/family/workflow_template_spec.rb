@@ -23,6 +23,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "refreshes the sibling family root tasks after successful member templating" do
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
     File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# old placeholder\n")
@@ -46,6 +47,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "runs family root mise trust when the mise executable is available" do
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
     File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# old placeholder\n")
@@ -69,6 +71,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "skips family root mise trust when the mise executable is unavailable" do
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: sibling_repos\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
     File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# old placeholder\n")
@@ -90,6 +93,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "commits migrated monorepo root tasks without leaving generated files dirty" do
+    skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
     File.write(File.join(@tmpdir, ".kettle-family.yml"), "family:\n  mode: monorepo\n")
     File.write(File.join(@tmpdir, "mise.toml"), "[tasks.bupb]\nrun = \"old bundler command\"\n")
     File.write(File.join(@tmpdir, "mise-family.tasks.toml"), "# old placeholder\n")

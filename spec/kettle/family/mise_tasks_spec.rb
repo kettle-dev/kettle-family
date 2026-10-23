@@ -351,6 +351,10 @@ RSpec.describe Kettle::Family::MiseTasks do
   end
 
   describe "Kettle::Family::ManagedSuite" do
+    before do
+      skip_for(engine: "ruby", versions: "head", reason: "Ruby head is permanently unsupported by tree_sitter_language_pack's released-ABI-only native gem policy")
+    end
+
     let(:monorepo_config) do
       instance_double(
         Kettle::Family::Config,
