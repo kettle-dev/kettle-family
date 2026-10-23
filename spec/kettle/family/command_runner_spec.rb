@@ -6,6 +6,13 @@ require "tmpdir"
 require "timeout"
 
 RSpec.describe Kettle::Family::CommandRunner do
+  # The mise exec prefix resolves the executable from PATH; pin it to the
+  # historical bare "mise" so prefix-shape assertions stay literal. Examples
+  # exercising the resolution itself override this stub.
+  before do
+    allow(described_class).to receive(:mise_executable).and_return("mise")
+  end
+
   around do |example|
     Dir.mktmpdir("kettle-family-runner-spec") do |dir|
       @tmpdir = dir
@@ -44,10 +51,49 @@ RSpec.describe Kettle::Family::CommandRunner do
   it "wraps commands with mise when a member has mise.toml" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    allow(described_class).to receive(:mise_executable).and_return("/fake/bin/mise")
+
+    result = described_class.new.call(member: member, phase: "test", command: ["ruby", "-v"])
+
+    # The resolved absolute path must spawn: the child's filtered PATH can
+    # exclude the directory holding a bare "mise" (CI ENOENT regression).
+    expect(result.command).to start_with("/fake/bin/mise", "exec", "-C", member.root, "--")
+  end
+
+  it "falls back to a bare mise argv when the executable cannot be resolved" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    allow(described_class).to receive(:mise_executable).and_return(nil)
 
     result = described_class.new.call(member: member, phase: "test", command: ["ruby", "-v"])
 
     expect(result.command).to start_with("mise", "exec", "-C", member.root, "--")
+  end
+
+  describe ".mise_executable" do
+    before do
+      allow(described_class).to receive(:mise_executable).and_call_original
+    end
+
+    it "returns the absolute path of the first executable mise on PATH" do
+      bin = File.join(@tmpdir, "bin")
+      FileUtils.mkdir_p(bin)
+      fake = File.join(bin, "mise")
+      File.write(fake, "#!/bin/sh\n")
+      FileUtils.chmod("u+x", fake)
+      stub_env("PATH" => bin)
+
+      expect(described_class.mise_executable).to eq(fake)
+    end
+
+    it "returns nil when PATH has no executable mise" do
+      bin = File.join(@tmpdir, "bin")
+      FileUtils.mkdir_p(bin)
+      File.write(File.join(bin, "mise"), "#!/bin/sh\n") # not executable
+      stub_env("PATH" => bin)
+
+      expect(described_class.mise_executable).to be_nil
+    end
   end
 
   it "runs an explicit raw command without wrapping it in mise" do

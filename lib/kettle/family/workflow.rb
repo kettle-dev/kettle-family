@@ -705,11 +705,7 @@ module Kettle
       # absolute path is required because spawned command environments strip
       # the orchestrator's Ruby/gem bin dirs from PATH.
       def mise_executable
-        ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).each do |dir|
-          path = File.join(dir, "mise")
-          return path if File.file?(path) && File.executable?(path)
-        end
-        nil
+        CommandRunner.mise_executable
       end
 
       # Sibling repositories have isolated working trees and can run their

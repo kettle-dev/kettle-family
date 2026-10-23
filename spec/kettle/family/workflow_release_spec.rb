@@ -28,6 +28,9 @@ RSpec.describe Kettle::Family::Workflow do
   # mocking framework available to examples and before/after hooks.
   before do
     allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?).and_return(false)
+    # The mise exec prefix resolves the executable from PATH; pin the
+    # resolver to bare "mise" so prefix-shape assertions stay literal.
+    allow(Kettle::Family::CommandRunner).to receive(:mise_executable).and_return("mise")
   end
 
   it "plans build releases with readiness and changelog checks" do

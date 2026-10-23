@@ -23,6 +23,19 @@ module Kettle
         exec(*ARGV)
       RUBY
 
+      # Absolute path to the mise executable resolved from the current PATH,
+      # or nil when mise is not installed. Spawned children run with a
+      # filtered PATH (see #process_env / #mise_member_path), so a bare "mise"
+      # argv is ENOENT whenever the binary lives in a directory the filter
+      # strips; the absolute path survives the filtered spawn env.
+      def self.mise_executable
+        ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).each do |dir|
+          path = File.join(dir, "mise")
+          return path if File.file?(path) && File.executable?(path)
+        end
+        nil
+      end
+
       class OtpCoordinator
         def initialize(input: $stdin, output: $stdout, queue_total: nil, secrets_provider: nil, event_handler: nil)
           @input = input
@@ -692,7 +705,7 @@ module Kettle
           *unset_env.flat_map { |key, _value| ["-u", key.to_s] },
           *set_env.map { |key, value| "#{key}=#{value}" }
         ]
-        mise_argv = ["mise", "exec", "-C", member.root, "--"]
+        mise_argv = [self.class.mise_executable || "mise", "exec", "-C", member.root, "--"]
         return [*mise_argv, *argv] if injected_env.empty?
 
         if Gem.win_platform?
