@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- release.preflight_commands family config: a list of {name, command} maintenance hooks run at the family root, in declaration order, as the FIRST release preflight phase — so template dependency floors, workflow pins, and similar generated-state maintenance land before version/state validation instead of failing the wave mid-publish. Commands may be strings or argv arrays; a failing command blocks the release; dry-run plans without executing. kettle-family ships only the mechanism — each family declares its own maintenance in its own .kettle-family.yml.
-
 ### Changed
 
 ### Deprecated
@@ -31,6 +29,17 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+## [1.3.31] - 2026-10-23
+
+- TAG: [v1.3.31][1.3.31t]
+- COVERAGE: 93.06% -- 7540/8102 lines in 45 files
+- BRANCH COVERAGE: 77.65% -- 3029/3901 branches in 45 files
+- 38.57% documented
+
+### Added
+
+- release.preflight_commands family config: a list of {name, command} maintenance hooks run at the family root, in declaration order, as the FIRST release preflight phase — so template dependency floors, workflow pins, and similar generated-state maintenance land before version/state validation instead of failing the wave mid-publish. Commands may be strings or argv arrays; a failing command blocks the release; dry-run plans without executing. kettle-family ships only the mechanism — each family declares its own maintenance in its own .kettle-family.yml.
 
 ## [1.3.30] - 2026-10-22
 
@@ -3216,7 +3225,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.30...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.31...HEAD
+[1.3.31]: https://github.com/kettle-dev/kettle-family/compare/v1.3.30...v1.3.31
+[1.3.31t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.31
 [1.3.30]: https://github.com/kettle-dev/kettle-family/compare/v1.3.29...v1.3.30
 [1.3.30t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.30
 [1.3.29]: https://github.com/kettle-dev/kettle-family/compare/v1.3.28...v1.3.29
