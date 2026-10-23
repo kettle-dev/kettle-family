@@ -699,13 +699,19 @@ module Kettle
         argv = normalize_command(command)
         return argv if raw || !mise_configured?(member)
 
+        # Without a mise executable there is no member runtime to activate;
+        # wrapping would spawn an unresolvable bare "mise" (ENOENT under the
+        # filtered child PATH), so run the command unwrapped.
+        resolved_mise = self.class.mise_executable
+        return argv unless resolved_mise
+
         command_env = nonsensitive_env(env)
         unset_env, set_env = command_env.partition { |_key, value| value.nil? }
         injected_env = [
           *unset_env.flat_map { |key, _value| ["-u", key.to_s] },
           *set_env.map { |key, value| "#{key}=#{value}" }
         ]
-        mise_argv = [self.class.mise_executable || "mise", "exec", "-C", member.root, "--"]
+        mise_argv = [resolved_mise, "exec", "-C", member.root, "--"]
         return [*mise_argv, *argv] if injected_env.empty?
 
         if Gem.win_platform?

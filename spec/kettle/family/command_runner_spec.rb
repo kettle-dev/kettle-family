@@ -60,14 +60,16 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.command).to start_with("/fake/bin/mise", "exec", "-C", member.root, "--")
   end
 
-  it "falls back to a bare mise argv when the executable cannot be resolved" do
+  it "runs the command unwrapped when the mise executable cannot be resolved" do
     member = member_at("alpha")
     File.write(File.join(member.root, "mise.toml"), "[env]\n")
     allow(described_class).to receive(:mise_executable).and_return(nil)
 
     result = described_class.new.call(member: member, phase: "test", command: ["ruby", "-v"])
 
-    expect(result.command).to start_with("mise", "exec", "-C", member.root, "--")
+    # No mise means no member runtime to activate; wrapping would spawn an
+    # unresolvable bare "mise" (ENOENT under the filtered child PATH).
+    expect(result.command).to eq(["ruby", "-v"])
   end
 
   describe ".mise_executable" do
