@@ -72,6 +72,24 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(result.command).to eq(["ruby", "-v"])
   end
 
+  it "still injects env via env(1) when unwrapping an unresolvable mise" do
+    member = member_at("alpha")
+    File.write(File.join(member.root, "mise.toml"), "[env]\n")
+    allow(described_class).to receive(:mise_executable).and_return(nil)
+
+    result = described_class.new.call(
+      member: member, phase: "test", command: ["ruby", "-v"],
+      env: {"K_JEM_TEMPLATING" => "true", "STRUCTUREDMERGE_DEV" => nil}
+    )
+
+    if Gem.win_platform?
+      expect(result.command.first(4)).to eq(["ruby", "--disable=rubyopt", "-e", described_class::WINDOWS_ENV_EXEC_SCRIPT])
+      expect(result.command).to include("K_JEM_TEMPLATING=true", "STRUCTUREDMERGE_DEV")
+    else
+      expect(result.command).to eq(["env", "-u", "STRUCTUREDMERGE_DEV", "K_JEM_TEMPLATING=true", "ruby", "-v"])
+    end
+  end
+
   describe ".mise_executable" do
     before do
       allow(described_class).to receive(:mise_executable).and_call_original

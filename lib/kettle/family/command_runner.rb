@@ -699,18 +699,41 @@ module Kettle
         argv = normalize_command(command)
         return argv if raw || !mise_configured?(member)
 
-        # Without a mise executable there is no member runtime to activate;
-        # wrapping would spawn an unresolvable bare "mise" (ENOENT under the
-        # filtered child PATH), so run the command unwrapped.
-        resolved_mise = self.class.mise_executable
-        return argv unless resolved_mise
-
         command_env = nonsensitive_env(env)
         unset_env, set_env = command_env.partition { |_key, value| value.nil? }
         injected_env = [
           *unset_env.flat_map { |key, _value| ["-u", key.to_s] },
           *set_env.map { |key, value| "#{key}=#{value}" }
         ]
+
+        # Without a mise executable there is no member runtime to activate;
+        # wrapping would spawn an unresolvable bare "mise" (ENOENT under the
+        # filtered child PATH), so run the command unwrapped — but preserve
+        # env injection through env(1) (or the portable ruby script on
+        # Windows), which the mise exec prefix otherwise carries.
+        resolved_mise = self.class.mise_executable
+        if resolved_mise.nil?
+          return argv if injected_env.empty?
+
+          if Gem.win_platform?
+            return [
+              "ruby",
+              "--disable=rubyopt",
+              "-e",
+              WINDOWS_ENV_EXEC_SCRIPT,
+              "--",
+              unset_env.length.to_s,
+              *unset_env.map { |key, _value| key.to_s },
+              set_env.length.to_s,
+              *set_env.map { |key, value| "#{key}=#{value}" },
+              "--",
+              *argv
+            ]
+          end
+
+          return ["env", *injected_env, *argv]
+        end
+
         mise_argv = [resolved_mise, "exec", "-C", member.root, "--"]
         return [*mise_argv, *argv] if injected_env.empty?
 
