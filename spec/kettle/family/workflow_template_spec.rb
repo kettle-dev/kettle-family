@@ -7,12 +7,6 @@ require "tmpdir"
 require "yaml"
 
 RSpec.describe Kettle::Family::Workflow do
-  # The mise exec prefix resolves the executable from PATH; pin the
-  # resolver to bare "mise" so prefix-shape assertions stay literal.
-  before do
-    allow(Kettle::Family::CommandRunner).to receive(:mise_executable).and_return("mise")
-  end
-
   around do |example|
     Dir.mktmpdir("kettle-family-template-workflow-spec") do |dir|
       @tmpdir = dir
@@ -1566,6 +1560,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "passes explicit environment overrides through member mise execution" do
+    allow(Kettle::Family::CommandRunner).to receive(:mise_executable).and_return("mise")
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
@@ -1670,6 +1665,7 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   it "overrides noisy template debug environment unless debug is enabled" do
+    allow(Kettle::Family::CommandRunner).to receive(:mise_executable).and_return("mise")
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"])
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
