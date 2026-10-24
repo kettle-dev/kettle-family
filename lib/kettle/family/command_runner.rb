@@ -199,7 +199,6 @@ module Kettle
           event_handler.call(
             member_name,
             {
-              "event_version" => 1,
               "type" => "secret_provider",
               "action" => action,
               "label" => label,

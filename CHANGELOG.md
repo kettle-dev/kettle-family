@@ -22,7 +22,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- [kc] shared-dependency-floor-engine: Delegate family gemspec floor parsing and edits to kettle-deps-floor; family release reconciliation supplies explicit released-member targets and disables registry updates for unrelated dependencies. Nomono bootstrap also raises Gemfile activation requirement arrays alongside direct gem floors so stale lockfiles can resolve the newly released Nomono version.
+- [kc] shared-dependency-floor-engine: Family workflows now emit and tape NDJSON through kettle-ndjson; the family runtime and local bundle declare kettle-ndjson directly. Dependency-floor updates use kettle-deps-floor with explicit sibling release targets and no registry lookups. Nomono bootstrap raises Gemfile and local activation-array floors.
+
+- [kc] shared-ndjson-event-integration: Use kettle-ndjson for family command summaries and per-member event tape serialization; family child-event names and payloads remain compatible with downstream progress/report handling. Declare kettle-ndjson as a direct runtime and local development dependency.
 
 ### Deprecated
 

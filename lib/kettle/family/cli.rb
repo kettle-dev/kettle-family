@@ -3,6 +3,7 @@
 require "command_kit"
 require "command_kit/commands"
 require "fileutils"
+require "kettle/ndjson"
 require "optparse"
 
 module Kettle
@@ -814,8 +815,11 @@ module Kettle
       def run_command(command, options)
         report = build_report(command, options)
         write_report(report, options)
-        if options[:events] && command == "release-state"
-          stdout.puts(JSON.generate("event_version" => 1, "type" => "summary", "report" => report.to_h))
+        if options[:events]
+          Kettle::Ndjson.emit_summary_event(
+            Kettle::Ndjson.event_stream(stdout, types: "summary"),
+            report: report.to_h
+          )
         else
           stdout.puts(options[:json] ? report.to_json : report.to_text)
         end
@@ -826,6 +830,33 @@ module Kettle
       end
 
       private
+
+      def emit_command_result_events(event_tape, command, results)
+        return unless event_tape
+
+        results.each do |result|
+          event_tape.call(
+            "type" => "command_step",
+            "command" => command,
+            "name" => result.phase,
+            "member" => result.member_name,
+            "branch" => result.branch,
+            "phase" => result.phase,
+            "status" => command_result_event_status(result),
+            "status_code" => result.status,
+            "elapsed_seconds" => result.elapsed_seconds,
+            "reason" => result.reason,
+            "result" => result.to_h
+          )
+        end
+      end
+
+      def command_result_event_status(result)
+        return "skipped" if result.skipped
+        return "ok" if result.ok?
+
+        "failed"
+      end
 
       def build_report(command, options)
         config = Config.load(root: options[:root], path: options[:config])
@@ -888,6 +919,7 @@ module Kettle
           release_state_results: release_state_results
         )
         state_progress&.finish
+        emit_command_result_events(state_event_tape, command, results)
         elapsed_seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
         Report.new(
           family_name: config.family_name,
@@ -1562,13 +1594,13 @@ module Kettle
       end
 
       def release_state_event_tape(command:, config:, options:)
-        return unless %w[release release-state].include?(command)
+        return unless %w[release release-state].include?(command) || options[:events]
         # Release event taping requires execute mode: dry-run release has no
         # child event streams to tape.
         return if command == "release" && !options[:execute]
 
         tape = ReleaseStateEventTape.new(root: config.root, stream: options[:events] ? stdout : nil)
-        stderr.puts("release state event tapes: #{tape.directory}") unless options[:events]
+        stderr.puts("family event tapes: #{tape.directory}") unless options[:events]
         tape
       end
 

@@ -1819,6 +1819,77 @@ RSpec.describe Kettle::Family::CLI do
     expect(Kettle::Family::ReleaseStateCheck).to have_received(:new).with(hash_including(jobs: 2))
   end
 
+  it "streams the final family report as NDJSON using kettle-ndjson" do
+    member = Kettle::Family::Member.new(name: "kettle-jem", root: @tmpdir, version: "7.1.41", dependencies: [])
+    result = Kettle::Family::CommandResult.new(
+      member_name: "kettle-jem",
+      phase: "dependency_floor",
+      command: ["internal", "dependency-floor", "kettle-deps-floor"],
+      workdir: @tmpdir,
+      status: 0,
+      success: true,
+      stdout: "updated dependency floor",
+      stderr: "",
+      elapsed_seconds: 0.01,
+      skipped: false,
+      reason: nil
+    )
+    report = Kettle::Family::Report.new(
+      family_name: "test-family",
+      family_mode: "sibling_repos",
+      order_mode: "dependency",
+      members: [member],
+      selected_members: [member],
+      config_path: File.join(@tmpdir, ".kettle-family.yml"),
+      command: "bex",
+      results: [result]
+    )
+    out = StringIO.new
+    err = StringIO.new
+    cli = described_class.new(stdout: out, stderr: err)
+    allow(cli).to receive(:build_report).and_return(report)
+    allow(cli).to receive(:write_report)
+
+    allow(Kettle::Ndjson).to receive(:emit_summary_event).and_call_original
+    status = cli.run_command("release", events: true)
+
+    events = out.string.lines(chomp: true).map { |line| JSON.parse(line) }
+    expect(status).to eq(0), err.string
+    expect(Kettle::Ndjson).to have_received(:emit_summary_event).with(anything, report: report.to_h)
+    expect(events).to contain_exactly(include("event_version" => 1, "type" => "summary", "report" => include("command" => "bex")))
+  end
+
+  it "emits family command results through the kettle-ndjson event tape" do
+    result = Kettle::Family::CommandResult.new(
+      member_name: "kettle-jem",
+      phase: "dependency_floor",
+      command: ["internal", "dependency-floor", "kettle-deps-floor"],
+      workdir: @tmpdir,
+      status: 0,
+      success: true,
+      stdout: "updated dependency floor",
+      stderr: "",
+      elapsed_seconds: 0.01,
+      skipped: false,
+      reason: nil
+    )
+    tape = Kettle::Family::ReleaseStateEventTape.new(root: @tmpdir)
+    cli = described_class.new(stdout: StringIO.new, stderr: StringIO.new)
+
+    cli.send(:emit_command_result_events, tape, "bex", [result])
+
+    event_path = File.join(tape.directory, "kettle-jem.ndjson")
+    event = JSON.parse(File.read(event_path).lines.fetch(0))
+    expect(event).to include(
+      "event_version" => 1,
+      "type" => "command_step",
+      "command" => "bex",
+      "member" => "kettle-jem",
+      "phase" => "dependency_floor",
+      "status" => "ok"
+    )
+  end
+
   it "streams state analysis and its final report as NDJSON when events are requested" do
     write_gem("alpha")
     result = Kettle::Family::ReleaseStateResult.new(

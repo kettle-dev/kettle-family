@@ -5122,18 +5122,17 @@ module Kettle
       end
 
       def gha_sha_pins_event_line_handler(member)
-        return nil unless progress_io
+        return nil unless progress_io || @event_tape
 
         lambda do |line|
           event = parse_template_event(line)
           next false unless event && event["type"].to_s.start_with?("gha_sha_pins")
 
-          if progress_io
-            if verbose || debug
-              emit_gha_sha_pins_event_progress(member, event)
-            elsif @gha_sha_pins_progress
-              emit_gha_sha_pins_event_status(member, event, progress: @gha_sha_pins_progress)
-            end
+          @event_tape&.call(event.merge("member" => member.name))
+          if progress_io && (verbose || debug)
+            emit_gha_sha_pins_event_progress(member, event)
+          elsif progress_io && @gha_sha_pins_progress
+            emit_gha_sha_pins_event_status(member, event, progress: @gha_sha_pins_progress)
           end
           true
         end

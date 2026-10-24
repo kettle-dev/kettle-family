@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require "json"
 require "time"
+require "kettle/ndjson"
 
 module Kettle
   module Family
@@ -34,10 +34,8 @@ module Kettle
         @mutex.synchronize do
           @sequence_by_member[target] += 1
           payload["sequence"] = @sequence_by_member.fetch(target)
-          line = JSON.generate(payload)
-          File.open(path_for(target), "a") { |file| file.puts(line) }
-          @stream&.puts(line)
-          @stream.flush if @stream&.respond_to?(:flush)
+          File.open(path_for(target), "a") { |file| emit_ndjson(file, payload) }
+          emit_ndjson(@stream, payload) if @stream
         end
         payload
       rescue
@@ -45,6 +43,17 @@ module Kettle
       end
 
       private
+
+      def emit_ndjson(io, payload)
+        type = payload.fetch("type").to_s
+        stream = Kettle::Ndjson.event_stream(io, types: type, event_types: [type], aliases: {})
+        attributes = payload.each_with_object({}) do |(key, value), result|
+          next if %w[type event_version].include?(key.to_s)
+
+          result[key.to_sym] = value
+        end
+        Kettle::Ndjson.emit_event(stream, type, attributes)
+      end
 
       def target_key(payload)
         member = payload.fetch("member", "family").to_s
