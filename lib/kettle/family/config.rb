@@ -208,6 +208,20 @@ module Kettle
         fetch_path("template", "jobs")
       end
 
+      # Additional local dependency selectors used by the generated
+      # `local-template` task. Values may use Mise's `{{config_root}}` token.
+      def template_local_env
+        configured = fetch_path("template", "local_env") || {}
+        raise Error, "template.local_env must be a mapping of ENV names to values" unless configured.is_a?(Hash)
+
+        configured.each_with_object({}) do |(name, value), env|
+          key = name.to_s
+          raise Error, "template.local_env cannot override #{key}" if %w[BUNDLE_GEMFILE RUBYOPT K_JEM_TEMPLATING].include?(key)
+
+          env[key] = value.to_s
+        end
+      end
+
       # A monorepo commonly has one root suite that covers every subgem. The
       # configured owner is optional; an --only invocation never expands its
       # own selection solely to reach that owner.
@@ -453,23 +467,61 @@ module Kettle
       def normalize_corporate_sponsors(raw)
         Array(raw).filter_map do |entry|
           unless entry.is_a?(Hash)
-            raise ArgumentError, "corporate sponsor entries must be mappings with name, url, and img_src"
+            raise ArgumentError, "corporate sponsor entries must be mappings with name, target_href, and image_src (legacy url and img_src are also accepted)"
           end
 
           sponsor = stringify_keys(entry)
           name = sponsor["name"].to_s.strip
-          url = sponsor["url"].to_s.strip
-          img_src = sponsor["img_src"].to_s.strip
-          if name.empty? || url.empty? || img_src.empty?
-            raise ArgumentError, "corporate sponsor entries require name, url, and img_src"
+          target_href = (sponsor["target_href"] || sponsor["url"]).to_s.strip
+          image_src = (sponsor["image_src"] || sponsor["img_src"]).to_s.strip
+          if name.empty? || target_href.empty? || image_src.empty?
+            raise ArgumentError, "corporate sponsor entries require name, target_href, and image_src (legacy url and img_src are also accepted)"
           end
 
-          {
+          sponsor.merge(
             "name" => name,
-            "url" => url,
-            "img_src" => img_src
-          }
+            "target_href" => target_href,
+            "image_src" => image_src,
+            "url" => target_href,
+            "img_src" => image_src,
+            "since" => normalize_sponsor_date(sponsor["since"]),
+            "until" => normalize_sponsor_date(sponsor["until"]),
+            "members" => normalize_corporate_sponsor_members(sponsor["members"], name)
+          ).compact
         end
+      end
+
+      def normalize_corporate_sponsor_members(raw, sponsor_name)
+        return nil if raw.nil?
+
+        Array(raw).filter_map do |entry|
+          unless entry.is_a?(Hash)
+            raise ArgumentError, "corporate sponsor #{sponsor_name.inspect} members must be mappings with name and target_href"
+          end
+          member = stringify_keys(entry)
+          raise ArgumentError, "corporate sponsor #{sponsor_name.inspect} members cannot themselves have members" if member.key?("members")
+
+          name = member["name"].to_s.strip
+          target_href = (member["target_href"] || member["url"]).to_s.strip
+          raise ArgumentError, "corporate sponsor #{sponsor_name.inspect} members require name and target_href" if name.empty? || target_href.empty?
+
+          image_src = (member["image_src"] || member["img_src"]).to_s.strip
+          member.merge(
+            "name" => name,
+            "target_href" => target_href,
+            "url" => target_href,
+            "image_src" => image_src.empty? ? nil : image_src,
+            "img_src" => image_src.empty? ? nil : image_src,
+            "since" => normalize_sponsor_date(member["since"]),
+            "until" => normalize_sponsor_date(member["until"])
+          ).compact
+        end
+      end
+
+      def normalize_sponsor_date(value)
+        return nil if value.nil? || value.to_s.strip.empty?
+
+        value.respond_to?(:iso8601) ? value.iso8601 : value.to_s.strip
       end
 
       def fetch_path(*keys)

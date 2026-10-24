@@ -362,6 +362,8 @@ RSpec.describe Kettle::Family::MiseTasks do
         members_root: "/fam/gems",
         family_mode: "monorepo",
         family_local_path_env_name: "STRUCTUREDMERGE_DEV",
+        family_local_path_root: "/fam/gems",
+        template_local_env: {"KETTLE_DEV_DEV" => "{{config_root}}/../kettle-dev"},
         release_disable_local_path_env: %w[K_JEM_TEMPLATING TSLP_DEV]
       )
     end
@@ -373,6 +375,8 @@ RSpec.describe Kettle::Family::MiseTasks do
         members_root: "/fam",
         family_mode: "sibling_repos",
         family_local_path_env_name: "KETTLE_DEV_DEV",
+        family_local_path_root: "/fam",
+        template_local_env: {"STRUCTUREDMERGE_DEV" => "{{config_root}}/../structuredmerge/ruby/gems"},
         release_disable_local_path_env: []
       )
     end
@@ -403,8 +407,7 @@ RSpec.describe Kettle::Family::MiseTasks do
       expect(content).to include(
         "run = \"env -- KETTLE_DEV_DEV=false bundle exec kettle-family bup --execute --commit\""
       )
-      expect(content).not_to include("--env")
-      expect(content).not_to include("{{config_root}}")
+      expect(content).not_to include("--env KETTLE_DEV_DEV=")
     end
 
     it "executes the generated env wrapper and forwards arguments to bundle" do
@@ -423,9 +426,28 @@ RSpec.describe Kettle::Family::MiseTasks do
     it "renders TOML that parses as a managed task file" do
       content = described_class::ManagedSuite.new(monorepo_config).content
 
-      expect(described_class.task_names(content, managed: true)).to include(
-        "test", "lint", "state", "release-state", "template", "bump", "changelog", "bup", "bupb", "update-bundler"
-      )
+      task_names = %w[test lint state release-state template local-template unreleased-template bump changelog bup bupb update-bundler]
+      expect(described_class.task_names(content, managed: true)).to include(*task_names)
+
+      analysis = ::Toml::Merge::FileAnalysis.new(content)
+      run_for = lambda do |name|
+        task = analysis.tables.find { |table| table.table_name == name }
+        JSON.parse(task.pairs.find { |pair| pair.key_name == "run" }.value_node.text)
+      end
+      local_run = run_for.call("local-template")
+      unreleased_run = run_for.call("unreleased-template")
+      local_argv = Shellwords.split(local_run)
+      unreleased_argv = Shellwords.split(unreleased_run)
+      child_env_for = lambda do |argv|
+        first_flag = argv.index("--env")
+        argv[first_flag..].each_slice(2).to_h { |_flag, assignment| assignment.split("=", 2) }
+      end
+      local_child_env = child_env_for.call(local_argv)
+      unreleased_child_env = child_env_for.call(unreleased_argv)
+      expect(local_argv).to include("BUNDLE_GEMFILE=Gemfile", "RUBYOPT=-rbundler/setup")
+      expect(local_child_env).to include("BUNDLE_GEMFILE" => "Gemfile", "RUBYOPT" => "-rbundler/setup", "K_JEM_TEMPLATING" => "true")
+      expect(unreleased_argv).to include("BUNDLE_GEMFILE=Gemfile", "RUBYOPT=-rbundler/setup")
+      expect(unreleased_child_env).to include("BUNDLE_GEMFILE" => "{{config_root}}/Gemfile", "RUBYOPT" => "-rbundler/setup", "K_JEM_TEMPLATING" => "true")
     end
   end
 end

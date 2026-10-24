@@ -3,6 +3,8 @@
 require "ast/crispr"
 require "ast/crispr/toml"
 require "psych/merge"
+require "pathname"
+require "shellwords"
 
 module Kettle
   module Family
@@ -355,6 +357,8 @@ module Kettle
           "state" => "Report release state for every family member",
           "release-state" => "Report changelog release state for every family member",
           "template" => "Apply kettle-jem templates across family members",
+          "local-template" => "Apply templates using member-local Nomono and local workspace gems",
+          "unreleased-template" => "Apply templates to stale members using the family-root bundle",
           "bump" => "Bump member gem versions",
           "changelog" => "Add a structured entry to the family changelog",
           "bup" => "Update dependencies and commit lockfiles; pass gems or options after --",
@@ -393,6 +397,8 @@ module Kettle
           tasks["bup"] = "bundle exec kettle-family bup --execute --commit"
           tasks["bupb"] = "bundle exec kettle-family update-bundler --execute --commit"
           tasks["update-bundler"] = tasks["bupb"]
+          tasks["local-template"] = local_template_command(member_bundle: "Gemfile")
+          tasks["unreleased-template"] = local_template_command(member_bundle: "{{config_root}}/Gemfile")
 
           neutral = neutralize_assignments
           wiring = env_wiring_flags
@@ -406,6 +412,39 @@ module Kettle
         end
 
         private
+
+        def local_template_command(member_bundle:)
+          local_env = config.template_local_env.dup
+          if (family_env = config.family_local_path_env_name)
+            relative_root = Pathname.new(config.family_local_path_root)
+              .relative_path_from(Pathname.new(config.root)).to_s
+            family_path = if relative_root == "."
+              "{{config_root}}"
+            else
+              "{{config_root}}/#{relative_root}"
+            end
+            local_env[family_env] = family_path
+          end
+          local_env["K_JEM_TEMPLATING"] = "true"
+
+          root_env = local_env.merge(
+            "RUBYOPT" => "-rbundler/setup",
+            "BUNDLE_GEMFILE" => "Gemfile"
+          )
+          child_env = local_env.merge(
+            "RUBYOPT" => "-rbundler/setup",
+            "BUNDLE_GEMFILE" => member_bundle
+          )
+          assignments = root_env.map { |key, value| "#{key}=#{escape_mise_value(value)}" }.join(" ")
+          forwarded = child_env.map { |key, value| "--env #{escape_mise_value("#{key}=#{value}")}" }.join(" ")
+          "#{assignments} bundle exec kettle-family template --execute #{forwarded}"
+        end
+
+        def escape_mise_value(value)
+          token = "{{config_root}}"
+          marker = "KETTLE_FAMILY_CONFIG_ROOT_TOKEN"
+          Shellwords.escape(value.to_s.gsub(token, marker)).gsub(marker, token)
+        end
 
         # Neutralize ambient local-path wiring so the command starts from the
         # family config, then hand kettle-family the intended overrides.
