@@ -5983,15 +5983,21 @@ module Kettle
       end
 
       def template_bundler_update_env(env, member)
-        return env unless member&.name == NomonoBootstrap::GEM_NAME
+        return env unless member
 
-        # While nomono itself is being version-bumped, its Gemfile/gemspec can
-        # require the new version while Gemfile.lock still records the old
-        # self-version. Eager RUBYOPT setup activates that old lock before a
-        # Bundler update can reconcile it. Keep the setting for Kettle Jem:
-        # its standalone bootstrap needs it to activate local template gems.
-        # Bundler update initializes its own bundle, so remove only this token
-        # for nomono's lockfile-update commands and preserve all other options.
+        # Bundler update/normalize/recovery commands operate on the MEMBER's
+        # own bundle (its nomono floor and lockfile), so they must target the
+        # member Gemfile — not the bundle the template task selected to launch
+        # kettle-family. Under unreleased-template that launcher bundle is the
+        # family-root Gemfile, which does not declare nomono, so
+        # `bundle update nomono` fails with "Could not find gem 'nomono'".
+        env["BUNDLE_GEMFILE"] = File.join(member.root, "Gemfile")
+        # Eager RUBYOPT setup would activate the member's possibly-stale
+        # lockfile before Bundler can reconcile it (and, while nomono itself is
+        # being version-bumped, its Gemfile/gemspec can require the new version
+        # while Gemfile.lock still records the old self-version). Bundler
+        # update/lock/install commands initialize their own bundle, so drop
+        # only this token and preserve all other options.
         options = Shellwords.split(env.fetch("RUBYOPT", ""))
         options.reject! { |option| option == "-rbundler/setup" }
         if options.empty?

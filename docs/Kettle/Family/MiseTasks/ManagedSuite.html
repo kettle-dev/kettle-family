@@ -136,6 +136,8 @@ release.disable_local_path_env, family.mode, family.members_root).</p>
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>state</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Report release state for every family member</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release-state</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Report changelog release state for every family member</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>template</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Apply kettle-jem templates across family members</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+  <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>local-template</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Apply templates using member-local Nomono and local workspace gems</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+  <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>unreleased-template</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Apply templates to stale members using the family-root bundle</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bump</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Bump member gem versions</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>changelog</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Add a structured entry to the family changelog</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
   <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bup</span><span class='tstring_end'>&quot;</span></span> <span class='op'>=&gt;</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Update dependencies and commit lockfiles; pass gems or options after --</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
@@ -273,12 +275,12 @@ release.disable_local_path_env, family.mode, family.members_root).</p>
       <pre class="lines">
 
 
-367
-368
-369</pre>
+371
+372
+373</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 367</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 371</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='id identifier rubyid_config'>config</span><span class='rparen'>)</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
@@ -320,12 +322,12 @@ release.disable_local_path_env, family.mode, family.members_root).</p>
       <pre class="lines">
 
 
-365
-366
-367</pre>
+369
+370
+371</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 365</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 369</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_config'>config</span>
   <span class='ivar'>@config</span>
@@ -357,10 +359,6 @@ release.disable_local_path_env, family.mode, family.members_root).</p>
       <pre class="lines">
 
 
-371
-372
-373
-374
 375
 376
 377
@@ -392,10 +390,16 @@ release.disable_local_path_env, family.mode, family.members_root).</p>
 403
 404
 405
-406</pre>
+406
+407
+408
+409
+410
+411
+412</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 371</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/mise_tasks.rb', line 375</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_content'>content</span>
   <span class='id identifier rubyid_tasks'>tasks</span> <span class='op'>=</span> <span class='lbrace'>{</span>
@@ -422,6 +426,8 @@ release.disable_local_path_env, family.mode, family.members_root).</p>
   <span class='id identifier rubyid_tasks'>tasks</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bup</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bundle exec kettle-family bup --execute --commit</span><span class='tstring_end'>&quot;</span></span>
   <span class='id identifier rubyid_tasks'>tasks</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bupb</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bundle exec kettle-family update-bundler --execute --commit</span><span class='tstring_end'>&quot;</span></span>
   <span class='id identifier rubyid_tasks'>tasks</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>update-bundler</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_tasks'>tasks</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bupb</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_tasks'>tasks</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>local-template</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_local_template_command'>local_template_command</span><span class='lparen'>(</span><span class='label'>member_bundle:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Gemfile</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_tasks'>tasks</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>unreleased-template</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_local_template_command'>local_template_command</span><span class='lparen'>(</span><span class='label'>member_bundle:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>{{config_root}}/Gemfile</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
 
   <span class='id identifier rubyid_neutral'>neutral</span> <span class='op'>=</span> <span class='id identifier rubyid_neutralize_assignments'>neutralize_assignments</span>
   <span class='id identifier rubyid_wiring'>wiring</span> <span class='op'>=</span> <span class='id identifier rubyid_env_wiring_flags'>env_wiring_flags</span>

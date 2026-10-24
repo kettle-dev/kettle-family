@@ -1383,7 +1383,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(workflow.send(:template_execution_profile).name).to eq(:template_local)
   end
 
-  it "keeps eager Bundler setup for Kettle Jem but omits it from nomono lockfile updates" do
+  it "keeps eager Bundler setup for Kettle Jem but targets the member Gemfile without eager setup for nomono bootstraps" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("nomono")
@@ -1409,9 +1409,13 @@ RSpec.describe Kettle::Family::Workflow do
       "BUNDLE_GEMFILE" => "Gemfile"
     )
     expect(workflow.send(:template_lockfile_recovery_env, member)).to include("RUBYOPT" => "-W:deprecated")
-    expect(workflow.send(:template_bootstrap_dependency_env, member)).to include("RUBYOPT" => "-W:deprecated")
+    expect(workflow.send(:template_bootstrap_dependency_env, member)).to include(
+      "RUBYOPT" => "-W:deprecated",
+      "BUNDLE_GEMFILE" => File.join(member.root, "Gemfile")
+    )
     expect(workflow.send(:template_bundler_update_env, workflow.send(:template_prepare_env), member)).to include(
-      "RUBYOPT" => "-W:deprecated"
+      "RUBYOPT" => "-W:deprecated",
+      "BUNDLE_GEMFILE" => File.join(member.root, "Gemfile")
     )
 
     other = member_at("alpha")
@@ -1419,7 +1423,12 @@ RSpec.describe Kettle::Family::Workflow do
       "RUBYOPT" => "-W:deprecated -rbundler/setup"
     )
     expect(workflow.send(:template_bundler_update_env, workflow.send(:template_prepare_env), other)).to include(
-      "RUBYOPT" => "-W:deprecated -rbundler/setup"
+      "RUBYOPT" => "-W:deprecated",
+      "BUNDLE_GEMFILE" => File.join(other.root, "Gemfile")
+    )
+    expect(workflow.send(:template_bootstrap_dependency_env, other)).to include(
+      "RUBYOPT" => "-W:deprecated",
+      "BUNDLE_GEMFILE" => File.join(other.root, "Gemfile")
     )
   end
 

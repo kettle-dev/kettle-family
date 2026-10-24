@@ -22,6 +22,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.33] - 2026-10-24
+
+- TAG: [v1.3.33][1.3.33t]
+- COVERAGE: 93.11% -- 7579/8140 lines in 45 files
+- BRANCH COVERAGE: 77.55% -- 3036/3915 branches in 45 files
+- 38.81% documented
+
+### Changed
+
 - [kc] local-template-bundles-and-family-sponsors: kettle-family: managed tasks generate local-template for current member bundles and unreleased-template for stale destinations using the family-root Gemfile; family sponsor configuration preserves target_href/image_src, sponsorship windows, and umbrella members when passed to kettle-jem.
 
 - [kc] kettle-jem/prepare: updated 9 project files:
@@ -33,14 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - documentation (1)
   - other (1)
   - workflows (2)
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [1.3.32] - 2026-10-23
 
@@ -3248,7 +3257,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.32...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.33...HEAD
+[1.3.33]: https://github.com/kettle-dev/kettle-family/compare/v1.3.32...v1.3.33
+[1.3.33t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.33
 [1.3.32]: https://github.com/kettle-dev/kettle-family/compare/v1.3.31...v1.3.32
 [1.3.32t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.32
 [1.3.31]: https://github.com/kettle-dev/kettle-family/compare/v1.3.30...v1.3.31
