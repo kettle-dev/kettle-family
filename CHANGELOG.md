@@ -22,7 +22,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- [kc] shared-dependency-floor-engine: Delegate family gemspec floor parsing and edits to kettle-deps-floor; family release reconciliation supplies explicit released-member targets and does not query RubyGems for unrelated dependencies.
+- [kc] shared-dependency-floor-engine: Delegate family gemspec floor parsing and edits to kettle-deps-floor; family release reconciliation supplies explicit released-member targets and disables registry updates for unrelated dependencies. Nomono bootstrap also raises Gemfile activation requirement arrays alongside direct gem floors so stale lockfiles can resolve the newly released Nomono version.
 
 ### Deprecated
 

@@ -14,9 +14,8 @@ RSpec.describe Kettle::Family::NomonoBootstrap, :prism do
   it "raises stale managed Gemfile nomono floors while preserving the declaration shape" do
     member = member_at("kettle-gha-pins")
     File.write(File.join(member.root, "Gemfile"), <<~RUBY)
-      source "https://gem.coop"
-
-      gem "nomono", "~> 1.1", ">= 1.1.0", require: false
+      nomono_activation_requirements = ["~> 1.1", ">= 1.1.0"]
+      Kernel.send(:gem, "nomono", *nomono_activation_requirements)
     RUBY
     File.write(File.join(member.root, "Gemfile.lock"), <<~LOCK)
       GEM
@@ -32,7 +31,8 @@ RSpec.describe Kettle::Family::NomonoBootstrap, :prism do
 
     expect(result).to be_ok
     expect(File.read(File.join(member.root, "Gemfile"))).to include(
-      'gem "nomono", "~> 1.1", ">= 1.1.1", require: false'
+      'nomono_activation_requirements = ["~> 1.1", ">= 1.1.1"]',
+      'Kernel.send(:gem, "nomono", *nomono_activation_requirements)'
     )
     expect(result.stdout).to include("lockfile nomono 1.1.0 is below 1.1.1")
   end

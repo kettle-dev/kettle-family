@@ -89,9 +89,11 @@ module Kettle
         edits = if File.file?(gemfile)
           source = File.read(gemfile)
           parse_result = Kettle::Dev::VersionBump.parse_source(source, gemfile)
-          Kettle::Dev::VersionBump.each_node(parse_result.value).filter_map do |node|
-            nomono_floor_edit(gemfile, source, node)
-          end
+          nodes = Kettle::Dev::VersionBump.each_node(parse_result.value)
+          [
+            *nodes.filter_map { |node| nomono_floor_edit(gemfile, source, node) },
+            *nodes.filter_map { |node| local_nomono_floor_edit(gemfile, source, node) }
+          ]
         else
           []
         end
