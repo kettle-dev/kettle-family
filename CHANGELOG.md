@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- [kc] shared-dependency-floor-engine: Delegate family gemspec floor parsing and edits to kettle-deps-floor; family release reconciliation supplies explicit released-member targets and does not query RubyGems for unrelated dependencies.
+
 ### Deprecated
 
 ### Removed

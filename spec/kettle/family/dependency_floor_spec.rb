@@ -23,6 +23,32 @@ RSpec.describe Kettle::Family::DependencyFloor, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.2.3"')
   end
 
+  it "does not query registry dependencies when family releases supply explicit targets" do
+    released = write_gem("alpha", version: "1.2.3")
+    dependent = write_gem(
+      "beta",
+      version: "2.0.0",
+      dependencies: {
+        "alpha" => ["~> 1.0", ">= 1.0.0"],
+        "faraday" => [">= 0.17.3", "< 4.0"]
+      }
+    )
+    resolver = instance_double(Kettle::Deps::Floor::RegistryResolver)
+    allow(resolver).to receive(:versions).and_return([{number: "3.0.0"}])
+    allow(Kettle::Deps::Floor::RegistryResolver).to receive(:new).and_return(resolver)
+
+    result = described_class.new(
+      released_members: [released],
+      dependent_members: [dependent],
+      mode: :execute
+    ).results
+
+    expect(result).to all(be_ok)
+    expect(resolver).not_to have_received(:versions)
+    expect(File.read(dependent.gemspec_path)).to include('"alpha", "~> 1.0", ">= 1.2.3"')
+    expect(File.read(dependent.gemspec_path)).to include('"faraday", ">= 0.17.3", "< 4.0"')
+  end
+
   it "raises development dependency floors for released family members" do
     alpha = write_gem("alpha", version: "1.2.3")
     beta = write_gem("beta", version: "2.0.0", dependencies: {"alpha" => ["~> 1.0", ">= 1.0.0"]}, dependency_method: "add_development_dependency")
