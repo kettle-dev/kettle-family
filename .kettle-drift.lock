@@ -1,10 +1,19 @@
 {
-  "- code and tests (1)\n- documentation (1)": [
+  "- [kc] kettle-jem/template: updated 11 project files:\n- code and tests (1)": [
     {
       "file": "CHANGELOG.md",
       "lines": [
         30,
-        77
+        292
+      ]
+    }
+  ],
+  "- code and tests (1)\n- documentation (1)": [
+    {
+      "file": "CHANGELOG.md",
+      "lines": [
+        293,
+        338
       ]
     }
   ],
@@ -12,8 +21,9 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        31,
-        78
+        33,
+        294,
+        339
       ]
     }
   ],
@@ -30,8 +40,8 @@
     {
       "file": "spec/spec_helper.rb",
       "lines": [
-        43,
-        61
+        84,
+        102
       ]
     }
   ],
@@ -57,8 +67,8 @@
     {
       "file": "spec/spec_helper.rb",
       "lines": [
-        42,
-        60
+        83,
+        101
       ]
     }
   ]

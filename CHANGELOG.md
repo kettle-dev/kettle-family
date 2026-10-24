@@ -24,6 +24,16 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - [kc] local-template-bundles-and-family-sponsors: kettle-family: managed tasks generate local-template for current member bundles and unreleased-template for stale destinations using the family-root Gemfile; family sponsor configuration preserves target_href/image_src, sponsorship windows, and umbrella members when passed to kettle-jem.
 
+- [kc] kettle-jem/prepare: updated 9 project files:
+  - dependencies (9)
+
+- [kc] kettle-jem/template: updated 11 project files:
+  - code and tests (1)
+  - dependencies (7)
+  - documentation (1)
+  - other (1)
+  - workflows (1)
+
 ### Deprecated
 
 ### Removed

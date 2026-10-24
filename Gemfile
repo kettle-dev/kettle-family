@@ -43,7 +43,7 @@ if direct_sibling_gems.any? &&
   # Bootstrapping nomono here cannot rely on a plain `gem "nomono", ...` line.
   # Bundler records that dependency during Gemfile evaluation, but it does not
   # activate that exact version before the immediate `require "nomono/bundler"`.
-  nomono_activation_requirements = ["~> 1.1", ">= 1.1.7"]
+  nomono_activation_requirements = ["~> 1.1", ">= 1.1.15"]
   nomono_requirement = Gem::Requirement.new(nomono_activation_requirements)
   nomono_already_activated = Gem.loaded_specs["nomono"]
   nomono_lockfile = File.expand_path("Gemfile.lock", __dir__)
@@ -80,6 +80,7 @@ if direct_sibling_gems.any? &&
 
     eval_nomono_gems(
       gems: direct_sibling_gems,
+      requirements: {"kettle-changelog" => ["~> 1.0", ">= 1.0.13"], "kettle-dev" => ["~> 3.1", ">= 3.1.24"], "kettle-gha-pins" => ["~> 0.3", ">= 0.3.18"], "kettle-test" => ["~> 2.0", ">= 2.0.27"]},
       prefix: "KETTLE_DEV",
       path_env: "KETTLE_DEV_DEV",
       root: ["src", "my", "kettle-dev"]

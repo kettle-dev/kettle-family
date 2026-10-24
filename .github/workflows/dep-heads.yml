@@ -88,7 +88,7 @@ jobs:
 
       - name: Bundle install
         if: ${{ !env.ACT && matrix.ruby == 'jruby' }}
-        run: bundle install --jobs 4
+        run: bundle install --jobs 1
 
       - name: Restore RSpec status log
         if: "${{!env.ACT}}"
