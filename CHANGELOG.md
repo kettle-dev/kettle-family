@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- [kc] duplicate-family-member-diagnostics: Duplicate gem names found in different directories now report both roots and gemspecs, with guidance for excluding scratch checkouts or disabling discovery when `members.roots` is complete.
+
 ### Security
 
 ## [1.3.34] - 2026-10-25

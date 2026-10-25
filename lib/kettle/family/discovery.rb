@@ -37,7 +37,9 @@ module Kettle
 
         (configured + discovered).each do |member|
           existing = by_name[member.name]
-          raise Error, "duplicate family member #{member.name.inspect}" if existing && !same_directory?(existing.root, member.root)
+          if existing && !same_directory?(existing.root, member.root)
+            raise duplicate_member_error(existing, member)
+          end
 
           by_name[member.name] = member
         end
@@ -80,6 +82,18 @@ module Kettle
         return true if release_dependency_member_names.nil?
 
         release_dependency_member_names.include?(File.basename(File.expand_path(root)))
+      end
+
+      def duplicate_member_error(first, second)
+        Error.new(<<~MESSAGE.strip)
+          duplicate family member #{first.name.inspect} found in different directories:
+            - #{first.root} (#{first.gemspec_path})
+            - #{second.root} (#{second.gemspec_path})
+          Each gem name must resolve to one family directory. If one is a scratch
+          checkout or worktree, move it outside the discovery roots or exclude it
+          with members.exclude. If members.roots lists the complete family, set
+          members.discover: false.
+        MESSAGE
       end
 
       def primary_gemspec(root)

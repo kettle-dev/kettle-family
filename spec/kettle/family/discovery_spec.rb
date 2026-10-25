@@ -283,7 +283,13 @@ RSpec.describe Kettle::Family::Discovery do
     config = Kettle::Family::Config.load(root: @tmpdir)
 
     expect { described_class.new(config: config).members }
-      .to raise_error(Kettle::Family::Error, /duplicate family member/)
+      .to raise_error(Kettle::Family::Error) { |error|
+        expect(error.message).to include('duplicate family member "alpha"')
+        expect(error.message).to include(File.join(@tmpdir, "alpha", "alpha.gemspec"))
+        expect(error.message).to include(File.join(other, "alpha.gemspec"))
+        expect(error.message).to include("members.exclude")
+        expect(error.message).to include("members.discover: false")
+      }
   end
 
   it "excludes discovered gemspecs with configured glob patterns before loading members" do
