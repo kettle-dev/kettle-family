@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-8.140-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-8.118-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -179,6 +179,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
 
 <p>Compatible with MRI Ruby 4.0.0+.<br>
 CI workflows and Appraisals are generated for MRI Ruby 4.0.0+.<br>
+The current MRI CI lane runs on Linux and macOS.<br>
 This test floor is configured by <code>ruby.test_minimum</code> in <code>.kettle-jem.yml</code> and<br>
 may be higher than the gem’s runtime compatibility floor when legacy Rubies are<br>
 not practical for the current toolchain.</p>
@@ -253,54 +254,6 @@ not practical for the current toolchain.</p>
 
 </details>
 
-<h3 id="runtime-and-platform-support">Runtime and Platform Support</h3>
-
-<p>Support tiers describe what this project’s CI actually exercises, not what may<br>
-work in an untested environment:</p>
-
-<ul>
-  <li>
-<strong>Parallel support</strong>: CI runs the test suite with multiple workers available.</li>
-  <li>
-<strong>Unsupported</strong>: the engine/platform combination is not covered by CI and is<br>
- not a project compatibility claim.</li>
-</ul>
-
-<table>
-  <thead>
-    <tr>
-      <th>Ruby engine/version</th>
-      <th>Linux</th>
-      <th>macOS</th>
-      <th>Windows</th>
-      <th>Notes</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>MRI 4.0-4.0</td>
-      <td>Parallel support</td>
-      <td>Unsupported</td>
-      <td>Unsupported</td>
-      <td>Versioned Ruby workflows run on Linux.</td>
-    </tr>
-    <tr>
-      <td>MRI current</td>
-      <td>Parallel support</td>
-      <td>Parallel support</td>
-      <td>Unsupported</td>
-      <td>Current Ruby workflow covers the declared OS platforms.</td>
-    </tr>
-    <tr>
-      <td>MRI head</td>
-      <td>Parallel support</td>
-      <td>Unsupported</td>
-      <td>Unsupported</td>
-      <td>CI is allowed to fail while Ruby is in development.</td>
-    </tr>
-  </tbody>
-</table>
-
 <h3 id="federated-dvcs">Federated DVCS</h3>
 
 <details>
@@ -352,17 +305,13 @@ work in an untested environment:</p>
 
 <h3 id="enterprise-support">Enterprise Support</h3>
 
-<p><a href="https://blog.tidelift.com/tidelift-joins-sonar"><img src="https://tidelift.com/badges/package/rubygems/kettle-family" alt="Lifted through Tidelift"></a></p>
-
-<p>Lifted through Tidelift, part of <a href="https://blog.tidelift.com/tidelift-joins-sonar">Sonar</a>.</p>
+<p>For enterprise support from the maintainer, use <a href="https://www.upwork.com/freelancers/~014942e9b056abdf86?mp_source=share">Upwork</a> or <a href="https://www.codementor.io/peterboling?utm_source=github&amp;utm_medium=button&amp;utm_term=peterboling&amp;utm_campaign=github">CodeMentor</a>.</p>
 
 <p>Other support channels:</p>
 
 <ul>
   <li><a href="https://www.rubyforum.org/tag/kettle-dev"><img src="https://img.shields.io/discourse/topics?server=https%3A%2F%2Fwww.rubyforum.org&amp;style=for-the-badge&amp;logo=discourse&amp;label=Ruby%20Users%20Forum" alt="Ruby Users Forum"></a></li>
   <li><a href="https://discord.gg/3qme4XHNKN"><img src="https://img.shields.io/discord/1373797679469170758?style=for-the-badge&amp;logo=discord" alt="Live Chat on Discord"></a></li>
-  <li><a href="https://www.upwork.com/freelancers/~014942e9b056abdf86?mp_source=share"><img src="https://img.shields.io/badge/UpWork-13544E?style=for-the-badge&amp;logo=Upwork&amp;logoColor=white" alt="Get help from me on Upwork"></a></li>
-  <li><a href="https://www.codementor.io/peterboling?utm_source=github&amp;utm_medium=button&amp;utm_term=peterboling&amp;utm_campaign=github"><img src="https://img.shields.io/badge/CodeMentor-Get_Help-1abc9c?style=for-the-badge&amp;logo=CodeMentor&amp;logoColor=white" alt="Get help from me on Codementor"></a></li>
 </ul>
 
 <h2 id="-installation">✨ Installation</h2>

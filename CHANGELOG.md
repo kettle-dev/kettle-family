@@ -22,6 +22,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.34] - 2026-10-25
+
+- TAG: [v1.3.34][1.3.34t]
+- COVERAGE: 93.08% -- 7556/8118 lines in 45 files
+- BRANCH COVERAGE: 77.48% -- 3017/3894 branches in 45 files
+- 38.89% documented
+
+### Changed
+
 - [kc] shared-dependency-floor-engine: Family workflows now emit and tape NDJSON through kettle-ndjson; the family runtime and local bundle declare kettle-ndjson directly. Dependency-floor updates use kettle-deps-floor with explicit sibling release targets and no registry lookups. Nomono bootstrap raises Gemfile and local activation-array floors.
 
 - [kc] shared-ndjson-event-integration: Use kettle-ndjson for family command summaries and per-member event tape serialization; family child-event names and payloads remain compatible with downstream progress/report handling. Declare kettle-ndjson as a direct runtime and local development dependency.
@@ -33,14 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - code and tests (1)
   - documentation (1)
   - other (1)
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [1.3.33] - 2026-10-24
 
@@ -3269,7 +3278,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.33...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.34...HEAD
+[1.3.34]: https://github.com/kettle-dev/kettle-family/compare/v1.3.33...v1.3.34
+[1.3.34t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.34
 [1.3.33]: https://github.com/kettle-dev/kettle-family/compare/v1.3.32...v1.3.33
 [1.3.33t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.33
 [1.3.32]: https://github.com/kettle-dev/kettle-family/compare/v1.3.31...v1.3.32
