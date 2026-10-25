@@ -24,11 +24,11 @@ gem "nomono", "~> 1.1", ">= 1.1.15", require: false # ruby >= 3.2.0
 # Direct sibling dependencies (env-switched via KETTLE_DEV_DEV)
 direct_sibling_gems = %w[
   kettle-changelog
-  kettle-dev
   kettle-deps-floor
+  kettle-dev
   kettle-gha-pins
-  kettle-test
   kettle-ndjson
+  kettle-test
   kettle-rb
 ]
 direct_sibling_dev = ENV.fetch("KETTLE_DEV_DEV", "")
@@ -81,7 +81,7 @@ if direct_sibling_gems.any? &&
 
     eval_nomono_gems(
       gems: direct_sibling_gems,
-      requirements: {"kettle-changelog" => ["~> 1.0", ">= 1.0.13"], "kettle-dev" => ["~> 3.1", ">= 3.1.24"], "kettle-deps-floor" => ["~> 0.1", ">= 0.1.0"], "kettle-gha-pins" => ["~> 0.3", ">= 0.3.18"], "kettle-ndjson" => ["~> 0.1", ">= 0.1.20"], "kettle-test" => ["~> 2.0", ">= 2.0.27"]},
+      requirements: {"kettle-changelog" => ["~> 1.0", ">= 1.0.13"], "kettle-deps-floor" => ["~> 0.1", ">= 0.1.0"], "kettle-dev" => ["~> 3.1", ">= 3.1.24"], "kettle-gha-pins" => ["~> 0.3", ">= 0.3.18"], "kettle-ndjson" => ["~> 0.1", ">= 0.1.20"], "kettle-test" => ["~> 2.0", ">= 2.0.27"]},
       prefix: "KETTLE_DEV",
       path_env: "KETTLE_DEV_DEV",
       root: ["src", "my", "kettle-dev"]

@@ -26,6 +26,14 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - [kc] shared-ndjson-event-integration: Use kettle-ndjson for family command summaries and per-member event tape serialization; family child-event names and payloads remain compatible with downstream progress/report handling. Declare kettle-ndjson as a direct runtime and local development dependency.
 
+- [kc] kettle-jem/prepare: updated 19 project files:
+  - dependencies (19)
+
+- [kc] kettle-jem/template: updated 3 project files:
+  - code and tests (1)
+  - documentation (1)
+  - other (1)
+
 ### Deprecated
 
 ### Removed
