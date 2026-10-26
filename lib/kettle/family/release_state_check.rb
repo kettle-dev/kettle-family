@@ -803,7 +803,10 @@ module Kettle
         member_config = member_local_release_config(member)
         return unless member_config
 
-        self.class.new(config: member_config, members: [member]).results(event_handler: event_handler)
+        current_result = check_member(member, event_handler: event_handler)
+        return [current_result] unless current_result.ok?
+
+        [current_result, *self.class.new(config: member_config, members: [member]).results(event_handler: event_handler)]
       end
 
       def emit_event(event_handler, member:, branch:, action:, status:, **details)
@@ -997,9 +1000,18 @@ module Kettle
 
       def add_branch_worktree(root:, branch:, worktree_root:)
         WORKTREE_ADMIN_MUTEX.synchronize do
-          _stdout, stderr, status = Open3.capture3("git", "worktree", "add", "--detach", worktree_root, branch, chdir: root)
-          raise Error, "could not add worktree for #{branch}: #{stderr}" unless status.success?
+          ref = resolvable_branch_ref(root, branch)
+          _stdout, stderr, status = Open3.capture3("git", "worktree", "add", "--detach", worktree_root, ref, chdir: root)
+          raise Error, "could not add worktree for #{branch}: #{stderr.strip}; fetch the branch or create a local ref (git fetch origin #{branch})" unless status.success?
         end
+      end
+
+      def resolvable_branch_ref(root, branch)
+        [branch, "refs/remotes/origin/#{branch}"].each do |ref|
+          _stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--verify", "#{ref}^{commit}", chdir: root)
+          return ref if status.success?
+        end
+        branch
       end
 
       def remove_branch_worktree(root:, worktree_root:)
