@@ -1423,7 +1423,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("member release targets:")
     expect(out.string).to include("alpha: r1, r2")
     expect(out.string.scan("release_checkout").size).to eq(2)
-    expect(out.string.scan("alpha release_build").size).to eq(2)
+    expect(out.string.scan("alpha release_build").size).to eq(3)
   end
 
   it "starts member-local release target branches at MEMBER@BRANCH" do

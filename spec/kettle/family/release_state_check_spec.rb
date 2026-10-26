@@ -36,8 +36,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
   it "includes the current member state alongside configured branch states" do
     member = member("alpha")
-    branch_state = release_state_result("alpha", {"version" => "0.9.0"})
-    branch_state.branch = "1-4-stable"
+    branch_state = release_state_result("alpha", {"version" => "0.9.0"}, branch: "1-4-stable")
     branch_config = instance_double(Kettle::Family::Config, release_target_branches: ["1-4-stable"])
     branch_check = instance_double(described_class, results: [branch_state])
     check = described_class.new(config: nil, members: [member])
@@ -783,9 +782,11 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
     allow(Kettle::Family::Config).to receive(:load).with(root: member.root).and_return(member_config)
     member_check = instance_double(described_class, results: [branch_result])
+    current_result = release_state_result("alpha", {"version" => "1.0.0"})
+    allow(check).to receive(:check_member).with(member, event_handler: nil).and_return(current_result)
     allow(described_class).to receive(:new).with(config: member_config, members: [member]).and_return(member_check)
 
-    expect(check.results).to eq([branch_result])
+    expect(check.results).to eq([current_result, branch_result])
   end
 
   it "uses root member release target branches before member-local release target branches" do
@@ -1110,7 +1111,8 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
   end
 
-  def release_state_result(member_name, state)
+  def release_state_result(member_name, state = nil, branch: nil, **state_data)
+    state ||= state_data
     Kettle::Family::ReleaseStateResult.new(
       member_name: member_name,
       command: [],
@@ -1120,7 +1122,8 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       stdout: "",
       stderr: "",
       elapsed_seconds: 0.0,
-      state: state
+      state: state,
+      branch: branch
     )
   end
 

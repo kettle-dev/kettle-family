@@ -165,7 +165,7 @@ RSpec.describe Kettle::Family::Workflow do
     allow(workflow).to receive(:member_local_workflow).with(member: target, member_config: branch_config).and_return(target_workflow)
 
     expect(workflow.send(:release_member_local_branch_target_results)).to all(be_ok)
-    expect(scheduled_batches).to eq([[beta, gamma]])
+    expect(scheduled_batches).to eq([[target, beta, gamma]])
   end
 
   it "lets a standalone default-mode gem create its own GitHub Release" do
@@ -2638,6 +2638,7 @@ RSpec.describe Kettle::Family::Workflow do
     results = described_class.new(command: "release", config: config, members: [member]).results
 
     expect(results.map(&:phase)).to eq(%w[
+      check published_version_check release_changelog release_build
       release_checkout check published_version_check release_changelog release_build
       release_checkout check published_version_check release_changelog release_build
     ])
@@ -2665,7 +2666,7 @@ RSpec.describe Kettle::Family::Workflow do
       members: [member],
       publish: true,
       start_step: 10
-    ).results.select { |result| result.phase == "release_publish" }.map(&:command)
+    ).results.select { |result| result.phase == "release_publish" && result.branch }.map(&:command)
 
     expect(commands.first.to_s).to include("start_step=10")
     expect(commands.last.to_s).not_to include("start_step=")

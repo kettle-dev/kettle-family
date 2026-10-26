@@ -1002,7 +1002,7 @@ module Kettle
         WORKTREE_ADMIN_MUTEX.synchronize do
           ref = resolvable_branch_ref(root, branch)
           _stdout, stderr, status = Open3.capture3("git", "worktree", "add", "--detach", worktree_root, ref, chdir: root)
-          raise Error, "could not add worktree for #{branch.inspect}; fetch the branch or create a local ref (git fetch origin #{branch}): #{stderr.strip}" unless status.success?
+          raise Error, "could not add worktree for #{branch}: #{stderr.strip}; fetch the branch or create a local ref (git fetch origin #{branch})" unless status.success?
         end
       end
 
