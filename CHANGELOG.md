@@ -22,6 +22,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.35] - 2026-10-26
+
+- TAG: [v1.3.35][1.3.35t]
+- COVERAGE: 93.07% -- 7558/8121 lines in 45 files
+- BRANCH COVERAGE: 77.45% -- 3016/3894 branches in 45 files
+- 38.89% documented
+
+### Changed
+
 - [kc] kettle-jem/prepare: updated 9 project files:
   - dependencies (9)
 
@@ -30,15 +47,9 @@ Please file a bug if you notice a violation of semantic versioning.
   - other (1)
   - workflows (1)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - [kc] duplicate-family-member-diagnostics: Duplicate gem names found in different directories now report both roots and gemspecs, with guidance for excluding scratch checkouts or disabling discovery when `members.roots` is complete.
-
-### Security
 
 ## [1.3.34] - 2026-10-25
 
@@ -3288,7 +3299,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.34...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.35...HEAD
+[1.3.35]: https://github.com/kettle-dev/kettle-family/compare/v1.3.34...v1.3.35
+[1.3.35t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.35
 [1.3.34]: https://github.com/kettle-dev/kettle-family/compare/v1.3.33...v1.3.34
 [1.3.34t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.34
 [1.3.33]: https://github.com/kettle-dev/kettle-family/compare/v1.3.32...v1.3.33
