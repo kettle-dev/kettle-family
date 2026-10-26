@@ -2223,11 +2223,14 @@ module Kettle
         # repositories through one-at-a-time release workflows. Run those
         # members through the normal release scheduler first so configured
         # waves and their worker budget remain effective.
-        results.concat(current_branch_results(current_branch_members)) unless current_branch_members.empty?
+        current_members = start_branch ? current_branch_members : members
+        results.concat(current_branch_results(current_members)) unless current_members.empty?
         return results unless results.all?(&:ok?)
 
         target_members.each_with_object(results) do |member, memo|
           member_config = member_local_release_config(member)
+          next if start_branch.nil? && BranchTargetConfig.branch_targets_for(command, member_config.release_target_branches).empty?
+
           memo.concat(member_local_workflow(member: member, member_config: member_config).results)
           break memo unless memo.last&.ok?
         end

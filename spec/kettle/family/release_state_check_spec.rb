@@ -34,6 +34,38 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true, "bump_release_pending" => false)
   end
 
+  it "includes the current member state alongside configured branch states" do
+    member = member("alpha")
+    branch_state = release_state_result("alpha", {"version" => "0.9.0"})
+    branch_state.branch = "1-4-stable"
+    branch_config = instance_double(Kettle::Family::Config, release_target_branches: ["1-4-stable"])
+    branch_check = instance_double(described_class, results: [branch_state])
+    check = described_class.new(config: nil, members: [member])
+    allow(check).to receive(:member_local_release_config).with(member).and_return(branch_config)
+    allow(check).to receive(:check_member).with(member, event_handler: nil).and_return(release_state_result("alpha", {"version" => "1.5.0"}))
+    allow(described_class).to receive(:new).and_return(branch_check)
+
+    results = check.results
+
+    expect(results.map(&:branch)).to eq([nil, "1-4-stable"])
+    expect(results.map { |result| result.state.fetch("version") }).to eq(["1.5.0", "0.9.0"])
+  end
+
+  it "resolves release-state worktrees from origin tracking refs" do
+    repo = File.join(@tmpdir, "remote-branch")
+    FileUtils.mkdir_p(repo)
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(repo, "README"), "branch target\n")
+    run_git(repo, "add", "README")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "update-ref", "refs/remotes/origin/1-4-stable", "HEAD")
+    check = described_class.new(config: nil, members: [])
+
+    expect(check.send(:resolvable_branch_ref, repo, "1-4-stable")).to eq("refs/remotes/origin/1-4-stable")
+  end
+
   it "runs the standalone changelog probe outside the parent Bundler environment" do
     member = member("alpha")
     state = {"gem_name" => "alpha", "pending_release" => false}
