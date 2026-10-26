@@ -19,7 +19,7 @@ git_source(:gitlab) { |repo_name| "https://gitlab.com/#{repo_name}" }
 gemspec
 
 # Local workspace dependency wiring for *_local.gemfile overrides
-gem "nomono", "~> 1.1", ">= 1.1.15", require: false # ruby >= 3.2.0
+gem "nomono", "~> 1.1", ">= 1.1.16", require: false # ruby >= 3.2.0
 
 # Direct sibling dependencies (env-switched via KETTLE_DEV_DEV)
 direct_sibling_gems = %w[
@@ -81,7 +81,7 @@ if direct_sibling_gems.any? &&
 
     eval_nomono_gems(
       gems: direct_sibling_gems,
-      requirements: {"kettle-changelog" => ["~> 1.0", ">= 1.0.13"], "kettle-deps-floor" => ["~> 0.1", ">= 0.1.0"], "kettle-dev" => ["~> 3.1", ">= 3.1.24"], "kettle-gha-pins" => ["~> 0.3", ">= 0.3.18"], "kettle-ndjson" => ["~> 0.1", ">= 0.1.20"], "kettle-test" => ["~> 2.0", ">= 2.0.27"]},
+      requirements: {"kettle-changelog" => ["~> 1.0", ">= 1.0.14"], "kettle-deps-floor" => ["~> 0.1", ">= 0.1.1"], "kettle-dev" => ["~> 3.1", ">= 3.1.25"], "kettle-gha-pins" => ["~> 0.3", ">= 0.3.18"], "kettle-ndjson" => ["~> 0.1", ">= 0.1.20"], "kettle-test" => ["~> 2.0", ">= 2.0.27"]},
       prefix: "KETTLE_DEV",
       path_env: "KETTLE_DEV_DEV",
       root: ["src", "my", "kettle-dev"]
