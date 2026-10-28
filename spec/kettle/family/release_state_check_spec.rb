@@ -50,6 +50,24 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(results.map { |result| result.state.fetch("version") }).to eq(["1.5.0", "0.9.0"])
   end
 
+  it "checks configured branches even when the current member state fails" do
+    member = member("alpha")
+    current_state = release_state_result("alpha", {"version" => "1.5.0"}, success: false)
+    branch_state = release_state_result("alpha", {"version" => "0.9.0"}, branch: "1-4-stable")
+    branch_config = instance_double(Kettle::Family::Config, release_target_branches: ["1-4-stable"])
+    branch_check = instance_double(described_class, results: [branch_state])
+    check = described_class.new(config: nil, members: [member])
+    allow(check).to receive(:member_local_release_config).with(member).and_return(branch_config)
+    allow(check).to receive(:check_member).with(member, event_handler: nil).and_return(current_state)
+    allow(described_class).to receive(:new).and_return(branch_check)
+
+    results = check.results
+
+    expect(results.map(&:branch)).to eq([nil, "1-4-stable"])
+    expect(results.first).not_to be_ok
+    expect(results.last).to be_ok
+  end
+
   it "resolves release-state worktrees from origin tracking refs" do
     repo = File.join(@tmpdir, "remote-branch")
     FileUtils.mkdir_p(repo)
@@ -1111,14 +1129,14 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
   end
 
-  def release_state_result(member_name, state = nil, branch: nil, **state_data)
+  def release_state_result(member_name, state = nil, branch: nil, success: true, **state_data)
     state ||= state_data
     Kettle::Family::ReleaseStateResult.new(
       member_name: member_name,
       command: [],
       workdir: member_name,
-      status: 0,
-      success: true,
+      status: success ? 0 : 1,
+      success: success,
       stdout: "",
       stderr: "",
       elapsed_seconds: 0.0,

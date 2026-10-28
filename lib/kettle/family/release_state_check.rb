@@ -804,8 +804,6 @@ module Kettle
         return unless member_config
 
         current_result = check_member(member, event_handler: event_handler)
-        return [current_result] unless current_result.ok?
-
         [current_result, *self.class.new(config: member_config, members: [member]).results(event_handler: event_handler)]
       end
 
