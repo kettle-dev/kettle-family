@@ -3789,6 +3789,7 @@ module Kettle
       def append_kettle_release_args(command, member: nil)
         command = replace_kettle_release_provider(command) if @release_secrets_broker
         args = []
+        args << "--version=#{member.version}" if member&.version && !command_includes_arg?(command, "--version")
         effective_start_step = release_start_step_for(member)
         command, configured_skip_steps = extract_kettle_release_skip_steps(command)
         effective_skip_steps = (configured_skip_steps + release_skip_steps_for(member).split(",")).uniq.join(",")

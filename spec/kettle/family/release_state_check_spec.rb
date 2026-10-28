@@ -29,7 +29,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     result = described_class.new(members: [member]).results.fetch(0)
 
     expect(result).to be_ok
-    expect(result.command).to eq(changelog_command)
+    expect(result.command).to eq(changelog_command(member))
     expect(result.workdir).to eq(member.root)
     expect(result.state).to include("latest_released" => "1.2.3", "ahead" => 3, "pending_release" => true, "bump_release_pending" => false)
   end
@@ -48,6 +48,24 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
 
     expect(results.map(&:branch)).to eq([nil, "1-4-stable"])
     expect(results.map { |result| result.state.fetch("version") }).to eq(["1.5.0", "0.9.0"])
+  end
+
+  it "checks configured branches even when the current member state fails" do
+    member = member("alpha")
+    current_state = release_state_result("alpha", {"version" => "1.5.0"}, success: false)
+    branch_state = release_state_result("alpha", {"version" => "0.9.0"}, branch: "1-4-stable")
+    branch_config = instance_double(Kettle::Family::Config, release_target_branches: ["1-4-stable"])
+    branch_check = instance_double(described_class, results: [branch_state])
+    check = described_class.new(config: nil, members: [member])
+    allow(check).to receive(:member_local_release_config).with(member).and_return(branch_config)
+    allow(check).to receive(:check_member).with(member, event_handler: nil).and_return(current_state)
+    allow(described_class).to receive(:new).and_return(branch_check)
+
+    results = check.results
+
+    expect(results.map(&:branch)).to eq([nil, "1-4-stable"])
+    expect(results.first).not_to be_ok
+    expect(results.last).to be_ok
   end
 
   it "resolves release-state worktrees from origin tracking refs" do
@@ -86,7 +104,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     result = described_class.new(members: [member]).results.fetch(0)
 
     expect(result).to be_ok
-    expect(result.command).to eq([RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"])
+    expect(result.command).to eq([RbConfig.ruby, "-S", "kettle-changelog", "--version", member.version, "--release-state", "--json"])
   end
 
   it "runs state checks in parallel with explicit jobs while preserving order" do
@@ -988,7 +1006,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
         "K_CHANGELOG_GEM_NAME" => "alpha",
         "K_CHANGELOG_VERSION_FILE" => alpha.version_file
       ),
-      *changelog_command,
+      *changelog_command(alpha),
       chdir: @tmpdir
     )
     expect(Open3).to have_received(:capture3).with(
@@ -996,7 +1014,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
         "K_CHANGELOG_GEM_NAME" => "beta",
         "K_CHANGELOG_VERSION_FILE" => beta.version_file
       ),
-      *changelog_command,
+      *changelog_command(beta),
       chdir: @tmpdir
     )
   end
@@ -1019,7 +1037,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(results.map(&:member_name)).to eq(%w[alpha kettle-jem])
     expect(Open3).to have_received(:capture3).with(
       hash_including("K_CHANGELOG_GEM_NAME" => "alpha"),
-      *changelog_command,
+      *changelog_command(alpha),
       chdir: @tmpdir
     )
     expect(Open3).to have_received(:capture3).with(
@@ -1028,7 +1046,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
         "K_CHANGELOG_PATH" => File.join(kettle_jem.root, "CHANGELOG.md"),
         "K_CHANGELOG_VERSION_FILE" => kettle_jem.version_file
       ),
-      *changelog_command,
+      *changelog_command(kettle_jem),
       chdir: kettle_jem.root
     )
   end
@@ -1105,20 +1123,20 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: version_file, version: "1.0.0", dependencies: [])
   end
 
-  def changelog_command
-    [RbConfig.ruby, Gem.bin_path("kettle-changelog", "kettle-changelog"), "--release-state", "--json"]
+  def changelog_command(member)
+    [RbConfig.ruby, Gem.bin_path("kettle-changelog", "kettle-changelog"), "--version", member.version, "--release-state", "--json"]
   rescue Gem::Exception
-    [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
+    [RbConfig.ruby, "-S", "kettle-changelog", "--version", member.version, "--release-state", "--json"]
   end
 
-  def release_state_result(member_name, state = nil, branch: nil, **state_data)
+  def release_state_result(member_name, state = nil, branch: nil, success: true, **state_data)
     state ||= state_data
     Kettle::Family::ReleaseStateResult.new(
       member_name: member_name,
       command: [],
       workdir: member_name,
-      status: 0,
-      success: true,
+      status: success ? 0 : 1,
+      success: success,
       stdout: "",
       stderr: "",
       elapsed_seconds: 0.0,

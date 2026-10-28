@@ -50,6 +50,25 @@ RSpec.describe Kettle::Family::VersionBump, :prism do
     expect(File.read(beta.gemspec_path)).to include('"alpha", "= 1.1.0"')
   end
 
+  it "bumps computed string versions through Prism method literals" do
+    alpha = write_gem("alpha", version: "1.2.3")
+    File.write(alpha.version_file, <<~RUBY)
+      module Alpha
+        def self.major; 1; end
+        def self.minor; 2; end
+        def self.patch; 3; end
+        def self.to_s; [major, minor, patch].join("."); end
+        VERSION = to_s
+      end
+    RUBY
+
+    results = described_class.new(members: [alpha], target_version: "1.3.0", mode: :execute).results
+
+    expect(results).to all(be_ok)
+    expect(File.read(alpha.version_file)).to include("def self.major; 1; end", "def self.minor; 3; end", "def self.patch; 0; end", "VERSION = to_s")
+    expect(File.read(alpha.gemspec_path)).to include('spec.version = "1.3.0"')
+  end
+
   it "combines gemspec edits when member and discovered paths use different spellings" do
     alpha = write_gem("alpha", version: "1.0.0")
     beta = write_gem("beta", version: "1.0.0", dependencies: {"alpha" => "= 1.0.0"})

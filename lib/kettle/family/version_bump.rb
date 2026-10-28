@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "kettle/dev"
+require "ast/crispr/ruby/prism"
 
 module Kettle
   module Family
@@ -74,12 +75,20 @@ module Kettle
       end
 
       def collect_edits(member, member_target_version)
-        version_edits = with_dev_errors do
-          Kettle::Dev::VersionBump.new(
-            root: member.root,
-            current_version: member.version,
-            target_version: member_target_version
-          ).edits
+        begin
+          version_edits = with_dev_errors do
+            Kettle::Dev::VersionBump.new(
+              root: member.root,
+              current_version: member.version,
+              target_version: member_target_version
+            ).edits
+          end
+        rescue Error => error
+          bump = Kettle::Dev::VersionBump.new(root: member.root, current_version: member.version, target_version: member_target_version)
+          computed_version_edits = prism_computed_version_edits(member, member_target_version)
+          raise error if computed_version_edits.empty?
+
+          version_edits = computed_version_edits + bump.send(:gemspec_version_edits)
         end
         version_edits = version_edits.map do |edit|
           if same_file?(edit.fetch(:path), member.gemspec_path)
@@ -89,6 +98,33 @@ module Kettle
           end
         end
         version_edits + gemspec_dependency_edits(member)
+      end
+
+      def prism_computed_version_edits(member, target_version)
+        version = Gem::Version.new(target_version)
+        replacements = {major: version.segments[0] || 0, minor: version.segments[1] || 0, patch: version.segments[2] || 0}
+        Kettle::Dev::Versioning.version_file_candidates(member.root).flat_map do |path|
+          source = File.read(path)
+          analysis = Ast::Crispr::Ruby::Prism.document_context(content: source, source_label: path).ast
+          root = analysis.parse_result.value
+          nodes = Kettle::Dev::VersionBump.each_node(root).to_a
+          version_constant = nodes.find do |node|
+            node.is_a?(Prism::ConstantWriteNode) && node.name == :VERSION && node.value.is_a?(Prism::CallNode) && node.value.name == :to_s
+          end
+          next [] unless version_constant
+
+          replacements.filter_map do |method_name, replacement_value|
+            method = nodes.find { |node| node.is_a?(Prism::DefNode) && node.name == method_name }
+            literal = method&.body&.body&.last
+            next unless literal.is_a?(Prism::IntegerNode) || literal.is_a?(Prism::StringNode)
+
+            next if literal.is_a?(Prism::IntegerNode) && literal.value == replacement_value
+            next if literal.is_a?(Prism::StringNode) && literal.unescaped == replacement_value.to_s
+
+            replacement = literal.is_a?(Prism::StringNode) ? Kettle::Dev::VersionBump.quote_like(literal.location.slice, replacement_value.to_s) : replacement_value.to_s
+            Kettle::Dev::VersionBump.file_edit(path, source, literal.location.start_offset, literal.location.end_offset, replacement)
+          end
+        end
       end
 
       def same_file?(left, right)

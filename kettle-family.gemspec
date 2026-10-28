@@ -96,6 +96,7 @@ Gem::Specification.new do |spec|
 
   # Utilities
   spec.add_dependency("ast-crispr", "~> 7.1", ">= 7.1.11")                     # ruby >= 4.0.0, generic structured editing
+  spec.add_dependency("ast-crispr-ruby-prism", "~> 7.1", ">= 7.1.10")         # Ruby source AST adapter for computed version files
   spec.add_dependency("ast-crispr-toml", "~> 7.1", ">= 7.1.11")                # ruby >= 4.0.0, TOML owners for mise.toml family tasks
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
