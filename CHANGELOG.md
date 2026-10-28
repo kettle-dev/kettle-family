@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- [kc] template-family-resume-hints: Template failures now produce one combined retry hint for failed and pending members, preserving member@branch selectors for branch-stack templates.
+
 ### Deprecated
 
 ### Removed
