@@ -3,8 +3,8 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        25,
-        75
+        54,
+        98
       ]
     }
   ],
@@ -12,8 +12,8 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        59,
-        377
+        82,
+        400
       ]
     }
   ],
@@ -21,9 +21,10 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        60,
-        333,
-        378
+        32,
+        83,
+        356,
+        401
       ]
     }
   ],
@@ -31,8 +32,8 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        29,
-        525
+        58,
+        548
       ]
     }
   ],
@@ -40,10 +41,28 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        61,
-        81,
-        334,
-        379
+        84,
+        104,
+        357,
+        402
+      ]
+    }
+  ],
+  "- documentation (1)\n- other (2)": [
+    {
+      "file": "CHANGELOG.md",
+      "lines": [
+        33,
+        481
+      ]
+    }
+  ],
+  "- other (2)\n- workflows (1)": [
+    {
+      "file": "CHANGELOG.md",
+      "lines": [
+        34,
+        482
       ]
     }
   ],

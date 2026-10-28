@@ -24,6 +24,16 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - [kc] template-family-resume-hints: Template failures now produce one combined retry hint for failed and pending members, preserving member@branch selectors for branch-stack templates.
 
+- [kc] kettle-jem/prepare: updated 7 project files:
+  - configuration (1)
+  - dependencies (6)
+
+- [kc] kettle-jem/template: updated 5 project files:
+  - code and tests (1)
+  - documentation (1)
+  - other (2)
+  - workflows (1)
+
 ### Deprecated
 
 ### Removed
