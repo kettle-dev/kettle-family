@@ -113,7 +113,7 @@ module Kettle
 
       def check_member(member, branch: nil, event_handler: nil)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        command = release_state_command
+        command = release_state_command(member)
         emit_event(event_handler, member: member, branch: branch, action: "member_start", status: "running", command: command)
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: "running", command: command)
         stdout, stderr, status = capture_release_state(
@@ -142,15 +142,16 @@ module Kettle
         emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
         result
       rescue JSON::ParserError => error
-        result = result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
+        result = result(member: member, command: command || release_state_command(member), stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
         emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: "failed", elapsed_seconds: elapsed || 0.0, status_code: 1, reason: result.reason)
         result
       end
 
-      def release_state_command
-        [RbConfig.ruby, kettle_changelog_executable, "--release-state", "--json"]
+      def release_state_command(member = nil)
+        version_args = member&.version ? ["--version", member.version.to_s] : []
+        [RbConfig.ruby, kettle_changelog_executable, *version_args, "--release-state", "--json"]
       rescue Gem::Exception
-        [RbConfig.ruby, "-S", "kettle-changelog", "--release-state", "--json"]
+        [RbConfig.ruby, "-S", "kettle-changelog", *version_args, "--release-state", "--json"]
       end
 
       def kettle_changelog_executable
@@ -176,7 +177,7 @@ module Kettle
 
       def check_shared_changelog_member(member, branch: nil, event_handler: nil)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        command = release_state_command
+        command = release_state_command(member)
         emit_event(event_handler, member: member, branch: branch, action: "member_start", status: "running", command: command)
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: "running", command: command)
         stdout, stderr, status = capture_release_state(
@@ -216,13 +217,13 @@ module Kettle
         emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
         result
       rescue JSON::ParserError => error
-        result = result(member: member, command: command || release_state_command, stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
+        result = result(member: member, command: command || release_state_command(member), stdout: stdout, stderr: stderr, status: 1, elapsed: elapsed || 0.0, success: false, state: {}, reason: "invalid release-state JSON: #{error.message}", branch: branch)
         emit_event(event_handler, member: member, branch: branch, action: "member_complete", status: "failed", elapsed_seconds: elapsed || 0.0, status_code: 1, reason: result.reason)
         result
       rescue Error => error
         result = result(
           member: member,
-          command: command || release_state_command,
+          command: command || release_state_command(member),
           stdout: "",
           stderr: error.message,
           status: 1,

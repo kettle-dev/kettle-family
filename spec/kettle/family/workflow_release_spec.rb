@@ -1310,7 +1310,7 @@ RSpec.describe Kettle::Family::Workflow do
       required_remotes: "origin"
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --required-remotes=origin --yes --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --version=1.0.0 start_step=10 skip_steps=10 --ci-workflows=current,style.yml --local-ci --skip-bundle-audit --skip-remotes=cb --required-remotes=origin --yes --events"])
   end
 
   it "passes the appraisal-only skip through release commands" do
@@ -1429,7 +1429,7 @@ RSpec.describe Kettle::Family::Workflow do
       publish: true
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --required-remotes=origin,github --yes --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --version=1.0.0 --required-remotes=origin,github --yes --events"])
   end
 
   it "delegates configured 1Password secrets to kettle-release by default" do
@@ -1451,7 +1451,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = workflow.results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --yes --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --version=1.0.0 --secrets-provider=1password --yes --events"])
     expect(results.last.command).not_to include("cached-secret")
     expect(results.last.command).not_to include("one-time password")
     release_env = workflow.send(:release_env)
@@ -1502,6 +1502,17 @@ RSpec.describe Kettle::Family::Workflow do
       "KETTLE_RELEASE_SECRETS_BROKER" => broker.path,
       "KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE" => "cached-secret"
     )
+  end
+
+  it "passes the discovered member version to kettle-release" do
+    write_release_config(publish_command: "bundle exec kettle-release")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true)
+
+    command = workflow.send(:append_kettle_release_args, ["bundle", "exec", "kettle-release"], member: member)
+
+    expect(command).to include("--version=#{member.version}")
   end
 
   it "applies fast recovery only to the named release member" do
@@ -1733,7 +1744,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = workflow.results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --yes --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --secrets-provider=1password --version=1.0.0 --yes --events"])
     expect(results.last.command).not_to include("cached-secret")
     expect(workflow.send(:release_env)).to include(
       "KETTLE_RELEASE_SECRETS_PROVIDER" => "1password",
@@ -1755,7 +1766,7 @@ RSpec.describe Kettle::Family::Workflow do
       accept: false
     ).results
 
-    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --events"])
+    expect(results.last.command).to eq(["sh", "-lc", "bundle exec kettle-release --version=1.0.0 --events"])
   end
 
   it "rejects unsafe ci workflow subset values before building release commands" do
