@@ -2,7 +2,7 @@
   "gemfiles/modular/style_local.gemfile:2466659765": [
     [71, 23, 20, "Style/SafeNavigation: Use safe navigation (`&.`) instead of checking if an object exists before calling the method.", 1851388465]
   ],
-  "lib/kettle/family/report.rb:4100833436": [
+  "lib/kettle/family/report.rb:2968118540": [
     [311, 12, 61, "Style/SafeNavigation: Use safe navigation (`&.`) instead of checking if an object exists before calling the method.", 3634965710]
   ],
   "lib/kettle/family/workflow.rb:57865102": [
