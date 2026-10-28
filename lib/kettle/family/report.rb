@@ -125,7 +125,7 @@ module Kettle
           lines << "  #{result_state(result)} #{result_identity(result)} #{result.phase} #{result.reason || ""}".rstrip
           append_result_stdout(lines, result)
           append_indented_output(lines, result.stderr) if !result.ok? && !result.stderr.to_s.empty?
-          resume_hint = resume_hint_for(result)
+          resume_hint = resume_hint_for(result) unless command == "template"
           lines << "    resume: #{resume_hint}" if !result.ok? && resume_hint
         end
         append_template_summary(lines) if command == "template"
@@ -764,11 +764,10 @@ module Kettle
         failed ? [resume_hint_for(failed)] : []
       end
 
-      # Mirrors release_resume_hints: one hint per failure, plus a single set-based
-      # hint naming every member that never ran. --only selects by name rather
-      # than position, so it resumes exactly the unfinished members regardless of
-      # how dispatch ordered them, and the wave grouping is re-derived from the
-      # selected subset.
+      # Test gets one hint per failure plus a set-based hint for members that never
+      # ran. --only selects by name rather than position, so it resumes exactly the
+      # unfinished members regardless of how dispatch ordered them. Template uses
+      # one combined hint because it is idempotent and family-lockstep.
       #
       # A family-root failure takes precedence and suppresses the set-based hint:
       # that phase aborts the entire run before member dispatch, so every member
@@ -776,12 +775,22 @@ module Kettle
       def non_positional_resume_hints
         root_failure = results.find { |result| !result.ok? && family_root_phase?(result.phase) }
         return [resume_hint_for(root_failure)] if root_failure
+        return template_resume_hints if command == "template"
 
         failed_hints = visible_results.reject(&:ok?).filter_map { |result| resume_hint_for(result) }.uniq
         pending_names = summary_pending.map { |entry| entry.fetch("member") }
         return failed_hints if pending_names.empty?
 
         [*failed_hints, "kettle-family #{command} --only #{pending_names.join(",")}"]
+      end
+
+      def template_resume_hints
+        member_names = visible_results.reject(&:ok?).map { |result| result_identity(result) }
+        member_names.concat(summary_pending.map { |entry| entry.fetch("member") })
+        member_names = member_names.compact.uniq.sort
+        return ["kettle-family template"] if member_names.empty?
+
+        ["kettle-family template --only #{member_names.join(",")}"]
       end
 
       def release_resume_hints

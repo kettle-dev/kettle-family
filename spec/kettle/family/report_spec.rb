@@ -40,7 +40,9 @@ RSpec.describe Kettle::Family::Report do
     )
 
     expect(report.to_text).to include("failed rubocop-lts@r2_2-even-v8 template")
-    expect(report.to_text).to include("resume: kettle-family template --only rubocop-lts@r2_2-even-v8")
+    resume_hint = "kettle-family template --only rubocop-lts@r1_9-even-v2,rubocop-lts@r2_2-even-v8,rubocop-lts@r2_3-even-v10"
+    expect(report.to_text).to include("resume: #{resume_hint}")
+    expect(report.to_text).not_to include("resume: kettle-family template --only rubocop-lts@r2_2-even-v8")
     expect(report.to_h.dig("summary", "succeeded")).to eq(["rubocop-lts@r1_8-even-v0"])
     expect(report.to_h.dig("summary", "failed")).to eq([
       {"member" => "rubocop-lts@r2_2-even-v8", "phase" => "template", "reason" => "appraisal failed"}
@@ -49,10 +51,7 @@ RSpec.describe Kettle::Family::Report do
       {"member" => "rubocop-lts@r1_9-even-v2", "phase" => "template", "reason" => "not run after earlier failure"},
       {"member" => "rubocop-lts@r2_3-even-v10", "phase" => "template", "reason" => "not run after earlier failure"}
     ])
-    expect(report.to_h.fetch("resume_hints")).to contain_exactly(
-      "kettle-family template --only rubocop-lts@r2_2-even-v8",
-      "kettle-family template --only rubocop-lts@r1_9-even-v2,rubocop-lts@r2_3-even-v10"
-    )
+    expect(report.to_h.fetch("resume_hints")).to eq([resume_hint])
   end
 
   it "prints the loaded kettle-family version in text reports" do
@@ -958,10 +957,7 @@ RSpec.describe Kettle::Family::Report do
     ])
     # template dispatches in dependency waves, so resume is set-based (--only)
     # rather than positional (--start-at); see the pending-set spec below.
-    expect(summary.fetch("resume_hints")).to eq([
-      "kettle-family template --only alpha",
-      "kettle-family template --only beta"
-    ])
+    expect(summary.fetch("resume_hints")).to eq(["kettle-family template --only alpha,beta"])
     expect(text).to include("  0/2 members ok")
     expect(text).to include("  0 files changed")
   end
@@ -1017,8 +1013,7 @@ RSpec.describe Kettle::Family::Report do
     expect(plan_positions).to eq([7, 5, 8, 10])
     expect(plan_positions.sort).not_to eq(((ordered.length - pending.length)...ordered.length).to_a)
     expect(summary.fetch("resume_hints")).to eq([
-      "kettle-family template --only nomono",
-      "kettle-family template --only kettle-changelog,kettle-dev,kettle-family,kettle-soup-cover"
+      "kettle-family template --only kettle-changelog,kettle-dev,kettle-family,kettle-soup-cover,nomono"
     ])
   end
 
