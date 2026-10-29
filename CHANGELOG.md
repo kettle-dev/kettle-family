@@ -22,6 +22,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.36] - 2026-10-28
+
+- TAG: [v1.3.36][1.3.36t]
+- COVERAGE: 93.12% -- 7601/8163 lines in 45 files
+- BRANCH COVERAGE: 77.34% -- 3041/3932 branches in 45 files
+- 38.89% documented
+
+### Changed
+
 - [kc] template-family-resume-hints: Template failures now produce one combined retry hint for failed and pending members, preserving member@branch selectors for branch-stack templates.
 
 - [kc] kettle-jem/prepare: updated 7 project files:
@@ -33,14 +50,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - documentation (1)
   - other (2)
   - workflows (1)
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [1.3.35] - 2026-10-26
 
@@ -3311,7 +3320,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.35...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.36...HEAD
+[1.3.36]: https://github.com/kettle-dev/kettle-family/compare/v1.3.35...v1.3.36
+[1.3.36t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.36
 [1.3.35]: https://github.com/kettle-dev/kettle-family/compare/v1.3.34...v1.3.35
 [1.3.35t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.35
 [1.3.34]: https://github.com/kettle-dev/kettle-family/compare/v1.3.33...v1.3.34
