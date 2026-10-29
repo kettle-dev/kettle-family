@@ -100,10 +100,10 @@ Gem::Specification.new do |spec|
   spec.add_dependency("ast-crispr-toml", "~> 7.1", ">= 7.1.11")                # ruby >= 4.0.0, TOML owners for mise.toml family tasks
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
-  spec.add_dependency("kettle-changelog", "~> 1.0", ">= 1.0.14")             # ruby >= 4.0.0, release-state and family changelog commands
-  spec.add_dependency("kettle-deps-floor", "~> 0.1", ">= 0.1.1")           # generic AST-based gemspec dependency floor updates
-  spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.25")                 # ruby >= 3.2.0
-  spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.19")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow
+  spec.add_dependency("kettle-changelog", "~> 1.0", ">= 1.0.15")             # ruby >= 4.0.0, release-state and family changelog commands
+  spec.add_dependency("kettle-deps-floor", "~> 0.1", ">= 0.1.2")           # generic AST-based gemspec dependency floor updates
+  spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.26")                 # ruby >= 3.2.0
+  spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.20")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow
   spec.add_dependency("kettle-jem", "~> 7.1", ">= 7.1.28")                    # ruby >= 4.0.0, built-in templating workflow
   spec.add_dependency("kettle-ndjson", "~> 0.1", ">= 0.1.22")             # shared NDJSON event streams
   spec.add_dependency("kettle-test", "~> 2.0", ">= 2.0.28")              # ruby >= 2.4
