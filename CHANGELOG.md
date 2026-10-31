@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Release preflight now blocks on bootstrap dependency drift: a new `bootstrap dependency drift` phase compares each selected member's committed Gemfile.lock against the newest published version satisfying the member's declared floor for bootstrap-managed gems (`release.drift_check.gems`, default `[nomono]`), failing with a `bundle update <gem>` / family template sweep remediation hint; registry lookup failures skip non-fatally instead of blocking.
+
 ### Changed
 
 ### Deprecated
@@ -29,6 +31,8 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 ### Security
+
+- Generated resume commands no longer embed secret env values: secret-shaped keys (at minimum `KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE`) are redacted to the shell-safe placeholder `<redacted-reauthorize>`; re-authorize the secret through the release secrets provider (1Password or the `KETTLE_RELEASE_SECRETS_BROKER` cache), or paste the real value over the placeholder, before resuming.
 
 ## [1.3.36] - 2026-10-28
 
