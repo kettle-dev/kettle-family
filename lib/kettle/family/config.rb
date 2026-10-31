@@ -308,6 +308,17 @@ module Kettle
         end.compact
       end
 
+      # Bootstrap-managed gems whose committed member locks must not lag the
+      # newest published version satisfying the member's declared requirement
+      # (release.drift_check.gems; default: nomono, the bootstrap gem whose
+      # lock/registry drift killed the SM-ruby wave on 2026-10-30). An empty
+      # list disables the drift preflight phase entirely.
+      def release_drift_check_gems
+        configured = fetch_path("release", "drift_check", "gems")
+        gems = configured.nil? ? [NomonoBootstrap::GEM_NAME] : Array(configured)
+        gems.map(&:to_s).map(&:strip).reject(&:empty?).uniq
+      end
+
       def release_required_remotes
         fetch_path("release", "required_remotes")
       end

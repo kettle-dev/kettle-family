@@ -2072,9 +2072,9 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results).to all(be_ok)
     expect(provider).to have_received(:authorize!).once
-    expect(progress.string).to include("release preflight 3 phases:")
+    expect(progress.string).to include("release preflight 4 phases:")
     expect(progress.string).to include("preflight")
-    expect(progress.string).to include(">.>.>.")
+    expect(progress.string).to include(">.>.>.>.")
     expect(progress.string).to include("ok")
     expect(progress.string).not_to include("[release preflight] (1/3) > secrets provider authorization")
     expect(progress.string).not_to include("[release preflight] . secrets provider authorization")
@@ -2113,7 +2113,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first.member_name).to eq("kettle-family")
     expect(results.first.workdir).to eq(member.root)
     expect(results.first.stderr).to eq("not signed in")
-    expect(progress.string).to include("[preflight]   (1/3)")
+    expect(progress.string).to include("[preflight]   (1/4)")
     expect(progress.string).to include("F secrets provider authorization")
     expect(progress.string).not_to include("release preflight summary")
   end

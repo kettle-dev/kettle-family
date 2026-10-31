@@ -108,6 +108,16 @@ module Kettle
       REGISTRY_WAIT_ATTEMPTS = 15
       REGISTRY_WAIT_INTERVAL_SECONDS = 15
       TEMPLATE_GEMSPEC_RETRY_DELAY_SECONDS = 0.25
+      # Placeholder substituted for secret-valued env keys in generated resume
+      # commands (see aggregate_github_release_resume_command).
+      RESUME_COMMAND_REDACTED_VALUE = "<redacted-reauthorize>"
+      # Env key names whose values must never appear in printed commands.
+      # Matches by name shape, not a fixed list, so future secrets plumbing
+      # (new passphrase/OTP/token transports) is scrubbed by default. The
+      # excluded suffixes are routing metadata an operator needs to
+      # re-authorize (source/provider/broker/field NAME), never a secret.
+      RESUME_COMMAND_SECRET_ENV_KEY_RE = /PASSPHRASE|PASSWORD|SECRET|TOKEN|OTP|CREDENTIAL/i
+      RESUME_COMMAND_SECRET_ENV_KEY_EXCLUDE_RE = /(?:_SOURCE|_PROVIDER|_BROKER|_FIELD)\z/i
 
       def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, **options)
         @command = command
@@ -2024,12 +2034,13 @@ module Kettle
       def release_preflight_phases
         maintenance_phase = {label: "pre-release maintenance", method: :release_preflight_maintenance_results} unless config.release_preflight_commands.empty?
         bump_phase = {label: "release version bump", method: :release_preflight_version_bump_results} unless release_state_results.empty?
+        drift_phase = {label: "bootstrap dependency drift", method: :release_preflight_bootstrap_drift_results} unless config.release_drift_check_gems.empty?
         dirty_phase = {label: "branch checkout readiness", method: :release_preflight_branch_checkout_dirty_results}
         signing_phase = {label: "gem signing password", method: :release_preflight_signing_password_results}
         secrets_phase = release_secrets_authorization_required? ? {label: "secrets provider authorization", method: :release_preflight_secrets_authorization_results} : nil
         gha_sha_pins_phase = release_gha_sha_pins_review_required? ? {label: "GitHub Actions SHA pins", method: :release_preflight_gha_sha_pins_results} : nil
 
-        [maintenance_phase, bump_phase, secrets_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
+        [maintenance_phase, bump_phase, drift_phase, secrets_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
       end
 
       # Family-declared pre-release maintenance hooks (release.preflight_commands
@@ -2073,6 +2084,108 @@ module Kettle
         results = []
         review_gha_sha_pins(members, runner: command_runner, memo: results, env: command_env)
         results
+      end
+
+      # Bootstrap-managed gems (config release.drift_check.gems, default:
+      # nomono) are activated by a member's own Gemfile bootstrap, while CI
+      # resolves fresh bundles from the registry. When a newer published
+      # version satisfies the member's declared floor but the committed lock
+      # pins an older one, CI activates the newer version while the member
+      # bootstrap activates the locked older one, and the wave dies mid-job
+      # with a Gem::LoadError deep in a cold-start (observed 2026-10-30:
+      # nomono locked 1.1.16 vs published 1.1.17 satisfying a ">= 1.1.16"
+      # floor, run 40998206316). Nothing compared locked vs
+      # published-satisfying versions pre-release, so this phase blocks early
+      # with the remediation instead of letting CI discover the drift.
+      def release_preflight_bootstrap_drift_results
+        config.release_drift_check_gems.flat_map do |gem|
+          members.filter_map { |member| bootstrap_dependency_drift_result(member, gem) }
+        end
+      end
+
+      def bootstrap_dependency_drift_result(member, gem)
+        locked = locked_bootstrap_gem_version(member, gem)
+        return nil if locked.nil?
+
+        requirement = declared_bootstrap_gem_requirement(member, gem)
+        newest = newest_published_satisfying_version(gem, requirement)
+        if newest.nil?
+          # A registry outage must never become a false release block: treat
+          # "could not consult the registry" as a skip with a diagnostic.
+          warn "[kettle-family] bootstrap dependency drift check skipped for #{gem}: registry could not be consulted"
+          return nil
+        end
+        return nil if locked >= newest
+
+        release_preflight_error_result(
+          "bootstrap_dependency_drift",
+          "Release blocked: bootstrap dependency drift: #{member.name} locks #{gem} #{locked} but #{newest} satisfies its floor; " \
+          "run the family template sweep or `bundle update #{gem}` in the member before releasing.",
+          member: member
+        )
+      end
+
+      # The version a member's committed lock pins for the gem, from the
+      # registry-sourced GEM section only: a PATH or GIT pin is local-only
+      # state that has no published counterpart to drift against.
+      def locked_bootstrap_gem_version(member, gem)
+        lockfile_path = File.join(member.root, "Gemfile.lock")
+        return nil unless File.file?(lockfile_path)
+
+        section = nil
+        File.foreach(lockfile_path) do |line|
+          section = line.strip unless line.match?(/\A\s/)
+          next unless section == "GEM"
+
+          match = line.match(/\A {4}#{Regexp.escape(gem)} \(([^)]+)\)\s*\z/)
+          next unless match
+
+          begin
+            return Gem::Version.new(match[1])
+          rescue ArgumentError
+            return nil
+          end
+        end
+        nil
+      end
+
+      # The requirement the member's Gemfile declared for the gem, read from
+      # the lock's DEPENDENCIES section (Bundler records the DSL requirement
+      # there verbatim). A bare declaration means "any version".
+      def declared_bootstrap_gem_requirement(member, gem)
+        lockfile_path = File.join(member.root, "Gemfile.lock")
+        return Gem::Requirement.default unless File.file?(lockfile_path)
+
+        section = nil
+        File.foreach(lockfile_path) do |line|
+          section = line.strip unless line.match?(/\A\s/)
+          next unless section == "DEPENDENCIES"
+
+          match = line.match(/\A {2}#{Regexp.escape(gem)}(?: \((.+)\))?\s*\z/)
+          next unless match
+
+          constraints = (match[1] || "").split(",").map(&:strip).reject(&:empty?)
+          return Gem::Requirement.new(constraints) unless constraints.empty?
+
+          return Gem::Requirement.default
+        end
+        Gem::Requirement.default
+      end
+
+      # Newest published (non-prerelease) version satisfying the requirement,
+      # via the ETag-cached registry lookup shared with the rest of the
+      # toolchain; nil when the registry could not be consulted.
+      def newest_published_satisfying_version(gem, requirement)
+        numbers = Kettle::Dev::RubyGemsVersions.published_version_numbers(gem)
+        return nil if numbers.nil?
+
+        numbers.filter_map do |number|
+          Gem::Version.new(number)
+        rescue ArgumentError
+          nil
+        end.select do |version|
+          !version.prerelease? && requirement.satisfied_by?(version)
+        end.max
       end
 
       def release_gha_sha_pins_review_required?
@@ -2119,11 +2232,14 @@ module Kettle
         @secrets_provider.is_a?(Secrets::OnePassword)
       end
 
-      def release_preflight_error_result(phase, message)
+      def release_preflight_error_result(phase, message, member: nil)
         # A preflight failure blocks the selected release invocation. Attribute
         # it to that invocation's first member so generated resume commands do
-        # not target the synthetic family name or an unselected sibling.
-        member = members.first || family_member
+        # not target the synthetic family name or an unselected sibling. Phases
+        # that identify a specific offending member (e.g. bootstrap dependency
+        # drift) override that attribution so the resume hint targets the
+        # member that needs the fix.
+        member ||= members.first || family_member
         CommandResult.new(
           member_name: member.name,
           phase: phase,
@@ -4159,9 +4275,24 @@ module Kettle
 
       def aggregate_github_release_resume_command(env, command)
         assignments = env.sort_by { |key, _value| key }.filter_map do |key, value|
-          "#{key}=#{Shellwords.escape(value.to_s)}" unless value.nil?
+          next if value.nil?
+
+          # Resume commands land in terminal output, run summaries, and
+          # transcripts. Env built from the broker-cached secrets used to
+          # embed KETTLE_RELEASE_GEM_SIGNING_PASSPHRASE in plaintext here
+          # (2026-10-30 incident). Redact secret-valued keys instead: the
+          # printed command keeps its shape, and the operator re-authorizes
+          # the secret through the release secrets provider (1Password, or
+          # the KETTLE_RELEASE_SECRETS_BROKER cache) — or pastes the real
+          # passphrase in place of the placeholder — before resuming.
+          rendered_value = resume_command_secret_env_key?(key) ? Shellwords.escape(RESUME_COMMAND_REDACTED_VALUE) : Shellwords.escape(value.to_s)
+          "#{key}=#{rendered_value}"
         end
         (["env", *assignments].join(" ") + " " + Shellwords.join(command)).strip
+      end
+
+      def resume_command_secret_env_key?(key)
+        key.match?(RESUME_COMMAND_SECRET_ENV_KEY_RE) && !key.match?(RESUME_COMMAND_SECRET_ENV_KEY_EXCLUDE_RE)
       end
 
       def aggregate_github_release_event_line_handler(member)
