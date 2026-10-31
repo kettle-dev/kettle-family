@@ -14,7 +14,7 @@ RSpec.describe Kettle::Family::Config do
   it "defaults to no independent version series members" do
     config = described_class.load(root: @tmpdir)
 
-    expect(config.release_version_series_independent_members).to eq([])
+    expect(config.release_version_series_independent_members).to be_empty
   end
 
   it "loads release.version_series.independent_members" do
