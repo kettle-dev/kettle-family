@@ -920,6 +920,29 @@
         <li class="public ">
   <span class="summary_signature">
     
+      <a href="#independent_version_series_member%3F-instance_method" title="#independent_version_series_member? (instance method)">#<strong>independent_version_series_member?</strong>(member)  &#x21d2; Boolean </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(root:, path:, data:)  &#x21d2; Config </a>
     
 
@@ -1382,6 +1405,29 @@
         <li class="public ">
   <span class="summary_signature">
     
+      <a href="#release_drift_check_gems-instance_method" title="#release_drift_check_gems (instance method)">#<strong>release_drift_check_gems</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Bootstrap-managed gems whose committed member locks must not lag the newest published version satisfying the member’s declared requirement (release.drift_check.gems; default: nomono, the bootstrap gem whose lock/registry drift killed the SM-ruby wave on 2026-10-30).</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
       <a href="#release_env-instance_method" title="#release_env (instance method)">#<strong>release_env</strong>  &#x21d2; Object </a>
     
 
@@ -1742,6 +1788,29 @@
 
   
     <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#release_version_series_independent_members-instance_method" title="#release_version_series_independent_members (instance method)">#<strong>release_version_series_independent_members</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>Members that keep their own monotonic version series even in a shared-version family (release.version_series.independent_members; default empty).</p>
 </div></span>
   
 </li>
@@ -2242,12 +2311,12 @@ Used to compute local_gem_exclusions during templating to avoid version-satisfia
       <pre class="lines">
 
 
-440
-441
-442</pre>
+469
+470
+471</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 440</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 469</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_branch_dependencies'>branch_dependencies</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branch_dependencies</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
@@ -2272,12 +2341,12 @@ Used to compute local_gem_exclusions during templating to avoid version-satisfia
       <pre class="lines">
 
 
-434
-435
-436</pre>
+463
+464
+465</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 434</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 463</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_branch_lanes'>branch_lanes</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branch_lanes</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branches</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>lanes</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
@@ -2739,14 +2808,14 @@ inferred as CI-resident and retained in release lockfiles.</p>
       <pre class="lines">
 
 
-356
-357
-358
-359
-360</pre>
+367
+368
+369
+370
+371</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 356</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 367</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_ci_resident_monorepo_local_path_graph?'>ci_resident_monorepo_local_path_graph?</span>
   <span class='kw'>return</span> <span class='kw'>false</span> <span class='kw'>unless</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>family</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>mode</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>monorepo</span><span class='tstring_end'>&quot;</span></span>
@@ -2910,12 +2979,12 @@ scheduling. CI-safe local path inference is deliberately narrower.</p>
       <pre class="lines">
 
 
-366
-367
-368</pre>
+377
+378
+379</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 366</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 377</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_configured_monorepo_release?'>configured_monorepo_release?</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>family</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>mode</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>monorepo</span><span class='tstring_end'>&quot;</span></span>
@@ -3223,6 +3292,59 @@ scheduling. CI-safe local path inference is deliberately narrower.</p>
 </div>
     
       <div class="method_details ">
+  <h3 class="signature " id="independent_version_series_member?-instance_method">
+  
+    #<strong>independent_version_series_member?</strong>(member)  &#x21d2; <tt>Boolean</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+433
+434
+435</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 433</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_independent_version_series_member?'>independent_version_series_member?</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_release_version_series_independent_members'>release_version_series_independent_members</span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
   <h3 class="signature " id="install_local_dependencies-instance_method">
   
     #<strong>install_local_dependencies</strong>  &#x21d2; <tt>Object</tt> 
@@ -3362,15 +3484,15 @@ scheduling. CI-safe local path inference is deliberately narrower.</p>
       <pre class="lines">
 
 
-427
-428
-429
-430
-431
-432</pre>
+456
+457
+458
+459
+460
+461</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 427</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 456</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_member_release_target_branches'>member_release_target_branches</span>
   <span class='id identifier rubyid_targets'>targets</span> <span class='op'>=</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>member_target_branches</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
@@ -3667,12 +3789,12 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-404
-405
-406</pre>
+415
+416
+417</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 404</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 415</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_aggregate_validation?'>release_aggregate_validation?</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>aggregate_validation</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>enabled</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>==</span> <span class='kw'>true</span>
@@ -3697,15 +3819,15 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-408
-409
-410
-411
-412
-413</pre>
+437
+438
+439
+440
+441
+442</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 408</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 437</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_aggregate_validation_excluded_members'>release_aggregate_validation_excluded_members</span>
   <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>aggregate_validation</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>exclude_members</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='rparen'>)</span>
@@ -3733,14 +3855,14 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-347
-348
-349
-350
-351</pre>
+358
+359
+360
+361
+362</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 347</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 358</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_allowed_local_path_env_names'>release_allowed_local_path_env_names</span>
   <span class='id identifier rubyid_inferred'>inferred</span> <span class='op'>=</span> <span class='id identifier rubyid_ci_resident_monorepo_local_path_graph?'>ci_resident_monorepo_local_path_graph?</span> <span class='op'>?</span> <span class='lbracket'>[</span><span class='id identifier rubyid_family_local_path_env_name'>family_local_path_env_name</span><span class='rbracket'>]</span> <span class='op'>:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
@@ -3767,15 +3889,15 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-340
-341
-342
-343
-344
-345</pre>
+351
+352
+353
+354
+355
+356</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 340</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 351</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_allowed_local_path_roots'>release_allowed_local_path_roots</span>
   <span class='id identifier rubyid_inferred'>inferred</span> <span class='op'>=</span> <span class='id identifier rubyid_ci_resident_monorepo_local_path_graph?'>ci_resident_monorepo_local_path_graph?</span> <span class='op'>?</span> <span class='lbracket'>[</span><span class='id identifier rubyid_family_local_path_root'>family_local_path_root</span><span class='rbracket'>]</span> <span class='op'>:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
@@ -3826,12 +3948,12 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-384
-385
-386</pre>
+395
+396
+397</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 384</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 395</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_auto_dependency_floors?'>release_auto_dependency_floors?</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>auto_dependency_floors</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>!=</span> <span class='kw'>false</span>
@@ -3856,15 +3978,15 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-333
-334
-335
-336
-337
-338</pre>
+344
+345
+346
+347
+348
+349</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 333</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 344</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_branch_target_graph_contract'>release_branch_target_graph_contract</span>
   <span class='id identifier rubyid_configured'>configured</span> <span class='op'>=</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branch_target_graph_contract</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_strip'>strip</span>
@@ -3938,6 +4060,54 @@ independent kettle-release test and CI lifecycle.</p>
 </div>
     
       <div class="method_details ">
+  <h3 class="signature " id="release_drift_check_gems-instance_method">
+  
+    #<strong>release_drift_check_gems</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Bootstrap-managed gems whose committed member locks must not lag the<br />
+newest published version satisfying the member’s declared requirement<br />
+(release.drift_check.gems; default: nomono, the bootstrap gem whose<br />
+lock/registry drift killed the SM-ruby wave on 2026-10-30). An empty<br />
+list disables the drift preflight phase entirely.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+316
+317
+318
+319
+320</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 316</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_release_drift_check_gems'>release_drift_check_gems</span>
+  <span class='id identifier rubyid_configured'>configured</span> <span class='op'>=</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>drift_check</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>gems</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_gems'>gems</span> <span class='op'>=</span> <span class='id identifier rubyid_configured'>configured</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span> <span class='op'>?</span> <span class='lbracket'>[</span><span class='const'><span class='object_link'><a href="NomonoBootstrap.html" title="Kettle::Family::NomonoBootstrap (class)">NomonoBootstrap</a></span></span><span class='op'>::</span><span class='const'><span class='object_link'><a href="NomonoBootstrap.html#GEM_NAME-constant" title="Kettle::Family::NomonoBootstrap::GEM_NAME (constant)">GEM_NAME</a></span></span><span class='rbracket'>]</span> <span class='op'>:</span> <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_configured'>configured</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_gems'>gems</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:to_s</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:strip</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_reject'>reject</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:empty?</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_uniq'>uniq</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
   <h3 class="signature " id="release_env-instance_method">
   
     #<strong>release_env</strong>  &#x21d2; <tt>Object</tt> 
@@ -3952,12 +4122,12 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-315
-316
-317</pre>
+326
+327
+328</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 315</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 326</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_env'>release_env</span>
   <span class='id identifier rubyid_stringify_env'>stringify_env</span><span class='lparen'>(</span><span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>env</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span>
@@ -4005,12 +4175,12 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-392
-393
-394</pre>
+403
+404
+405</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 392</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 403</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_family_changelog?'>release_family_changelog?</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>family_changelog</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>enabled</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>==</span> <span class='kw'>true</span>
@@ -4035,12 +4205,12 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-396
-397
-398</pre>
+407
+408
+409</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 396</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 407</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_family_changelog_command'>release_family_changelog_command</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>family_changelog</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>command</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>bundle exec kettle-changelog</span><span class='tstring_end'>&quot;</span></span>
@@ -4065,18 +4235,18 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-323
-324
-325
-326
-327
-328
-329
-330
-331</pre>
+334
+335
+336
+337
+338
+339
+340
+341
+342</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 323</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 334</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_graph_contract'>release_graph_contract</span>
   <span class='id identifier rubyid_configured'>configured</span> <span class='op'>=</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>graph_contract</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_strip'>strip</span>
@@ -4107,12 +4277,12 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-374
-375
-376</pre>
+385
+386
+387</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 374</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 385</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_jobs'>release_jobs</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>jobs</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
@@ -4137,12 +4307,12 @@ independent kettle-release test and CI lifecycle.</p>
       <pre class="lines">
 
 
-319
-320
-321</pre>
+330
+331
+332</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 319</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 330</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_local_path_strategy'>release_local_path_strategy</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>local_path_strategy</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span>
@@ -4353,12 +4523,12 @@ self-commit; the hook does not commit on their behalf.</p>
       <pre class="lines">
 
 
-419
-420
-421</pre>
+448
+449
+450</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 419</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 448</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_push_command'>release_push_command</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>push_command</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_command_for'>command_for</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release_push</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>git push --follow-tags</span><span class='tstring_end'>&quot;</span></span>
@@ -4383,12 +4553,12 @@ self-commit; the hook does not commit on their behalf.</p>
       <pre class="lines">
 
 
-311
-312
-313</pre>
+322
+323
+324</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 311</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 322</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_required_remotes'>release_required_remotes</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>required_remotes</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
@@ -4413,12 +4583,12 @@ self-commit; the hook does not commit on their behalf.</p>
       <pre class="lines">
 
 
-370
-371
-372</pre>
+381
+382
+383</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 370</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 381</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_secrets'>release_secrets</span>
   <span class='id identifier rubyid_stringify_keys'>stringify_keys</span><span class='lparen'>(</span><span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>secrets</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span>
@@ -4443,12 +4613,12 @@ self-commit; the hook does not commit on their behalf.</p>
       <pre class="lines">
 
 
-415
-416
-417</pre>
+444
+445
+446</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 415</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 444</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_tag_command'>release_tag_command</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>tag_command</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_command_for'>command_for</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release_tag</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>git tag</span><span class='tstring_end'>&quot;</span></span>
@@ -4473,12 +4643,12 @@ self-commit; the hook does not commit on their behalf.</p>
       <pre class="lines">
 
 
-423
-424
-425</pre>
+452
+453
+454</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 423</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 452</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_target_branches'>release_target_branches</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>target_branches</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>branches</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release_targets</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>||</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
@@ -4526,15 +4696,68 @@ self-commit; the hook does not commit on their behalf.</p>
       <pre class="lines">
 
 
-388
-389
-390</pre>
+399
+400
+401</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 388</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 399</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_validate_ci_bundles?'>release_validate_ci_bundles?</span>
   <span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>validate_ci_bundles</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>==</span> <span class='kw'>true</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="release_version_series_independent_members-instance_method">
+  
+    #<strong>release_version_series_independent_members</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Members that keep their own monotonic version series even in a<br />
+shared-version family (release.version_series.independent_members;<br />
+default empty). An independent-series member is skipped by lockstep<br />
+shared-version raises — its bumps stay on its own series — and is<br />
+exempt from the aggregate GitHub Release same-version invariant,<br />
+while its built artifacts still attach to the aggregate release.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+425
+426
+427
+428
+429
+430
+431</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 425</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_release_version_series_independent_members'>release_version_series_independent_members</span>
+  <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>version_series</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>independent_members</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='rparen'>)</span>
+    <span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:to_s</span><span class='rparen'>)</span>
+    <span class='period'>.</span><span class='id identifier rubyid_map'>map</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:strip</span><span class='rparen'>)</span>
+    <span class='period'>.</span><span class='id identifier rubyid_reject'>reject</span><span class='lparen'>(</span><span class='op'>&amp;</span><span class='symbol'>:empty?</span><span class='rparen'>)</span>
+    <span class='period'>.</span><span class='id identifier rubyid_uniq'>uniq</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -4556,14 +4779,14 @@ self-commit; the hook does not commit on their behalf.</p>
       <pre class="lines">
 
 
-378
-379
-380
-381
-382</pre>
+389
+390
+391
+392
+393</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 378</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/config.rb', line 389</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_release_waves'>release_waves</span>
   <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_fetch_path'>fetch_path</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>waves</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_wave'>wave</span><span class='op'>|</span>

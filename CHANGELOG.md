@@ -20,15 +20,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Release preflight now blocks on bootstrap dependency drift: a new `bootstrap dependency drift` phase compares each selected member's committed Gemfile.lock against the newest published version satisfying the member's declared floor for bootstrap-managed gems (`release.drift_check.gems`, default `[nomono]`), failing with a `bundle update <gem>` / family template sweep remediation hint; registry lookup failures skip non-fatally instead of blocking.
-
-- New family config release.version_series.independent_members: members that keep their own monotonic version series in a shared-version family. They are skipped by lockstep shared-version raises and exempt from the aggregate GitHub Release same-version invariant, while their built artifacts still attach to the aggregate release.
-
 ### Changed
 
 ### Deprecated
 
 ### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.37] - 2026-10-30
+
+- TAG: [v1.3.37][1.3.37t]
+- COVERAGE: 93.13% -- 7665/8230 lines in 45 files
+- BRANCH COVERAGE: 77.52% -- 3076/3968 branches in 45 files
+- 39.41% documented
+
+### Added
+
+- Release preflight now blocks on bootstrap dependency drift: a new `bootstrap dependency drift` phase compares each selected member's committed Gemfile.lock against the newest published version satisfying the member's declared floor for bootstrap-managed gems (`release.drift_check.gems`, default `[nomono]`), failing with a `bundle update <gem>` / family template sweep remediation hint; registry lookup failures skip non-fatally instead of blocking.
+
+- New family config release.version_series.independent_members: members that keep their own monotonic version series in a shared-version family. They are skipped by lockstep shared-version raises and exempt from the aggregate GitHub Release same-version invariant, while their built artifacts still attach to the aggregate release.
 
 ### Fixed
 
@@ -3330,7 +3343,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.36...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.37...HEAD
+[1.3.37]: https://github.com/kettle-dev/kettle-family/compare/v1.3.36...v1.3.37
+[1.3.37t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.37
 [1.3.36]: https://github.com/kettle-dev/kettle-family/compare/v1.3.35...v1.3.36
 [1.3.36t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.36
 [1.3.35]: https://github.com/kettle-dev/kettle-family/compare/v1.3.34...v1.3.35
