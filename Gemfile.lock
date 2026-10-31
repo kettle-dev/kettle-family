@@ -33,7 +33,7 @@ PATH
 GEM
   remote: https://gem.coop/
   specs:
-    addressable (2.9.0)
+    addressable (2.9.1)
       public_suffix (>= 2.0.2, < 8.0)
     anonymous_loader (0.1.5)
       version_gem (~> 1.1, >= 1.1.17)
@@ -193,7 +193,7 @@ GEM
       ruby-progressbar (~> 1.13)
       tty-progressbar (~> 0.18)
       version_gem (~> 1.1, >= 1.1.17)
-    kettle-jem (7.1.40)
+    kettle-jem (7.1.41)
       addressable (>= 2.8, < 3)
       ast-crispr-markdown-markly (~> 7.1, >= 7.1.8)
       ast-crispr-ruby-prism (~> 7.1, >= 7.1.10)
@@ -203,11 +203,12 @@ GEM
       citrus-toml-merge (~> 7.1, >= 7.1.8)
       dotenv-merge (~> 7.1, >= 7.1.8)
       json-merge (~> 7.1, >= 7.1.8)
-      kettle-changelog (~> 1.0, >= 1.0.13)
-      kettle-dev (~> 3.1, >= 3.1.21)
+      kettle-changelog (~> 1.0, >= 1.0.15)
+      kettle-deps-floor (~> 0.1, >= 0.1.0)
+      kettle-dev (~> 3.1, >= 3.1.26)
       kettle-gha-pins (~> 0.3, >= 0.3.14)
       kettle-ndjson (~> 0.1, >= 0.1.13)
-      kettle-rb (~> 0.1, >= 0.1.17)
+      kettle-rb (~> 0.1, >= 0.1.19)
       markdown-merge (~> 7.1, >= 7.1.8)
       markly-merge (~> 7.1, >= 7.1.8)
       parslet (~> 2.0)
@@ -220,7 +221,7 @@ GEM
       toml-merge (~> 7.1, >= 7.1.8)
       toml-rb (~> 4.2)
       tree_haver (~> 7.1, >= 7.1.8)
-      version_gem (~> 1.1, >= 1.1.15)
+      version_gem (~> 1.1, >= 1.1.17)
       yaml-merge (~> 7.1, >= 7.1.8)
     kettle-ndjson (0.1.23)
       version_gem (~> 1.1, >= 1.1.17)
@@ -638,7 +639,7 @@ DEPENDENCIES
   yard-yaml (~> 0.2, >= 0.2.6)
 
 CHECKSUMS
-  addressable (2.9.0) sha256=7fdf6ac3660f7f4e867a0838be3f6cf722ace541dd97767fa42bc6cfa980c7af
+  addressable (2.9.1) sha256=f1212365945455c84e8d031eea40fc6bedf0c663a78d95b3ab93591040bc5c35
   anonymous_loader (0.1.5) sha256=c96a4a1b5f49f320037fae63e931ac15b3823686e4f0ee6f24f75a0ade4227cb
   ansi (1.6.0) sha256=ac9ea0c0ea8d32fb4e271348e609963ac78882f34b73836c2a02b3622e666658
   appraisal2 (3.2.6) sha256=6664d2404b9fe160dfbbed4dd9b78e7b9146402bc3468ff92ba78c1878bc318a
@@ -695,7 +696,7 @@ CHECKSUMS
   kettle-dev (3.1.26) sha256=3118ec5ffaa94c563b6830e310cbd127e8b94353126f724b8a2de8e72554abed
   kettle-family (1.3.37)
   kettle-gha-pins (0.3.20) sha256=2676d426db9de0527a628a9c6170e302a51a6cf150d5463cf778cc53fb9a255f
-  kettle-jem (7.1.40) sha256=8cdf8bb51f95021a020d00221018d29d4b14ae7b7b5c0db14da2c23568ce7952
+  kettle-jem (7.1.41) sha256=542ac434954d8427d32b971c209c969a5262c4cfcdc02ee69893d16d8cb01258
   kettle-ndjson (0.1.23) sha256=114ea69068a2221dd1dd58950e80b3e91620ab8bf56d7a2c460f257bcf96afb1
   kettle-rb (0.1.21) sha256=da48380788b274340f954b21b203073a72622869d8db9111ab34e52e7f902c04
   kettle-soup-cover (3.0.16) sha256=674edad40b454c6c21e6323f8918cb563a3edd2b956b87f03ed73ad4e6bd7dd7
