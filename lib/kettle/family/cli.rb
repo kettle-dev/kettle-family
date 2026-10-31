@@ -1475,19 +1475,29 @@ module Kettle
       def shared_bump_member_names(config:, members:)
         return [] unless config.shared_changelog?
 
-        members.reject { |member| config.member_local_changelog?(member) }.map(&:name)
+        members
+          .reject { |member| config.member_local_changelog?(member) }
+          .reject { |member| config.independent_version_series_member?(member) }
+          .map(&:name)
       end
 
       def shared_bump_target_version(config:, members:, options:, release_state_results: nil)
         return unless config.shared_changelog?
         return unless Kettle::Dev::VersionBump::BUMP_TYPES.include?(options[:target_version].to_s)
 
+        # The lockstep raise cohort excludes members carrying their own
+        # changelog AND independently versioned members: an independent
+        # series must never be captured by (or drag) the shared version
+        # line, in either direction.
         shared_members = members.reject { |member| config.member_local_changelog?(member) }
+          .reject { |member| config.independent_version_series_member?(member) }
         return if shared_members.empty?
 
         versions = shared_members.map { |member| Gem::Version.new(member.version.to_s) }.uniq
         current = versions.max
-        return current.to_s if versions.length > 1
+        # Without release-state results (explicit member selection) a
+        # misaligned cohort still aligns to its maximum, as before.
+        return current.to_s if versions.length > 1 && release_state_results.nil?
 
         released_versions = Array(release_state_results).filter_map do |result|
           next unless shared_members.any? { |member| member.name == result.member_name }
@@ -1502,8 +1512,15 @@ module Kettle
         rescue ArgumentError
           nil
         end
+        # Mid-prep (the cohort line already moved past the last release):
+        # laggards align up to the in-flight version and nothing increments.
         return current.to_s if released_versions.any? && current > released_versions.max
 
+        # Otherwise the cohort owes a release: every shared member is raised
+        # to the family's NEXT shared version — including a misaligned
+        # cohort, which previously aligned to the current maximum and then
+        # reported ok, leaving the unreleased-entries bump gate uncleared
+        # with no documented command able to clear it (#17).
         Kettle::Dev::VersionBump.resolve_target_version(options[:target_version].to_s, current.to_s)
       end
 

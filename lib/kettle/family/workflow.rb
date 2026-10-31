@@ -4005,6 +4005,16 @@ module Kettle
         aggregate_validation_members.include?(member)
       end
 
+      # An independently versioned member (release.version_series.
+      # independent_members) keeps its own monotonic series: it is exempt
+      # from lockstep raises and from the aggregate same-version invariant,
+      # but remains part of the aggregate release for artifact attachment.
+      def independent_version_series_member?(member)
+        return false unless member
+
+        config.independent_version_series_member?(member)
+      end
+
       def aggregate_validation_member_name?(member)
         member && member.name == (@aggregate_validation_member_name || aggregate_validation_members.first&.name)
       end
@@ -4225,12 +4235,19 @@ module Kettle
 
       # simplecov:disable Covered by monorepo release integration, not sibling-repository suite.
       def aggregate_monorepo_github_release(members)
-        version = members.map { |member| member.version.to_s }.uniq
+        # The same-version invariant describes the shared-version cohort.
+        # Independently versioned members (release.version_series.
+        # independent_members) can never satisfy it by design, so they are
+        # exempt from the uniformity check while their artifacts still
+        # attach — at their own series version, not the cohort's.
+        shared_members = members.reject { |member| independent_version_series_member?(member) }
+        version = shared_members.map { |member| member.version.to_s }.uniq
         return aggregate_release_result("all selected members must have the same version") unless version.length == 1
 
         assets = members.flat_map do |member|
-          gem_path = Paths.glob(member.root, "pkg", "*.gem").select { |path| File.basename(path).end_with?("-#{version.first}.gem") }
-          checksum_paths = %w[sha256 sha512].map { |algorithm| File.join(member.root, "checksums", "#{member.name}-#{version.first}.gem.#{algorithm}") }
+          asset_version = independent_version_series_member?(member) ? member.version.to_s : version.first
+          gem_path = Paths.glob(member.root, "pkg", "*.gem").select { |path| File.basename(path).end_with?("-#{asset_version}.gem") }
+          checksum_paths = %w[sha256 sha512].map { |algorithm| File.join(member.root, "checksums", "#{member.name}-#{asset_version}.gem.#{algorithm}") }
           gem_path + checksum_paths.select { |path| File.file?(path) }
         end
         command = ["bundle", "exec", "kettle-gh-release", "--allow-unpublished", "--events", "--release-version", version.first]

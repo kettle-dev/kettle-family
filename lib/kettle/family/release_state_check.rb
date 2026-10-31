@@ -830,8 +830,9 @@ module Kettle
       end
 
       # Version-locked siblings move in lockstep. Members not declared
-      # independently releasable (release.aggregate_validation.exclude_members)
-      # share the family version line, so:
+      # independently releasable (release.aggregate_validation.exclude_members
+      # or release.version_series.independent_members) share the family
+      # version line, so:
       #   1. when any of them needs a version bump, all of them do — including
       #      members without unreleased changelog entries of their own and
       #      brand-new members that have never been released (empty
@@ -839,12 +840,13 @@ module Kettle
       #   2. a member whose checkout version sits behind the cohort's version
       #      line (e.g. a cohort that already bumped while it stayed put) needs
       #      a catch-up bump on its own.
-      # Independently releasable members keep per-member bump semantics: they
-      # bump only when their own unreleased entries require it. Members whose
-      # checkout version already moved past their last release are mid-prep
-      # and are never double-bumped.
+      # Independently versioned members keep per-member bump semantics: they
+      # bump only when their own unreleased entries require it, and their
+      # (possibly higher) own-series version never drags the cohort line.
+      # Members whose checkout version already moved past their last release
+      # are mid-prep and are never double-bumped.
       def normalize_lockstep_version_bump(results)
-        excluded = Array(config&.release_aggregate_validation_excluded_members).map(&:to_s)
+        excluded = independent_bump_member_names
         return results if excluded.empty?
 
         aggregate = results.select do |result|
@@ -894,6 +896,17 @@ module Kettle
         nil
       end
 
+      # Members exempt from lockstep bump semantics: aggregate-validation
+      # exclusions plus independently versioned members. Both keep per-member
+      # bump behavior; neither may be force-marked pending by the cohort, and
+      # an independent-series version never participates in the cohort line.
+      def independent_bump_member_names
+        Array(config&.release_aggregate_validation_excluded_members)
+          .concat(Array(config&.release_version_series_independent_members))
+          .map(&:to_s)
+          .uniq
+      end
+
       def normalize_shared_version_bump(results)
         shared_results = results.select { |result| result.ok? && shared_changelog_member_result?(result) }
         return results unless shared_results.any? { |result| result.state["bump_release_pending"] == true }
@@ -919,7 +932,11 @@ module Kettle
 
       def shared_changelog_member_result?(result)
         member = members.find { |candidate| candidate.name == result.member_name }
-        member && !member_local_changelog?(member)
+        member && !member_local_changelog?(member) && !independent_version_series_member?(member)
+      end
+
+      def independent_version_series_member?(member)
+        config&.independent_version_series_member?(member) || false
       end
 
       def git_root

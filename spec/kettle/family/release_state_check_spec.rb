@@ -188,7 +188,9 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       root: @tmpdir,
       changelog_env: {},
       changelog_path: "CHANGELOG.md",
-      release_aggregate_validation_excluded_members: [])
+      release_aggregate_validation_excluded_members: [],
+      release_version_series_independent_members: [],
+      independent_version_series_member?: false)
     state = {
       "gem_name" => "alpha",
       "version" => "1.2.3",
@@ -218,7 +220,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
   end
 
   it "propagates a required bump to version-locked siblings, including never-released members" do
-    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: ["independent"])
+    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: ["independent"], release_version_series_independent_members: [], independent_version_series_member?: false)
     check = described_class.new(members: [member("alpha"), member("beta"), member("independent")], config: config)
     results = [
       release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
@@ -232,7 +234,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
   end
 
   it "catches up a version-locked sibling left behind after the cohort bumped" do
-    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: ["independent"])
+    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: ["independent"], release_version_series_independent_members: [], independent_version_series_member?: false)
     check = described_class.new(members: [member("alpha"), member("beta"), member("independent")], config: config)
     results = [
       release_state_result("alpha", "version" => "1.2.4", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => false),
@@ -246,7 +248,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
   end
 
   it "does not double-bump a version-locked sibling whose version already moved past its release" do
-    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: ["independent"])
+    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: ["independent"], release_version_series_independent_members: [], independent_version_series_member?: false)
     check = described_class.new(members: [member("alpha"), member("beta")], config: config)
     results = [
       release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
@@ -259,7 +261,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
   end
 
   it "leaves results unchanged when no independently releasable members are declared" do
-    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: [])
+    config = instance_double(Kettle::Family::Config, release_aggregate_validation_excluded_members: [], release_version_series_independent_members: [], independent_version_series_member?: false)
     check = described_class.new(members: [member("alpha"), member("beta")], config: config)
     results = [
       release_state_result("alpha", "version" => "1.2.3", "latest_released" => "1.2.3", "unreleased_entries" => true, "bump_release_pending" => true),
@@ -1158,7 +1160,9 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       shared_changelog?: shared_changelog,
       changelog_workdir: nil,
       changelog_env: changelog_env,
-      release_aggregate_validation_excluded_members: []
+      release_aggregate_validation_excluded_members: [],
+      release_version_series_independent_members: [],
+      independent_version_series_member?: false
     )
   end
 
