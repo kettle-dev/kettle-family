@@ -416,6 +416,24 @@ module Kettle
         fetch_path("release", "aggregate_validation", "enabled") == true
       end
 
+      # Members that keep their own monotonic version series even in a
+      # shared-version family (release.version_series.independent_members;
+      # default empty). An independent-series member is skipped by lockstep
+      # shared-version raises — its bumps stay on its own series — and is
+      # exempt from the aggregate GitHub Release same-version invariant,
+      # while its built artifacts still attach to the aggregate release.
+      def release_version_series_independent_members
+        Array(fetch_path("release", "version_series", "independent_members"))
+          .map(&:to_s)
+          .map(&:strip)
+          .reject(&:empty?)
+          .uniq
+      end
+
+      def independent_version_series_member?(member)
+        release_version_series_independent_members.include?(member.name.to_s)
+      end
+
       def release_aggregate_validation_excluded_members
         Array(fetch_path("release", "aggregate_validation", "exclude_members"))
           .map(&:to_s)

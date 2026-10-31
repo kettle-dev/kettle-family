@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Release preflight now blocks on bootstrap dependency drift: a new `bootstrap dependency drift` phase compares each selected member's committed Gemfile.lock against the newest published version satisfying the member's declared floor for bootstrap-managed gems (`release.drift_check.gems`, default `[nomono]`), failing with a `bundle update <gem>` / family template sweep remediation hint; registry lookup failures skip non-fatally instead of blocking.
 
+- New family config release.version_series.independent_members: members that keep their own monotonic version series in a shared-version family. They are skipped by lockstep shared-version raises and exempt from the aggregate GitHub Release same-version invariant, while their built artifacts still attach to the aggregate release.
+
 ### Changed
 
 ### Deprecated
@@ -29,6 +31,10 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Removed
 
 ### Fixed
+
+- kettle-family bump now raises shared-changelog members to the family's next shared version when their release is pending, including a misaligned cohort that previously only aligned to the current maximum and reported ok, leaving the unreleased-entries bump gate uncleared with no documented command able to clear it (#17).
+
+- Independently versioned members (release.version_series.independent_members) can no longer be captured by the lockstep shared-version raise: they bump on their own series, are never force-marked pending by the shared cohort, their higher own-series version no longer drags the cohort line, and the aggregate GitHub Release no longer fails its same-version check on them (#18).
 
 ### Security
 
