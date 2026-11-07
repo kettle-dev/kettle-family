@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Fixed the template workflow fixture to use the active default Bundler launcher across locked CI environments.
+
 ### Security
 
 ## [1.3.37] - 2026-10-30
