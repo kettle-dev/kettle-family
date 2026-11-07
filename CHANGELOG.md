@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.38] - 2026-11-07
+
+- TAG: [v1.3.38][1.3.38t]
+- COVERAGE: 93.15% -- 7697/8263 lines in 45 files
+- BRANCH COVERAGE: 77.57% -- 3089/3982 branches in 45 files
+- 39.53% documented
+
+### Added
+
 - [kc] template-root-outputs: Monorepo template runs can now update explicitly configured repository-root output paths through the template.root_outputs setting, alongside the nested member being templated. Those outputs are isolated, validated, synchronized, and committed with the template changes.
 
 ### Changed
@@ -33,14 +52,6 @@ Please file a bug if you notice a violation of semantic versioning.
   - dependencies (3)
   - documentation (1)
   - other (1)
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [1.3.37] - 2026-10-30
 
@@ -3355,7 +3366,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.37...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.38...HEAD
+[1.3.38]: https://github.com/kettle-dev/kettle-family/compare/v1.3.37...v1.3.38
+[1.3.38t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.38
 [1.3.37]: https://github.com/kettle-dev/kettle-family/compare/v1.3.36...v1.3.37
 [1.3.37t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.37
 [1.3.36]: https://github.com/kettle-dev/kettle-family/compare/v1.3.35...v1.3.36
