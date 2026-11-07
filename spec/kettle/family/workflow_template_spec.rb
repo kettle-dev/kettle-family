@@ -468,6 +468,47 @@ RSpec.describe Kettle::Family::Workflow do
     expect(git_output(@tmpdir, "status", "--short")).to eq("")
   end
 
+  it "routes configured repository-root template outputs for a nested single member" do
+    member = member_at("packages/ruby")
+    FileUtils.mkdir_p(member.root)
+    File.write(File.join(member.root, "marker"), "member\n")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      family:
+        mode: monorepo
+      members:
+        roots:
+          - packages/ruby
+      template:
+        root_outputs:
+          - .github/workflows/generated.yml
+    YAML
+    executable = File.join(@tmpdir, "bin", "kettle-jem")
+    FileUtils.mkdir_p(File.dirname(executable))
+    File.write(executable, <<~RUBY)
+      require "fileutils"
+      FileUtils.mkdir_p(".github/workflows")
+      File.write(".github/workflows/generated.yml", "workflow\\n")
+      File.write(".github/workflows/unrelated.yml", "unsafe\\n")
+      FileUtils.mkdir_p("packages/ruby")
+      File.write("packages/ruby/member-output.txt", "member\\n")
+      File.write("unrelated.txt", "unsafe\\n")
+    RUBY
+    config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
+    config_hash["template"]["command"] = [RbConfig.ruby, executable]
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump(config_hash))
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+
+    results = workflow.results
+
+    expect(results.any? { |result| !result.ok? }).to be(true)
+    expect(results.map(&:phase)).to include("template_worktree_materialize")
+    expect(File.exist?(File.join(@tmpdir, ".github/workflows/generated.yml"))).to be(false)
+    expect(File.exist?(File.join(@tmpdir, "unrelated.txt"))).to be(false)
+    expect(File.exist?(File.join(member.root, "member-output.txt"))).to be(false)
+  end
+
   it "trusts root and member mise configs before running a detached template worktree" do
     Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
@@ -1435,8 +1476,8 @@ RSpec.describe Kettle::Family::Workflow do
   it "uses the template profile for real Bundler preparation, application, and normalization" do
     write_template_config
     config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))
-    bundler_version = Gem.loaded_specs.fetch("bundler").version
-    config_hash.fetch("template")["normalize_lockfiles_command"] = ["bundle", "_#{bundler_version}_", "lock", "--local"]
+    bundler_executable = File.join(File.dirname(RbConfig.ruby), "bundle")
+    config_hash.fetch("template")["normalize_lockfiles_command"] = [bundler_executable, "lock", "--local"]
     member = member_at("alpha")
     fixture_root = File.join(member.root, "template-fixture")
     FileUtils.mkdir_p(fixture_root)
@@ -1467,7 +1508,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
-    expect(results).to all(be_ok)
+    expect(results).to all(be_ok), results.reject(&:ok?).map { |result| [result.phase, result.stdout, result.stderr].join("\n") }.join("\n")
     expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles commit_normalized_lockfiles])
     expect(File.read(File.join(member.root, "Gemfile.lock"))).to include("remote: template-fixture")
   end

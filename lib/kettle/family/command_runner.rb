@@ -232,19 +232,19 @@ module Kettle
         @mise_adapter = mise_adapter || Kettle::Family.mise_adapter
       end
 
-      def call(member:, phase:, command:, env: {}, interactive: false, raw: false, stdout_line_handler: nil, log_path: nil, passthrough_output: true)
+      def call(member:, phase:, command:, env: {}, interactive: false, raw: false, stdout_line_handler: nil, log_path: nil, passthrough_output: true, chdir: member.root, **options)
         argv = command_argv(member: member, command: command, env: env, raw: raw)
         process_env = process_env(member: member, env: env)
         spawn_options = process_options
         return skipped_result(member: member, phase: phase, argv: argv) unless execute
 
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        stdout, stderr, status = with_transcript(log_path, argv: argv, chdir: member.root) do |log_io|
+        stdout, stderr, status = with_transcript(log_path, argv: argv, chdir: chdir) do |log_io|
           if interactive
             run_interactive(
               env: process_env,
               argv: argv,
-              chdir: member.root,
+              chdir: chdir,
               member_name: member.name,
               process_options: spawn_options,
               stdout_line_handler: stdout_line_handler,
@@ -252,9 +252,9 @@ module Kettle
               passthrough_output: passthrough_output
             )
           elsif stdout_line_handler
-            run_streaming(env: process_env, argv: argv, chdir: member.root, process_options: spawn_options, stdout_line_handler: stdout_line_handler, log_io: log_io)
+            run_streaming(env: process_env, argv: argv, chdir: chdir, process_options: spawn_options, stdout_line_handler: stdout_line_handler, log_io: log_io)
           else
-            result = Open3.capture3(process_env, *argv, chdir: member.root, **spawn_options)
+            result = Open3.capture3(process_env, *argv, chdir: chdir, **spawn_options)
             transcript_write(log_io, result[0])
             transcript_write(log_io, result[1])
             result
@@ -267,7 +267,7 @@ module Kettle
           member_name: member.name,
           phase: phase,
           command: argv,
-          workdir: member.root,
+          workdir: chdir,
           status: status.exitstatus,
           success: status.success?,
           stdout: stdout,

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "pathname"
 
 module Kettle
   module Family
@@ -206,6 +207,21 @@ module Kettle
 
       def template_jobs
         fetch_path("template", "jobs")
+      end
+
+      # Root paths that a nested monorepo member's Kettle Jem run may update.
+      # These are explicit repository-relative output paths, never globs.
+      def template_root_outputs
+        paths = Array(fetch_path("template", "root_outputs"))
+        paths.map do |path|
+          value = path.to_s
+          expanded = File.expand_path(value, root)
+          unless !value.empty? && !value.end_with?("/") && !Pathname.new(value).absolute? && Paths.within?(expanded, root) && expanded != root
+            raise Error, "template.root_outputs entries must be repository-relative paths below the family root: #{value.inspect}"
+          end
+
+          Pathname.new(expanded).relative_path_from(Pathname.new(root)).to_s
+        end.uniq
       end
 
       # Additional local dependency selectors used by the generated
