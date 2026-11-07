@@ -23,6 +23,7 @@ end
 begin
   require "kettle-soup-cover"
   if Kettle::Soup::Cover::DO_COV
+    # Requiring simplecov loads the project-local `.simplecov`.
     require "simplecov"
     require "kettle/soup/cover/config"
     SimpleCov.start
@@ -35,7 +36,10 @@ end
 # External RSpec & related config
 require "kettle/test/rspec"
 # `kettle/test/rspec` installs harness helpers documented in spec/README.md.
+
+# This library
 require "kettle/family"
+
 require_relative "support/shared_contexts/with_mocked_release_secrets"
 
 module KettleFamilySpecSupport

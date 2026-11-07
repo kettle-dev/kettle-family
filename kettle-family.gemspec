@@ -36,7 +36,7 @@ Gem::Specification.new do |spec|
     end
   end
 
-  spec.metadata["homepage_uri"] = "https://kettle-family.galtzo.com"
+  spec.metadata["homepage_uri"] = "https://structuredmerge.org"
   spec.metadata["source_code_uri"] = "#{spec.homepage}/tree/v#{spec.version}"
   spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/v#{spec.version}/CHANGELOG.md"
   spec.metadata["bug_tracker_uri"] = "#{spec.homepage}/issues"
@@ -100,7 +100,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency("ast-crispr-toml", "~> 7.1", ">= 7.1.11")                # ruby >= 4.0.0, TOML owners for mise.toml family tasks
   spec.add_dependency("command_kit", "~> 0.6")                              # ruby >= 3.0.0
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
-  spec.add_dependency("kettle-changelog", "~> 1.0", ">= 1.0.15")             # ruby >= 4.0.0, release-state and family changelog commands
+  spec.add_dependency("kettle-changelog", "~> 1.0", ">= 1.0.16")             # ruby >= 4.0.0, release-state and family changelog commands
   spec.add_dependency("kettle-deps-floor", "~> 0.1", ">= 0.1.2")           # generic AST-based gemspec dependency floor updates
   spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.26")                 # ruby >= 3.2.0
   spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.20")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow

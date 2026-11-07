@@ -30,6 +30,13 @@ direct_sibling_gems = %w[
   kettle-ndjson
   kettle-test
   kettle-rb
+  kettle-drift
+  kettle-fwd
+  kettle-paths
+  kettle-soup-cover
+  kettle-wash
+  nomono
+  token-resolver
 ]
 direct_sibling_dev = ENV.fetch("KETTLE_DEV_DEV", "")
 direct_sibling_local =
@@ -81,7 +88,7 @@ if direct_sibling_gems.any? &&
 
     eval_nomono_gems(
       gems: direct_sibling_gems,
-      requirements: {"kettle-changelog" => ["~> 1.0", ">= 1.0.14"], "kettle-deps-floor" => ["~> 0.1", ">= 0.1.1"], "kettle-dev" => ["~> 3.1", ">= 3.1.25"], "kettle-gha-pins" => ["~> 0.3", ">= 0.3.19"], "kettle-ndjson" => ["~> 0.1", ">= 0.1.22"], "kettle-test" => ["~> 2.0", ">= 2.0.28"]},
+      requirements: {"kettle-changelog" => ["~> 1.0", ">= 1.0.16"], "kettle-deps-floor" => ["~> 0.1", ">= 0.1.2"], "kettle-dev" => ["~> 3.1", ">= 3.1.26"], "kettle-gha-pins" => ["~> 0.3", ">= 0.3.20"], "kettle-ndjson" => ["~> 0.1", ">= 0.1.23"], "kettle-test" => ["~> 2.0", ">= 2.0.29"]},
       prefix: "KETTLE_DEV",
       path_env: "KETTLE_DEV_DEV",
       root: ["src", "my", "kettle-dev"]
@@ -106,9 +113,11 @@ end
 # wiring fails version solving for every command in the bundle.
 #
 # (env-switched: STRUCTUREDMERGE_DEV=/path/to/structuredmerge/ruby/gems for local paths)
+
 eval_gemfile "gemfiles/modular/templating.gemfile" if
   ENV.fetch("K_JEM_TEMPLATING", "false").casecmp("true").zero? ||
-    ENV.fetch("STRUCTUREDMERGE_DEV", "false").casecmp("false") != 0
+    ENV.fetch("STRUCTUREDMERGE_DEV", "false").casecmp("false") != 0 ||
+    ENV.fetch("STRUCTUREDMERGE_CORE_DEV", "false").casecmp("false") != 0
 
 # Debugging
 eval_gemfile "gemfiles/modular/debug.gemfile"
