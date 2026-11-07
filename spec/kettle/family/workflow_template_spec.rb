@@ -1508,7 +1508,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     results = described_class.new(command: "template", config: config, members: [member], execute: true).results
 
-    expect(results).to all(be_ok)
+    expect(results).to all(be_ok), results.reject(&:ok?).map { |result| [result.phase, result.stdout, result.stderr].join("\n") }.join("\n")
     expect(results.map(&:phase)).to eq(%w[prepare_lockfiles template normalize_lockfiles commit_normalized_lockfiles])
     expect(File.read(File.join(member.root, "Gemfile.lock"))).to include("remote: template-fixture")
   end
