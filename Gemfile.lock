@@ -160,7 +160,7 @@ GEM
       openssl (>= 2.2.1)
       strscan (>= 3.1.2)
     io-console (0.9.5)
-    irb (1.18.0)
+    irb (1.19.0)
       pp (>= 0.6.0)
       prism (>= 1.3.0)
       rdoc (>= 4.0.0)
@@ -688,7 +688,7 @@ CHECKSUMS
   gitmoji-regex (2.0.15) sha256=c6571bffd757f95c06d84a7d2d0b3f180eca7fe576882c371cee1f1a081cd968
   hexapdf (1.11.2) sha256=c69ea394cc1c4b291ee17cbf2707956ad975948db4f9cf7b9d9d3bfca87b5f1c
   io-console (0.9.5) sha256=83dd9bbf4c4680416629245b39cd4212eb5f4d9a4ea91804870c1f6b846414d5
-  irb (1.18.0) sha256=de9454a0703a54704b9811a5ef31a60c86949fbf4013fcf244fabc7c775248e3
+  irb (1.19.0) sha256=55ee56acbdd6c9fe06a2e6909f46a24e5c41f45f16906bab04e8049cf46f1d27
   json (3.1.0) sha256=3ce7ccf8fde58960177a3a756c31f292a4c1e1dedee884547096a5b0604e3bd8
   json-merge (7.1.16) sha256=ac02a11e2d2e066b18d32b1eb4d10df17cb9044c7b40c5c896fee446087a6f08
   kettle-changelog (1.0.16) sha256=b84320131e11346f7fcbe52ac81bf89ae94afa6b71d34a27c0f85041535149ae
