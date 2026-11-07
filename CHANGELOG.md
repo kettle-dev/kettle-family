@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- [kc] template-root-outputs: Monorepo template runs can now update explicitly configured repository-root output paths through the template.root_outputs setting, alongside the nested member being templated. Those outputs are isolated, validated, synchronized, and committed with the template changes.
+
 ### Changed
 
 ### Deprecated
@@ -27,8 +29,6 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Removed
 
 ### Fixed
-
-- Fixed the template workflow fixture to use the active default Bundler launcher across locked CI environments.
 
 ### Security
 
