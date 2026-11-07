@@ -1129,7 +1129,15 @@ module Kettle
       end
 
       def monorepo_template_worktrees?(wave)
-        monorepo_template_worktrees_enabled? && wave.length > 1
+        (monorepo_template_worktrees_enabled? && wave.length > 1) || monorepo_nested_template_worktree?(wave)
+      end
+
+      def monorepo_nested_template_worktree?(wave)
+        return false unless execute && monorepo_template? && wave.length == 1
+
+        member = wave.first
+        nested = Paths.within?(member.root, config.root) && !Paths.same?(member.root, config.root)
+        nested && !config.template_root_outputs.empty? && kettle_jem_template_command?(config.template_command || DEFAULT_COMMANDS.fetch("template"))
       end
 
       def monorepo_template_worktrees_enabled?
@@ -1207,7 +1215,8 @@ module Kettle
                 progress: progress,
                 progress_started: true,
                 commit_changes: false,
-                wave_jobs: wave_jobs
+                wave_jobs: wave_jobs,
+                template_worktree_root: monorepo_template_allowed_paths(entry.fetch(:original_member)).empty? ? nil : entry.fetch(:worktree_root)
               )
               mutex.synchronize do
                 ordered_results[index] = member_results
@@ -1234,17 +1243,18 @@ module Kettle
         paths = monorepo_template_worktree_changed_paths(worktree_root)
         return template_worktree_failure_result(original_member, paths, phase: "template_worktree_materialize") if paths.is_a?(String)
 
-        invalid_paths = paths.reject { |path| path == relative_root || path.start_with?("#{relative_root}/") }
+        allowed_paths = monorepo_template_allowed_paths(original_member)
+        invalid_paths = paths.reject { |path| monorepo_template_path_allowed?(path, relative_root, allowed_paths) }
         unless invalid_paths.empty?
           return template_worktree_failure_result(
             original_member,
-            "isolated template worker modified shared path(s): #{invalid_paths.sort.join(", ")}; only #{relative_root}/ may be materialized",
+            "isolated template worker modified shared path(s): #{invalid_paths.sort.join(", ")}; only #{([relative_root] + allowed_paths).join(", ")} may be materialized",
             phase: "template_worktree_materialize"
           )
         end
 
-        initial_state = entry.fetch(:primary_member_state)
-        current_state = monorepo_template_member_state(config.root, relative_root)
+        initial_state = entry[:primary_allowed_state] || entry.fetch(:primary_member_state)
+        current_state = monorepo_template_allowed_state(config.root, relative_root, allowed_paths)
         changed_primary_paths = changed_monorepo_template_state_paths(initial_state, current_state)
         unless changed_primary_paths.empty?
           return template_worktree_failure_result(
@@ -1271,19 +1281,40 @@ module Kettle
         changed_paths = monorepo_template_worktree_changed_paths(config.root)
         raise Error, changed_paths if changed_paths.is_a?(String)
 
-        member_changed_paths = changed_paths.select do |path|
-          path == relative_root || path.start_with?("#{relative_root}/")
-        end
+        allowed_paths = monorepo_template_allowed_paths(original_member)
+        member_changed_paths = changed_paths.select { |path| monorepo_template_path_allowed?(path, relative_root, allowed_paths) }
         sync_monorepo_template_paths(config.root, entry.fetch(:worktree_root), member_changed_paths)
-        primary_state = monorepo_template_member_state(config.root, relative_root)
-        worktree_state = monorepo_template_member_state(entry.fetch(:worktree_root), relative_root)
+        primary_state = monorepo_template_allowed_state(config.root, relative_root, allowed_paths)
+        worktree_state = monorepo_template_allowed_state(entry.fetch(:worktree_root), relative_root, allowed_paths)
         unless primary_state == worktree_state
           changed = changed_monorepo_template_state_paths(primary_state, worktree_state)
-          raise Error, "isolated template worker seed differs from primary member: #{changed.join(", ")}"
+          raise Error, "isolated template worker seed differs from primary allowed paths: #{changed.join(", ")}"
         end
 
         entry[:primary_changed_paths] = member_changed_paths
-        entry[:primary_member_state] = primary_state
+        entry[:primary_allowed_state] = primary_state
+        entry[:primary_member_state] = primary_state if allowed_paths.empty?
+      end
+
+      def monorepo_template_allowed_paths(member)
+        return [] unless Paths.within?(member.root, config.root) && !Paths.same?(member.root, config.root)
+
+        config.template_root_outputs
+      end
+
+      def monorepo_template_path_allowed?(path, relative_root, allowed_paths)
+        path == relative_root || path.start_with?("#{relative_root}/") || allowed_paths.include?(path)
+      end
+
+      def monorepo_template_allowed_state(root, relative_root, allowed_paths)
+        member_state = monorepo_template_member_state(root, relative_root)
+        shared_state = allowed_paths.each_with_object({}) do |allowed, state|
+          paths = git_worktree_paths(root, ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", allowed])
+          raise Error, paths if paths.is_a?(String)
+
+          paths.each { |path| state[path] = monorepo_template_path_signature(root, path) }
+        end
+        member_state.merge(shared_state)
       end
 
       def monorepo_template_relative_root(member)
@@ -1556,7 +1587,7 @@ module Kettle
         )
       end
 
-      def template_results_for_member(member, progress: nil, progress_key: nil, progress_label: nil, progress_started: false, commit_changes: true, wave_jobs: 1)
+      def template_results_for_member(member, progress: nil, progress_key: nil, progress_label: nil, progress_started: false, commit_changes: true, wave_jobs: 1, template_worktree_root: nil)
         progress_key ||= member.name
         progress_label ||= member.name
         start_template_member_progress(progress, member, progress_key: progress_key, progress_label: progress_label) unless progress_started
@@ -1583,6 +1614,7 @@ module Kettle
             phase: command,
             command: workflow_command(member),
             env: template_command_env(wave_jobs: wave_jobs, member: member),
+            chdir: template_worktree_root || member.root,
             stdout_line_handler: template_event_line_handler(member, progress: progress, progress_key: progress_key, progress_label: progress_label)
           )
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label)
@@ -6044,14 +6076,17 @@ module Kettle
         return unless memo.all?(&:ok?)
 
         synchronize_template_commit do
+          allowed_paths = monorepo_template_allowed_paths(member)
+          paths = allowed_paths.empty? ? ["."] : [monorepo_template_relative_root(member)] + allowed_paths
+          pathspec = paths.map { |path| Shellwords.escape(path) }.join(" ")
           memo << runner.call(
             member: member,
             phase: "commit_template",
             command: [
               "sh",
               "-lc",
-              "if [ -n \"$(git status --porcelain -- .)\" ]; then " \
-                "git add -A -- . && git commit -m #{Shellwords.escape(template_commit_message(member))}; " \
+              "if [ -n \"$(git status --porcelain -- #{pathspec})\" ]; then " \
+                "git add -A -- #{pathspec} && git commit -m #{Shellwords.escape(template_commit_message(member))} -- #{pathspec}; " \
                 "fi"
             ],
             env: workflow_env
