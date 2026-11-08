@@ -50,6 +50,28 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     expect(results.map { |result| result.state.fetch("version") }).to eq(["1.5.0", "0.9.0"])
   end
 
+  it "uses the checked-out stack branch for the current row while retaining branch rows" do
+    member = member("alpha")
+    branch_config = instance_double(Kettle::Family::Config, release_target_branches: ["1-4-stable"])
+    branch_state = release_state_result("alpha", {"version" => "1.4.12"}, branch: "1-4-stable")
+    branch_check = instance_double(described_class, results: [branch_state])
+    check = described_class.new(config: nil, members: [member])
+    allow(check).to receive(:member_local_release_config).and_return(branch_config)
+    allow(check).to receive(:current_branch_for).and_return("1-4-stable")
+    allow(check).to receive(:branch_filtered_state).and_return({"latest_released" => "1.4.11"})
+    allow(check).to receive(:enrich_git_state).and_call_original
+    allow(check).to receive(:enrich_github_release).and_return({"latest_released" => "1.4.11"})
+    allow(Open3).to receive(:capture3).and_return([JSON.generate("version" => "1.4.12"), "", status(0, true)])
+    allow(described_class).to receive(:new).and_return(branch_check)
+
+    results = check.results
+
+    expect(results.map(&:branch)).to eq([nil, "1-4-stable"])
+    expect(check).to have_received(:branch_filtered_state).with(member, anything, "1-4-stable")
+    expect(check).to have_received(:enrich_git_state).with(member.root, anything, branch: "1-4-stable")
+    expect(check).to have_received(:enrich_github_release).with(member.root, anything, branch: "1-4-stable", member: member)
+  end
+
   it "checks configured branches even when the current member state fails" do
     member = member("alpha")
     current_state = release_state_result("alpha", {"version" => "1.5.0"}, success: false)
