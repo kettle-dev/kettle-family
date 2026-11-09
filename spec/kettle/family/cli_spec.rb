@@ -832,6 +832,65 @@ RSpec.describe Kettle::Family::CLI do
     expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
   end
 
+  it "refuses to bump a mid-prep member whose version already leads its latest changelog release", :prism do
+    write_gem("alpha")
+    set_gem_version(File.join(@tmpdir, "alpha"), "alpha", "1.0.1")
+    File.write(File.join(@tmpdir, "alpha", "CHANGELOG.md"), "## [Unreleased]\n\n- fix\n\n## [1.0.0] - 2026-01-01\n")
+    initialize_git_repo(@tmpdir)
+    out = StringIO.new
+
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "alpha", "--execute"], out: out, err: StringIO.new)
+
+    expect(status).to eq(1)
+    expect(out.string).to include("failed alpha bump")
+    expect(out.string).to include("already ahead of latest released 1.0.0")
+    expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
+  end
+
+  it "bumps a mid-prep member with --force", :prism do
+    write_gem("alpha")
+    set_gem_version(File.join(@tmpdir, "alpha"), "alpha", "1.0.1")
+    File.write(File.join(@tmpdir, "alpha", "CHANGELOG.md"), "## [Unreleased]\n\n- fix\n\n## [1.0.0] - 2026-01-01\n")
+    initialize_git_repo(@tmpdir)
+    out = StringIO.new
+
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "alpha", "--execute", "--force"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.2"')
+  end
+
+  it "still checks a mid-prep member in --check mode without the guard blocking", :prism do
+    write_gem("alpha")
+    set_gem_version(File.join(@tmpdir, "alpha"), "alpha", "1.0.1")
+    File.write(File.join(@tmpdir, "alpha", "CHANGELOG.md"), "## [Unreleased]\n\n- fix\n\n## [1.0.0] - 2026-01-01\n")
+    out = StringIO.new
+
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "alpha", "--check"], out: out, err: StringIO.new)
+
+    expect(status).to eq(1)
+    expect(out.string).to include("failed alpha bump")
+    expect(out.string).to include("version changes required")
+  end
+
+  it "honors release-state latest_released over the changelog fallback in the mid-prep guard", :prism do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, "alpha", "CHANGELOG.md"), "## [Unreleased]\n\n- fix\n\n## [1.0.0] - 2026-01-01\n")
+    initialize_git_repo(@tmpdir)
+    allow(Kettle::Family::ReleaseStateCheck).to receive(:new).and_return(
+      instance_double(
+        Kettle::Family::ReleaseStateCheck,
+        results: [release_state_result("alpha", "latest_released" => "1.0.0", "unreleased_entries" => true, "bump_release_pending" => true)]
+      )
+    )
+    out = StringIO.new
+
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "bump", "--execute"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
+  end
+
   it "bumps exact family dependency pins in release-wave order", :prism do
     write_gem("alpha")
     write_gem("beta")
