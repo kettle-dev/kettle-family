@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Release state now uses the checked-out branch's release line, Git counts, and exact GitHub release when a member is on a configured stack branch, while retaining the separate branch report.
+
 ### Security
 
 ## [1.3.38] - 2026-11-07

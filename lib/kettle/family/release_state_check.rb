@@ -67,7 +67,7 @@ module Kettle
       def checked_out_scoped_results?
         return false unless branches&.one?
 
-        members.any? { |member| current_branch_for(member) == branches.first }
+        members.any? && members.all? { |member| current_branch_for(member) == branches.first }
       end
 
       def scoped_checkout_results(event_handler: nil)
@@ -111,7 +111,7 @@ module Kettle
         [error_result(branch: branch, error: error)]
       end
 
-      def check_member(member, branch: nil, event_handler: nil)
+      def check_member(member, branch: nil, state_branch: branch, event_handler: nil)
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         command = release_state_command(member)
         emit_event(event_handler, member: member, branch: branch, action: "member_start", status: "running", command: command)
@@ -126,14 +126,14 @@ module Kettle
         emit_event(event_handler, member: member, branch: branch, action: "changelog_command", status: success ? "ok" : "failed", elapsed_seconds: elapsed, status_code: status.exitstatus)
         state = success ? JSON.parse(stdout) : {}
         emit_event(event_handler, member: member, branch: branch, action: "computed_booleans", status: "running") if success
-        state = branch_filtered_state(member, state, branch) if success && branch
+        state = branch_filtered_state(member, state, state_branch) if success && state_branch
         state = state_with_computed_booleans(state) if success
         emit_event(event_handler, member: member, branch: branch, action: "computed_booleans", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "running") if success
-        state = enrich_git_state(member.root, state, branch: branch) if success
+        state = enrich_git_state(member.root, state, branch: state_branch) if success
         emit_event(event_handler, member: member, branch: branch, action: "git_state", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "running") if success
-        state = enrich_github_release(member.root, state, branch: branch, member: member) if success
+        state = enrich_github_release(member.root, state, branch: state_branch, member: member) if success
         emit_event(event_handler, member: member, branch: branch, action: "github_release", status: "ok") if success
         emit_event(event_handler, member: member, branch: branch, action: "transfer_changelog", status: "running") if success
         state = enrich_transfer_changelog_lag(member.root, state) if success
@@ -804,7 +804,12 @@ module Kettle
         member_config = member_local_release_config(member)
         return unless member_config
 
-        current_result = check_member(member, event_handler: event_handler)
+        checkout = current_branch_for(member)
+        current_result = if member_config.release_target_branches.include?(checkout)
+          check_member(member, state_branch: checkout, event_handler: event_handler)
+        else
+          check_member(member, event_handler: event_handler)
+        end
         [current_result, *self.class.new(config: member_config, members: [member]).results(event_handler: event_handler)]
       end
 
