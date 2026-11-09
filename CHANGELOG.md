@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Family bump lock: bump --execute holds an flock on <family-root>/tmp/kettle-family/bump.lock for the whole write-and-commit section; a concurrent bump fails closed naming the holder. flock releases on process death, so no stale lockfile cleanup is needed. (#28)
-
 ### Changed
 
 ### Deprecated
@@ -30,9 +28,22 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- bump --execute now refuses to bump a mid-prep member whose version already leads its latest release (double-bump guard; latest release from release state, falling back to the member changelog's latest released section when the explicit --only path carries no state). Pass --force to bump a mid-prep member deliberately. Shared-changelog cohorts are unchanged. (#28)
-
 ### Security
+
+## [1.3.40] - 2026-11-09
+
+- TAG: [v1.3.40][1.3.40t]
+- COVERAGE: 93.22% -- 7802/8369 lines in 45 files
+- BRANCH COVERAGE: 77.61% -- 3148/4056 branches in 45 files
+- 39.49% documented
+
+### Added
+
+- Family bump lock: bump --execute holds an flock on <family-root>/tmp/kettle-family/bump.lock for the whole write-and-commit section; a concurrent bump fails closed naming the holder. flock releases on process death, so no stale lockfile cleanup is needed. (#28)
+
+### Fixed
+
+- bump --execute now refuses to bump a mid-prep member whose version already leads its latest release (double-bump guard; latest release from release state, falling back to the member changelog's latest released section when the explicit --only path carries no state). Pass --force to bump a mid-prep member deliberately. Shared-changelog cohorts are unchanged. (#28)
 
 ## [1.3.39] - 2026-11-08
 
@@ -3387,7 +3398,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.39...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.40...HEAD
+[1.3.40]: https://github.com/kettle-dev/kettle-family/compare/v1.3.39...v1.3.40
+[1.3.40t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.40
 [1.3.39]: https://github.com/kettle-dev/kettle-family/compare/v1.3.38...v1.3.39
 [1.3.39t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.39
 [1.3.38]: https://github.com/kettle-dev/kettle-family/compare/v1.3.37...v1.3.38
