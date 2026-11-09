@@ -56,11 +56,13 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     branch_state = release_state_result("alpha", {"version" => "1.4.12"}, branch: "1-4-stable")
     branch_check = instance_double(described_class, results: [branch_state])
     check = described_class.new(config: nil, members: [member])
-    allow(check).to receive(:member_local_release_config).and_return(branch_config)
-    allow(check).to receive(:current_branch_for).and_return("1-4-stable")
-    allow(check).to receive(:branch_filtered_state).and_return({"latest_released" => "1.4.11"})
+    allow(check).to receive_messages(
+      member_local_release_config: branch_config,
+      current_branch_for: "1-4-stable",
+      branch_filtered_state: {"latest_released" => "1.4.11"},
+      enrich_github_release: {"latest_released" => "1.4.11"}
+    )
     allow(check).to receive(:enrich_git_state).and_call_original
-    allow(check).to receive(:enrich_github_release).and_return({"latest_released" => "1.4.11"})
     allow(Open3).to receive(:capture3).and_return([JSON.generate("version" => "1.4.12"), "", status(0, true)])
     allow(described_class).to receive(:new).and_return(branch_check)
 
