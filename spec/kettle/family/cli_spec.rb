@@ -873,6 +873,56 @@ RSpec.describe Kettle::Family::CLI do
     expect(out.string).to include("version changes required")
   end
 
+  it "fails closed when another process holds the family bump lock", :prism do
+    write_gem("alpha")
+    initialize_git_repo(@tmpdir)
+    lock_path = File.join(@tmpdir, "tmp", "kettle-family", "bump.lock")
+    FileUtils.mkdir_p(File.dirname(lock_path))
+    File.open(lock_path, File::RDWR | File::CREAT, 0o644) do |holder|
+      holder.flock(File::LOCK_EX)
+      holder.write("pid 999999, started 2026-01-01T00:00:00Z")
+      holder.flush
+      out = StringIO.new
+      err = StringIO.new
+
+      status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "alpha", "--execute"], out: out, err: err)
+
+      expect(status).to eq(1)
+      expect(err.string).to include("another family bump is in progress")
+      expect(err.string).to include("pid 999999")
+      expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.0"')
+    end
+  end
+
+  it "bumps after the family bump lock is released", :prism do
+    write_gem("alpha")
+    initialize_git_repo(@tmpdir)
+    lock_path = File.join(@tmpdir, "tmp", "kettle-family", "bump.lock")
+    FileUtils.mkdir_p(File.dirname(lock_path))
+    File.open(lock_path, File::RDWR | File::CREAT, 0o644) { |holder| holder.flock(File::LOCK_EX) }
+    out = StringIO.new
+
+    status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "alpha", "--execute"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
+  end
+
+  it "does not require the family bump lock in --check mode", :prism do
+    write_gem("alpha")
+    lock_path = File.join(@tmpdir, "tmp", "kettle-family", "bump.lock")
+    FileUtils.mkdir_p(File.dirname(lock_path))
+    File.open(lock_path, File::RDWR | File::CREAT, 0o644) do |holder|
+      holder.flock(File::LOCK_EX)
+      out = StringIO.new
+
+      status = described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "alpha", "--check"], out: out, err: StringIO.new)
+
+      expect(status).to eq(1)
+      expect(out.string).to include("version changes required")
+    end
+  end
+
   it "honors release-state latest_released over the changelog fallback in the mid-prep guard", :prism do
     write_gem("alpha")
     File.write(File.join(@tmpdir, "alpha", "CHANGELOG.md"), "## [Unreleased]\n\n- fix\n\n## [1.0.0] - 2026-01-01\n")

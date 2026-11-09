@@ -1449,6 +1449,36 @@ module Kettle
         )
         return guard_results unless guard_results.empty?
 
+        run = -> { bump_version_write_results(config: config, members: members, options: options, phase: phase, release_state_results: release_state_results) }
+        return run.call unless options[:execute]
+
+        with_bump_lock(config: config, &run)
+      end
+
+      # Serialize concurrent family bumps with an flock held for the whole
+      # write-and-commit section. The kernel releases an flock on process
+      # death, so there is no stale lockfile to clear by hand; the file's
+      # contents name the holder for the fail-closed message. Scope is the
+      # family root, not the member: lockstep cohort bumps span members, and
+      # multi-lock acquisition invites deadlock.
+      def with_bump_lock(config:)
+        lock_path = File.join(config.root, "tmp", "kettle-family", "bump.lock")
+        FileUtils.mkdir_p(File.dirname(lock_path))
+        File.open(lock_path, File::RDWR | File::CREAT, 0o644) do |lock_file|
+          unless lock_file.flock(File::LOCK_EX | File::LOCK_NB)
+            holder = File.read(lock_path).strip
+            detail = holder.empty? ? "holder unknown" : "held by #{holder}"
+            raise Error, "bump refused: another family bump is in progress (#{detail}; lock #{lock_path})"
+          end
+          lock_file.rewind
+          lock_file.write("pid #{Process.pid}, started #{Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ")}")
+          lock_file.flush
+          lock_file.truncate(lock_file.tell)
+          yield
+        end
+      end
+
+      def bump_version_write_results(config:, members:, options:, phase:, release_state_results: nil)
         results = []
         completed_target_versions = {}
         shared_member_names = shared_bump_member_names(config: config, members: members)
