@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Family bump lock: bump --execute holds an flock on <family-root>/tmp/kettle-family/bump.lock for the whole write-and-commit section; a concurrent bump fails closed naming the holder. flock releases on process death, so no stale lockfile cleanup is needed. (#28)
+
 ### Changed
 
 ### Deprecated
