@@ -794,11 +794,37 @@ module Kettle
       end
 
       def release_resume_hints
-        failed_hints = visible_results.reject(&:ok?).filter_map { |result| resume_hint_for(result) }.uniq
+        failed_hints = merged_release_failure_hints(visible_results.reject(&:ok?))
         pending_names = summary_pending.map { |entry| entry.fetch("member") }
         return failed_hints if pending_names.empty?
 
         [*failed_hints, release_resume_hint_for_pending(pending_names)]
+      end
+
+      # Members within a wave run in parallel, so failures that need the same
+      # resume step share one command (--only a,b,c) instead of one line each.
+      # Results carrying a bespoke resume_command are kept verbatim.
+      def merged_release_failure_hints(failures)
+        groups = {}
+        order = []
+        failures.each do |result|
+          custom = result.respond_to?(:resume_command) && !result.resume_command.to_s.empty?
+          if custom || result.member_name.nil? || result.phase == "aggregate_github_release"
+            hint = release_resume_hint(result)
+            order << [:raw, hint] if hint && !order.include?([:raw, hint])
+            next
+          end
+          step = result.respond_to?(:resume_step) ? result.resume_step : nil
+          key = [:group, step]
+          order << key unless groups.key?(key)
+          (groups[key] ||= []) << result.member_name
+        end
+        order.map do |kind, value|
+          next value if kind == :raw
+
+          hint = "#{release_resume_base} --only #{groups[[kind, value]].uniq.join(",")}"
+          value ? "#{hint} --start-step #{value}" : hint
+        end
       end
 
       def resume_hint_for(result)

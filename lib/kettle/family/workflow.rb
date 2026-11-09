@@ -2555,7 +2555,36 @@ module Kettle
         results
       end
 
+      # Parallel members race to install Bundler into the shared gem dir: each
+      # `bundle lock/update` auto-installs the version in its lockfile's
+      # BUNDLED WITH, and `update --bundler=X` installs the newest stable.
+      # Concurrent installs leave half-written gems (LoadError on
+      # bundler/definition, rubygems_ext, ...). Install every needed version
+      # once, serially, before the fan-out.
+      def prewarm_bundlers_once(wave, wave_jobs)
+        return if wave_jobs <= 1
+
+        versions = wave.flat_map { |member| bundled_with_versions(member) }
+        versions << stable_bundler_version&.to_s
+        versions = versions.compact.uniq - (@prewarmed_bundlers ||= [])
+        versions.each do |version|
+          next if system("gem", "list", "-i", "bundler", "-v", version, out: File::NULL, err: File::NULL)
+
+          system("gem", "install", "bundler", "-v", version, "--no-document", out: File::NULL, err: File::NULL)
+        end
+        @prewarmed_bundlers.concat(versions)
+      end
+
+      def bundled_with_versions(member)
+        Dir.glob(File.join(member.root, "{Gemfile,Appraisal.root.gemfile,gemfiles/*.gemfile}.lock")).filter_map do |lock|
+          File.read(lock)[/^BUNDLED WITH\n\s+(\d[\w.]*)\s*$/, 1]
+        end.uniq
+      rescue SystemCallError
+        []
+      end
+
       def run_release_wave(wave, wave_jobs: release_jobs(wave))
+        prewarm_bundlers_once(wave, wave_jobs)
         queue = Queue.new
         wave.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(wave.length)
