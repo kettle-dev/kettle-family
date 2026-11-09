@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Executed bundle updates now show planning and per-member phase progress as they run, summarize completed, failed, unfinished, and unstarted members on failure or interruption, and omit routine successful command output from the text report. Discovery also avoids evaluating the same configured and discovered gemspec twice.
+
 ### Deprecated
 
 ### Removed

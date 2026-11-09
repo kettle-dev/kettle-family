@@ -501,6 +501,35 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).phase).to eq("commit_bundle_update")
   end
 
+  it "reports bup phase progress and identifies completed, failed and unfinished members" do
+    fake_bin = File.join(@tmpdir, "bin")
+    FileUtils.mkdir_p(fake_bin)
+    write_fake_ruby_executable(fake_bin, "bundle", 'exit(Dir.pwd.end_with?("beta") ? 1 : 0)')
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = %w[alpha beta gamma].map { |name| member_at(name) }
+    progress = StringIO.new
+    workflow = described_class.new(command: "bup", config: config, members: members, execute: true, commit: false,
+      progress_io: progress, env_overrides: {"PATH" => prepend_path(fake_bin)})
+
+    results = workflow.results
+
+    expect(results.map(&:ok?)).to eq([true, false])
+    expect(progress.string).to include("bup started", "bup ok", "bup failed", "completed: alpha; failed: beta; unfinished: ; unstarted: gamma")
+  end
+
+  it "reports unfinished members when bup is interrupted" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    members = %w[alpha beta].map { |name| member_at(name) }
+    progress = StringIO.new
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call).and_raise(Interrupt)
+    workflow = described_class.new(command: "bup", config: config, members: members, execute: true, progress_io: progress)
+
+    expect { workflow.results }.to raise_error(Interrupt)
+    expect(progress.string).to include("bup interrupted", "completed: ; failed: -; unfinished: alpha; unstarted: beta")
+  end
+
   it "updates a sibling-family root before members without committing the root lockfile" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "sibling_repos"}}))
     write_gemfile(@tmpdir)

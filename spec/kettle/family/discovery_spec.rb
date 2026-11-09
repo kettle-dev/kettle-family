@@ -61,6 +61,16 @@ RSpec.describe Kettle::Family::Discovery do
     expect(discovery.warnings).to be_empty
   end
 
+  it "evaluates a configured and discovered gemspec only once per inspection" do
+    root = write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), {"members" => {"roots" => ["alpha"]}}.to_yaml)
+    discovery = described_class.new(config: Kettle::Family::Config.load(root: @tmpdir))
+    allow(discovery).to receive(:load_gemspec).and_call_original
+
+    expect(discovery.members.map(&:name)).to eq(["alpha"])
+    expect(discovery).to have_received(:load_gemspec).with(File.join(root, "alpha.gemspec")).once
+  end
+
   it "includes development dependencies in release dependency metadata" do
     write_gem("alpha")
     write_gem("beta", development_dependencies: ["alpha"])
