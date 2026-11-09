@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- Generated [pins] mise task now prefixes env KETTLE_GHA_PINS_OFFLINE_FALLBACK=true so member pins runs fetch live from the GitHub API on a persistent-cache miss (newly introduced actions no longer fail the family pins run with 'offline cache miss'). Env switch, not a CLI flag, so members resolving an older kettle-gha-pins ignore it.
+
 ### Deprecated
 
 ### Removed

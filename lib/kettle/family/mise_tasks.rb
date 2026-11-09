@@ -390,6 +390,13 @@ module Kettle
             flags = %w[branch-lanes discover metadata report mise-trust].include?(command) ? "" : " --execute"
             flags += " --upgrade major" if name == "pins"
             tasks[name] = "bundle exec kettle-family #{command}#{flags}"
+            # Member pins runs execute with --offline (appended in execute
+            # mode), which hard-fails on a cold cache entry for a newly
+            # introduced action. The env switch opts into kettle-gha-pins'
+            # live-fetch-on-miss fallback. It is an env var, not a CLI flag,
+            # so members still resolving an older kettle-gha-pins ignore it
+            # instead of dying on "invalid option".
+            tasks[name] = "env KETTLE_GHA_PINS_OFFLINE_FALLBACK=true #{tasks[name]}" if name == "pins"
           end
           tasks["readiness"] = "bundle exec kettle-family check --execute"
           tasks["deps"] = "bundle exec kettle-family bup --execute --no-commit"

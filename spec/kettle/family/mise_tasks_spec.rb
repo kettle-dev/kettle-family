@@ -410,6 +410,14 @@ RSpec.describe Kettle::Family::MiseTasks do
       expect(content).not_to include("--env KETTLE_DEV_DEV=")
     end
 
+    it "enables the kettle-gha-pins offline fallback via env switch in the generated pins task" do
+      content = described_class::ManagedSuite.new(sibling_config).content
+
+      expect(content).to include(
+        "run = \"env KETTLE_GHA_PINS_OFFLINE_FALLBACK=true bundle exec kettle-family gha-sha-pins --execute --upgrade major\""
+      )
+    end
+
     it "executes the generated env wrapper and forwards arguments to bundle" do
       Dir.mktmpdir("managed-task-command") do |dir|
         File.write(File.join(dir, "bundle"), "#!/bin/sh\nprintf '%s\\n' \"$KETTLE_DEV_DEV\" \"$@\"\n")
