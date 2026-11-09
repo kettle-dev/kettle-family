@@ -627,11 +627,12 @@ module Kettle
 
         option :check, desc: "Check whether version bumps would need edits"
         option :from, value: {type: String, usage: "VERSION"}, desc: "Require selected members to currently match VERSION"
+        option :force, desc: "Allow bumping a mid-prep member whose version already leads its latest release"
 
         def run(target_version = nil)
           raise Error, "#{workflow_command_name} requires VERSION, major, minor, patch, or pre" unless target_version
 
-          run_family(workflow_command_name, target_version: target_version, from_version: options[:from])
+          run_family(workflow_command_name, target_version: target_version, from_version: options[:from], force: options[:force])
         end
 
         private
@@ -1439,6 +1440,15 @@ module Kettle
         require_relative "version_bump"
         require_relative "release_waves"
 
+        guard_results = mid_prep_bump_guard_results(
+          config: config,
+          members: members,
+          options: options,
+          phase: phase,
+          release_state_results: release_state_results
+        )
+        return guard_results unless guard_results.empty?
+
         results = []
         completed_target_versions = {}
         shared_member_names = shared_bump_member_names(config: config, members: members)
@@ -1481,6 +1491,73 @@ module Kettle
           )
           break memo unless memo.last.ok?
         end
+      end
+
+      # Fail closed on a double bump: a member whose checkout version already
+      # sits ahead of its latest released version is mid-prep, and bumping it
+      # again steals a version number from the in-flight release. The explicit
+      # "--only <member> patch" path carries no release-state results
+      # (release_state_results_for_selection skips the check without a status
+      # token), so fall back to the member changelog's latest released section
+      # — a purely local read that covers exactly that path. Shared-changelog
+      # families are exempt: shared_bump_target_version already aligns mid-prep
+      # cohort laggards without incrementing.
+      def mid_prep_bump_guard_results(config:, members:, options:, phase:, release_state_results:)
+        return [] unless options[:execute]
+        return [] if options[:force]
+        return [] if config.shared_changelog?
+
+        states_by_name = Array(release_state_results).each_with_object({}) do |result, memo|
+          memo[result.member_name] = result.state
+        end
+        members.filter_map do |member|
+          latest = mid_prep_latest_released(member: member, state: states_by_name[member.name])
+          next if latest.nil?
+
+          current = Gem::Version.new(member.version.to_s)
+          next unless current > latest
+
+          CommandResult.new(
+            member_name: member.name,
+            phase: phase,
+            command: ["internal", phase, "mid-prep-guard"],
+            workdir: member.root,
+            status: 1,
+            success: false,
+            stdout: "",
+            stderr: "bump refused: #{member.name} is #{current}, already ahead of latest released #{latest}; release it first, or pass --force to bump a mid-prep member",
+            elapsed_seconds: 0.0,
+            skipped: false,
+            reason: "mid-prep double-bump guard"
+          )
+        end
+      end
+
+      def mid_prep_latest_released(member:, state:)
+        if state.respond_to?(:[])
+          latest = state["latest_released"].to_s
+          unless latest.empty?
+            parsed = mid_prep_guard_version(latest)
+            return parsed if parsed
+          end
+        end
+        changelog = File.join(member.root, "CHANGELOG.md")
+        return nil unless File.file?(changelog)
+
+        File.foreach(changelog) do |line|
+          match = line.match(/\A## \[([^\]]+)\]/)
+          next unless match
+          next if match[1] == "Unreleased"
+
+          return mid_prep_guard_version(match[1])
+        end
+        nil
+      end
+
+      def mid_prep_guard_version(value)
+        Gem::Version.new(value.to_s)
+      rescue ArgumentError
+        nil
       end
 
       def shared_bump_member_names(config:, members:)

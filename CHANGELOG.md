@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- bump --execute now refuses to bump a mid-prep member whose version already leads its latest release (double-bump guard; latest release from release state, falling back to the member changelog's latest released section when the explicit --only path carries no state). Pass --force to bump a mid-prep member deliberately. Shared-changelog cohorts are unchanged. (#28)
+
 ### Security
 
 ## [1.3.39] - 2026-11-08
