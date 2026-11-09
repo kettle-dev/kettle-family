@@ -82,6 +82,11 @@ branch targets must emit the same phase events as ordinary members.</p>
   <li>Shared-root changelog members query the exact registry release version’s tag.</li>
   <li>Branch-stack targets also query their exact release version’s tag, never the<br>
 repository-wide latest release belonging to another branch.</li>
+  <li>When a member’s current checkout is a configured stack target, its current<br>
+row uses that branch’s release line, Git refs, and exact GitHub release tag.<br>
+It includes uncommitted checkout changes; the separate branch row inspects<br>
+the committed branch ref in a temporary worktree. Other current checkouts<br>
+keep their ordinary reporting behavior.</li>
   <li>Member-local changelogs in a shared-changelog monorepo also query their exact<br>
 released version: publishing the cohort later must not replace their identity<br>
 with the repository-wide latest release.</li>

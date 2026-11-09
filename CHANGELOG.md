@@ -22,17 +22,28 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Executed bundle updates now show planning and per-member phase progress as they run, summarize completed, failed, unfinished, and unstarted members on failure or interruption, and omit routine successful command output from the text report. Discovery also avoids evaluating the same configured and discovered gemspec twice.
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
-- Release state now uses the checked-out branch's release line, Git counts, and exact GitHub release when a member is on a configured stack branch, while retaining the separate branch report.
-
 ### Security
+
+## [1.3.39] - 2026-11-08
+
+- TAG: [v1.3.39][1.3.39t]
+- COVERAGE: 93.21% -- 7754/8319 lines in 45 files
+- BRANCH COVERAGE: 77.53% -- 3120/4024 branches in 45 files
+- 39.49% documented
+
+### Changed
+
+- Executed bundle updates now show planning and per-member phase progress as they run, summarize completed, failed, unfinished, and unstarted members on failure or interruption, and omit routine successful command output from the text report. Discovery also avoids evaluating the same configured and discovered gemspec twice.
+
+### Fixed
+
+- Release state now uses the checked-out branch's release line, Git counts, and exact GitHub release when a member is on a configured stack branch, while retaining the separate branch report.
 
 ## [1.3.38] - 2026-11-07
 
@@ -3370,7 +3381,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.38...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.39...HEAD
+[1.3.39]: https://github.com/kettle-dev/kettle-family/compare/v1.3.38...v1.3.39
+[1.3.39t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.39
 [1.3.38]: https://github.com/kettle-dev/kettle-family/compare/v1.3.37...v1.3.38
 [1.3.38t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.38
 [1.3.37]: https://github.com/kettle-dev/kettle-family/compare/v1.3.36...v1.3.37
