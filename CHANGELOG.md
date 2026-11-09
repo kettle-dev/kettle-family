@@ -22,8 +22,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- Generated [pins] mise task now prefixes env KETTLE_GHA_PINS_OFFLINE_FALLBACK=true so member pins runs fetch live from the GitHub API on a persistent-cache miss (newly introduced actions no longer fail the family pins run with 'offline cache miss'). Env switch, not a CLI flag, so members resolving an older kettle-gha-pins ignore it.
-
 ### Deprecated
 
 ### Removed
@@ -35,13 +33,15 @@ Please file a bug if you notice a violation of semantic versioning.
 ## [1.3.39] - 2026-11-08
 
 - TAG: [v1.3.39][1.3.39t]
-- COVERAGE: 93.21% -- 7754/8319 lines in 45 files
-- BRANCH COVERAGE: 77.53% -- 3120/4024 branches in 45 files
+- COVERAGE: 93.21% -- 7755/8320 lines in 45 files
+- BRANCH COVERAGE: 77.55% -- 3122/4026 branches in 45 files
 - 39.49% documented
 
 ### Changed
 
 - Executed bundle updates now show planning and per-member phase progress as they run, summarize completed, failed, unfinished, and unstarted members on failure or interruption, and omit routine successful command output from the text report. Discovery also avoids evaluating the same configured and discovered gemspec twice.
+
+- Generated [pins] mise task now prefixes env KETTLE_GHA_PINS_OFFLINE_FALLBACK=true so member pins runs fetch live from the GitHub API on a persistent-cache miss (newly introduced actions no longer fail the family pins run with 'offline cache miss'). Env switch, not a CLI flag, so members resolving an older kettle-gha-pins ignore it.
 
 ### Fixed
 
