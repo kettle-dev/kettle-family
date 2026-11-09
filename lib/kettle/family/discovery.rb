@@ -130,6 +130,11 @@ module Kettle
       end
 
       def member_from_gemspec(path)
+        @members_by_gemspec ||= {}
+        @members_by_gemspec[File.expand_path(path)] ||= build_member_from_gemspec(path)
+      end
+
+      def build_member_from_gemspec(path)
         spec = load_gemspec(path)
         root = File.dirname(path)
         dependencies = spec.runtime_dependencies.map(&:name).sort

@@ -859,6 +859,8 @@ module Kettle
       end
 
       def build_report(command, options)
+        planning_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        planning_progress(command, options, "planning started")
         config = Config.load(root: options[:root], path: options[:config])
         start_at = parse_start_at(options[:start_at])
         Selection.validate_positional_start_at!(command, start_at.member, branch: start_at.branch)
@@ -871,6 +873,7 @@ module Kettle
           release_dependency_member_names: (command == "release") ? nil : direct_member_only_names(effective_only)
         )
         members = discovery.members
+        planning_progress(command, options, "discovered #{members.size} members in #{format("%.1f", Process.clock_gettime(Process::CLOCK_MONOTONIC) - planning_started)}s; ordering")
         ordered = if command == "install"
           install_order(members, config)
         elsif command == "metadata"
@@ -894,6 +897,7 @@ module Kettle
           members: ordered,
           release_state_results: release_state_results
         ).apply(only: effective_only, exclude: options[:exclude], start_at: start_at.member)
+        planning_progress(command, options, "planning complete in #{format("%.1f", Process.clock_gettime(Process::CLOCK_MONOTONIC) - planning_started)}s; #{selected.size} selected")
         options = options.merge(template_branch_selection: branch_selection)
         result_members = selected
         display_members = display_members_for(command: command, config: config, members: ordered, selected_members: selected)
@@ -1130,11 +1134,18 @@ module Kettle
       end
 
       def progress_io(command, options)
-        return nil unless %w[release template gha-sha-pins].include?(command)
+        return nil unless %w[release template gha-sha-pins bup bupb update-bundler].include?(command)
         return nil unless options[:execute]
-        return nil if options[:json]
+        return nil if options[:json] || (options[:events] && %w[bup bupb update-bundler].include?(command))
 
         stdout
+      end
+
+      def planning_progress(command, options, message)
+        return unless %w[bup bupb update-bundler].include?(command) && progress_io(command, options)
+
+        stdout.puts("#{command}: #{message}")
+        stdout.flush if stdout.respond_to?(:flush)
       end
 
       def release_state_progress(command:, config:, members:, options:)

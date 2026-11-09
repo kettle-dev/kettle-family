@@ -619,11 +619,16 @@ module Kettle
         return test_member_workflow_results(workflow_members) if command == "test" && execute
 
         runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
+        bup_progress = start_bup_progress(workflow_members)
         results = []
+        completed = []
+        started_members = []
+        failed = nil
+        runner = BupProgressRunner.new(runner, bup_progress, started_members) if bup_progress
         update_family_root_bundle(runner: runner, memo: results) if %w[bup bupb update-bundler].include?(command)
         return results unless results.all?(&:ok?)
 
-        results.concat(bup_bootstrap_dependency_results(workflow_members, runner: runner, memo: results)) if %w[bup bupb update-bundler].include?(command)
+        results.concat(bup_bootstrap_dependency_results(workflow_members, runner: runner, memo: results, progress: bup_progress)) if %w[bup bupb update-bundler].include?(command)
         return results unless results.all?(&:ok?)
 
         if %w[bup bupb update-bundler].include?(command) && release_mode_bundle_update?
@@ -636,6 +641,8 @@ module Kettle
         end
         gha_progress = (command == "gha-sha-pins") ? start_gha_sha_pins_progress(workflow_members) : nil
         workflow_members.each_with_object(results) do |member, memo|
+          bup_progress&.start_member(member, total: 1, status: "starting")
+          started_members << member.name unless started_members.include?(member.name)
           if command == "template" && config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles")
             break memo unless memo.last.ok?
@@ -657,7 +664,11 @@ module Kettle
           )
           memo << result
           gha_progress&.finish_member(member, success: result.ok?, status: result.ok? ? "complete" : "failed")
-          break memo unless result.ok?
+          unless result.ok?
+            failed = member.name
+            bup_progress&.finish_member(member, success: false, status: "failed")
+            break memo
+          end
 
           normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "normalize_lockfiles") if command == "template"
           commit_gha_sha_pins(member: member, runner: runner, memo: memo) if command == "gha-sha-pins"
@@ -668,9 +679,50 @@ module Kettle
             commit_bundle_update(member: member, runner: runner, memo: memo)
           end
           commit_bex_changes(member: member, runner: runner, memo: memo) if command == "bex"
+          if bup_progress
+            failed = member.name unless memo.last&.ok?
+            bup_progress.finish_member(member, success: failed.nil?, status: failed ? "failed" : "complete")
+            completed << member.name unless failed
+            break memo if failed
+          end
         end
         gha_progress&.finish
         results
+      ensure
+        if bup_progress
+          failed ||= results.find { |result| !result.ok? }&.member_name
+          bup_progress.finish
+          remaining = workflow_members.map(&:name) - completed - Array(failed)
+          unfinished = remaining & started_members
+          unstarted = remaining - started_members
+          bup_progress.summary("#{command} summary: completed: #{completed.join(", ")}; failed: #{failed || "-"}; unfinished: #{unfinished.join(", ")}; unstarted: #{unstarted.join(", ")}")
+        end
+      end
+
+      class BupProgressRunner
+        def initialize(runner, progress, started_members)
+          @runner = runner
+          @progress = progress
+          @started_members = started_members
+        end
+
+        def call(member:, phase:, **options)
+          started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          @started_members << member.name unless @started_members.include?(member.name)
+          @progress.update(member, status: "#{phase} started")
+          result = @runner.call(member: member, phase: phase, **options)
+          @progress.update(member, status: "#{phase} #{result.ok? ? "ok" : "failed"} (#{format("%.1f", Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)}s)")
+          result
+        rescue Interrupt
+          @progress.update(member, status: "#{phase} interrupted (#{format("%.1f", Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)}s)")
+          raise
+        end
+      end
+
+      def start_bup_progress(workflow_members)
+        return unless execute && progress_io && %w[bup bupb update-bundler].include?(command)
+
+        WorkflowProgress.new(io: progress_io, label: command, total: workflow_members.size, jobs: 1, members: workflow_members).tap(&:start)
       end
 
       def update_family_root_bundle(runner:, memo:)
@@ -1433,12 +1485,14 @@ module Kettle
       # generated bootstrap activates an older installed release and Bundler
       # rejects the duplicate requirement raised by the family-root floor bump.
       # This is the bup analogue of template_bootstrap_dependency_results.
-      def bup_bootstrap_dependency_results(workflow_members, runner:, memo:)
+      def bup_bootstrap_dependency_results(workflow_members, runner:, memo:, progress: nil)
         return [] if workflow_members.empty?
 
+        progress&.notification("checking bootstrap dependencies")
         candidate_members = workflow_members.select { |member| nomono_bootstrap_candidate?(member) }
         return [] if candidate_members.empty?
 
+        progress&.notification("checking latest nomono release for #{candidate_members.size} members")
         latest_nomono_version = latest_released_nomono_version
         bootstrap = NomonoBootstrap.new(
           latest_version: latest_nomono_version,
@@ -1446,6 +1500,7 @@ module Kettle
           phase: "bup_bootstrap_dependencies"
         )
         candidate_members.each_with_object([]) do |member, results|
+          progress&.notification("#{member.name}: checking bootstrap")
           next unless bootstrap.member_needs_bootstrap?(member)
 
           floor_paths = bootstrap.paths_to_update(member)

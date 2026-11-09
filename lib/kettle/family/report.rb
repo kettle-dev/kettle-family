@@ -261,7 +261,7 @@ module Kettle
       end
 
       def suppress_success_output?(result)
-        result.stdout.to_s.empty? || (command == "template" && result.ok?)
+        result.stdout.to_s.empty? || (%w[template bup bupb update-bundler].include?(command) && result.ok?)
       end
 
       def machine_readable_result?(result)
