@@ -20,13 +20,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Pluggable release secrets adapters: `Secrets::Registry` selects a provider by name and third parties can register their own. Built-in adapters share one `CliAdapter` engine: `1password` (`op`), `bitwarden` (aliases `bw`, `vaultwarden`), `rbw`, and a generic `command` adapter that runs one configured command per secret without a shell. An adapter that cannot supply a secret (unsupported operation, or access not approved such as a locked vault) falls back to asking at the terminal without echo. (#35, #36)
+
 ### Changed
+
+- The release secrets broker no longer depends on 1Password wording: adapters raise `Secrets::AuthorizationError` when access is not approved. After such a failure, requests already queued fail at once with one clear message instead of each raising its own prompt (previously one member failed per minute). The signing passphrase is read once; the RubyGems OTP is always fetched fresh. (#35, #36)
+- When several release members fail at the same resume step, the report prints one merged `--only a,b,c [--start-step N]` command instead of one line per member. (#32, #34)
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Parallel release waves no longer race to install Bundler into the shared gem dir: each Bundler version named by members' `BUNDLED WITH`, plus the newest stable, is installed once, serially, before the fan-out. (#33, #34)
 
 ### Security
 
