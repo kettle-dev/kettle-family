@@ -253,11 +253,14 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
     let(:prompter) { instance_double(Kettle::Family::Secrets::TerminalPrompter) }
 
     it "classifies 1Password approval failures but not other failures" do
-      approval = described_class.classify_onepassword_error(StandardError.new("error initializing client: authorization prompt dismissed"))
-      other = described_class.classify_onepassword_error(StandardError.new("item not found"))
+      provider = described_class::OnePassword.new("item" => "Rubygems")
+      status = instance_double(Process::Status, success?: false, exitstatus: 1)
+      allow(Open3).to receive(:capture3).with("op", "item", "get", "Rubygems", "--otp")
+        .and_return(["", "error initializing client: authorization prompt dismissed", status],
+          ["", "item not found", status])
 
-      expect(approval).to be_a(described_class::AuthorizationError)
-      expect(other).not_to be_a(described_class::AuthorizationError)
+      expect { provider.rubygems_otp }.to raise_error(described_class::AuthorizationError)
+      expect { provider.rubygems_otp }.to raise_error(Kettle::Family::Error) { |error| expect(error).not_to be_a(described_class::AuthorizationError) }
     end
 
     it "runs configured commands without a shell and treats a missing command as unsupported" do
@@ -273,7 +276,7 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
     it "raises a plain error when a configured command fails" do
       provider = described_class::Command.new("rubygems_otp_command" => "false")
 
-      expect { provider.rubygems_otp }.to raise_error(Kettle::Family::Error, /rubygems otp command failed/)
+      expect { provider.rubygems_otp }.to raise_error(Kettle::Family::Error, /Command rubygems otp lookup failed/)
     end
 
     describe "Bitwarden and rbw presets" do
@@ -311,7 +314,7 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
         stub_capture(%w[bw get item Rubygems], stdout: JSON.generate("fields" => []))
 
         expect { provider.rubygems_otp }.to raise_error(Kettle::Family::Error, /Not found/)
-        expect { provider.gem_signing_passphrase }.to raise_error(Kettle::Family::Error, /not found on item/)
+        expect { provider.gem_signing_passphrase }.to raise_error(Kettle::Family::Error, /gem signing passphrase lookup failed: returned no value/)
       end
 
       it "declares what it supports" do
@@ -331,7 +334,7 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
       it "is available through the registry under bitwarden, bw, vaultwarden and rbw" do
         %w[bitwarden bw vaultwarden rbw].each do |name|
           config = instance_double(Kettle::Family::Config, release_secrets: {"provider" => name})
-          expect(described_class::Factory.build(config: config)).to be_a(described_class::Command)
+          expect(described_class::Factory.build(config: config)).to be_a(described_class::CliAdapter)
         end
       end
     end

@@ -44,40 +44,6 @@ module Kettle
       if defined?(Kettle::Dev::ReleaseSecrets)
         Kettle::Dev.const_set(:Error, Class.new(StandardError)) unless Kettle::Dev.const_defined?(:Error, false)
         Provider = Kettle::Dev::ReleaseSecrets::Provider
-
-        class OnePassword < Kettle::Dev::ReleaseSecrets::OnePassword
-          def self.configured?(name)
-            Kettle::Dev::ReleaseSecrets::OnePassword.configured?(name)
-          end
-
-          def authorize!
-            with_release_secret_alert_suppressed { gem_signing_passphrase }
-          rescue => error
-            raise Secrets.classify_onepassword_error(error)
-          end
-
-          def gem_signing_passphrase
-            super
-          rescue => error
-            raise Secrets.classify_onepassword_error(error)
-          end
-
-          def rubygems_otp
-            with_release_secret_alert_suppressed { super }
-          rescue => error
-            raise Secrets.classify_onepassword_error(error)
-          end
-
-          private
-
-          def with_release_secret_alert_suppressed
-            previous = ENV.fetch("KETTLE_RELEASE_SECRET_ALERT", nil)
-            ENV["KETTLE_RELEASE_SECRET_ALERT"] = "false"
-            yield
-          ensure
-            previous.nil? ? ENV.delete("KETTLE_RELEASE_SECRET_ALERT") : ENV["KETTLE_RELEASE_SECRET_ALERT"] = previous
-          end
-        end
       else
         class Provider
           def authorize!
@@ -90,87 +56,6 @@ module Kettle
 
           def rubygems_otp
             nil
-          end
-        end
-
-        class OnePassword < Provider
-          PROVIDER_NAMES = %w[1password onepassword op].freeze
-          DEFAULTS = {
-            "item" => "Rubygems",
-            "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE",
-            "rubygems_otp_field" => "one-time password"
-          }.freeze
-
-          def self.configured?(name)
-            PROVIDER_NAMES.include?(name.to_s.downcase)
-          end
-
-          def initialize(config)
-            @config = DEFAULTS.merge(config || {})
-          end
-
-          def gem_signing_passphrase
-            reference = string_config("gem_signing_passphrase_reference")
-            return read_reference(reference) unless reference.empty?
-
-            item_field("gem_signing_passphrase_field")
-          end
-
-          def authorize!
-            gem_signing_passphrase
-          end
-
-          def rubygems_otp
-            reference = string_config("rubygems_otp_reference")
-            return read_reference(reference) unless reference.empty?
-
-            item = required_config("item")
-            argv = ["op", "item", "get", item, "--otp"]
-            account = string_config("account")
-            argv.concat(["--account", account]) unless account.empty?
-            run_op(argv, purpose: "RubyGems OTP")
-          end
-
-          private
-
-          attr_reader :config
-
-          def item_field(field_key)
-            item = required_config("item")
-            field = required_config(field_key)
-            argv = ["op", "item", "get", item, "--fields", "label=#{field}", "--reveal"]
-            account = string_config("account")
-            argv.concat(["--account", account]) unless account.empty?
-            run_op(argv, purpose: field_key.tr("_", " "))
-          end
-
-          def read_reference(reference)
-            argv = ["op", "read", reference]
-            account = string_config("account")
-            argv.concat(["--account", account]) unless account.empty?
-            run_op(argv, purpose: "secret reference")
-          end
-
-          def run_op(argv, purpose:)
-            stdout, stderr, status = Open3.capture3(*argv)
-            return stdout.to_s.strip if status.success? && !stdout.to_s.strip.empty?
-
-            details = stderr.to_s.strip
-            details = "op exited #{status.exitstatus}" if details.empty?
-            raise Secrets.classify_onepassword_error(Error.new("1Password #{purpose} lookup failed: #{details}"))
-          rescue Errno::ENOENT
-            raise Error, "1Password CLI executable `op` was not found"
-          end
-
-          def required_config(key)
-            value = string_config(key)
-            raise Error, "1Password release secrets require release.secrets.#{key}" if value.empty?
-
-            value
-          end
-
-          def string_config(key)
-            config.fetch(key, "").to_s
           end
         end
       end
@@ -207,50 +92,29 @@ module Kettle
         end
       end
 
-      # 1Password wording that means "access not approved" (dismissed or timed
-      # out prompt, locked or unreachable app) rather than a bad lookup. Kept
-      # here, with the adapter, so nothing else depends on op's messages.
-      ONEPASSWORD_AUTHORIZATION_FAILURE = /authoriz|dismissed|desktop app|connection reset|not signed in|session expired/i
-
-      def self.classify_onepassword_error(error)
-        return error if error.is_a?(AuthorizationError)
-
-        klass = error.message.match?(ONEPASSWORD_AUTHORIZATION_FAILURE) ? AuthorizationError : Error
-        klass.new(error.message)
-      end
-
-      # Generic adapter: runs one configured command per secret, with no shell.
-      # Works with any CLI that prints the secret on stdout, e.g. Bitwarden
-      # (`bw get password <item>`, `bw get totp <item>`), rbw (`rbw code <item>`),
-      # pass, or a script. An operation without a configured command is simply
-      # unsupported, and the family prompts the user for it instead.
-      #
-      #   release:
-      #     secrets:
-      #       provider: command
-      #       gem_signing_passphrase_command: bw get password rubygems-signing
-      #       rubygems_otp_command: bw get totp rubygems
-      class Command < Provider
-        NAMES = %w[command cli].freeze
-
-        def self.configured?(name)
-          NAMES.include?(name.to_s.downcase)
-        end
-
+      # Shared engine for adapters that shell out to a vault CLI. A subclass says
+      # *what* to run (argv_for), how its tool words "access not approved"
+      # (error_class_for) and how to name itself in messages (label); this class
+      # does the running, the error reporting and the supports?/authorize! plumbing.
+      # Every built-in (1Password, Bitwarden, rbw, generic command) goes through
+      # it, so each one exercises the same config and error handling.
+      class CliAdapter < Provider
         def initialize(config)
           super()
           @config = config || {}
         end
 
         def supports?(operation)
-          !command_for(operation).empty?
+          !argv_for(operation.to_sym).nil?
         end
 
+        # Eager preflight: loading the signing passphrase proves access (and is
+        # what the workflow stores for signing). Nil when it is unsupported.
         def authorize!
-          nil
+          supports?(:gem_signing_passphrase) ? gem_signing_passphrase : nil
         end
 
-        # No session to keep alive: every call runs the configured command.
+        # Each call runs the CLI; there is no session to keep alive.
         def keepalive_required?
           false
         end
@@ -260,38 +124,156 @@ module Kettle
         end
 
         def gem_signing_passphrase
-          run(:gem_signing_passphrase)
+          fetch(:gem_signing_passphrase)
         end
 
         def rubygems_otp
-          run(:rubygems_otp)
+          fetch(:rubygems_otp)
         end
 
         private
 
-        # Subclasses map their tool's "locked / not signed in" wording to
-        # AuthorizationError; the generic adapter cannot know it.
+        attr_reader :config
+
+        # Array of argv, or nil when this adapter cannot supply the operation.
+        def argv_for(_operation)
+          nil
+        end
+
+        def purpose_for(operation)
+          operation.to_s.tr("_", " ")
+        end
+
+        def label
+          self.class.name.to_s.split("::").last
+        end
+
+        # Subclasses map their tool's "locked / not signed in / prompt dismissed"
+        # wording to AuthorizationError so the family can fall back to asking.
         def error_class_for(_details)
           Error
         end
 
-        def command_for(operation)
-          @config.fetch("#{operation}_command", "").to_s.strip
+        def postprocess(_operation, stdout)
+          stdout
         end
 
-        def run(operation)
-          command = command_for(operation)
-          return nil if command.empty?
+        def fetch(operation)
+          argv = argv_for(operation)
+          return nil if argv.nil?
 
-          stdout, stderr, status = Open3.capture3(*Shellwords.split(command))
-          value = stdout.to_s.strip
+          stdout, stderr, status = Open3.capture3(*argv)
+          value = postprocess(operation, stdout.to_s.strip).to_s.strip
           return value if status.success? && !value.empty?
 
           details = stderr.to_s.strip
-          details = "exited #{status.exitstatus}" if details.empty?
-          raise error_class_for(details), "#{operation.to_s.tr("_", " ")} command failed: #{details}"
+          details = (status.success? ? "returned no value" : "#{argv.first} exited #{status.exitstatus}") if details.empty?
+          raise error_class_for(details), "#{label} #{purpose_for(operation)} lookup failed: #{details}"
         rescue Errno::ENOENT
-          raise Error, "#{operation.to_s.tr("_", " ")} command executable was not found: #{command.split.first}"
+          raise Error, "#{label} CLI executable `#{argv&.first}` was not found"
+        end
+
+        def setting(key)
+          config.fetch(key, "").to_s.strip
+        end
+
+        def required_setting(key)
+          value = setting(key)
+          raise Error, "#{label} release secrets require release.secrets.#{key}" if value.empty?
+
+          value
+        end
+
+        def account_args
+          account = setting("account")
+          account.empty? ? [] : ["--account", account]
+        end
+      end
+
+      # Generic adapter: one configured command per secret, no shell. Works with
+      # any CLI that prints the secret on stdout (pass, a script, ...). An
+      # operation without a configured command is unsupported, and the family
+      # prompts the user for it instead.
+      #
+      #   release:
+      #     secrets:
+      #       provider: command
+      #       gem_signing_passphrase_command: pass show rubygems/signing
+      #       rubygems_otp_command: pass otp rubygems
+      class Command < CliAdapter
+        NAMES = %w[command cli].freeze
+
+        def self.configured?(name)
+          NAMES.include?(name.to_s.downcase)
+        end
+
+        private
+
+        def argv_for(operation)
+          command = setting("#{operation}_command")
+          command.empty? ? nil : Shellwords.split(command)
+        end
+
+        def label
+          "Command"
+        end
+      end
+
+      # 1Password CLI (`op`). Approval failures (dismissed prompt, locked or
+      # unreachable app) are recognised so the family can fall back to asking.
+      class OnePassword < CliAdapter
+        PROVIDER_NAMES = %w[1password onepassword op].freeze
+        DEFAULTS = {
+          "item" => "Rubygems",
+          "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE",
+          "rubygems_otp_field" => "one-time password"
+        }.freeze
+        AUTHORIZATION_FAILURE = /authoriz|dismissed|desktop app|connection reset|not signed in|session expired/i
+
+        def self.configured?(name)
+          PROVIDER_NAMES.include?(name.to_s.downcase)
+        end
+
+        def initialize(config)
+          super(DEFAULTS.merge(config || {}))
+        end
+
+        private
+
+        def label
+          "1Password"
+        end
+
+        def cli
+          setting("cli").empty? ? "op" : setting("cli")
+        end
+
+        def argv_for(operation)
+          case operation
+          when :gem_signing_passphrase
+            reference = setting("gem_signing_passphrase_reference")
+            return [cli, "read", reference, *account_args] unless reference.empty?
+
+            [cli, "item", "get", required_setting("item"), "--fields",
+              "label=#{required_setting("gem_signing_passphrase_field")}", "--reveal", *account_args]
+          when :rubygems_otp
+            reference = setting("rubygems_otp_reference")
+            return [cli, "read", reference, *account_args] unless reference.empty?
+
+            [cli, "item", "get", required_setting("item"), "--otp", *account_args]
+          end
+        end
+
+        def purpose_for(operation)
+          if operation == :gem_signing_passphrase
+            setting("gem_signing_passphrase_reference").empty? ? "gem signing passphrase field" : "secret reference"
+          else
+            setting("rubygems_otp_reference").empty? ? "RubyGems OTP" : "secret reference"
+          end
+        end
+
+        def error_class_for(details)
+          details.match?(AUTHORIZATION_FAILURE) ? AuthorizationError : Error
         end
       end
 
@@ -304,11 +286,10 @@ module Kettle
       #       item: Rubygems                              # item holding the TOTP
       #       gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE  # custom field on that item
       #       # or: gem_signing_passphrase_item: gem-signing  (its password)
-      #       # cli: bw                                    # executable
-      class Bitwarden < Command
+      #       # cli: bw
+      class Bitwarden < CliAdapter
         NAMES = %w[bitwarden bw vaultwarden].freeze
         DEFAULTS = {
-          "cli" => "bw",
           "item" => "Rubygems",
           "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE"
         }.freeze
@@ -322,90 +303,79 @@ module Kettle
           super(DEFAULTS.merge(config || {}))
         end
 
-        def supports?(operation)
-          operation.to_sym == :rubygems_otp ? !setting("item").empty? : passphrase_source?
-        end
-
-        def authorize!
-          rubygems_otp
-          nil
-        end
-
-        def gem_signing_passphrase
-          item = setting("gem_signing_passphrase_item")
-          return capture([cli, "get", "password", item], "gem signing passphrase") unless item.empty?
-
-          field = setting("gem_signing_passphrase_field")
-          return nil if field.empty? || setting("item").empty?
-
-          json = capture([cli, "get", "item", setting("item")], "gem signing passphrase")
-          found = Array(JSON.parse(json)["fields"]).find { |entry| entry["name"] == field }
-          value = found && found["value"].to_s
-          raise Error, "gem signing passphrase field #{field.inspect} not found on item #{setting("item").inspect}" if value.to_s.empty?
-
-          value
-        rescue JSON::ParserError
-          raise Error, "gem signing passphrase lookup returned unreadable data from #{cli}"
-        end
-
-        def rubygems_otp
-          capture([cli, "get", "totp", setting("item")], "RubyGems OTP")
-        end
-
         private
 
-        def cli = setting("cli")
-
-        def setting(key)
-          @config.fetch(key, "").to_s.strip
+        def label
+          "Bitwarden"
         end
 
-        def passphrase_source?
-          !setting("gem_signing_passphrase_item").empty? ||
-            (!setting("gem_signing_passphrase_field").empty? && !setting("item").empty?)
+        def cli
+          setting("cli").empty? ? "bw" : setting("cli")
+        end
+
+        def argv_for(operation)
+          item = setting("item")
+          case operation
+          when :rubygems_otp
+            [cli, "get", "totp", item] unless item.empty?
+          when :gem_signing_passphrase
+            password_item = setting("gem_signing_passphrase_item")
+            return [cli, "get", "password", password_item] unless password_item.empty?
+
+            [cli, "get", "item", item] unless item.empty? || setting("gem_signing_passphrase_field").empty?
+          end
+        end
+
+        def postprocess(operation, stdout)
+          return stdout unless operation == :gem_signing_passphrase && setting("gem_signing_passphrase_item").empty?
+
+          field = setting("gem_signing_passphrase_field")
+          found = Array(JSON.parse(stdout)["fields"]).find { |entry| entry["name"] == field }
+          found ? found["value"].to_s : ""
+        rescue JSON::ParserError
+          ""
         end
 
         def error_class_for(details)
           details.match?(LOCKED) ? AuthorizationError : Error
         end
-
-        def capture(argv, purpose)
-          stdout, stderr, status = Open3.capture3(*argv)
-          value = stdout.to_s.strip
-          return value if status.success? && !value.empty?
-
-          details = stderr.to_s.strip
-          details = "#{argv.first} exited #{status.exitstatus}" if details.empty?
-          raise error_class_for(details), "Bitwarden #{purpose} lookup failed: #{details}"
-        rescue Errno::ENOENT
-          raise Error, "Bitwarden CLI executable `#{argv.first}` was not found"
-        end
       end
 
-      # rbw (unofficial Bitwarden CLI with an agent): every secret is a plain
-      # command, so this is configuration over Command.
+      # rbw (unofficial Bitwarden CLI with an agent).
       #
       #   provider: rbw
       #   item: Rubygems
       #   gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE
-      class Rbw < Command
+      class Rbw < CliAdapter
         NAMES = %w[rbw].freeze
+        DEFAULTS = {"item" => "Rubygems", "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE"}.freeze
 
         def self.configured?(name)
           NAMES.include?(name.to_s.downcase)
         end
 
         def initialize(config)
-          config = {"item" => "Rubygems", "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE"}.merge(config || {})
-          item = config["item"].to_s
-          field = config["gem_signing_passphrase_field"].to_s
-          commands = {}
-          commands["rubygems_otp_command"] = "rbw code #{Shellwords.escape(item)}" unless item.empty?
-          commands["gem_signing_passphrase_command"] = "rbw get #{Shellwords.escape(item)} --field #{Shellwords.escape(field)}" unless item.empty? || field.empty?
-          super(config.merge(commands))
+          super(DEFAULTS.merge(config || {}))
         end
 
         private
+
+        def label
+          "rbw"
+        end
+
+        def argv_for(operation)
+          item = setting("item")
+          return nil if item.empty?
+
+          case operation
+          when :rubygems_otp
+            ["rbw", "code", item]
+          when :gem_signing_passphrase
+            field = setting("gem_signing_passphrase_field")
+            ["rbw", "get", item, "--field", field] unless field.empty?
+          end
+        end
 
         def error_class_for(details)
           details.match?(/locked|not logged in|agent|pinentry/i) ? AuthorizationError : Error
