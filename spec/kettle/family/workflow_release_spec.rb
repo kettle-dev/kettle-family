@@ -44,6 +44,31 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.skipped).to be(true)
   end
 
+  describe "Bundler prewarm before parallel waves" do
+    it "installs each BUNDLED WITH version found in member lockfiles once, only for parallel waves" do
+      write_release_config
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = ready_member("alpha")
+      File.write(File.join(member.root, "Gemfile.lock"), "GEM\n\nBUNDLED WITH\n   4.0.23\n")
+      File.write(File.join(member.root, "Appraisal.root.gemfile.lock"), "BUNDLED WITH\n   4.0.24\n")
+      workflow = described_class.new(command: "release", config: config, members: [member])
+      allow(workflow).to receive(:stable_bundler_version).and_return(Gem::Version.new("4.0.24"))
+      installed = []
+      allow(workflow).to receive(:system) do |*args, **|
+        installed << args.last(1) if args[1] == "install"
+        args[1] == "list" ? false : true
+      end
+
+      workflow.send(:prewarm_bundlers_once, [member], 1)
+      expect(installed).to be_empty
+
+      workflow.send(:prewarm_bundlers_once, [member], 2)
+      workflow.send(:prewarm_bundlers_once, [member], 2)
+      expect(workflow.send(:bundled_with_versions, member)).to contain_exactly("4.0.23", "4.0.24")
+      expect(installed.length).to eq(2) # one install per version, not repeated on the second parallel call
+    end
+  end
+
   it "omits the pre-release maintenance phase when no commands are configured" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)
