@@ -276,6 +276,66 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
       expect { provider.rubygems_otp }.to raise_error(Kettle::Family::Error, /rubygems otp command failed/)
     end
 
+    describe "Bitwarden and rbw presets" do
+      def stub_capture(argv, stdout: "", stderr: "", success: true)
+        status = instance_double(Process::Status, success?: success, exitstatus: success ? 0 : 1)
+        allow(Open3).to receive(:capture3).with(*argv).and_return([stdout, stderr, status])
+      end
+
+      it "reads the OTP with bw get totp and the passphrase from a custom field" do
+        provider = described_class::Bitwarden.new("item" => "Rubygems")
+        stub_capture(%w[bw get totp Rubygems], stdout: "123456\n")
+        stub_capture(%w[bw get item Rubygems], stdout: JSON.generate("fields" => [{"name" => "GEM-SIGN-PASSPHRASE", "value" => "s3cret"}]))
+
+        expect(provider.rubygems_otp).to eq("123456")
+        expect(provider.gem_signing_passphrase).to eq("s3cret")
+      end
+
+      it "reads the passphrase from another item's password when configured" do
+        provider = described_class::Bitwarden.new("gem_signing_passphrase_item" => "gem-signing")
+        stub_capture(%w[bw get password gem-signing], stdout: "pw\n")
+
+        expect(provider.gem_signing_passphrase).to eq("pw")
+      end
+
+      it "reports a locked vault as an approval failure so the family can prompt" do
+        provider = described_class::Bitwarden.new({})
+        stub_capture(%w[bw get totp Rubygems], stderr: "Vault is locked.", success: false)
+
+        expect { provider.rubygems_otp }.to raise_error(described_class::AuthorizationError, /locked/)
+      end
+
+      it "reports other failures as plain errors and a missing field clearly" do
+        provider = described_class::Bitwarden.new({})
+        stub_capture(%w[bw get totp Rubygems], stderr: "Not found.", success: false)
+        stub_capture(%w[bw get item Rubygems], stdout: JSON.generate("fields" => []))
+
+        expect { provider.rubygems_otp }.to raise_error(Kettle::Family::Error, /Not found/)
+        expect { provider.gem_signing_passphrase }.to raise_error(Kettle::Family::Error, /not found on item/)
+      end
+
+      it "declares what it supports" do
+        expect(described_class::Bitwarden.new("item" => "").supports?(:rubygems_otp)).to be(false)
+        expect(described_class::Bitwarden.new({}).supports?(:gem_signing_passphrase)).to be(true)
+      end
+
+      it "builds rbw commands from item and field" do
+        provider = described_class::Rbw.new("item" => "My Item")
+        stub_capture(["rbw", "code", "My Item"], stdout: "654321\n")
+        stub_capture(["rbw", "get", "My Item", "--field", "GEM-SIGN-PASSPHRASE"], stdout: "pp\n")
+
+        expect(provider.rubygems_otp).to eq("654321")
+        expect(provider.gem_signing_passphrase).to eq("pp")
+      end
+
+      it "is available through the registry under bitwarden, bw, vaultwarden and rbw" do
+        %w[bitwarden bw vaultwarden rbw].each do |name|
+          config = instance_double(Kettle::Family::Config, release_secrets: {"provider" => name})
+          expect(described_class::Factory.build(config: config)).to be_a(described_class::Command)
+        end
+      end
+    end
+
     it "resolves providers through the registry, including third-party adapters" do
       adapter = Class.new(Kettle::Family::Secrets::Provider)
       described_class::Registry.register("my-vault") { |_config| adapter.new }

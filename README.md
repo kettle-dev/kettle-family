@@ -434,6 +434,25 @@ release:
     rubygems_otp_field: one-time password
 ```
 
+Other providers are pluggable adapters, selected the same way. For
+Bitwarden-compatible tools (Bitwarden `bw`, Vaultwarden), unlock first with
+`export BW_SESSION=$(bw unlock --raw)`:
+
+```yaml
+release:
+  secrets:
+    provider: bitwarden        # also: bw, vaultwarden, rbw, command
+    item: Rubygems             # item that holds the TOTP
+    gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE   # custom field on that item
+```
+
+`provider: command` runs one configured command per secret (no shell), for any
+other tool: set `gem_signing_passphrase_command` and `rubygems_otp_command`.
+Anything an adapter cannot supply (an unsupported secret, or access not
+approved, such as a locked vault) is asked for at the terminal instead, without
+echo. The OTP is always fetched fresh; the signing passphrase is read once.
+Custom adapters register with `Kettle::Family::Secrets::Registry.register`.
+
 Use `--secrets-provider 1password` to opt in explicitly for a release run, or
 `--secrets-provider interactive` to force prompts even when the family config
 has a provider configured. Family publish runs pass `--yes` to child

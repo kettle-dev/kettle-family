@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "io/console"
+require "json"
 require "shellwords"
 
 begin
@@ -268,6 +269,12 @@ module Kettle
 
         private
 
+        # Subclasses map their tool's "locked / not signed in" wording to
+        # AuthorizationError; the generic adapter cannot know it.
+        def error_class_for(_details)
+          Error
+        end
+
         def command_for(operation)
           @config.fetch("#{operation}_command", "").to_s.strip
         end
@@ -282,9 +289,126 @@ module Kettle
 
           details = stderr.to_s.strip
           details = "exited #{status.exitstatus}" if details.empty?
-          raise Error, "#{operation.to_s.tr("_", " ")} command failed: #{details}"
+          raise error_class_for(details), "#{operation.to_s.tr("_", " ")} command failed: #{details}"
         rescue Errno::ENOENT
           raise Error, "#{operation.to_s.tr("_", " ")} command executable was not found: #{command.split.first}"
+        end
+      end
+
+      # Bitwarden-compatible CLIs (Bitwarden `bw`, Vaultwarden via `bw`).
+      # Unlock first and export the session: `export BW_SESSION=$(bw unlock --raw)`.
+      #
+      #   release:
+      #     secrets:
+      #       provider: bitwarden
+      #       item: Rubygems                              # item holding the TOTP
+      #       gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE  # custom field on that item
+      #       # or: gem_signing_passphrase_item: gem-signing  (its password)
+      #       # cli: bw                                    # executable
+      class Bitwarden < Command
+        NAMES = %w[bitwarden bw vaultwarden].freeze
+        DEFAULTS = {
+          "cli" => "bw",
+          "item" => "Rubygems",
+          "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE"
+        }.freeze
+        LOCKED = /locked|not logged in|session|unauthenticated|BW_SESSION/i
+
+        def self.configured?(name)
+          NAMES.include?(name.to_s.downcase)
+        end
+
+        def initialize(config)
+          super(DEFAULTS.merge(config || {}))
+        end
+
+        def supports?(operation)
+          operation.to_sym == :rubygems_otp ? !setting("item").empty? : passphrase_source?
+        end
+
+        def authorize!
+          rubygems_otp
+          nil
+        end
+
+        def gem_signing_passphrase
+          item = setting("gem_signing_passphrase_item")
+          return capture([cli, "get", "password", item], "gem signing passphrase") unless item.empty?
+
+          field = setting("gem_signing_passphrase_field")
+          return nil if field.empty? || setting("item").empty?
+
+          json = capture([cli, "get", "item", setting("item")], "gem signing passphrase")
+          found = Array(JSON.parse(json)["fields"]).find { |entry| entry["name"] == field }
+          value = found && found["value"].to_s
+          raise Error, "gem signing passphrase field #{field.inspect} not found on item #{setting("item").inspect}" if value.to_s.empty?
+
+          value
+        rescue JSON::ParserError
+          raise Error, "gem signing passphrase lookup returned unreadable data from #{cli}"
+        end
+
+        def rubygems_otp
+          capture([cli, "get", "totp", setting("item")], "RubyGems OTP")
+        end
+
+        private
+
+        def cli = setting("cli")
+
+        def setting(key)
+          @config.fetch(key, "").to_s.strip
+        end
+
+        def passphrase_source?
+          !setting("gem_signing_passphrase_item").empty? ||
+            (!setting("gem_signing_passphrase_field").empty? && !setting("item").empty?)
+        end
+
+        def error_class_for(details)
+          details.match?(LOCKED) ? AuthorizationError : Error
+        end
+
+        def capture(argv, purpose)
+          stdout, stderr, status = Open3.capture3(*argv)
+          value = stdout.to_s.strip
+          return value if status.success? && !value.empty?
+
+          details = stderr.to_s.strip
+          details = "#{argv.first} exited #{status.exitstatus}" if details.empty?
+          raise error_class_for(details), "Bitwarden #{purpose} lookup failed: #{details}"
+        rescue Errno::ENOENT
+          raise Error, "Bitwarden CLI executable `#{argv.first}` was not found"
+        end
+      end
+
+      # rbw (unofficial Bitwarden CLI with an agent): every secret is a plain
+      # command, so this is configuration over Command.
+      #
+      #   provider: rbw
+      #   item: Rubygems
+      #   gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE
+      class Rbw < Command
+        NAMES = %w[rbw].freeze
+
+        def self.configured?(name)
+          NAMES.include?(name.to_s.downcase)
+        end
+
+        def initialize(config)
+          config = {"item" => "Rubygems", "gem_signing_passphrase_field" => "GEM-SIGN-PASSPHRASE"}.merge(config || {})
+          item = config["item"].to_s
+          field = config["gem_signing_passphrase_field"].to_s
+          commands = {}
+          commands["rubygems_otp_command"] = "rbw code #{Shellwords.escape(item)}" unless item.empty?
+          commands["gem_signing_passphrase_command"] = "rbw get #{Shellwords.escape(item)} --field #{Shellwords.escape(field)}" unless item.empty? || field.empty?
+          super(config.merge(commands))
+        end
+
+        private
+
+        def error_class_for(details)
+          details.match?(/locked|not logged in|agent|pinentry/i) ? AuthorizationError : Error
         end
       end
 
@@ -318,6 +442,8 @@ module Kettle
         end
       end
       Registry.register(*Command::NAMES) { |config| Command.new(config) }
+      Registry.register(*Bitwarden::NAMES) { |config| Bitwarden.new(config) }
+      Registry.register(*Rbw::NAMES) { |config| Rbw.new(config) }
 
       class Factory
         def self.build(config:, override_provider: nil)
