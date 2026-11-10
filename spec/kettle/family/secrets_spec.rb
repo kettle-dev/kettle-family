@@ -207,7 +207,9 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
     end
     broker = described_class::Broker.new(provider: provider, root: Dir.mktmpdir("kettle-family-broker-spec")).start
 
-    threads = Array.new(3) { Thread.new { broker_request(broker, "rubygems_otp") } }
+    threads = Array.new(3) do
+      Thread.new { broker_request(broker, "rubygems_otp") } # rubocop:disable ThreadSafety/NewThread -- concurrent clients are the point of this spec
+    end
     sleep 0.3 # all three are connected; one is in the provider, two are queued
     gate << :dismissed
     responses = threads.map(&:value)

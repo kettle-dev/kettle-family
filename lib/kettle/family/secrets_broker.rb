@@ -115,7 +115,7 @@ module Kettle
         def lookup(operation)
           unless Secrets.supports?(provider, operation)
             return prompt_user(operation, "this secrets provider does not support #{operation.tr("_", " ")}") ||
-                "".dup
+                +""
           end
 
           provider.public_send(operation)

@@ -1,9 +1,9 @@
 {
-  "lib/kettle/family/report.rb:3175036140": [
+  "lib/kettle/family/report.rb:294006982": [
     [311, 12, 61, "Style/SafeNavigation: Use safe navigation (`&.`) instead of checking if an object exists before calling the method.", 3634965710]
   ],
-  "lib/kettle/family/workflow.rb:3059659127": [
-    [5725, 9, 38, "ThreadSafety/LazySynchronizationPrimitive: Do not lazily initialize synchronization primitives with `||=`.", 3762219047]
+  "lib/kettle/family/workflow.rb:3823875470": [
+    [5754, 9, 38, "ThreadSafety/LazySynchronizationPrimitive: Do not lazily initialize synchronization primitives with `||=`.", 3762219047]
   ],
   "spec/kettle/family/discovery_spec.rb:462556996": [
     [38, 33, 10, "ThreadSafety/NewThread: Avoid starting new threads.", 3411682361]

@@ -387,19 +387,20 @@ module Kettle
       #
       #   Kettle::Family::Secrets::Registry.register("bitwarden") { |config| MyAdapter.new(config) }
       module Registry
-        @builders = {}
+        BUILDERS = {}
+        LOCK = Mutex.new
 
         class << self
           def register(*names, &builder)
-            names.flatten.each { |name| @builders[name.to_s.downcase] = builder }
+            LOCK.synchronize { names.flatten.each { |name| BUILDERS[name.to_s.downcase] = builder } }
           end
 
           def builder_for(name)
-            @builders[name.to_s.downcase]
+            LOCK.synchronize { BUILDERS[name.to_s.downcase] }
           end
 
           def names
-            @builders.keys.sort
+            LOCK.synchronize { BUILDERS.keys.sort }
           end
         end
       end

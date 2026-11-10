@@ -56,7 +56,7 @@ RSpec.describe Kettle::Family::Workflow do
       installed = []
       allow(workflow).to receive(:system) do |*args, **|
         installed << args.last(1) if args[1] == "install"
-        args[1] == "list" ? false : true
+        args[1] != "list"
       end
 
       workflow.send(:prewarm_bundlers_once, [member], 1)
