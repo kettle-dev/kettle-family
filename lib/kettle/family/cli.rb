@@ -700,7 +700,7 @@ module Kettle
         option :skip_bundle_audit, long: "--skip-bundle-audit", desc: "Skip bundle:audit/update during release rake checks"
         option :skip_remotes, long: "--skip-remotes", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated git remote skip list through to kettle-release commands"
         option :required_remotes, long: "--required-remotes", value: {type: String, usage: "LIST"}, desc: "Pass a comma-separated required git remote list through to kettle-release commands"
-        option :secrets_provider, long: "--secrets-provider", value: {type: String, usage: "NAME"}, desc: "Release secrets provider: interactive, 1password"
+        option :secrets_provider, long: "--secrets-provider", value: {type: String, usage: "NAME"}, desc: "Release secrets provider: interactive, 1password, bitwarden (bw, vaultwarden), rbw, command"
         option :no_auto_floors, long: "--no-auto-floors", desc: "Do not raise family dependency floors between member releases" do
           options[:no_auto_floors] = true
         end
