@@ -713,6 +713,24 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("resume_hints")).to eq(["kettle-family release --execute --publish --only alpha --start-step 15"])
   end
 
+  it "merges release failures sharing a resume step into one --only hint" do
+    a = result("alpha", success: false, reason: "OTP failed")
+    b = result("beta", success: false, reason: "build failed")
+    c = result("gamma", success: false, reason: "OTP failed")
+    a.resume_step = 15
+    c.resume_step = 15
+    members = %w[alpha beta gamma].map { |n| member(n) }
+    report = described_class.new(
+      family_name: "example", order_mode: "dependency", members: members, selected_members: members,
+      config_path: nil, command: "release", release_mode: "publish", results: [a, b, c]
+    )
+
+    expect(report.to_h.fetch("resume_hints")).to eq([
+      "kettle-family release --execute --publish --only alpha,gamma --start-step 15",
+      "kettle-family release --execute --publish --only beta"
+    ])
+  end
+
   it "replays relevant release options in member-scoped publish retries" do
     failed = result("alpha", success: false, reason: "OTP failed")
     failed.resume_step = 15
