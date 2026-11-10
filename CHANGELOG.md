@@ -20,12 +20,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- Pluggable release secrets adapters: `Secrets::Registry` selects a provider by name and third parties can register their own. Built-in adapters share one `CliAdapter` engine: `1password` (`op`), `bitwarden` (aliases `bw`, `vaultwarden`), `rbw`, and a generic `command` adapter that runs one configured command per secret without a shell. An adapter that cannot supply a secret (unsupported operation, or access not approved such as a locked vault) falls back to asking at the terminal without echo. (#35, #36)
-
 ### Changed
-
-- The release secrets broker no longer depends on 1Password wording: adapters raise `Secrets::AuthorizationError` when access is not approved. After such a failure, requests already queued fail at once with one clear message instead of each raising its own prompt (previously one member failed per minute). The signing passphrase is read once; the RubyGems OTP is always fetched fresh. (#35, #36)
-- When several release members fail at the same resume step, the report prints one merged `--only a,b,c [--start-step N]` command instead of one line per member. (#32, #34)
 
 ### Deprecated
 
@@ -33,9 +28,27 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Parallel release waves no longer race to install Bundler into the shared gem dir: each Bundler version named by members' `BUNDLED WITH`, plus the newest stable, is installed once, serially, before the fan-out. (#33, #34)
-
 ### Security
+
+## [1.3.41] - 2026-11-10
+
+- TAG: [v1.3.41][1.3.41t]
+- COVERAGE: 93.68% -- 7991/8530 lines in 45 files
+- BRANCH COVERAGE: 77.96% -- 3222/4133 branches in 45 files
+- 40.73% documented
+
+### Added
+
+- Pluggable release secrets adapters: `Secrets::Registry` selects a provider by name and third parties can register their own. Built-in adapters share one `CliAdapter` engine: `1password` (`op`), `bitwarden` (aliases `bw`, `vaultwarden`), `rbw`, and a generic `command` adapter that runs one configured command per secret without a shell. An adapter that cannot supply a secret (unsupported operation, or access not approved such as a locked vault) falls back to asking at the terminal without echo. (#35, #36)
+
+### Changed
+
+- The release secrets broker no longer depends on 1Password wording: adapters raise `Secrets::AuthorizationError` when access is not approved. After such a failure, requests already queued fail at once with one clear message instead of each raising its own prompt (previously one member failed per minute). The signing passphrase is read once; the RubyGems OTP is always fetched fresh. (#35, #36)
+- When several release members fail at the same resume step, the report prints one merged `--only a,b,c [--start-step N]` command instead of one line per member. (#32, #34)
+
+### Fixed
+
+- Parallel release waves no longer race to install Bundler into the shared gem dir: each Bundler version named by members' `BUNDLED WITH`, plus the newest stable, is installed once, serially, before the fan-out. (#33, #34)
 
 ## [1.3.40] - 2026-11-09
 
@@ -3405,7 +3418,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.40...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.41...HEAD
+[1.3.41]: https://github.com/kettle-dev/kettle-family/compare/v1.3.40...v1.3.41
+[1.3.41t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.41
 [1.3.40]: https://github.com/kettle-dev/kettle-family/compare/v1.3.39...v1.3.40
 [1.3.40t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.40
 [1.3.39]: https://github.com/kettle-dev/kettle-family/compare/v1.3.38...v1.3.39

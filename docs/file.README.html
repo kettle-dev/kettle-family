@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-8.369-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-8.530-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -585,6 +585,24 @@ unlocked, and signed in before the release starts.</p>
     gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE
     rubygems_otp_field: one-time password
 </code></pre>
+
+<p>Other providers are pluggable adapters, selected the same way. For<br>
+Bitwarden-compatible tools (Bitwarden <code>bw</code>, Vaultwarden), unlock first with<br>
+<code>export BW_SESSION=$(bw unlock --raw)</code>:</p>
+
+<pre class="code language-yaml"><code class="language-yaml">release:
+  secrets:
+    provider: bitwarden        # also: bw, vaultwarden, rbw, command
+    item: Rubygems             # item that holds the TOTP
+    gem_signing_passphrase_field: GEM-SIGN-PASSPHRASE   # custom field on that item
+</code></pre>
+
+<p><code>provider: command</code> runs one configured command per secret (no shell), for any<br>
+other tool: set <code>gem_signing_passphrase_command</code> and <code>rubygems_otp_command</code>.<br>
+Anything an adapter cannot supply (an unsupported secret, or access not<br>
+approved, such as a locked vault) is asked for at the terminal instead, without<br>
+echo. The OTP is always fetched fresh; the signing passphrase is read once.<br>
+Custom adapters register with <code>Kettle::Family::Secrets::Registry.register</code>.</p>
 
 <p>Use <code>--secrets-provider 1password</code> to opt in explicitly for a release run, or<br>
 <code>--secrets-provider interactive</code> to force prompts even when the family config<br>
