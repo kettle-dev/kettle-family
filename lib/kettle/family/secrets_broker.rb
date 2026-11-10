@@ -15,6 +15,9 @@ module Kettle
       # one release session is shared across sequential and parallel waves.
       class Broker
         OPERATIONS = %w[gem_signing_passphrase rubygems_otp].freeze
+        # Provider errors that mean the user has not approved access (dismissed
+        # or timed-out prompt, locked or unreachable app), not a bad request.
+        AUTHORIZATION_FAILURE = /authoriz|dismissed|desktop app|connection reset|not signed in|session expired/i
         UNIX_SOCKET_PATH_MAX = RbConfig::CONFIG["host_os"].include?("darwin") ? 103 : 107
 
         attr_reader :path
@@ -46,6 +49,8 @@ module Kettle
           FileUtils.mkdir_p(directory, mode: 0o700)
           @mutex = Mutex.new
           @closed = false
+          @cached = {}
+          @authorization_failure = nil
         end
 
         def start
@@ -85,12 +90,41 @@ module Kettle
           raise
         end
 
+        # Requests are serialized. Each failed approval prompt can take about a
+        # minute to time out, so without this every queued member would raise
+        # its own prompt in turn and fail one by one. A request that was already
+        # waiting when approval failed fails immediately with the same message;
+        # requests arriving afterwards may prompt again (the user may be back).
+        # The signing passphrase is static, so it is cached after one lookup.
+        # The OTP is a short-lived TOTP and is always fetched fresh.
+        def resolve(operation, requested_at:)
+          @mutex.synchronize do
+            return @cached.fetch(operation) if @cached.key?(operation)
+
+            failure = @authorization_failure
+            raise Error, failure.fetch(:message) if failure && requested_at <= failure.fetch(:at)
+
+            begin
+              value = provider.public_send(operation)
+            rescue => error
+              if error.message.match?(AUTHORIZATION_FAILURE)
+                message = "#{error.message} (approve the access prompt, then resume the release)"
+                @authorization_failure = {at: Process.clock_gettime(Process::CLOCK_MONOTONIC), message: message}
+                raise Error, message
+              end
+              raise
+            end
+            @cached[operation] = value if operation == "gem_signing_passphrase"
+            value
+          end
+        end
+
         def handle(connection)
           request = JSON.parse(connection.gets.to_s)
           operation = request.fetch("operation")
           raise Error, "unsupported release secrets broker operation #{operation.inspect}" unless OPERATIONS.include?(operation)
 
-          value = @mutex.synchronize { provider.public_send(operation) }
+          value = resolve(operation, requested_at: Process.clock_gettime(Process::CLOCK_MONOTONIC))
           connection.write(JSON.generate("ok" => true, "value" => value.to_s))
           connection.write("\n")
         rescue => error

@@ -188,6 +188,66 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
     broker&.close
   end
 
+  def broker_request(broker, operation)
+    socket = UNIXSocket.new(broker.path)
+    socket.write("#{JSON.generate("operation" => operation)}\n")
+    JSON.parse(socket.gets)
+  ensure
+    socket&.close
+  end
+
+  it "fails requests that were already queued when approval failed, without re-prompting" do
+    gate = Queue.new
+    calls = 0
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+    allow(provider).to receive(:rubygems_otp) do
+      calls += 1
+      gate.pop # simulate the prompt waiting for the user
+      raise Kettle::Family::Error, "1Password RubyGems OTP lookup failed: authorization prompt dismissed"
+    end
+    broker = described_class::Broker.new(provider: provider, root: Dir.mktmpdir("kettle-family-broker-spec")).start
+
+    threads = Array.new(3) { Thread.new { broker_request(broker, "rubygems_otp") } }
+    sleep 0.3 # all three are connected; one is in the provider, two are queued
+    gate << :dismissed
+    responses = threads.map(&:value)
+
+    expect(calls).to eq(1)
+    expect(responses.map { |response| response["ok"] }).to eq([false, false, false])
+    expect(responses.map { |response| response["error"] }).to all(include("approve the access prompt"))
+  ensure
+    broker&.close
+  end
+
+  it "prompts again for a request that arrives after an approval failure" do
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+    allow(provider).to receive(:rubygems_otp).and_invoke(
+      -> { raise Kettle::Family::Error, "authorization prompt dismissed" },
+      -> { "654321" }
+    )
+    broker = described_class::Broker.new(provider: provider, root: Dir.mktmpdir("kettle-family-broker-spec")).start
+
+    expect(broker_request(broker, "rubygems_otp")["ok"]).to be(false)
+    expect(broker_request(broker, "rubygems_otp")).to eq("ok" => true, "value" => "654321")
+  ensure
+    broker&.close
+  end
+
+  it "caches the static signing passphrase but never the OTP" do
+    provider = instance_double(Kettle::Family::Secrets::Provider)
+    allow(provider).to receive(:gem_signing_passphrase).and_return("pass")
+    allow(provider).to receive(:rubygems_otp).and_return("111111", "222222")
+    broker = described_class::Broker.new(provider: provider, root: Dir.mktmpdir("kettle-family-broker-spec")).start
+
+    2.times { expect(broker_request(broker, "gem_signing_passphrase")["value"]).to eq("pass") }
+    values = 2.times.map { broker_request(broker, "rubygems_otp")["value"] }
+
+    expect(provider).to have_received(:gem_signing_passphrase).once
+    expect(values).to eq(%w[111111 222222])
+  ensure
+    broker&.close
+  end
+
   it "uses a compact socket path for deep release roots" do
     provider = instance_double(Kettle::Family::Secrets::Provider)
 
