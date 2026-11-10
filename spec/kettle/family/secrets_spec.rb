@@ -203,7 +203,7 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
     allow(provider).to receive(:rubygems_otp) do
       calls += 1
       gate.pop # simulate the prompt waiting for the user
-      raise Kettle::Family::Error, "1Password RubyGems OTP lookup failed: authorization prompt dismissed"
+      raise Kettle::Family::Secrets::AuthorizationError, "RubyGems OTP lookup failed: access prompt dismissed"
     end
     broker = described_class::Broker.new(provider: provider, root: Dir.mktmpdir("kettle-family-broker-spec")).start
 
@@ -222,7 +222,7 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
   it "prompts again for a request that arrives after an approval failure" do
     provider = instance_double(Kettle::Family::Secrets::Provider)
     allow(provider).to receive(:rubygems_otp).and_invoke(
-      -> { raise Kettle::Family::Error, "authorization prompt dismissed" },
+      -> { raise Kettle::Family::Secrets::AuthorizationError, "access prompt dismissed" },
       -> { "654321" }
     )
     broker = described_class::Broker.new(provider: provider, root: Dir.mktmpdir("kettle-family-broker-spec")).start
@@ -246,6 +246,85 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
     expect(values).to eq(%w[111111 222222])
   ensure
     broker&.close
+  end
+
+  describe "adapter-centric behavior" do
+    let(:root) { Dir.mktmpdir("kettle-family-broker-spec") }
+    let(:prompter) { instance_double(Kettle::Family::Secrets::TerminalPrompter) }
+
+    it "classifies 1Password approval failures but not other failures" do
+      approval = described_class.classify_onepassword_error(StandardError.new("error initializing client: authorization prompt dismissed"))
+      other = described_class.classify_onepassword_error(StandardError.new("item not found"))
+
+      expect(approval).to be_a(described_class::AuthorizationError)
+      expect(other).not_to be_a(described_class::AuthorizationError)
+    end
+
+    it "runs configured commands without a shell and treats a missing command as unsupported" do
+      provider = described_class::Command.new("rubygems_otp_command" => "echo 424242")
+
+      expect(provider.supports?(:rubygems_otp)).to be(true)
+      expect(provider.supports?(:gem_signing_passphrase)).to be(false)
+      expect(provider.rubygems_otp).to eq("424242")
+      expect(provider.gem_signing_passphrase).to be_nil
+      expect(provider.keepalive_required?).to be(false)
+    end
+
+    it "raises a plain error when a configured command fails" do
+      provider = described_class::Command.new("rubygems_otp_command" => "false")
+
+      expect { provider.rubygems_otp }.to raise_error(Kettle::Family::Error, /rubygems otp command failed/)
+    end
+
+    it "resolves providers through the registry, including third-party adapters" do
+      adapter = Class.new(Kettle::Family::Secrets::Provider)
+      described_class::Registry.register("my-vault") { |_config| adapter.new }
+      config = instance_double(Kettle::Family::Config, release_secrets: {"provider" => "my-vault"})
+
+      expect(described_class::Factory.build(config: config)).to be_a(adapter)
+      cli = instance_double(Kettle::Family::Config, release_secrets: {"provider" => "command", "rubygems_otp_command" => "echo 1"})
+      expect(described_class::Factory.build(config: cli)).to be_a(described_class::Command)
+      unknown = instance_double(Kettle::Family::Config, release_secrets: {"provider" => "nope"})
+      expect { described_class::Factory.build(config: unknown) }.to raise_error(Kettle::Family::Error, /available: interactive, .*command/)
+    end
+
+    it "asks the user for an operation the adapter does not support, and caches the passphrase" do
+      provider = described_class::Command.new("rubygems_otp_command" => "echo 424242")
+      allow(prompter).to receive(:ask).and_return("typed-pass")
+      broker = described_class::Broker.new(provider: provider, root: root, prompter: prompter).start
+
+      2.times { expect(broker_request(broker, "gem_signing_passphrase")).to eq("ok" => true, "value" => "typed-pass") }
+      expect(broker_request(broker, "rubygems_otp")).to eq("ok" => true, "value" => "424242")
+      expect(prompter).to have_received(:ask).once.with(operation: "gem_signing_passphrase", reason: /does not support/)
+    ensure
+      broker&.close
+    end
+
+    it "falls back to asking the user when access was not approved" do
+      provider = instance_double(Kettle::Family::Secrets::Provider)
+      allow(provider).to receive(:rubygems_otp).and_raise(Kettle::Family::Secrets::AuthorizationError, "prompt dismissed")
+      allow(prompter).to receive(:ask).and_return("999999")
+      broker = described_class::Broker.new(provider: provider, root: root, prompter: prompter).start
+
+      expect(broker_request(broker, "rubygems_otp")).to eq("ok" => true, "value" => "999999")
+    ensure
+      broker&.close
+    end
+
+    it "does not prompt for the explicit interactive provider (child keeps its own behavior)" do
+      provider = Kettle::Family::Secrets::Provider.new
+      allow(prompter).to receive(:ask)
+      broker = described_class::Broker.new(provider: provider, root: root, prompter: prompter).start
+
+      expect(broker_request(broker, "rubygems_otp")).to eq("ok" => true, "value" => "")
+      expect(prompter).not_to have_received(:ask)
+    ensure
+      broker&.close
+    end
+
+    it "only builds a terminal prompter when stdin is a terminal" do
+      expect(described_class::TerminalPrompter.for_terminal(input: StringIO.new)).to be_nil
+    end
   end
 
   it "uses a compact socket path for deep release roots" do

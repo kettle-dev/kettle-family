@@ -212,7 +212,7 @@ module Kettle
       def with_release_secrets_broker
         return yield unless release_secrets_broker_required?
 
-        @release_secrets_broker = Secrets::Broker.new(provider: @secrets_provider, root: config.root).start
+        @release_secrets_broker = Secrets::Broker.new(provider: @secrets_provider, root: config.root, prompter: Secrets::TerminalPrompter.for_terminal).start
         yield
       ensure
         @release_secrets_broker&.close
@@ -2316,7 +2316,7 @@ module Kettle
       end
 
       def release_secrets_authorization_required?
-        @secrets_provider.is_a?(Secrets::OnePassword)
+        !Secrets.interactive?(@secrets_provider)
       end
 
       def release_preflight_error_result(phase, message, member: nil)

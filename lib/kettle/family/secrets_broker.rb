@@ -15,15 +15,13 @@ module Kettle
       # one release session is shared across sequential and parallel waves.
       class Broker
         OPERATIONS = %w[gem_signing_passphrase rubygems_otp].freeze
-        # Provider errors that mean the user has not approved access (dismissed
-        # or timed-out prompt, locked or unreachable app), not a bad request.
-        AUTHORIZATION_FAILURE = /authoriz|dismissed|desktop app|connection reset|not signed in|session expired/i
         UNIX_SOCKET_PATH_MAX = RbConfig::CONFIG["host_os"].include?("darwin") ? 103 : 107
 
         attr_reader :path
 
-        def initialize(provider:, root:)
+        def initialize(provider:, root:, prompter: nil)
           @provider = provider
+          @prompter = prompter
           directory = File.join(root, "tmp", "kettle-family")
           basename = "secrets-#{SecureRandom.hex(8)}.sock"
           @path = File.join(directory, basename)
@@ -104,19 +102,37 @@ module Kettle
             failure = @authorization_failure
             raise Error, failure.fetch(:message) if failure && requested_at <= failure.fetch(:at)
 
-            begin
-              value = provider.public_send(operation)
-            rescue => error
-              if error.message.match?(AUTHORIZATION_FAILURE)
-                message = "#{error.message} (approve the access prompt, then resume the release)"
-                @authorization_failure = {at: Process.clock_gettime(Process::CLOCK_MONOTONIC), message: message}
-                raise Error, message
-              end
-              raise
-            end
+            value = lookup(operation)
             @cached[operation] = value if operation == "gem_signing_passphrase"
             value
           end
+        end
+
+        # Adapter first; the user is asked only where the adapter cannot help:
+        # it does not support the operation, returned nothing, or access was not
+        # approved. Without a terminal to ask on, those cases keep their
+        # original behavior (blank value, or the adapter's error).
+        def lookup(operation)
+          unless Secrets.supports?(provider, operation)
+            return prompt_user(operation, "this secrets provider does not support #{operation.tr("_", " ")}") ||
+                "".dup
+          end
+
+          provider.public_send(operation)
+        rescue AuthorizationError => error
+          message = "#{error.message} (approve the access prompt, then resume the release)"
+          typed = prompt_user(operation, error.message)
+          return typed if typed
+
+          @authorization_failure = {at: Process.clock_gettime(Process::CLOCK_MONOTONIC), message: message}
+          raise Error, message
+        end
+
+        def prompt_user(operation, reason)
+          return nil unless @prompter && !Secrets.interactive?(provider)
+
+          value = @prompter.ask(operation: operation, reason: reason)
+          value.to_s.empty? ? nil : value
         end
 
         def handle(connection)
