@@ -28,7 +28,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Parallel release waves no longer start unless every Bundler version a member may use is installed and complete (`exe/bundle`, `lib/bundler.rb`, `lib/bundler/setup.rb` present). The prewarm now scans nested lockfiles (e.g. `gemfiles/**`), surfaces `gem install` failures instead of swallowing them, and aborts before fan-out, preventing `LoadError` under `bundler-X/lib/bundler` when members install Bundler into the shared gem dir concurrently. (#38)
+- Parallel release waves no longer start unless every Bundler version a member may use is installed and complete (`exe/bundle`, `lib/bundler.rb`, `lib/bundler/setup.rb` present). The prewarm now scans nested lockfiles (e.g. `gemfiles/**`), surfaces `gem install` failures instead of swallowing them, pre-installs the registry-latest stable Bundler that a member's release would otherwise install mid-wave, and aborts before fan-out, preventing `LoadError` under `bundler-X/lib/bundler` when members install Bundler into the shared gem dir concurrently. (#38)
 
 ### Security
 

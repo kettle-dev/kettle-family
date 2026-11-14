@@ -2568,6 +2568,10 @@ module Kettle
 
         versions = wave.flat_map { |member| bundled_with_versions(member) }
         versions << stable_bundler_version&.to_s
+        # kettle-release installs the registry's newest stable Bundler when it
+        # is newer than the running one; install it here, once, instead of
+        # having a member do it mid-wave.
+        versions << published_bundler_version&.to_s
         versions = versions.compact.uniq - (@prewarmed_bundlers ||= [])
         versions.each { |version| ensure_bundler_installed!(version) }
         @prewarmed_bundlers.concat(versions)
@@ -2577,6 +2581,14 @@ module Kettle
       # one is read-only for `bundle exec`/`update --bundler=X`; see #38), so
       # the wave is safe once every version is installed AND complete. Fail
       # before fan-out rather than let members race a half-installed Bundler.
+      # Registry-latest stable Bundler; nil (skip) when the registry cannot be
+      # consulted, matching kettle-dev's fail-open behavior.
+      def published_bundler_version
+        Kettle::Dev::BundlerPinning.published_stable
+      rescue
+        nil
+      end
+
       def ensure_bundler_installed!(version)
         unless bundler_install_complete?(version)
           _out, err, _status = Open3.capture3("gem", "install", "bundler", "-v", version, "--no-document")
@@ -2586,13 +2598,14 @@ module Kettle
         end
       end
 
+      # Read gem dirs directly: under `bundle exec` (how the family itself
+      # runs) `gem list`/Specification lookups are scoped to the lockfile and
+      # report other Bundler versions as missing.
       def bundler_install_complete?(version)
-        return false unless system("gem", "list", "-i", "bundler", "-v", version, out: File::NULL, err: File::NULL)
-
-        dir = Gem::Specification.dirs.map { |d| File.expand_path("../gems/bundler-#{version}", d) }.find { |d| File.directory?(d) }
-        # Specs are written last by RubyGems, but a crashed earlier install
-        # can leave a spec without all files.
-        !dir.nil? && %w[exe/bundle lib/bundler.rb lib/bundler/setup.rb].all? { |f| File.file?(File.join(dir, f)) }
+        Array(Gem.path).any? do |base|
+          File.file?(File.join(base, "specifications", "bundler-#{version}.gemspec")) &&
+            %w[exe/bundle lib/bundler.rb lib/bundler/setup.rb].all? { |f| File.file?(File.join(base, "gems", "bundler-#{version}", f)) }
+        end
       end
 
       def bundled_with_versions(member)
