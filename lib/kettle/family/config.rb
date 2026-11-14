@@ -402,6 +402,12 @@ module Kettle
         fetch_path("release", "jobs")
       end
 
+      # Update the advisory database once, serially, before a parallel wave.
+      # Disabled with `release.advisory_db_update: false`.
+      def release_advisory_db_update?
+        fetch_path("release", "advisory_db_update") != false
+      end
+
       def release_waves
         Array(fetch_path("release", "waves")).map do |wave|
           Array(wave).map(&:to_s).map(&:strip).reject(&:empty?)
