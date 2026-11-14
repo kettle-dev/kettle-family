@@ -28,6 +28,7 @@ RSpec.describe Kettle::Family::Workflow do
   # mocking framework available to examples and before/after hooks.
   before do
     allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?).and_return(false)
+    allow(Kettle::Dev::BundlerPinning).to receive(:published_stable).and_return(nil) # no registry access in specs
     # The mise exec prefix resolves through the family MiseAdapter; pin the
     # executable to bare "mise" so prefix-shape assertions stay literal.
     Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
@@ -45,18 +46,29 @@ RSpec.describe Kettle::Family::Workflow do
   end
 
   describe "Bundler prewarm before parallel waves" do
-    it "installs each BUNDLED WITH version found in member lockfiles once, only for parallel waves" do
+    let(:status) { instance_double(Process::Status, success?: true) }
+
+    def prewarm_workflow
       write_release_config
       config = Kettle::Family::Config.load(root: @tmpdir)
       member = ready_member("alpha")
       File.write(File.join(member.root, "Gemfile.lock"), "GEM\n\nBUNDLED WITH\n   4.0.23\n")
-      File.write(File.join(member.root, "Appraisal.root.gemfile.lock"), "BUNDLED WITH\n   4.0.24\n")
+      FileUtils.mkdir_p(File.join(member.root, "gemfiles/modular/x"))
+      File.write(File.join(member.root, "gemfiles/modular/x/deep.gemfile.lock"), "BUNDLED WITH\n   4.0.24\n")
       workflow = described_class.new(command: "release", config: config, members: [member])
-      allow(workflow).to receive(:stable_bundler_version).and_return(Gem::Version.new("4.0.24"))
+      allow(workflow).to receive_messages(stable_bundler_version: Gem::Version.new("4.0.24"), published_bundler_version: nil)
+      [workflow, member]
+    end
+
+    it "installs each BUNDLED WITH version (including nested lockfiles) once, only for parallel waves" do
+      workflow, member = prewarm_workflow
       installed = []
-      allow(workflow).to receive(:system) do |*args, **|
-        installed << args.last(1) if args[1] == "install"
-        args[1] != "list"
+      complete = {}
+      allow(workflow).to receive(:bundler_install_complete?) { |v| complete.fetch(v, false) }
+      allow(Open3).to receive(:capture3) do |*args|
+        installed << args.last(2).first
+        complete[args[4]] = true
+        ["", "", status]
       end
 
       workflow.send(:prewarm_bundlers_once, [member], 1)
@@ -65,7 +77,56 @@ RSpec.describe Kettle::Family::Workflow do
       workflow.send(:prewarm_bundlers_once, [member], 2)
       workflow.send(:prewarm_bundlers_once, [member], 2)
       expect(workflow.send(:bundled_with_versions, member)).to contain_exactly("4.0.23", "4.0.24")
-      expect(installed.length).to eq(2) # one install per version, not repeated on the second parallel call
+      expect(complete.keys).to contain_exactly("4.0.23", "4.0.24")
+    end
+
+    it "also pre-installs the registry-latest stable Bundler a member would otherwise install mid-wave" do
+      workflow, member = prewarm_workflow
+      allow(workflow).to receive(:published_bundler_version).and_return(Gem::Version.new("4.0.25"))
+      complete = {}
+      allow(workflow).to receive(:bundler_install_complete?) { |v| complete.fetch(v, false) }
+      allow(Open3).to receive(:capture3) do |*args|
+        complete[args[4]] = true
+        ["", "", status]
+      end
+      workflow.send(:prewarm_bundlers_once, [member], 2)
+      expect(complete.keys).to include("4.0.25")
+    end
+
+    it "treats an unreachable registry as no extra version" do
+      workflow, _member = prewarm_workflow
+      allow(workflow).to receive(:published_bundler_version).and_call_original
+      allow(Kettle::Dev::BundlerPinning).to receive(:published_stable).and_raise(SocketError)
+      expect(workflow.send(:published_bundler_version)).to be_nil
+    end
+
+    it "skips install when the version is already complete" do
+      workflow, member = prewarm_workflow
+      allow(workflow).to receive(:bundler_install_complete?).and_return(true)
+      expect(Open3).not_to receive(:capture3)
+      workflow.send(:prewarm_bundlers_once, [member], 2)
+    end
+
+    it "fails before fan-out when a Bundler version is still incomplete after install" do
+      workflow, member = prewarm_workflow
+      allow(workflow).to receive(:bundler_install_complete?).and_return(false)
+      allow(Open3).to receive(:capture3).and_return(["", "network down", status])
+      expect { workflow.send(:prewarm_bundlers_once, [member], 2) }
+        .to raise_error(Kettle::Family::Error, /not completely installed.*network down/)
+    end
+
+    it "treats an installed spec with missing files as incomplete" do
+      workflow, _member = prewarm_workflow
+      gems = File.join(@tmpdir, "g")
+      FileUtils.mkdir_p(File.join(gems, "specifications"))
+      File.write(File.join(gems, "specifications", "bundler-9.9.9.gemspec"), "")
+      allow(Gem).to receive(:path).and_return([gems])
+      expect(workflow.send(:bundler_install_complete?, "9.9.9")).to be(false)
+      %w[exe/bundle lib/bundler.rb lib/bundler/setup.rb].each do |f|
+        FileUtils.mkdir_p(File.dirname(File.join(gems, "gems/bundler-9.9.9", f)))
+        File.write(File.join(gems, "gems/bundler-9.9.9", f), "")
+      end
+      expect(workflow.send(:bundler_install_complete?, "9.9.9")).to be(true)
     end
   end
 

@@ -2555,30 +2555,61 @@ module Kettle
         results
       end
 
+      ADVISORY_DB_UPDATE_COMMAND = %w[bundle audit update].freeze
+
       # Parallel members race to install Bundler into the shared gem dir: each
       # `bundle lock/update` auto-installs the version in its lockfile's
       # BUNDLED WITH, and `update --bundler=X` installs the newest stable.
       # Concurrent installs leave half-written gems (LoadError on
       # bundler/definition, rubygems_ext, ...). Install every needed version
       # once, serially, before the fan-out.
-      ADVISORY_DB_UPDATE_COMMAND = %w[bundle audit update].freeze
-
       def prewarm_bundlers_once(wave, wave_jobs)
         return if wave_jobs <= 1
 
         versions = wave.flat_map { |member| bundled_with_versions(member) }
         versions << stable_bundler_version&.to_s
+        # kettle-release installs the registry's newest stable Bundler when it
+        # is newer than the running one; install it here, once, instead of
+        # having a member do it mid-wave.
+        versions << published_bundler_version&.to_s
         versions = versions.compact.uniq - (@prewarmed_bundlers ||= [])
-        versions.each do |version|
-          next if system("gem", "list", "-i", "bundler", "-v", version, out: File::NULL, err: File::NULL)
-
-          system("gem", "install", "bundler", "-v", version, "--no-document", out: File::NULL, err: File::NULL)
-        end
+        versions.each { |version| ensure_bundler_installed!(version) }
         @prewarmed_bundlers.concat(versions)
       end
 
+      # Only a missing Bundler is written into the shared gem dir (an installed
+      # one is read-only for `bundle exec`/`update --bundler=X`; see #38), so
+      # the wave is safe once every version is installed AND complete. Fail
+      # before fan-out rather than let members race a half-installed Bundler.
+      # Registry-latest stable Bundler; nil (skip) when the registry cannot be
+      # consulted, matching kettle-dev's fail-open behavior.
+      def published_bundler_version
+        Kettle::Dev::BundlerPinning.published_stable
+      rescue
+        nil
+      end
+
+      def ensure_bundler_installed!(version)
+        unless bundler_install_complete?(version)
+          _out, err, _status = Open3.capture3("gem", "install", "bundler", "-v", version, "--no-document")
+          unless bundler_install_complete?(version)
+            raise Error, "Bundler #{version} is not completely installed before the parallel wave: #{err.to_s.strip}"
+          end
+        end
+      end
+
+      # Read gem dirs directly: under `bundle exec` (how the family itself
+      # runs) `gem list`/Specification lookups are scoped to the lockfile and
+      # report other Bundler versions as missing.
+      def bundler_install_complete?(version)
+        Array(Gem.path).any? do |base|
+          File.file?(File.join(base, "specifications", "bundler-#{version}.gemspec")) &&
+            %w[exe/bundle lib/bundler.rb lib/bundler/setup.rb].all? { |f| File.file?(File.join(base, "gems", "bundler-#{version}", f)) }
+        end
+      end
+
       def bundled_with_versions(member)
-        Dir.glob(File.join(member.root, "{Gemfile,Appraisal.root.gemfile,gemfiles/*.gemfile}.lock")).filter_map do |lock|
+        Dir.glob(File.join(member.root, "**/*.lock"), File::FNM_DOTMATCH).reject { |lock| lock.match?(%r{/(vendor|node_modules|\.git)/}) }.filter_map do |lock|
           File.read(lock)[/^BUNDLED WITH\n\s+(\d[\w.]*)\s*$/, 1]
         end.uniq
       rescue SystemCallError
