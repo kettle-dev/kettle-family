@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- Parallel release waves update the Ruby advisory database once, serially, before fan-out (`bundle audit update`; failure is a warning) and pass `KETTLE_DEV_SKIP_AUDIT_UPDATE=true` to member releases, avoiding "cannot lock ref" races in the shared `ruby-advisory-db`. Disable with `release.advisory_db_update: false` or `KETTLE_FAMILY_SKIP_AUDIT_UPDATE=true`. (#38)
+
 ### Changed
 
 ### Deprecated

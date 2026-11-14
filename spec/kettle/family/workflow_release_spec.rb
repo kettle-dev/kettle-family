@@ -130,6 +130,46 @@ RSpec.describe Kettle::Family::Workflow do
     end
   end
 
+  describe "advisory database update before parallel waves" do
+    let(:member) { ready_member("alpha") }
+    let(:status_ok) { instance_double(Process::Status, success?: true) }
+    let(:status_bad) { instance_double(Process::Status, success?: false) }
+
+    def build_workflow
+      write_release_config
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      described_class.new(command: "release", config: config, members: [member])
+    end
+
+    it "updates once, serially, only for parallel waves" do
+      workflow = build_workflow
+      expect(Open3).to receive(:capture3).with("bundle", "audit", "update", chdir: member.root).once.and_return(["", "", status_ok])
+      workflow.send(:update_advisory_db_once, [member], 1)
+      workflow.send(:update_advisory_db_once, [member], 2)
+      workflow.send(:update_advisory_db_once, [member], 2)
+    end
+
+    it "warns instead of raising when the update fails" do
+      workflow = build_workflow
+      allow(Open3).to receive(:capture3).and_return(["", "boom", status_bad])
+      expect { workflow.send(:update_advisory_db_once, [member], 2) }.to output(/advisory database update failed.*boom/).to_stderr
+    end
+
+    it "is skippable via the env switch" do
+      workflow = build_workflow
+      stub_const("ENV", ENV.to_h.merge("KETTLE_FAMILY_SKIP_AUDIT_UPDATE" => "true"))
+      expect(Open3).not_to receive(:capture3)
+      workflow.send(:update_advisory_db_once, [member], 2)
+      expect(workflow.send(:release_env_for_member, member, wave_jobs: 2)).not_to have_key("KETTLE_DEV_SKIP_AUDIT_UPDATE")
+    end
+
+    it "passes KETTLE_DEV_SKIP_AUDIT_UPDATE to members only in parallel waves" do
+      workflow = build_workflow
+      expect(workflow.send(:release_env_for_member, member, wave_jobs: 2)["KETTLE_DEV_SKIP_AUDIT_UPDATE"]).to eq("true")
+      expect(workflow.send(:release_env_for_member, member, wave_jobs: 1)).not_to have_key("KETTLE_DEV_SKIP_AUDIT_UPDATE")
+    end
+  end
+
   it "omits the pre-release maintenance phase when no commands are configured" do
     write_release_config
     config = Kettle::Family::Config.load(root: @tmpdir)

@@ -2616,8 +2616,35 @@ module Kettle
         []
       end
 
+      # Concurrent `bundle audit update` runs `git pull` in the shared
+      # ~/.local/share/ruby-advisory-db and fails with "cannot lock ref".
+      # Update it once, serially, here; members are told to skip their own
+      # (KETTLE_DEV_SKIP_AUDIT_UPDATE, ignored by kettle-dev versions that
+      # predate it). Failure is only a warning.
+      def update_advisory_db_once(wave, wave_jobs)
+        return unless advisory_db_update_enabled?(wave_jobs)
+        return if @advisory_db_updated
+
+        @advisory_db_updated = true
+        member = wave.first
+        return unless member
+
+        _out, err, status = Open3.capture3(*ADVISORY_DB_UPDATE_COMMAND, chdir: member.root)
+        warn "[kettle-family] advisory database update failed (continuing): #{err.to_s.strip}" unless status.success?
+      rescue SystemCallError => e
+        warn "[kettle-family] advisory database update failed (continuing): #{e.message}"
+      end
+
+      def advisory_db_update_enabled?(wave_jobs)
+        wave_jobs > 1 &&
+          config.release_advisory_db_update? &&
+          !skip_bundle_audit &&
+          !%w[1 true yes].include?(ENV.fetch("KETTLE_FAMILY_SKIP_AUDIT_UPDATE", "").to_s.downcase)
+      end
+
       def run_release_wave(wave, wave_jobs: release_jobs(wave))
         prewarm_bundlers_once(wave, wave_jobs)
+        update_advisory_db_once(wave, wave_jobs)
         queue = Queue.new
         wave.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(wave.length)
@@ -4288,6 +4315,7 @@ module Kettle
         env = execution_profile(release_bootstrap_execution_profile, release_env)
         env.merge!(release_lockfile_local_path_env_overrides(member, graph: graph))
         env.merge!(graph.environment)
+        env["KETTLE_DEV_SKIP_AUDIT_UPDATE"] ||= "true" if advisory_db_update_enabled?(wave_jobs)
         # A resumed child kettle-release starts in the member's mise
         # environment after the release candidate was already prepared.
         # Disable sibling paths so mise cannot reactivate them before the
