@@ -330,7 +330,6 @@ refresh. These temporary lockfiles are not committed; this is an optional
 early registry-resolution gate for coordinated releases where waiting for CI
 would be too late to discover an incompatible dependency floor.
 
-
 Parallel waves (`release.jobs` > 1) update the Ruby advisory database once,
 serially, before fan-out (`bundle audit update`; failure is only a warning) and
 pass `KETTLE_DEV_SKIP_AUDIT_UPDATE=true` to member releases so they do not each
