@@ -1514,6 +1514,9 @@ RSpec.describe Kettle::Family::CLI do
       write_gem("alpha")
       out = StringIO.new
       err = StringIO.new
+      # Keep these hermetic: CI may lack mise or kettle-gha-pins.
+      allow(Kettle::Family).to receive(:mise_adapter).and_return(instance_double(Kettle::Family::MiseAdapter, trust_argv: nil)) if name == "mise-trust"
+      allow_any_instance_of(Kettle::Family::Workflow).to receive(:review_gha_sha_pins).and_return(true) if name == "gha-sha-pins" # rubocop:disable RSpec/AnyInstance
 
       described_class.call([name, "--root", @tmpdir, *((name == "mise-trust") ? [] : ["--execute"]), "--events", *extra], out: out, err: err)
 
