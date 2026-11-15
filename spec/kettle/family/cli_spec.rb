@@ -1478,7 +1478,7 @@ RSpec.describe Kettle::Family::CLI do
     expect(alpha.map { |event| event["phase"] }.compact).to include("pull")
   end
 
-  {"sync" => [], "test" => [], "lint" => [], "docs" => [], "bex" => %w[true], "check" => [], "reset" => %w[Gemfile.lock], "clean-unreleased" => [], "clean-blockers" => [], "clean-installed" => [], "bump" => %w[patch --only alpha --force], "bump-version" => %w[patch --only alpha --force], "add-changelog" => %w[--section Added --entry x], "mise-trust" => [], "reconcile-releases" => []}.each do |name, extra|
+  {"sync" => [], "test" => [], "lint" => [], "docs" => [], "bex" => %w[true], "check" => [], "reset" => %w[Gemfile.lock], "clean-unreleased" => [], "clean-blockers" => [], "clean-installed" => [], "bump" => %w[patch --only alpha --force], "bump-version" => %w[patch --only alpha --force], "add-changelog" => %w[--section Added --entry x], "mise-trust" => [], "reconcile-releases" => [], "bup" => [], "bupb" => [], "update-bundler" => [], "gha-sha-pins" => [], "template" => []}.each do |name, extra|
     it "streams per-member NDJSON events for #{name} --execute --events" do
       write_gem("alpha")
       out = StringIO.new
