@@ -31,6 +31,7 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 - A release tooling bundle check repaired by `bundle install` no longer causes a false failure summary or an unnecessary release resume command. (#65, #66)
+- Correct the README command reference, release-state selectors, release profiles, and template dirty-file rules; document `pull` and `up` stash recovery.
 
 ### Security
 
