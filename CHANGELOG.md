@@ -22,11 +22,15 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- `pull` and `up` temporarily stash member worktree changes before syncing and restore them afterward. `up` pushes the rebased commits before restoring the stash. If restoring a stash containing only `Gemfile.lock` fails, the pulled lockfile is left clean, the stash is retained for recovery, and the family run continues with a warning. (#67)
+
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- A release tooling bundle check repaired by `bundle install` no longer causes a false failure summary or an unnecessary release resume command. (#65, #66)
 
 ### Security
 
