@@ -1492,6 +1492,23 @@ RSpec.describe Kettle::Family::CLI do
     expect(alpha.map { |event| event["phase"] }.compact).to include("pull")
   end
 
+  it "relays live test_progress events from a member's test command" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      commands:
+        test: |-
+          #{RbConfig.ruby} -rjson -e 'puts "dots"; puts JSON.generate(type: "test_progress", event_version: 1, kind: "tick", examples: 7, failures: 1, pending: 0, elapsed: 1.0)'
+    YAML
+    out = StringIO.new
+    err = StringIO.new
+
+    described_class.call(["test", "--root", @tmpdir, "--execute", "--events"], out: out, err: err)
+
+    events = out.string.lines.select { |line| line.start_with?("{") }.map { |line| JSON.parse(line) }
+    progress = events.find { |event| event["type"] == "test_progress" }
+    expect(progress).to include("member" => "alpha", "command" => "test", "examples" => 7, "failures" => 1)
+  end
+
   {"sync" => [], "test" => [], "lint" => [], "docs" => [], "bex" => %w[true], "check" => [], "reset" => %w[Gemfile.lock], "clean-unreleased" => [], "clean-blockers" => [], "clean-installed" => [], "bump" => %w[patch --only alpha --force], "bump-version" => %w[patch --only alpha --force], "add-changelog" => %w[--section Added --entry x], "mise-trust" => [], "reconcile-releases" => [], "bup" => [], "bupb" => [], "update-bundler" => [], "gha-sha-pins" => [], "template" => []}.each do |name, extra|
     it "streams per-member NDJSON events for #{name} --execute --events" do
       write_gem("alpha")

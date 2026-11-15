@@ -41,6 +41,19 @@ module Kettle
         emit("command_step", member, phase: phase, status: ok ? "ok" : "failed", elapsed_seconds: elapsed_seconds)
       end
 
+      # Live counts relayed from a child suite's `test_progress` events. Ticks
+      # only repaint the TTY pane (a non-TTY log would get a line per second);
+      # failures and the final event always update it. Every event is taped.
+      def test_progress(member, event)
+        kind = event["kind"].to_s
+        if @progress && (@progress.tty? || kind != "tick")
+          status = "#{event["examples"]} examples, #{event["failures"]} failed"
+          status += " #{event["location"]}" if kind == "failure" && event["location"]
+          @progress.update(member, status: status, mark: (kind == "failure") ? "F" : nil)
+        end
+        @tape&.call(event.merge("command" => @command, "member" => member.name))
+      end
+
       def finish_member(member, success:)
         @mutex.synchronize { (success ? @completed : @failed) << member.name }
         @progress&.finish_member(member, success: success, status: success ? "complete" : "failed")
