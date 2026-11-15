@@ -3242,12 +3242,29 @@ RSpec.describe Kettle::Family::Workflow do
 
       results = workflow.send(:release_tool_bundle_probe, runner: runner, member: alpha)
 
-      expect(results.map(&:phase)).to eq(%w[release_tool_bundle_check release_tool_bundle_repair])
+      expect(results.map(&:phase)).to eq(%w[release_tool_bundle_repair])
       expect(results.last).to be_ok
       expect(captured.map { |(_phase, command, env)| [command, env.fetch("BUNDLE_GEMFILE")] }).to eq([
         [["bundle", "check"], File.join(tooling, "Gemfile")],
         [["bundle", "install"], File.join(tooling, "Gemfile")]
       ])
+    end
+
+    it "retains the failure when repairing the tooling bundle fails" do
+      write_release_config
+      tooling = File.join(@tmpdir, "kettle-dev")
+      FileUtils.mkdir_p(tooling)
+      File.write(File.join(tooling, "Gemfile"), "source \"https://gem.coop\"\n")
+      stub_env("KETTLE_DEV_DEV" => File.dirname(tooling))
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      alpha = ready_member_with_gemspec("alpha", version: "1.2.3")
+      workflow = described_class.new(command: "release", config: config, members: [alpha])
+      runner = probe_runner("release_tool_bundle_check" => false, "release_tool_bundle_repair" => false)
+
+      results = workflow.send(:release_tool_bundle_probe, runner: runner, member: alpha)
+
+      expect(results.map(&:phase)).to eq(%w[release_tool_bundle_check release_tool_bundle_repair])
+      expect(results).to all(have_attributes(success: false))
     end
   end
 
