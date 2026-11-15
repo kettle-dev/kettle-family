@@ -3422,7 +3422,10 @@ module Kettle
         check = runner.call(member: member, phase: "release_tool_bundle_check", command: ["bundle", "check"], env: env)
         return [check] if check.ok?
 
-        [check, runner.call(member: member, phase: "release_tool_bundle_repair", command: ["bundle", "install"], env: env)]
+        repair = runner.call(member: member, phase: "release_tool_bundle_repair", command: ["bundle", "install"], env: env)
+        # A failed probe is diagnostic, not an unresolved release failure if
+        # installing the missing gems succeeds.
+        repair.ok? ? [repair] : [check, repair]
       end
 
       def append_dependency_floor_lockfile_results(dependent_members:, runner:, memo:)
