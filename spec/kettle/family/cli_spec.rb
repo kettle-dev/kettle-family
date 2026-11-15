@@ -1484,7 +1484,7 @@ RSpec.describe Kettle::Family::CLI do
       out = StringIO.new
       err = StringIO.new
 
-      described_class.call([name, "--root", @tmpdir, *(name == "mise-trust" ? [] : ["--execute"]), "--events", *extra], out: out, err: err)
+      described_class.call([name, "--root", @tmpdir, *((name == "mise-trust") ? [] : ["--execute"]), "--events", *extra], out: out, err: err)
 
       events = out.string.lines.select { |line| line.start_with?("{") }.map { |line| JSON.parse(line) }
       alpha = events.select { |event| event["member"] == "alpha" }
