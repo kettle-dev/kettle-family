@@ -27,6 +27,32 @@ Prefer these helpers over ad hoc ENV mutation, direct Timecop setup, or direct
 stdout/stderr plumbing. They keep specs isolated across parallel workers and
 make local runs match CI behavior.
 
+## No Real Gem Installs
+
+Specs must not install gems into the shared gem home. CI runs specs in
+parallel (`turbo_tests2` workers share `GEM_HOME`), so a real install, such as
+a newer Bundler from RubyGems, can rewrite a gem while another worker is
+running `bundle`. The result is a half-written gem and a random `LoadError` in
+an unrelated spec, which only shows up under some seeds.
+
+`spec/support/no_real_gem_installs.rb` enforces this. It raises
+`NoRealGemInstalls::Violation` when a spec runs:
+
+- `Gem::DependencyInstaller#install` or `Gem::Installer#install` in-process; or
+- a child-process `gem install` without `--local` through `Open3`.
+
+If you hit it, stub the install instead, for example
+`allow(Kettle::Dev::BundlerPinning).to receive(:install_stable)`. Commands that
+call it indirectly, such as `bupb --execute` and `update-bundler --execute`,
+need the stub too.
+
+If an example genuinely needs a real install, give it its own isolated
+`GEM_HOME` and tag it `:allow_real_gem_install`.
+`spec/integration/unreleased_gem_cleanup_enumeration_spec.rb` is the model.
+
+The guard covers gem installs only. It does not stop other writes to shared
+state, such as `bundle update` against the shared home.
+
 ## Worktree Integration Scenarios
 
 `spec/integration/mise_worktree_execution_spec.rb` exercises the real Git and
