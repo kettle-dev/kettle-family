@@ -1056,7 +1056,7 @@ module Kettle
         return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members, jobs: options[:jobs], event_handler: state_event_handler) if command == "release-state"
-        return install_results(config: config, members: members, options: options) if command == "install"
+        return install_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "install"
         return [] unless WORKFLOW_COMMANDS.include?(command)
 
         Workflow.new(
@@ -1135,9 +1135,9 @@ module Kettle
       end
 
       def progress_io(command, options)
-        return nil unless %w[release template gha-sha-pins bup bupb update-bundler].include?(command)
+        return nil unless %w[release template gha-sha-pins bup bupb update-bundler up push pull sync test install].include?(command)
         return nil unless options[:execute]
-        return nil if options[:json] || (options[:events] && %w[bup bupb update-bundler].include?(command))
+        return nil if options[:json] || (options[:events] && %w[bup bupb update-bundler up push pull sync test install].include?(command))
 
         stdout
       end
@@ -1720,8 +1720,8 @@ module Kettle
         ReleaseReconciler.new(config: config, members: members, execute: options[:execute]).results
       end
 
-      def install_results(config:, members:, options:)
-        LocalInstall.new(config: config, members: members, execute: options[:execute], jobs: options[:jobs]).results
+      def install_results(config:, members:, options:, event_tape: nil)
+        LocalInstall.new(config: config, members: members, execute: options[:execute], jobs: options[:jobs], progress_io: progress_io("install", options), event_tape: event_tape).results
       end
 
       def release_state_results(config:, members:, jobs: nil, event_handler: nil)
