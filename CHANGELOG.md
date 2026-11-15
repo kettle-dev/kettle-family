@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.42] - 2026-11-15
+
+- TAG: [v1.3.42][1.3.42t]
+- COVERAGE: 94.22% -- 8235/8740 lines in 46 files
+- BRANCH COVERAGE: 79.06% -- 3416/4321 branches in 46 files
+- 40.81% documented
+
+### Added
+
 - Parallel release waves update the Ruby advisory database once, serially, before fan-out (`bundle audit update`; failure is a warning) and pass `KETTLE_DEV_SKIP_AUDIT_UPDATE=true` to member releases, avoiding "cannot lock ref" races in the shared `ruby-advisory-db`. Disable with `release.advisory_db_update: false` or `KETTLE_FAMILY_SKIP_AUDIT_UPDATE=true`. (#38)
 
 ### Changed
@@ -34,15 +53,9 @@ Please file a bug if you notice a violation of semantic versioning.
   - other (1)
   - workflows (1)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Parallel release waves no longer start unless every Bundler version a member may use is installed and complete (`exe/bundle`, `lib/bundler.rb`, `lib/bundler/setup.rb` present). The prewarm now scans nested lockfiles (e.g. `gemfiles/**`), surfaces `gem install` failures instead of swallowing them, pre-installs the registry-latest stable Bundler that a member's release would otherwise install mid-wave, and aborts before fan-out, preventing `LoadError` under `bundler-X/lib/bundler` when members install Bundler into the shared gem dir concurrently. (#38)
-
-### Security
 
 ## [1.3.41] - 2026-11-10
 
@@ -3432,7 +3445,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.41...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.42...HEAD
+[1.3.42]: https://github.com/kettle-dev/kettle-family/compare/v1.3.41...v1.3.42
+[1.3.42t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.42
 [1.3.41]: https://github.com/kettle-dev/kettle-family/compare/v1.3.40...v1.3.41
 [1.3.41t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.41
 [1.3.40]: https://github.com/kettle-dev/kettle-family/compare/v1.3.39...v1.3.40
