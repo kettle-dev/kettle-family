@@ -12,6 +12,52 @@ RSpec.describe Kettle::Family::Workflow do
     end
   end
 
+  it "pushes and continues after preserving a conflicting lockfile stash" do
+    write_config(command: ["ruby", "-e", "true"])
+    remote = File.join(@tmpdir, "remote.git")
+    seed = File.join(@tmpdir, "seed")
+    git = lambda do |*args|
+      output, status = Open3.capture2e("git", *args)
+      raise output unless status.success?
+      output
+    end
+    git.call("init", "--bare", remote)
+    git.call("clone", remote, seed)
+    git.call("-C", seed, "config", "user.email", "test@example.test")
+    git.call("-C", seed, "config", "user.name", "Test")
+    File.write(File.join(seed, "Gemfile.lock"), "original\n")
+    git.call("-C", seed, "add", "Gemfile.lock")
+    git.call("-C", seed, "commit", "-m", "initial")
+    git.call("-C", seed, "push", "-u", "origin", "HEAD")
+    alpha = member_at("alpha")
+    beta = member_at("beta")
+    [alpha, beta].each do |member|
+      git.call("clone", remote, member.root)
+      git.call("-C", member.root, "config", "user.email", "test@example.test")
+      git.call("-C", member.root, "config", "user.name", "Test")
+    end
+    File.write(File.join(alpha.root, "committed.txt"), "local commit\n")
+    git.call("-C", alpha.root, "add", "committed.txt")
+    git.call("-C", alpha.root, "commit", "-m", "local commit")
+    File.write(File.join(alpha.root, "Gemfile.lock"), "local\n")
+    File.write(File.join(seed, "Gemfile.lock"), "upstream\n")
+    git.call("-C", seed, "commit", "-am", "upstream")
+    git.call("-C", seed, "push")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+
+    results = described_class.new(command: "up", config: config, members: [alpha, beta], execute: true).results
+
+    expect(results).to all(be_ok)
+    expect(results.map { |result| [result.member_name, result.phase] }).to include(["alpha", "push"], ["alpha", "sync_stash_warning"], ["beta", "push"])
+    expect(results.find { |result| result.phase == "sync_stash_warning" }.reason).to include("warning", "stash")
+    expect(File.read(File.join(alpha.root, "Gemfile.lock"))).to eq("upstream\n")
+    expect(git.call("-C", alpha.root, "status", "--porcelain")).to be_empty
+    expect(git.call("-C", alpha.root, "stash", "show", "-p")).to include("+local")
+    git.call("-C", seed, "fetch")
+    branch = git.call("-C", seed, "branch", "--show-current").strip
+    expect(git.call("-C", seed, "show", "origin/#{branch}:committed.txt")).to eq("local commit\n")
+  end
+
   it "uses configured commands and stops on first execution failure" do
     write_config(command: [RbConfig.ruby, "-e", "exit 3"])
     alpha = member_at("alpha")

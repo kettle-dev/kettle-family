@@ -3077,17 +3077,95 @@ module Kettle
         reporter = member_reporter(sync_members)
         sync_members.each_with_object([]) do |member, memo|
           reporter&.start_member(member, steps: steps.length)
+          stash = nil
+          if execute && command != "push"
+            status = runner.call(member: member, phase: "sync_worktree_check", command: %w[git status --porcelain=v1 -z --untracked-files=all])
+            unless status.ok?
+              reporter&.step_started(member, "pull")
+              status.phase = "pull"
+              memo << status
+              reporter&.step_finished(member, "pull", ok: false, elapsed_seconds: status.elapsed_seconds)
+              reporter&.finish_member(member, success: false)
+              break memo
+            end
+            unless status.stdout.empty?
+              lockfile_only = status.stdout.match?(/\A[ MADRCU]{2} Gemfile\.lock\x00\z/)
+              previous = runner.call(member: member, phase: "sync_previous_stash", command: %w[git rev-parse -q --verify refs/stash])
+              save = runner.call(member: member, phase: "sync_stash", command: ["git", "stash", "push", "--include-untracked", "--message", "kettle-family-#{command}-#{member.name}"])
+              memo << save unless save.ok?
+              if save.ok?
+                ref = runner.call(member: member, phase: "sync_stash_ref", command: %w[git rev-parse --verify refs/stash])
+                memo << ref unless ref.ok?
+                stash = {oid: ref.stdout.strip, lockfile_only: lockfile_only} if ref.ok? && (!previous.ok? || previous.stdout.strip != ref.stdout.strip)
+                if ref.ok? && !stash
+                  ref.success = false
+                  ref.reason = "no new stash was created; worktree changes were not saved"
+                  memo << ref
+                end
+              end
+              unless stash
+                reporter&.finish_member(member, success: false)
+                break memo
+              end
+            end
+          end
+          member_ok = true
           steps.each do |phase, git_command|
             reporter&.step_started(member, phase)
             memo << runner.call(member: member, phase: phase, command: git_command)
             reporter&.step_finished(member, phase, ok: memo.last.ok?, elapsed_seconds: memo.last.elapsed_seconds)
-            break unless memo.last.ok?
+            unless memo.last.ok?
+              member_ok = false
+              break
+            end
           end
-          reporter&.finish_member(member, success: memo.last.ok?)
-          break memo unless memo.last.ok?
+          if stash
+            restore = git_sync_restore_stash(member: member, stash: stash, runner: runner, allow_lockfile_warning: member_ok)
+            memo << restore
+            member_ok &&= restore.ok?
+          end
+          reporter&.finish_member(member, success: member_ok)
+          break memo unless member_ok
         end
       ensure
         reporter&.finish
+      end
+
+      def git_sync_restore_stash(member:, stash:, runner:, allow_lockfile_warning:)
+        oid = stash.fetch(:oid)
+        restore = runner.call(member: member, phase: "sync_stash_restore", command: ["git", "stash", "apply", "--index", oid])
+        if !restore.ok? && allow_lockfile_warning && stash.fetch(:lockfile_only)
+          # This stash contained only the root lockfile, so resetting that path
+          # cannot discard any unrelated work. Keep the stash for inspection.
+          cleanup = runner.call(member: member, phase: "sync_stash_cleanup", command: %w[git restore --source=HEAD --staged --worktree -- Gemfile.lock])
+          return cleanup unless cleanup.ok?
+
+          status = runner.call(member: member, phase: "sync_stash_cleanup_check", command: %w[git status --porcelain=v1 -z --untracked-files=all])
+          return status unless status.ok?
+          unless status.stdout.empty?
+            status.success = false
+            status.reason = "stash restore left a dirty worktree; stash #{oid} was retained"
+            return status
+          end
+
+          cleanup.phase = "sync_stash_warning"
+          cleanup.reason = "warning: lockfile changes remain in stash #{oid}"
+          cleanup.stdout = "Could not restore Gemfile.lock; the pulled lockfile was kept clean. Inspect with git stash show -p #{oid}; recover with git stash apply --index #{oid}."
+          return cleanup
+        end
+        return restore unless restore.ok?
+
+        listing = runner.call(member: member, phase: "sync_stash_list", command: %w[git stash list --format=%gd:%H])
+        return listing unless listing.ok?
+
+        entry = listing.stdout.lines.find { |line| line.strip.end_with?(":#{oid}") }
+        unless entry
+          restore.success = false
+          restore.reason = "restored stash could not be located for removal (#{oid})"
+          return restore
+        end
+        drop = runner.call(member: member, phase: "sync_stash_drop", command: ["git", "stash", "drop", entry.split(":", 2).first])
+        drop.ok? ? restore : drop
       end
 
       def test_progress_line_handler(reporter, member)
