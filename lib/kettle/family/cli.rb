@@ -1135,9 +1135,9 @@ module Kettle
       end
 
       def progress_io(command, options)
-        return nil unless %w[release template gha-sha-pins bup bupb update-bundler up push pull sync test install].include?(command)
+        return nil unless %w[release template gha-sha-pins bup bupb update-bundler up push pull sync test install lint docs bex].include?(command)
         return nil unless options[:execute]
-        return nil if options[:json] || (options[:events] && %w[bup bupb update-bundler up push pull sync test install].include?(command))
+        return nil if options[:json] || (options[:events] && %w[bup bupb update-bundler up push pull sync test install lint docs bex].include?(command))
 
         stdout
       end

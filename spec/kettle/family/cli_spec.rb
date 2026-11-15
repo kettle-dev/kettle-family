@@ -1478,12 +1478,12 @@ RSpec.describe Kettle::Family::CLI do
     expect(alpha.map { |event| event["phase"] }.compact).to include("pull")
   end
 
-  %w[sync test].each do |name|
+  {"sync" => [], "test" => [], "lint" => [], "docs" => [], "bex" => %w[true]}.each do |name, extra|
     it "streams per-member NDJSON events for #{name} --execute --events" do
       write_gem("alpha")
       out = StringIO.new
 
-      described_class.call([name, "--root", @tmpdir, "--execute", "--events"], out: out, err: StringIO.new)
+      described_class.call([name, "--root", @tmpdir, "--execute", "--events", *extra], out: out, err: StringIO.new)
 
       events = out.string.lines.map { |line| JSON.parse(line) }
       alpha = events.select { |event| event["member"] == "alpha" }

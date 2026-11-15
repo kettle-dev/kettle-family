@@ -63,6 +63,8 @@ module Kettle
       TEMPLATE_AUTOSTASH_ALLOWED_DIRECTORIES = %w[lib spec test].freeze
       TEMPLATE_MANAGED_DIRTY_PATH_PATTERN = %r{(?:\A|/)(?:Gemfile\.lock|Appraisal\.root\.gemfile\.lock|\.structuredmerge/kettle-jem\.lock|gemfiles/modular/[^/]+_local\.gemfile)\z}
       PRE_TEMPLATE_BOOTSTRAP_GEMS = %w[nomono kettle-dev].freeze
+      REPORTED_MEMBER_COMMANDS = %w[sync lint docs bex].freeze
+
       GIT_SYNC_COMMANDS = {
         "push" => [["push", %w[git push]]],
         "pull" => [["pull", %w[git pull --rebase]]],
@@ -640,7 +642,7 @@ module Kettle
           return results unless review_gha_sha_pins(workflow_members, runner: runner, memo: results)
         end
         gha_progress = (command == "gha-sha-pins") ? start_gha_sha_pins_progress(workflow_members) : nil
-        sync_reporter = (command == "sync") ? member_reporter(workflow_members) : nil
+        sync_reporter = REPORTED_MEMBER_COMMANDS.include?(command) ? member_reporter(workflow_members) : nil
         workflow_members.each_with_object(results) do |member, memo|
           bup_progress&.start_member(member, total: 1, status: "starting")
           started_members << member.name unless started_members.include?(member.name)
@@ -658,6 +660,8 @@ module Kettle
           gha_progress&.start_member(member, total: 1, status: "starting")
           result = reported_member_call(
             sync_reporter, runner, member,
+            finish: !bex_commit_step?,
+            steps: bex_commit_step? ? 2 : 1,
             command: command_text,
             env: template_command_env,
             stdout_line_handler: (command == "gha-sha-pins") ? gha_sha_pins_event_line_handler(member) : nil
@@ -665,6 +669,7 @@ module Kettle
           memo << result
           gha_progress&.finish_member(member, success: result.ok?, status: result.ok? ? "complete" : "failed")
           unless result.ok?
+            sync_reporter&.finish_member(member, success: false) if bex_commit_step?
             failed = member.name
             bup_progress&.finish_member(member, success: false, status: "failed")
             break memo
@@ -678,7 +683,7 @@ module Kettle
           if %w[bup bupb update-bundler].include?(command) && memo.last&.ok? && validate_bundle_update_lockfile(member: member, memo: memo)
             commit_bundle_update(member: member, runner: runner, memo: memo)
           end
-          commit_bex_changes(member: member, runner: runner, memo: memo) if command == "bex"
+          commit_bex_changes(member: member, runner: runner, memo: memo, reporter: sync_reporter) if command == "bex"
           if bup_progress
             failed = member.name unless memo.last&.ok?
             bup_progress.finish_member(member, success: failed.nil?, status: failed ? "failed" : "complete")
@@ -3063,13 +3068,17 @@ module Kettle
       # Run one workflow command for a member, reporting it as a single step.
       # `report_as` names the member shown in progress/events when the command
       # runs against a relocated (worktree) copy.
-      def reported_member_call(reporter, runner, member, report_as: member, **call_options)
-        reporter&.start_member(report_as, steps: 1)
+      def reported_member_call(reporter, runner, member, report_as: member, finish: true, steps: 1, **call_options)
+        reporter&.start_member(report_as, steps: steps)
         reporter&.step_started(report_as, command)
         result = runner.call(member: member, phase: command, **call_options)
         reporter&.step_finished(report_as, command, ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
-        reporter&.finish_member(report_as, success: result.ok?)
+        reporter&.finish_member(report_as, success: result.ok?) if finish
         result
+      end
+
+      def bex_commit_step?
+        command == "bex" && commit
       end
 
       def command_runner
@@ -6876,9 +6885,10 @@ module Kettle
         !%w[true yes 1 on enabled].include?(text.downcase)
       end
 
-      def commit_bex_changes(member:, runner:, memo:)
+      def commit_bex_changes(member:, runner:, memo:, reporter: nil)
         return unless commit
 
+        reporter&.step_started(member, "commit_bex")
         result = runner.call(
           member: member,
           phase: "commit_bex",
@@ -6890,6 +6900,8 @@ module Kettle
           ]
         )
         memo << result
+        reporter&.step_finished(member, "commit_bex", ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
+        reporter&.finish_member(member, success: result.ok?)
       end
 
       def family_member
