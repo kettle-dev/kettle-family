@@ -47,6 +47,38 @@ module Kettle
         emit("member_complete", member, status: success ? "ok" : "failed")
       end
 
+      # Report a batched run (one command covering every member) as a single
+      # step per member: all members start, then each finishes with the outcome
+      # of its own results once the batch returns. When the batch failed, members
+      # with no results were never reached and are reported as skipped.
+      def around_batch(phase)
+        @members.each do |member|
+          start_member(member, steps: 1)
+          step_started(member, phase)
+        end
+        results = yield
+        batch_failed = results.any? { |result| !result.ok? }
+        @members.each do |member|
+          own = results.select { |result| result.member_name == member.name }
+          next skip_member(member, phase) if own.empty? && batch_failed
+
+          ok = own.all?(&:ok?)
+          step_finished(member, phase, ok: ok, elapsed_seconds: own.sum { |result| result.elapsed_seconds.to_f })
+          finish_member(member, success: ok)
+        end
+        results
+      ensure
+        finish
+      end
+
+      # A member a failed run never reached: closed out as skipped, neither
+      # completed nor failed, so it is not mistaken for a success.
+      def skip_member(member, phase)
+        @progress&.finish_member(member, success: true, status: "skipped")
+        emit("command_step", member, phase: phase, status: "skipped")
+        emit("member_complete", member, status: "skipped")
+      end
+
       def finish
         return unless @progress
 

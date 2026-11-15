@@ -847,6 +847,20 @@ RSpec.describe Kettle::Family::CLI do
     expect(File.read(File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))).to include('VERSION = "1.0.1"')
   end
 
+  it "reports members a failed bump never reached as skipped in the event stream", :prism do
+    write_gem("alpha")
+    write_gem("beta")
+    set_gem_version(File.join(@tmpdir, "alpha"), "alpha", "1.0.1")
+    File.write(File.join(@tmpdir, "alpha", "CHANGELOG.md"), "## [Unreleased]\n\n- fix\n\n## [1.0.0] - 2026-01-01\n")
+    initialize_git_repo(@tmpdir)
+    out = StringIO.new
+
+    described_class.call(["bump", "patch", "--root", @tmpdir, "--only", "alpha,beta", "--execute", "--events"], out: out, err: StringIO.new)
+
+    completes = out.string.lines.select { |line| line.start_with?("{") }.map { |line| JSON.parse(line) }.select { |event| event["type"] == "member_complete" }
+    expect(completes.to_h { |event| [event["member"], event["status"]] }).to eq("alpha" => "failed", "beta" => "skipped")
+  end
+
   it "bumps a mid-prep member with --force", :prism do
     write_gem("alpha")
     set_gem_version(File.join(@tmpdir, "alpha"), "alpha", "1.0.1")
@@ -1478,14 +1492,15 @@ RSpec.describe Kettle::Family::CLI do
     expect(alpha.map { |event| event["phase"] }.compact).to include("pull")
   end
 
-  %w[sync test].each do |name|
+  {"sync" => [], "test" => [], "lint" => [], "docs" => [], "bex" => %w[true], "check" => [], "reset" => %w[Gemfile.lock], "clean-unreleased" => [], "clean-blockers" => [], "clean-installed" => [], "bump" => %w[patch --only alpha --force], "bump-version" => %w[patch --only alpha --force], "add-changelog" => %w[--section Added --entry x], "mise-trust" => [], "reconcile-releases" => [], "bup" => [], "bupb" => [], "update-bundler" => [], "gha-sha-pins" => [], "template" => []}.each do |name, extra|
     it "streams per-member NDJSON events for #{name} --execute --events" do
       write_gem("alpha")
       out = StringIO.new
+      err = StringIO.new
 
-      described_class.call([name, "--root", @tmpdir, "--execute", "--events"], out: out, err: StringIO.new)
+      described_class.call([name, "--root", @tmpdir, *((name == "mise-trust") ? [] : ["--execute"]), "--events", *extra], out: out, err: err)
 
-      events = out.string.lines.map { |line| JSON.parse(line) }
+      events = out.string.lines.select { |line| line.start_with?("{") }.map { |line| JSON.parse(line) }
       alpha = events.select { |event| event["member"] == "alpha" }
       expect(alpha.map { |event| event["type"] }).to include("member_start", "command_step", "member_complete")
     end

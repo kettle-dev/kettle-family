@@ -63,6 +63,10 @@ module Kettle
       TEMPLATE_AUTOSTASH_ALLOWED_DIRECTORIES = %w[lib spec test].freeze
       TEMPLATE_MANAGED_DIRTY_PATH_PATTERN = %r{(?:\A|/)(?:Gemfile\.lock|Appraisal\.root\.gemfile\.lock|\.structuredmerge/kettle-jem\.lock|gemfiles/modular/[^/]+_local\.gemfile)\z}
       PRE_TEMPLATE_BOOTSTRAP_GEMS = %w[nomono kettle-dev].freeze
+      REPORTED_MEMBER_COMMANDS = %w[sync lint docs bex].freeze
+      # These already render their own progress pane; only the NDJSON events are added.
+      EVENT_ONLY_MEMBER_COMMANDS = %w[bup bupb update-bundler gha-sha-pins].freeze
+
       GIT_SYNC_COMMANDS = {
         "push" => [["push", %w[git push]]],
         "pull" => [["pull", %w[git pull --rebase]]],
@@ -592,18 +596,24 @@ module Kettle
       def reset_member_results(workflow_members)
         target = normalized_reset_target
         runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
+        reporter = member_reporter(workflow_members)
         workflow_members.each_with_object([]) do |member, memo|
+          reporter&.start_member(member, steps: 1)
+          reporter&.step_started(member, "reset")
           case target
           when "Gemfile.lock"
             reset_gemfile_lock(member: member, runner: runner, memo: memo)
           else
             raise Error, "reset target #{target.inspect} is not supported"
           end
-          break memo unless memo.last&.ok?
-
-          commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "reset", force: true)
-          break memo unless memo.last&.ok?
+          commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "reset", force: true) if memo.last&.ok?
+          ok = memo.last&.ok? || false
+          reporter&.step_finished(member, "reset", ok: ok)
+          reporter&.finish_member(member, success: ok)
+          break memo unless ok
         end
+      ensure
+        reporter&.finish
       end
 
       def normalized_reset_target
@@ -640,7 +650,12 @@ module Kettle
           return results unless review_gha_sha_pins(workflow_members, runner: runner, memo: results)
         end
         gha_progress = (command == "gha-sha-pins") ? start_gha_sha_pins_progress(workflow_members) : nil
-        sync_reporter = (command == "sync") ? member_reporter(workflow_members) : nil
+        sync_reporter = if REPORTED_MEMBER_COMMANDS.include?(command)
+          member_reporter(workflow_members)
+        elsif EVENT_ONLY_MEMBER_COMMANDS.include?(command)
+          MemberReporter.build(command: command, members: workflow_members, io: nil, tape: @event_tape, execute: execute)
+        end
+        defer_finish = bex_commit_step? || EVENT_ONLY_MEMBER_COMMANDS.include?(command)
         workflow_members.each_with_object(results) do |member, memo|
           bup_progress&.start_member(member, total: 1, status: "starting")
           started_members << member.name unless started_members.include?(member.name)
@@ -658,6 +673,8 @@ module Kettle
           gha_progress&.start_member(member, total: 1, status: "starting")
           result = reported_member_call(
             sync_reporter, runner, member,
+            finish: !defer_finish,
+            steps: bex_commit_step? ? 2 : 1,
             command: command_text,
             env: template_command_env,
             stdout_line_handler: (command == "gha-sha-pins") ? gha_sha_pins_event_line_handler(member) : nil
@@ -665,6 +682,7 @@ module Kettle
           memo << result
           gha_progress&.finish_member(member, success: result.ok?, status: result.ok? ? "complete" : "failed")
           unless result.ok?
+            sync_reporter&.finish_member(member, success: false) if defer_finish
             failed = member.name
             bup_progress&.finish_member(member, success: false, status: "failed")
             break memo
@@ -678,7 +696,8 @@ module Kettle
           if %w[bup bupb update-bundler].include?(command) && memo.last&.ok? && validate_bundle_update_lockfile(member: member, memo: memo)
             commit_bundle_update(member: member, runner: runner, memo: memo)
           end
-          commit_bex_changes(member: member, runner: runner, memo: memo) if command == "bex"
+          commit_bex_changes(member: member, runner: runner, memo: memo, reporter: sync_reporter) if command == "bex"
+          sync_reporter&.finish_member(member, success: memo.last&.ok? != false) if EVENT_ONLY_MEMBER_COMMANDS.include?(command)
           if bup_progress
             failed = member.name unless memo.last&.ok?
             bup_progress.finish_member(member, success: failed.nil?, status: failed ? "failed" : "complete")
@@ -1653,6 +1672,8 @@ module Kettle
         progress_label ||= member.name
         start_template_member_progress(progress, member, progress_key: progress_key, progress_label: progress_label) unless progress_started
         runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
+        event_reporter = MemberReporter.build(command: command, members: [member], io: nil, tape: @event_tape, execute: execute)
+        event_reporter&.start_member(member, steps: 1)
         [].tap do |memo|
           if config.normalize_lockfiles?
             normalize_lockfiles(member: member, runner: runner, memo: memo, phase: "prepare_lockfiles", commit_changes: commit_changes)
@@ -1670,6 +1691,7 @@ module Kettle
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label) if memo.last&.phase == "prepare_template_dependencies"
           return memo if prepared == false
 
+          event_reporter&.step_started(member, command)
           memo << runner.call(
             member: member,
             phase: command,
@@ -1678,6 +1700,7 @@ module Kettle
             chdir: template_worktree_root || member.root,
             stdout_line_handler: template_event_line_handler(member, progress: progress, progress_key: progress_key, progress_label: progress_label)
           )
+          event_reporter&.step_finished(member, command, ok: memo.last.ok?, elapsed_seconds: memo.last.elapsed_seconds)
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label)
           return memo unless memo.last.ok?
 
@@ -1687,6 +1710,7 @@ module Kettle
           commit_template_normalized_gemfile_lock(member: member, runner: runner, memo: memo, commit_changes: commit_changes)
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label) if memo.last&.phase == "commit_template"
         ensure
+          event_reporter&.finish_member(member, success: memo.all?(&:ok?))
           template_result = memo.find { |result| result.phase == "template" } || memo.last
           if template_result
             progress&.finish_member(
@@ -1707,8 +1731,18 @@ module Kettle
       def check_results(workflow_members)
         results = []
         results.concat(BranchLaneAudit.new(config: config, members: workflow_members).results) unless config.branch_lanes.empty?
-        results.concat(workflow_members.map { |member| ReadinessCheck.call(member: member, config: config) })
+        reporter = member_reporter(workflow_members)
+        results.concat(workflow_members.map do |member|
+          reporter&.start_member(member, steps: 1)
+          reporter&.step_started(member, "check")
+          result = ReadinessCheck.call(member: member, config: config)
+          reporter&.step_finished(member, "check", ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
+          reporter&.finish_member(member, success: result.ok?)
+          result
+        end)
         results
+      ensure
+        reporter&.finish
       end
 
       def branch_target_results
@@ -3063,13 +3097,17 @@ module Kettle
       # Run one workflow command for a member, reporting it as a single step.
       # `report_as` names the member shown in progress/events when the command
       # runs against a relocated (worktree) copy.
-      def reported_member_call(reporter, runner, member, report_as: member, **call_options)
-        reporter&.start_member(report_as, steps: 1)
+      def reported_member_call(reporter, runner, member, report_as: member, finish: true, steps: 1, **call_options)
+        reporter&.start_member(report_as, steps: steps)
         reporter&.step_started(report_as, command)
         result = runner.call(member: member, phase: command, **call_options)
         reporter&.step_finished(report_as, command, ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
-        reporter&.finish_member(report_as, success: result.ok?)
+        reporter&.finish_member(report_as, success: result.ok?) if finish
         result
+      end
+
+      def bex_commit_step?
+        command == "bex" && commit
       end
 
       def command_runner
@@ -6876,9 +6914,10 @@ module Kettle
         !%w[true yes 1 on enabled].include?(text.downcase)
       end
 
-      def commit_bex_changes(member:, runner:, memo:)
+      def commit_bex_changes(member:, runner:, memo:, reporter: nil)
         return unless commit
 
+        reporter&.step_started(member, "commit_bex")
         result = runner.call(
           member: member,
           phase: "commit_bex",
@@ -6890,6 +6929,8 @@ module Kettle
           ]
         )
         memo << result
+        reporter&.step_finished(member, "commit_bex", ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
+        reporter&.finish_member(member, success: result.ok?)
       end
 
       def family_member
