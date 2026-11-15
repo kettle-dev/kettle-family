@@ -10,7 +10,7 @@ module Kettle
     # workers can share one instance. Both outputs are optional.
     class MemberReporter
       def self.build(command:, members:, io:, tape:, execute:, jobs: 1)
-        return nil unless execute && (io || tape)
+        return nil if !execute || (io.nil? && tape.nil?)
 
         new(command: command, members: members, io: io, tape: tape, jobs: jobs)
       end
