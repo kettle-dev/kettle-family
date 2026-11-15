@@ -594,18 +594,24 @@ module Kettle
       def reset_member_results(workflow_members)
         target = normalized_reset_target
         runner = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter)
+        reporter = member_reporter(workflow_members)
         workflow_members.each_with_object([]) do |member, memo|
+          reporter&.start_member(member, steps: 1)
+          reporter&.step_started(member, "reset")
           case target
           when "Gemfile.lock"
             reset_gemfile_lock(member: member, runner: runner, memo: memo)
           else
             raise Error, "reset target #{target.inspect} is not supported"
           end
-          break memo unless memo.last&.ok?
-
-          commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "reset", force: true)
-          break memo unless memo.last&.ok?
+          commit_normalized_lockfiles(branch_members: [member], runner: runner, memo: memo, reason: "reset", force: true) if memo.last&.ok?
+          ok = memo.last&.ok? || false
+          reporter&.step_finished(member, "reset", ok: ok)
+          reporter&.finish_member(member, success: ok)
+          break memo unless ok
         end
+      ensure
+        reporter&.finish
       end
 
       def normalized_reset_target
@@ -1712,8 +1718,18 @@ module Kettle
       def check_results(workflow_members)
         results = []
         results.concat(BranchLaneAudit.new(config: config, members: workflow_members).results) unless config.branch_lanes.empty?
-        results.concat(workflow_members.map { |member| ReadinessCheck.call(member: member, config: config) })
+        reporter = member_reporter(workflow_members)
+        results.concat(workflow_members.map do |member|
+          reporter&.start_member(member, steps: 1)
+          reporter&.step_started(member, "check")
+          result = ReadinessCheck.call(member: member, config: config)
+          reporter&.step_finished(member, "check", ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
+          reporter&.finish_member(member, success: result.ok?)
+          result
+        end)
         results
+      ensure
+        reporter&.finish
       end
 
       def branch_target_results

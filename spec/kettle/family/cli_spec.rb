@@ -1491,6 +1491,19 @@ RSpec.describe Kettle::Family::CLI do
     end
   end
 
+  {"check" => [], "reset" => %w[Gemfile.lock], "clean-unreleased" => [], "clean-blockers" => [], "clean-installed" => []}.each do |name, extra|
+    it "streams per-member NDJSON events for #{name} --execute --events" do
+      write_gem("alpha")
+      out = StringIO.new
+
+      described_class.call([name, "--root", @tmpdir, "--execute", "--events", *extra], out: out, err: StringIO.new)
+
+      events = out.string.lines.filter_map { |line| JSON.parse(line) rescue nil }
+      alpha = events.select { |event| event["member"] == "alpha" }
+      expect(alpha.map { |event| event["type"] }).to include("member_start", "command_step", "member_complete")
+    end
+  end
+
   it "streams per-member NDJSON events for install --execute --events" do
     write_gem("alpha")
     out = StringIO.new

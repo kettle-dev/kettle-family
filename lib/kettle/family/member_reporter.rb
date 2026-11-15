@@ -47,6 +47,26 @@ module Kettle
         emit("member_complete", member, status: success ? "ok" : "failed")
       end
 
+      # Report a batched run (one command covering every member) as a single
+      # step per member: all members start, then each finishes with the outcome
+      # of its own results once the batch returns.
+      def around_batch(phase)
+        @members.each do |member|
+          start_member(member, steps: 1)
+          step_started(member, phase)
+        end
+        results = yield
+        @members.each do |member|
+          own = results.select { |result| result.member_name == member.name }
+          ok = own.all?(&:ok?)
+          step_finished(member, phase, ok: ok, elapsed_seconds: own.sum { |result| result.elapsed_seconds.to_f })
+          finish_member(member, success: ok)
+        end
+        results
+      ensure
+        finish
+      end
+
       def finish
         return unless @progress
 
