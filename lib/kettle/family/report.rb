@@ -152,6 +152,7 @@ module Kettle
         lines << "  skipped: #{summary_list(data.fetch("skipped"))}"
         lines << "  failed: #{summary_list(data.fetch("failed").map { |entry| summary_entry(entry) })}"
         lines << "  pending: #{summary_list(data.fetch("pending").map { |entry| summary_entry(entry) })}"
+        data.fetch("sync_warnings").each { |warning| lines << "  warning: #{warning}" }
         hints = data.fetch("resume_hints")
         if hints.one?
           lines << "  resume: #{hints.first}"
@@ -182,6 +183,7 @@ module Kettle
           "skipped" => summary_skipped,
           "failed" => summary_failed,
           "pending" => summary_pending,
+          "sync_warnings" => results.select { |result| result.phase == "sync_stash_warning" }.map { |result| "#{result.member_name}: #{result.reason}; #{result.stdout}" },
           "release_log_dirs" => release_log_dirs,
           "resume_hint" => resume_hint,
           "resume_hints" => resume_hints
@@ -425,6 +427,7 @@ module Kettle
       end
 
       def result_state(result)
+        return "warning" if result.phase == "sync_stash_warning"
         return "skipped" if result.skipped
         return "ok" if result.success
 
