@@ -23,7 +23,7 @@ end
 # cannot fail when the implementation stops calling it, so it encodes the buggy
 # contract instead of the behaviour. That is exactly how the masking went
 # unnoticed while the suite stayed green.
-RSpec.describe Kettle::Family::UnreleasedGemCleanup, "installed gem enumeration" do
+RSpec.describe Kettle::Family::UnreleasedGemCleanup, "installed gem enumeration", :allow_real_gem_install do # installs into an isolated GEM_HOME
   # GemMine shells out to `gem build` and `gem install`, which needs those
   # executables available outside the bundle. It guards that itself via
   # Bundler.with_unbundled_env, so the only precondition is gem_mine being

@@ -37,6 +37,9 @@ end
 require "kettle/test/rspec"
 # `kettle/test/rspec` installs harness helpers documented in spec/README.md.
 
+# Guard: no real gem installs from specs (they race parallel workers).
+require_relative "support/no_real_gem_installs"
+
 # This library
 require "kettle/family"
 

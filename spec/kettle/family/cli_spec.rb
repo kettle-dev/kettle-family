@@ -1514,7 +1514,10 @@ RSpec.describe Kettle::Family::CLI do
       write_gem("alpha")
       out = StringIO.new
       err = StringIO.new
-      # Keep these hermetic: CI may lack mise or kettle-gha-pins.
+      # Keep these hermetic: CI may lack mise or kettle-gha-pins, and bupb /
+      # update-bundler would otherwise really install the latest Bundler into the
+      # shared gem home, racing parallel workers that are running `bundle`.
+      allow(Kettle::Dev::BundlerPinning).to receive(:install_stable) if %w[bupb update-bundler].include?(name)
       allow(Kettle::Family).to receive(:mise_adapter).and_return(instance_double(Kettle::Family::MiseAdapter, trust_argv: nil)) if name == "mise-trust"
       allow_any_instance_of(Kettle::Family::Workflow).to receive(:review_gha_sha_pins).and_return(true) if name == "gha-sha-pins" # rubocop:disable RSpec/AnyInstance
 
