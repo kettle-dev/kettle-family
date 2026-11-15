@@ -138,7 +138,7 @@ configuration, create their own GitHub Release through <code>kettle-release</cod
     <tr>
       <td>Source</td>
       <td>
-<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-8.740-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
+<a href="https://gitlab.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitLab-FBA326?style=for-the-badge&amp;logo=Gitlab&amp;logoColor=orange" alt="Source on GitLab.com"></a> <a href="https://codeberg.org/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/CodeBerg-4893CC?style=for-the-badge&amp;logo=CodeBerg&amp;logoColor=blue" alt="Source on CodeBerg.org"></a> <a href="https://github.com/kettle-dev/kettle-family"><img src="https://img.shields.io/badge/GitHub-238636?style=for-the-badge&amp;logo=GitHub&amp;logoColor=green" alt="Source on GitHub.com"></a> <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"><img src="https://img.shields.io/badge/KLOC-8.803-FFDD67.svg?style=for-the-badge&amp;logo=YouTube&amp;logoColor=blue" alt="The best SHA: dQw4w9WgXcQ!"></a>
 </td>
     </tr>
     <tr>
@@ -648,6 +648,10 @@ publish command explicitly includes <code>--secrets-provider</code>.</p>
       <td>Trust mise configuration for the family.</td>
     </tr>
     <tr>
+      <td><code>mise-tasks</code></td>
+      <td>Refresh managed family mise tasks and migrate standard root task definitions.</td>
+    </tr>
+    <tr>
       <td><code>discover</code></td>
       <td>Discover members and print their execution order.</td>
     </tr>
@@ -681,7 +685,7 @@ publish command explicitly includes <code>--secrets-provider</code>.</p>
     </tr>
     <tr>
       <td><code>reconcile-releases</code></td>
-      <td>Create verified missing GitHub Releases for published tags.</td>
+      <td>Check for missing GitHub Releases; <code>--execute</code> creates verified backfills.</td>
     </tr>
     <tr>
       <td><code>reset</code></td>
@@ -776,7 +780,15 @@ publish command explicitly includes <code>--secrets-provider</code>.</p>
 
 <p>Use <code>kettle-family help COMMAND</code> for command-specific options. Most workflow<br>
 commands also accept <code>--only</code>, <code>--exclude</code>, <code>--start-at</code>, <code>--jobs</code>,<br>
-<code>--execute</code>, <code>--dry-run</code>, <code>--commit</code>, and <code>--no-commit</code> as applicable.</p>
+<code>--execute</code>, <code>--dry-run</code>, <code>--commit</code>, and <code>--no-commit</code> as applicable.<br>
+<code>test</code> and ordinary <code>template</code> runs do not accept a positional <code>--start-at</code>:<br>
+use <code>--only</code> or the report’s retry hint because their parallel dispatch is not<br>
+positional. <code>template</code> also accepts <code>MEMBER@BRANCH</code> for a branch-stack resume.</p>
+
+<p><code>mise-tasks</code> writes its managed task file and updates <code>mise.toml</code> directly; it<br>
+does not require <code>--execute</code>. It warns about duplicate task definitions by<br>
+default. Use <code>--clean</code> to remove those duplicates from the root configuration,<br>
+or <code>--task-file PATH</code> to choose a different managed task file.</p>
 
 <p>Inspect discovery and release plans before executing them:</p>
 
@@ -833,11 +845,11 @@ kettle-family release --execute --only unreleased,pending
   <tbody>
     <tr>
       <td><code>unreleased</code></td>
-      <td>The current <code>version.rb</code> is not the latest published gem version.</td>
+      <td>The <code>Unreleased</code> changelog section contains entries.</td>
     </tr>
     <tr>
       <td><code>prepared</code></td>
-      <td>The changelog already has a versioned section for the current <code>version.rb</code>.</td>
+      <td>The latest versioned changelog section matches the current <code>version.rb</code>.</td>
     </tr>
     <tr>
       <td><code>pending</code></td>
@@ -866,6 +878,14 @@ explicit limit; results remain in family order.</p>
 <p>Most commands accept <code>--json</code> to print a machine-readable report instead of the<br>
 text report, and <code>--report PATH</code> to write that JSON report while still printing<br>
 the normal text report.</p>
+
+<p><code>pull --execute</code> and <code>up --execute</code> temporarily stash tracked and untracked<br>
+member changes before pulling with rebase. <code>up</code> pushes the rebased commits<br>
+before restoring the stash. If restoration fails for a stash containing only<br>
+the root <code>Gemfile.lock</code>, the pulled lockfile is left clean and the stash is<br>
+retained; the report identifies it and provides recovery commands. The member<br>
+is reported with a warning and the run continues. Other restore failures stop<br>
+the run, as do pull or push failures. <code>push</code> alone does not stash changes.</p>
 
 <p>Refresh member dependencies before templating when the generated project should<br>
 be validated against the latest compatible releases:</p>
@@ -935,14 +955,14 @@ and leaves RubyGems MFA prompts interactive by default:</p>
 <pre class="code language-console"><code class="language-console">kettle-family release --publish --execute
 </code></pre>
 
-<p>Release uses two explicitly separate execution contexts. <code>release_bootstrap</code><br>
+<p>Release uses explicitly separate execution contexts. <code>release_bootstrap</code><br>
 starts <code>kettle-release</code> from the family-root tool bundle, so a family can retain<br>
 its configured local sibling graph while it prepares a release wave. It never<br>
-uses a member’s development Gemfile to boot the release tool. <code>release_registry</code><br>
-then resets each tracked release lockfile against registry dependencies and is<br>
-also used by every project release child command. Local sibling paths therefore<br>
-remain available only before that transition; they cannot enter the canonical<br>
-lockfile, the release-preparation commit, or CI-facing project commands.</p>
+uses a member’s development Gemfile to boot the release tool. The<br>
+<code>release_registry</code> profile uses registry dependencies for the canonical release<br>
+lockfile. Explicit monorepo CI-local paths and configured wave transitions use<br>
+separate profiles with their own permitted-path rules; see<br>
+<a href="EXECUTION_PROFILES.md">Execution Profiles</a> for those exceptions.</p>
 
 <p>Use named recovery modes when a publish wave has already prepared a member:</p>
 
@@ -964,14 +984,16 @@ family changelog commands and child <code>kettle-release</code> commands. Use<br
 <code>--no-accept</code> when you want each child command to ask its own confirmation<br>
 prompts.</p>
 
-<p>Executed publish runs can opt in to the local 1Password CLI for unattended<br>
-release credentials. The gem signing passphrase is loaded once and cached only<br>
-in memory for the current <code>kettle-family</code> process. When the publish command is<br>
-<code>kettle-release</code>, <code>kettle-family</code> watches the child release process and answers<br>
-signing and RubyGems MFA prompts itself, so long releases do not reuse a stale<br>
-TOTP from release startup. If a publish command explicitly includes<br>
-<code>--secrets-provider</code>, that child <code>kettle-release</code> owns its own provider<br>
-interaction instead.</p>
+<p>Executed publish runs can use 1Password, Bitwarden (<code>bitwarden</code>, <code>bw</code>, or<br>
+<code>vaultwarden</code>), <code>rbw</code>, or a configured <code>command</code> adapter for release<br>
+credentials. Adapters can also be registered through <code>Secrets::Registry</code>.<br>
+The signing passphrase is cached in memory for the family run; RubyGems OTPs<br>
+are requested fresh. Where the installed <code>kettle-release</code> supports direct<br>
+secrets and 1Password is selected, the child requests secrets through the<br>
+family broker. Otherwise the family runner handles supported prompts. An<br>
+explicit child <code>--secrets-provider</code> controls that child’s provider interaction.</p>
+
+<p>For example, configure the local 1Password CLI:</p>
 
 <pre class="code language-yaml"><code class="language-yaml">release:
   secrets:
@@ -1046,10 +1068,11 @@ registry dependency chain. Members with their own <code>CHANGELOG.md</code> reta
 normal dependency.</p>
 
 <p>Resume a failed family publish after fixing the failure. Already published<br>
-versions are skipped automatically. A release report gives a member-scoped<br>
-resume command for each failed child, including the recorded <code>--start-step</code><br>
-when the child emitted a failed release-step event. Run those commands one at a<br>
-time. If any members were never started, the report also gives a separate<br>
+versions are skipped automatically. A release report gives member-scoped<br>
+resume commands for failed children, including the recorded <code>--start-step</code><br>
+when a child emitted a failed release-step event. Members with the same recovery<br>
+step may be grouped into one command. Run the commands one at a time. If any<br>
+members were never started, the report also gives a separate<br>
 normal-flow command for exactly those members. Use <code>--start-step</code> only after<br>
 the pre-release gate already passed or the failure was intentionally handled:</p>
 
@@ -1111,8 +1134,10 @@ successful or unreached members are restored normally. A successful run always<b
 restores its autostashes regardless of this option.</p>
 
 <p>Before creating any autostash, the workflow checks every selected member<br>
-checkout. Automatic stashing is allowed only when all dirty paths are under<br>
-<code>lib/</code>, <code>spec/</code>, or <code>test/</code>; changes elsewhere, including changelogs, lockfiles,<br>
+checkout. Changes under <code>lib/</code>, <code>spec/</code>, and <code>test/</code> are eligible for stashing.<br>
+Managed <code>Gemfile.lock</code>, <code>Appraisal.root.gemfile.lock</code>,<br>
+<code>.structuredmerge/kettle-jem.lock</code>, and modular <code>*_local.gemfile</code> paths are<br>
+also allowed and are left in place. Other dirty paths, including changelogs,<br>
 configuration, and generated workflow files, fail the run before templating<br>
 starts and are listed in the error. This preflight is separate from<br>
 <code>--no-cleanup</code>: the latter preserves a failed template for debugging, while<br>

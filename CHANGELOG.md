@@ -22,18 +22,29 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- `pull` and `up` temporarily stash member worktree changes before syncing and restore them afterward. `up` pushes the rebased commits before restoring the stash. If restoring a stash containing only `Gemfile.lock` fails, the pulled lockfile is left clean, the stash is retained for recovery, and the family run continues with a warning. (#67)
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
+### Security
+
+## [1.3.43] - 2026-11-15
+
+- TAG: [v1.3.43][1.3.43t]
+- COVERAGE: 94.05% -- 8279/8803 lines in 46 files
+- BRANCH COVERAGE: 78.71% -- 3439/4369 branches in 46 files
+- 40.81% documented
+
+### Changed
+
+- `pull` and `up` temporarily stash member worktree changes before syncing and restore them afterward. `up` pushes the rebased commits before restoring the stash. If restoring a stash containing only `Gemfile.lock` fails, the pulled lockfile is left clean, the stash is retained for recovery, and the family run continues with a warning. (#67)
+
+### Fixed
+
 - A release tooling bundle check repaired by `bundle install` no longer causes a false failure summary or an unnecessary release resume command. (#65, #66)
 - Correct the README command reference, release-state selectors, release profiles, and template dirty-file rules; document `pull` and `up` stash recovery.
-
-### Security
 
 ## [1.3.42] - 2026-11-15
 
@@ -3450,7 +3461,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.42...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.43...HEAD
+[1.3.43]: https://github.com/kettle-dev/kettle-family/compare/v1.3.42...v1.3.43
+[1.3.43t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.43
 [1.3.42]: https://github.com/kettle-dev/kettle-family/compare/v1.3.41...v1.3.42
 [1.3.42t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.42
 [1.3.41]: https://github.com/kettle-dev/kettle-family/compare/v1.3.40...v1.3.41
