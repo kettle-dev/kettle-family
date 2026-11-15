@@ -1517,7 +1517,11 @@ RSpec.describe Kettle::Family::CLI do
       # Keep these hermetic: CI may lack mise or kettle-gha-pins, and bupb /
       # update-bundler would otherwise really install the latest Bundler into the
       # shared gem home, racing parallel workers that are running `bundle`.
-      allow(Kettle::Dev::BundlerPinning).to receive(:install_stable) if %w[bupb update-bundler].include?(name)
+      # Without the real install there may be no stable Bundler on the runner (ruby-head
+      # ships a prerelease), so pin the version the commands ask for.
+      if %w[bupb update-bundler].include?(name)
+        allow(Kettle::Dev::BundlerPinning).to receive_messages(install_stable: nil, installed_stable: Gem::Version.new("4.0.24"))
+      end
       allow(Kettle::Family).to receive(:mise_adapter).and_return(instance_double(Kettle::Family::MiseAdapter, trust_argv: nil)) if name == "mise-trust"
       allow_any_instance_of(Kettle::Family::Workflow).to receive(:review_gha_sha_pins).and_return(true) if name == "gha-sha-pins" # rubocop:disable RSpec/AnyInstance
 
@@ -1525,7 +1529,7 @@ RSpec.describe Kettle::Family::CLI do
 
       events = out.string.lines.select { |line| line.start_with?("{") }.map { |line| JSON.parse(line) }
       alpha = events.select { |event| event["member"] == "alpha" }
-      expect(alpha.map { |event| event["type"] }).to include("member_start", "command_step", "member_complete")
+      expect(alpha.map { |event| event["type"] }).to include("member_start", "command_step", "member_complete"), "stderr: #{err.string}"
     end
   end
 

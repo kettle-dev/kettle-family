@@ -29,6 +29,10 @@ RSpec.describe Kettle::Family::Workflow do
   before do
     allow(Kettle::Dev::RubyGemsVersions).to receive(:recently_released?).and_return(false)
     allow(Kettle::Dev::BundlerPinning).to receive(:published_stable).and_return(nil) # no registry access in specs
+    # Parallel release waves prewarm Bundler with a real `gem install bundler`
+    # when the runner lacks the BUNDLED WITH version, which races parallel spec
+    # workers. The prewarm examples below exercise it with their own stubs.
+    allow_any_instance_of(described_class).to receive(:ensure_bundler_installed!) unless RSpec.current_example.metadata[:real_prewarm] # rubocop:disable RSpec/AnyInstance
     # The mise exec prefix resolves through the family MiseAdapter; pin the
     # executable to bare "mise" so prefix-shape assertions stay literal.
     Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
@@ -45,7 +49,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.skipped).to be(true)
   end
 
-  describe "Bundler prewarm before parallel waves" do
+  describe "Bundler prewarm before parallel waves", :real_prewarm do
     let(:status) { instance_double(Process::Status, success?: true) }
 
     def prewarm_workflow
