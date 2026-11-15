@@ -1466,6 +1466,42 @@ RSpec.describe Kettle::Family::CLI do
     ])
   end
 
+  it "streams per-member NDJSON events for up --execute --events" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    described_class.call(["up", "--root", @tmpdir, "--execute", "--events"], out: out, err: StringIO.new)
+
+    events = out.string.lines.map { |line| JSON.parse(line) }
+    alpha = events.select { |event| event["member"] == "alpha" }
+    expect(alpha.map { |event| [event["type"], event["status"]] }).to include(["member_start", "started"], ["member_complete", "failed"]).or include(["member_start", "started"], ["member_complete", "ok"])
+    expect(alpha.map { |event| event["phase"] }.compact).to include("pull")
+  end
+
+  %w[sync test].each do |name|
+    it "streams per-member NDJSON events for #{name} --execute --events" do
+      write_gem("alpha")
+      out = StringIO.new
+
+      described_class.call([name, "--root", @tmpdir, "--execute", "--events"], out: out, err: StringIO.new)
+
+      events = out.string.lines.map { |line| JSON.parse(line) }
+      alpha = events.select { |event| event["member"] == "alpha" }
+      expect(alpha.map { |event| event["type"] }).to include("member_start", "command_step", "member_complete")
+    end
+  end
+
+  it "streams per-member NDJSON events for install --execute --events" do
+    write_gem("alpha")
+    out = StringIO.new
+
+    described_class.call(["install", "--root", @tmpdir, "--execute", "--events"], out: out, err: StringIO.new)
+
+    events = out.string.lines.map { |line| JSON.parse(line) }
+    types = events.select { |event| event["member"] == "alpha" }.map { |event| event["type"] }
+    expect(types).to include("member_start", "command_step", "member_complete")
+  end
+
   it "plans standalone default-branch sync commands per member" do
     write_gem("alpha")
     out = StringIO.new

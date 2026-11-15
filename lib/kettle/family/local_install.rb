@@ -7,6 +7,7 @@ require "open3"
 require "time"
 
 require_relative "concurrency"
+require_relative "member_reporter"
 require_relative "paths"
 
 module Kettle
@@ -14,7 +15,9 @@ module Kettle
     class LocalInstall
       include MemberLoader
 
-      def initialize(config:, members:, execute: false, jobs: nil)
+      def initialize(config:, members:, execute: false, jobs: nil, progress_io: nil, event_tape: nil)
+        @progress_io = progress_io
+        @event_tape = event_tape
         @config = config
         @members = members
         @execute = execute
@@ -22,6 +25,7 @@ module Kettle
       end
 
       def results
+        @reporter = MemberReporter.build(command: "install", members: install_members, io: @progress_io, tape: @event_tape, execute: execute, jobs: install_jobs(install_members))
         results = if execute && install_jobs(install_members) > 1
           parallel_install_results
         else
@@ -29,6 +33,8 @@ module Kettle
         end
         write_local_install_marker if execute && results.all?(&:ok?)
         results
+      ensure
+        @reporter&.finish
       end
 
       private
@@ -122,16 +128,31 @@ module Kettle
       end
 
       def install_member(member)
+        @reporter&.start_member(member, steps: 2)
+        result = install_member_steps(member)
+        @reporter&.finish_member(member, success: result.ok?)
+        result
+      end
+
+      def install_member_steps(member)
         gem_path = local_gem_path(member)
         argv = install_argv(gem_path)
         return skipped_result(member: member, argv: argv) unless execute
 
         FileUtils.mkdir_p(File.dirname(gem_path))
         FileUtils.rm_f(gem_path)
+        @reporter&.step_started(member, "build")
         build_stdout, build_stderr, build_status = run(build_argv(member, gem_path), chdir: member.root)
-        return failed_result(member: member, argv: build_argv(member, gem_path), stdout: build_stdout, stderr: build_stderr, status: build_status) unless build_status.success?
+        unless build_status.success?
+          failed = failed_result(member: member, argv: build_argv(member, gem_path), stdout: build_stdout, stderr: build_stderr, status: build_status)
+          @reporter&.step_finished(member, "build", ok: false)
+          return failed
+        end
+        @reporter&.step_finished(member, "build", ok: true)
 
+        @reporter&.step_started(member, "install")
         stdout, stderr, status = run(argv)
+        @reporter&.step_finished(member, "install", ok: status.success?)
         CommandResult.new(
           member_name: member.name,
           phase: "install",

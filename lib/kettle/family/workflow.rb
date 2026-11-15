@@ -640,6 +640,7 @@ module Kettle
           return results unless review_gha_sha_pins(workflow_members, runner: runner, memo: results)
         end
         gha_progress = (command == "gha-sha-pins") ? start_gha_sha_pins_progress(workflow_members) : nil
+        sync_reporter = (command == "sync") ? member_reporter(workflow_members) : nil
         workflow_members.each_with_object(results) do |member, memo|
           bup_progress&.start_member(member, total: 1, status: "starting")
           started_members << member.name unless started_members.include?(member.name)
@@ -655,9 +656,8 @@ module Kettle
 
           command_text = workflow_command(member)
           gha_progress&.start_member(member, total: 1, status: "starting")
-          result = runner.call(
-            member: member,
-            phase: command,
+          result = reported_member_call(
+            sync_reporter, runner, member,
             command: command_text,
             env: template_command_env,
             stdout_line_handler: (command == "gha-sha-pins") ? gha_sha_pins_event_line_handler(member) : nil
@@ -689,6 +689,7 @@ module Kettle
         gha_progress&.finish
         results
       ensure
+        sync_reporter&.finish
         if bup_progress
           failed ||= results.find { |result| !result.ok? }&.member_name
           bup_progress.finish
@@ -769,6 +770,7 @@ module Kettle
         return monorepo_test_worktree_results(test_members) if monorepo_test_worktrees?(test_members)
 
         wave_jobs = test_jobs(test_members)
+        reporter = member_reporter(test_members, jobs: wave_jobs)
         queue = Queue.new
         test_members.each_with_index { |member, index| queue << [index, member] }
         ordered_results = Array.new(test_members.length)
@@ -782,9 +784,8 @@ module Kettle
               break if mutex.synchronize { stop }
 
               index, member = queue.pop(true)
-              result = runner.call(
-                member: member,
-                phase: command,
+              result = reported_member_call(
+                reporter, runner, member,
                 command: workflow_command(member),
                 env: test_command_env(wave_jobs: wave_jobs)
               )
@@ -808,6 +809,8 @@ module Kettle
         return results unless results.all?(&:ok?)
 
         results + skipped_members.map { |member| aggregate_test_skip_result(member, owner: test_members.first) }
+      ensure
+        reporter&.finish
       end
 
       def test_members_for(workflow_members)
@@ -878,6 +881,7 @@ module Kettle
 
       def run_monorepo_test_worktree_entries(entries)
         wave_jobs = test_jobs(entries)
+        reporter = member_reporter(entries.map { |entry| entry.fetch(:original_member) }, jobs: wave_jobs)
         queue = Queue.new
         entries.each_with_index { |entry, index| queue << [index, entry] }
         ordered_results = Array.new(entries.length)
@@ -891,9 +895,9 @@ module Kettle
 
               index, entry = queue.pop(true)
               member = entry.fetch(:member)
-              result = CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter).call(
-                member: member,
-                phase: command,
+              result = reported_member_call(
+                reporter, CommandRunner.new(execute: execute, accept: accept, mise_adapter: @mise_adapter), member,
+                report_as: entry.fetch(:original_member),
                 command: workflow_command(member),
                 env: test_command_env(wave_jobs: wave_jobs)
               )
@@ -914,6 +918,8 @@ module Kettle
           end
         end.each(&:join)
         ordered_results.compact
+      ensure
+        reporter&.finish
       end
 
       def cleanup_monorepo_test_worktrees(entries)
@@ -3033,13 +3039,37 @@ module Kettle
 
       def git_sync_results(sync_members)
         runner = command_runner
+        steps = GIT_SYNC_COMMANDS.fetch(command)
+        reporter = member_reporter(sync_members)
         sync_members.each_with_object([]) do |member, memo|
-          GIT_SYNC_COMMANDS.fetch(command).each do |phase, git_command|
+          reporter&.start_member(member, steps: steps.length)
+          steps.each do |phase, git_command|
+            reporter&.step_started(member, phase)
             memo << runner.call(member: member, phase: phase, command: git_command)
+            reporter&.step_finished(member, phase, ok: memo.last.ok?, elapsed_seconds: memo.last.elapsed_seconds)
             break unless memo.last.ok?
           end
+          reporter&.finish_member(member, success: memo.last.ok?)
           break memo unless memo.last.ok?
         end
+      ensure
+        reporter&.finish
+      end
+
+      def member_reporter(report_members, jobs: 1)
+        MemberReporter.build(command: command, members: report_members, io: progress_io, tape: @event_tape, execute: execute, jobs: jobs)
+      end
+
+      # Run one workflow command for a member, reporting it as a single step.
+      # `report_as` names the member shown in progress/events when the command
+      # runs against a relocated (worktree) copy.
+      def reported_member_call(reporter, runner, member, report_as: member, **call_options)
+        reporter&.start_member(report_as, steps: 1)
+        reporter&.step_started(report_as, command)
+        result = runner.call(member: member, phase: command, **call_options)
+        reporter&.step_finished(report_as, command, ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
+        reporter&.finish_member(report_as, success: result.ok?)
+        result
       end
 
       def command_runner
