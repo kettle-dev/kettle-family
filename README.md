@@ -481,6 +481,7 @@ The command names below are available from `kettle-family --help`:
 | `version` | Print the kettle-family version. |
 | `help` | Print top-level or command-specific help. |
 | `mise-trust` | Trust mise configuration for the family. |
+| `mise-tasks` | Refresh managed family mise tasks and migrate standard root task definitions. |
 | `discover` | Discover members and print their execution order. |
 | `plan` | Alias for `discover`. |
 | `report` | Print family discovery and configuration details. |
@@ -489,7 +490,7 @@ The command names below are available from `kettle-family --help`:
 | `clean-unreleased` | Uninstall locally installed family versions newer than released versions. |
 | `clean-blockers` | Uninstall unreleased gems, from any family, pinned by members' lockfiles — removes cross-family blockers such as an unreleased StructuredMerge gem pinned by a kettle-dev member. |
 | `clean-installed` | The deterministic inverse of `install`: uninstall each selected member's current source version (plus configured install local dependencies) when that version is unreleased, including cached `.gem` files. Sees installed-but-unpinned pollution the other two cleanups miss. |
-| `reconcile-releases` | Create verified missing GitHub Releases for published tags. |
+| `reconcile-releases` | Check for missing GitHub Releases; `--execute` creates verified backfills. |
 | `reset` | Reset a managed family artifact, such as release lockfiles. |
 | `test` | Run the configured test workflow for each selected member. |
 | `lint` | Run the configured lint workflow for each selected member. |
@@ -516,6 +517,14 @@ The command names below are available from `kettle-family --help`:
 Use `kettle-family help COMMAND` for command-specific options. Most workflow
 commands also accept `--only`, `--exclude`, `--start-at`, `--jobs`,
 `--execute`, `--dry-run`, `--commit`, and `--no-commit` as applicable.
+`test` and ordinary `template` runs do not accept a positional `--start-at`:
+use `--only` or the report's retry hint because their parallel dispatch is not
+positional. `template` also accepts `MEMBER@BRANCH` for a branch-stack resume.
+
+`mise-tasks` writes its managed task file and updates `mise.toml` directly; it
+does not require `--execute`. It warns about duplicate task definitions by
+default. Use `--clean` to remove those duplicates from the root configuration,
+or `--task-file PATH` to choose a different managed task file.
 
 Inspect discovery and release plans before executing them:
 
@@ -567,8 +576,8 @@ The supported release-state tokens are:
 
 | Token | Meaning |
 |-------|---------|
-| `unreleased` | The current `version.rb` is not the latest published gem version. |
-| `prepared` | The changelog already has a versioned section for the current `version.rb`. |
+| `unreleased` | The `Unreleased` changelog section contains entries. |
+| `prepared` | The latest versioned changelog section matches the current `version.rb`. |
 | `pending` | The member has unreleased changelog work or an unpublished prepared release. |
 | `bump` | The member has unreleased changelog work and still needs a version bump. |
 
@@ -588,6 +597,14 @@ explicit limit; results remain in family order.
 Most commands accept `--json` to print a machine-readable report instead of the
 text report, and `--report PATH` to write that JSON report while still printing
 the normal text report.
+
+`pull --execute` and `up --execute` temporarily stash tracked and untracked
+member changes before pulling with rebase. `up` pushes the rebased commits
+before restoring the stash. If restoration fails for a stash containing only
+the root `Gemfile.lock`, the pulled lockfile is left clean and the stash is
+retained; the report identifies it and provides recovery commands. The member
+is reported with a warning and the run continues. Other restore failures stop
+the run, as do pull or push failures. `push` alone does not stash changes.
 
 Refresh member dependencies before templating when the generated project should
 be validated against the latest compatible releases:
@@ -662,14 +679,14 @@ and leaves RubyGems MFA prompts interactive by default:
 kettle-family release --publish --execute
 ```
 
-Release uses two explicitly separate execution contexts. `release_bootstrap`
+Release uses explicitly separate execution contexts. `release_bootstrap`
 starts `kettle-release` from the family-root tool bundle, so a family can retain
 its configured local sibling graph while it prepares a release wave. It never
-uses a member's development Gemfile to boot the release tool. `release_registry`
-then resets each tracked release lockfile against registry dependencies and is
-also used by every project release child command. Local sibling paths therefore
-remain available only before that transition; they cannot enter the canonical
-lockfile, the release-preparation commit, or CI-facing project commands.
+uses a member's development Gemfile to boot the release tool. The
+`release_registry` profile uses registry dependencies for the canonical release
+lockfile. Explicit monorepo CI-local paths and configured wave transitions use
+separate profiles with their own permitted-path rules; see
+[Execution Profiles](EXECUTION_PROFILES.md) for those exceptions.
 
 Use named recovery modes when a publish wave has already prepared a member:
 
@@ -693,14 +710,16 @@ family changelog commands and child `kettle-release` commands. Use
 `--no-accept` when you want each child command to ask its own confirmation
 prompts.
 
-Executed publish runs can opt in to the local 1Password CLI for unattended
-release credentials. The gem signing passphrase is loaded once and cached only
-in memory for the current `kettle-family` process. When the publish command is
-`kettle-release`, `kettle-family` watches the child release process and answers
-signing and RubyGems MFA prompts itself, so long releases do not reuse a stale
-TOTP from release startup. If a publish command explicitly includes
-`--secrets-provider`, that child `kettle-release` owns its own provider
-interaction instead.
+Executed publish runs can use 1Password, Bitwarden (`bitwarden`, `bw`, or
+`vaultwarden`), `rbw`, or a configured `command` adapter for release
+credentials. Adapters can also be registered through `Secrets::Registry`.
+The signing passphrase is cached in memory for the family run; RubyGems OTPs
+are requested fresh. Where the installed `kettle-release` supports direct
+secrets and 1Password is selected, the child requests secrets through the
+family broker. Otherwise the family runner handles supported prompts. An
+explicit child `--secrets-provider` controls that child's provider interaction.
+
+For example, configure the local 1Password CLI:
 
 ```yaml
 release:
@@ -781,10 +800,11 @@ registry dependency chain. Members with their own `CHANGELOG.md` retain the
 normal dependency.
 
 Resume a failed family publish after fixing the failure. Already published
-versions are skipped automatically. A release report gives a member-scoped
-resume command for each failed child, including the recorded `--start-step`
-when the child emitted a failed release-step event. Run those commands one at a
-time. If any members were never started, the report also gives a separate
+versions are skipped automatically. A release report gives member-scoped
+resume commands for failed children, including the recorded `--start-step`
+when a child emitted a failed release-step event. Members with the same recovery
+step may be grouped into one command. Run the commands one at a time. If any
+members were never started, the report also gives a separate
 normal-flow command for exactly those members. Use `--start-step` only after
 the pre-release gate already passed or the failure was intentionally handled:
 
@@ -851,8 +871,10 @@ successful or unreached members are restored normally. A successful run always
 restores its autostashes regardless of this option.
 
 Before creating any autostash, the workflow checks every selected member
-checkout. Automatic stashing is allowed only when all dirty paths are under
-`lib/`, `spec/`, or `test/`; changes elsewhere, including changelogs, lockfiles,
+checkout. Changes under `lib/`, `spec/`, and `test/` are eligible for stashing.
+Managed `Gemfile.lock`, `Appraisal.root.gemfile.lock`,
+`.structuredmerge/kettle-jem.lock`, and modular `*_local.gemfile` paths are
+also allowed and are left in place. Other dirty paths, including changelogs,
 configuration, and generated workflow files, fail the run before templating
 starts and are listed in the error. This preflight is separate from
 `--no-cleanup`: the latter preserves a failed template for debugging, while

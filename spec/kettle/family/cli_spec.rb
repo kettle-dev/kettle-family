@@ -21,6 +21,14 @@ RSpec.describe Kettle::Family::CLI do
     end
   end
 
+  it "lists every CLI command in the README command reference" do
+    readme = File.read(File.expand_path("../../../README.md", __dir__))
+    reference = readme.split("### Command reference", 2).last.split("Use `kettle-family help COMMAND`", 2).first
+    documented = reference.scan(/^\| `([^`]+)` \|/).flatten
+
+    expect(documented.sort).to eq((described_class::COMMANDS + ["help"]).sort)
+  end
+
   it "prints a JSON discovery report" do
     write_gem("alpha")
     out = StringIO.new
