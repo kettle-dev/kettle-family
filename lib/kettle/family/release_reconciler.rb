@@ -12,7 +12,8 @@ module Kettle
       CHECK_PHASE = "reconcile_github_release_check"
       CREATE_PHASE = "reconcile_github_release"
 
-      def initialize(config:, members:, execute: false, runner: nil)
+      def initialize(config:, members:, execute: false, runner: nil, reporter: nil)
+        @reporter = reporter
         @config = config
         @members = members
         @execute = execute
@@ -22,13 +23,21 @@ module Kettle
       def results
         release_states = release_state_by_member
         members.flat_map do |member|
-          reconcile_member(member: member, release_state: release_states[member.name])
+          reporter&.start_member(member, steps: 1)
+          reporter&.step_started(member, "reconcile-releases")
+          member_results = reconcile_member(member: member, release_state: release_states[member.name])
+          ok = member_results.all?(&:ok?)
+          reporter&.step_finished(member, "reconcile-releases", ok: ok, elapsed_seconds: member_results.sum { |result| result.elapsed_seconds.to_f })
+          reporter&.finish_member(member, success: ok)
+          member_results
         end
+      ensure
+        reporter&.finish
       end
 
       private
 
-      attr_reader :config, :members, :execute, :runner
+      attr_reader :config, :members, :execute, :runner, :reporter
 
       def release_state_by_member
         ReleaseStateCheck.new(config: config, members: members).results.each_with_object({}) do |result, memo|

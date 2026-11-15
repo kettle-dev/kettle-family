@@ -12,7 +12,7 @@ module Kettle
       include CommandKit::Commands
 
       COMMANDS = %w[version mise-trust mise-tasks discover plan report metadata check clean-blockers clean-installed clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
-      EVENT_COMMANDS = %w[bup bupb update-bundler up push pull sync test install lint docs bex check reset clean-unreleased clean-blockers clean-installed bump bump-version add-changelog].freeze
+      EVENT_COMMANDS = %w[bup bupb update-bundler up push pull sync test install lint docs bex check reset clean-unreleased clean-blockers clean-installed bump bump-version add-changelog mise-trust reconcile-releases].freeze
       PROGRESS_COMMANDS = (%w[release template gha-sha-pins] + EVENT_COMMANDS).freeze
       WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb update-bundler bex release push pull sync up].freeze
 
@@ -1049,13 +1049,13 @@ module Kettle
       end
 
       def command_results_for_current_branch(command:, config:, members:, options:, family_members: members, start_at: StartAt.new(nil, nil), state_event_handler: nil, state_event_tape: nil, release_state_results: nil)
-        return mise_trust_results(config: config, members: members) if command == "mise-trust"
+        return mise_trust_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "mise-trust"
         return bump_version_results(config: config, members: members, options: options, phase: command, release_state_results: release_state_results, event_tape: state_event_tape) if %w[bump bump-version].include?(command)
         return add_changelog_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "clean-unreleased"
         return clean_blockers_results(members: members, options: options, event_tape: state_event_tape) if command == "clean-blockers"
         return clean_installed_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "clean-installed"
-        return reconcile_release_results(config: config, members: members, options: options) if command == "reconcile-releases"
+        return reconcile_release_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "reconcile-releases"
         return branch_lane_results(config: config, members: members) if command == "branch-lanes"
         return release_state_results(config: config, members: members, jobs: options[:jobs], event_handler: state_event_handler) if command == "release-state"
         return install_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "install"
@@ -1110,15 +1110,21 @@ module Kettle
         ).results
       end
 
-      def mise_trust_results(config:, members:)
+      def mise_trust_results(config:, members:, options: {}, event_tape: nil)
         adapter = Kettle::Family.mise_adapter
         roots = [config.root, *members.map(&:root)].uniq
         runner = CommandRunner.new(execute: true, accept: true)
-        roots.map.with_index do |root, index|
-          member = members.find { |candidate| candidate.root == root } || Member.new("family", root, nil, nil, nil, [], [], nil, [], [])
+        trust_members = roots.map { |root| members.find { |candidate| candidate.root == root } || Member.new("family", root, nil, nil, nil, [], [], nil, [], []) }
+        reporter = MemberReporter.build(command: "mise-trust", members: trust_members, io: progress_io("mise-trust", options), tape: event_tape, execute: options[:execute])
+        trust_members.map do |member|
+          root = member.root
+          reporter&.start_member(member, steps: 1)
+          reporter&.step_started(member, "mise_trust")
           trust_argv = adapter.trust_argv(root)
-          unless trust_argv
-            next CommandResult.new(
+          result = if trust_argv
+            runner.call(member: member, phase: "mise_trust", command: trust_argv, env: {}, raw: true)
+          else
+            CommandResult.new(
               member_name: member.name,
               phase: "mise_trust",
               command: [],
@@ -1132,8 +1138,12 @@ module Kettle
               reason: "mise executable not available"
             )
           end
-          runner.call(member: member, phase: "mise_trust", command: trust_argv, env: {}, raw: true)
+          reporter&.step_finished(member, "mise_trust", ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
+          reporter&.finish_member(member, success: result.ok?)
+          result
         end
+      ensure
+        reporter&.finish
       end
 
       def progress_io(command, options)
@@ -1745,8 +1755,9 @@ module Kettle
         reporter ? reporter.around_batch(command, &block) : block.call
       end
 
-      def reconcile_release_results(config:, members:, options:)
-        ReleaseReconciler.new(config: config, members: members, execute: options[:execute]).results
+      def reconcile_release_results(config:, members:, options:, event_tape: nil)
+        reporter = MemberReporter.build(command: "reconcile-releases", members: members, io: progress_io("reconcile-releases", options), tape: event_tape, execute: options[:execute])
+        ReleaseReconciler.new(config: config, members: members, execute: options[:execute], reporter: reporter).results
       end
 
       def install_results(config:, members:, options:, event_tape: nil)
