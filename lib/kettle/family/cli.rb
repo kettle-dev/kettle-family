@@ -12,7 +12,7 @@ module Kettle
       include CommandKit::Commands
 
       COMMANDS = %w[version mise-trust mise-tasks discover plan report metadata check clean-blockers clean-installed clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
-      EVENT_COMMANDS = %w[bup bupb update-bundler up push pull sync test install lint docs bex check reset clean-unreleased clean-blockers clean-installed].freeze
+      EVENT_COMMANDS = %w[bup bupb update-bundler up push pull sync test install lint docs bex check reset clean-unreleased clean-blockers clean-installed bump bump-version add-changelog].freeze
       PROGRESS_COMMANDS = (%w[release template gha-sha-pins] + EVENT_COMMANDS).freeze
       WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb update-bundler bex release push pull sync up].freeze
 
@@ -1050,8 +1050,8 @@ module Kettle
 
       def command_results_for_current_branch(command:, config:, members:, options:, family_members: members, start_at: StartAt.new(nil, nil), state_event_handler: nil, state_event_tape: nil, release_state_results: nil)
         return mise_trust_results(config: config, members: members) if command == "mise-trust"
-        return bump_version_results(config: config, members: members, options: options, phase: command, release_state_results: release_state_results) if %w[bump bump-version].include?(command)
-        return add_changelog_results(config: config, members: members, options: options) if command == "add-changelog"
+        return bump_version_results(config: config, members: members, options: options, phase: command, release_state_results: release_state_results, event_tape: state_event_tape) if %w[bump bump-version].include?(command)
+        return add_changelog_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "add-changelog"
         return clean_unreleased_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "clean-unreleased"
         return clean_blockers_results(members: members, options: options, event_tape: state_event_tape) if command == "clean-blockers"
         return clean_installed_results(config: config, members: members, options: options, event_tape: state_event_tape) if command == "clean-installed"
@@ -1438,7 +1438,16 @@ module Kettle
         StartAt.new(member, branch)
       end
 
-      def bump_version_results(config:, members:, options:, phase:, release_state_results: nil)
+      def bump_version_results(config:, members:, options:, phase:, release_state_results: nil, event_tape: nil)
+        reporter = MemberReporter.build(command: phase, members: members, io: progress_io(phase, options), tape: event_tape, execute: options[:execute])
+        return guarded_bump_version_results(config: config, members: members, options: options, phase: phase, release_state_results: release_state_results) unless reporter
+
+        reporter.around_batch(phase) do
+          guarded_bump_version_results(config: config, members: members, options: options, phase: phase, release_state_results: release_state_results)
+        end
+      end
+
+      def guarded_bump_version_results(config:, members:, options:, phase:, release_state_results:)
         require_relative "version_bump"
         require_relative "release_waves"
 
@@ -1644,22 +1653,29 @@ module Kettle
         Kettle::Dev::VersionBump.resolve_target_version(options[:target_version].to_s, current.to_s)
       end
 
-      def add_changelog_results(config:, members:, options:)
+      def add_changelog_results(config:, members:, options:, event_tape: nil)
         section = options[:changelog_section].to_s
         entry = options[:changelog_entry].to_s
         raise Error, "add-changelog requires --section" if section.empty?
         raise Error, "add-changelog requires --entry" if entry.empty?
 
         runner = CommandRunner.new(execute: options[:execute])
+        reporter = MemberReporter.build(command: "add-changelog", members: members, io: progress_io("add-changelog", options), tape: event_tape, execute: options[:execute])
         members.each_with_object([]) do |member, memo|
+          reporter&.start_member(member, steps: 1)
+          reporter&.step_started(member, "add-changelog")
           memo << runner.call(
             member: member,
             phase: "add-changelog",
             command: [installed_executable("kettle-changelog"), "--add-unreleased-entry", "--section", section, "--entry", entry],
             env: changelog_target_env(config: config, member: member)
           )
+          reporter&.step_finished(member, "add-changelog", ok: memo.last.ok?, elapsed_seconds: memo.last.elapsed_seconds)
+          reporter&.finish_member(member, success: memo.last.ok?)
           break memo unless memo.last.ok?
         end
+      ensure
+        reporter&.finish
       end
 
       # Changelogs go where the family config says they go: a shared-changelog

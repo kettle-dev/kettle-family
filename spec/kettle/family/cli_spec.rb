@@ -1478,12 +1478,13 @@ RSpec.describe Kettle::Family::CLI do
     expect(alpha.map { |event| event["phase"] }.compact).to include("pull")
   end
 
-  {"sync" => [], "test" => [], "lint" => [], "docs" => [], "bex" => %w[true], "check" => [], "reset" => %w[Gemfile.lock], "clean-unreleased" => [], "clean-blockers" => [], "clean-installed" => []}.each do |name, extra|
+  {"sync" => [], "test" => [], "lint" => [], "docs" => [], "bex" => %w[true], "check" => [], "reset" => %w[Gemfile.lock], "clean-unreleased" => [], "clean-blockers" => [], "clean-installed" => [], "bump" => %w[patch --only alpha --force], "bump-version" => %w[patch --only alpha --force], "add-changelog" => %w[--section Added --entry x]}.each do |name, extra|
     it "streams per-member NDJSON events for #{name} --execute --events" do
       write_gem("alpha")
       out = StringIO.new
+      err = StringIO.new
 
-      described_class.call([name, "--root", @tmpdir, "--execute", "--events", *extra], out: out, err: StringIO.new)
+      described_class.call([name, "--root", @tmpdir, "--execute", "--events", *extra], out: out, err: err)
 
       events = out.string.lines.select { |line| line.start_with?("{") }.map { |line| JSON.parse(line) }
       alpha = events.select { |event| event["member"] == "alpha" }
