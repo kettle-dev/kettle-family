@@ -1492,11 +1492,31 @@ RSpec.describe Kettle::Family::CLI do
     expect(alpha.map { |event| event["phase"] }.compact).to include("pull")
   end
 
+  it "relays live test_progress events from a member's test command" do
+    write_gem("alpha")
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), <<~YAML)
+      commands:
+        test: |-
+          #{RbConfig.ruby} -rjson -e 'puts "dots"; puts JSON.generate(type: "test_progress", event_version: 1, kind: "tick", examples: 7, failures: 1, pending: 0, elapsed: 1.0)'
+    YAML
+    out = StringIO.new
+    err = StringIO.new
+
+    described_class.call(["test", "--root", @tmpdir, "--execute", "--events"], out: out, err: err)
+
+    events = out.string.lines.select { |line| line.start_with?("{") }.map { |line| JSON.parse(line) }
+    progress = events.find { |event| event["type"] == "test_progress" }
+    expect(progress).to include("member" => "alpha", "command" => "test", "examples" => 7, "failures" => 1)
+  end
+
   {"sync" => [], "test" => [], "lint" => [], "docs" => [], "bex" => %w[true], "check" => [], "reset" => %w[Gemfile.lock], "clean-unreleased" => [], "clean-blockers" => [], "clean-installed" => [], "bump" => %w[patch --only alpha --force], "bump-version" => %w[patch --only alpha --force], "add-changelog" => %w[--section Added --entry x], "mise-trust" => [], "reconcile-releases" => [], "bup" => [], "bupb" => [], "update-bundler" => [], "gha-sha-pins" => [], "template" => []}.each do |name, extra|
     it "streams per-member NDJSON events for #{name} --execute --events" do
       write_gem("alpha")
       out = StringIO.new
       err = StringIO.new
+      # Keep these hermetic: CI may lack mise or kettle-gha-pins.
+      allow(Kettle::Family).to receive(:mise_adapter).and_return(instance_double(Kettle::Family::MiseAdapter, trust_argv: nil)) if name == "mise-trust"
+      allow_any_instance_of(Kettle::Family::Workflow).to receive(:review_gha_sha_pins).and_return(true) if name == "gha-sha-pins" # rubocop:disable RSpec/AnyInstance
 
       described_class.call([name, "--root", @tmpdir, *((name == "mise-trust") ? [] : ["--execute"]), "--events", *extra], out: out, err: err)
 

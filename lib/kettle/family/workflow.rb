@@ -3090,6 +3090,16 @@ module Kettle
         reporter&.finish
       end
 
+      def test_progress_line_handler(reporter, member)
+        lambda do |line|
+          event = line.start_with?("{") ? parse_template_event(line) : nil
+          next false unless event && event["type"] == "test_progress"
+
+          reporter.test_progress(member, event)
+          true
+        end
+      end
+
       def member_reporter(report_members, jobs: 1)
         MemberReporter.build(command: command, members: report_members, io: progress_io, tape: @event_tape, execute: execute, jobs: jobs)
       end
@@ -3100,7 +3110,17 @@ module Kettle
       def reported_member_call(reporter, runner, member, report_as: member, finish: true, steps: 1, **call_options)
         reporter&.start_member(report_as, steps: steps)
         reporter&.step_started(report_as, command)
+        relay_tests = command == "test" && reporter
+        if relay_tests
+          # Ask the child suite for live test_progress events (kettle-test /
+          # turbo_tests2, opt-in) and relay them into the pane and event tape.
+          call_options[:env] = {"KETTLE_TEST_EVENTS" => "1"}.merge(call_options[:env] || {})
+          call_options[:stdout_line_handler] = test_progress_line_handler(reporter, report_as)
+        end
         result = runner.call(member: member, phase: command, **call_options)
+        # The handler only consumes event lines; the rspec output still needs to
+        # reach the report, so do not mark it as already streamed.
+        result.output_streamed = false if relay_tests
         reporter&.step_finished(report_as, command, ok: result.ok?, elapsed_seconds: result.elapsed_seconds)
         reporter&.finish_member(report_as, success: result.ok?) if finish
         result

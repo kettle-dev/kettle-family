@@ -30,4 +30,14 @@ RSpec.describe Kettle::Family::MemberReporter do
       expect(members.map { |member| complete_status(member.name) }).to eq(%w[ok ok ok])
     end
   end
+
+  describe "#test_progress" do
+    it "tapes the event with the member and command" do
+      reporter = described_class.new(command: "test", members: members, tape: ->(event) { events << event })
+
+      reporter.test_progress(members.first, {"type" => "test_progress", "kind" => "failure", "examples" => 3, "failures" => 1, "location" => "./spec/a_spec.rb:1"})
+
+      expect(events).to contain_exactly(include("type" => "test_progress", "member" => "alpha", "command" => "test", "kind" => "failure"))
+    end
+  end
 end
