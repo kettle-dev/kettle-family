@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- Family templating now self-heals a boot-time Bundler::GemNotFound in prepare_template_dependencies. kettle-jem prepare boots with RUBYOPT=-rbundler/setup, so a member lockfile pinning gems absent from the family runner's gemset crashed at process boot before prepare's own repair install could run, and lockfile recovery only re-locks (never installs), so the retry failed identically. The workflow now detects the materialize message, runs a RUBYOPT-stripped bundle install against the member bundle (new prepare_template_dependencies_install phase), and retries preparation once (#70)
-
 ### Security
+
+## [1.3.44] - 2026-11-16
+
+- TAG: [v1.3.44][1.3.44t]
+- COVERAGE: 94.06% -- 8308/8833 lines in 46 files
+- BRANCH COVERAGE: 78.75% -- 3453/4385 branches in 46 files
+- 40.74% documented
+
+### Fixed
+
+- Family templating now self-heals a boot-time Bundler::GemNotFound in prepare_template_dependencies. kettle-jem prepare boots with RUBYOPT=-rbundler/setup, so a member lockfile pinning gems absent from the family runner's gemset crashed at process boot before prepare's own repair install could run, and lockfile recovery only re-locks (never installs), so the retry failed identically. The workflow now detects the materialize message, runs a RUBYOPT-stripped bundle install against the member bundle (new prepare_template_dependencies_install phase), and retries preparation once (#70)
 
 ## [1.3.43] - 2026-11-15
 
@@ -3463,7 +3472,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.43...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.44...HEAD
+[1.3.44]: https://github.com/kettle-dev/kettle-family/compare/v1.3.43...v1.3.44
+[1.3.44t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.44
 [1.3.43]: https://github.com/kettle-dev/kettle-family/compare/v1.3.42...v1.3.43
 [1.3.43t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.43
 [1.3.42]: https://github.com/kettle-dev/kettle-family/compare/v1.3.41...v1.3.42
