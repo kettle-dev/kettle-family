@@ -22,6 +22,7 @@ RSpec.describe Kettle::Family::WorkflowProgress do
   end
 
   it "renders a sliding fixed-width event tape for TTY progress" do
+    allow(TTY::Screen).to receive(:width).and_return(120)
     output = StringIO.new
     allow(output).to receive(:tty?).and_return(true)
     member = instance_double(Kettle::Family::Member, name: "alpha")
@@ -54,6 +55,19 @@ RSpec.describe Kettle::Family::WorkflowProgress do
     expect(output.string).to include("(0/4)")
     expect(output.string).to include("(1/4)")
     expect(output.string).to include("01:05")
+  end
+
+  it "displays and clears secondary progress independently of primary progress" do
+    output = StringIO.new
+    allow(output).to receive(:tty?).and_return(true)
+    member = instance_double(Kettle::Family::Member, name: "alpha")
+    progress = described_class.new(io: output, label: "releasing", total: 1, jobs: 1)
+
+    progress.start_member(member, total: 4, status: "release")
+    progress.update(member, status: "ci", secondary: "(10/17)")
+    expect(output.string).to match(/\(0\/4\)\s+\(10\/17\)/)
+    progress.update(member, status: "next")
+    expect(progress.send(:secondary_text, "alpha").strip).to eq("")
   end
 
   it "keeps concurrent branch executions of one member on distinct progress rows" do

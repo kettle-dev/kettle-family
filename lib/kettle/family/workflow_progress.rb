@@ -8,14 +8,15 @@ module Kettle
     class WorkflowProgress
       MEMBER_WIDTH = 24
       PROGRESS_WIDTH = 7
+      SECONDARY_WIDTH = 9
       ELAPSED_WIDTH = 7
-      FORMAT = "%<member>-#{MEMBER_WIDTH}.#{MEMBER_WIDTH}s %<progress>s %<duration>s %<events>s %<status>s"
+      FORMAT = "%<member>-#{MEMBER_WIDTH}.#{MEMBER_WIDTH}s %<progress>s %<secondary>s %<duration>s %<events>s %<status>s"
       EVENT_WIDTH = 20
       MIN_STATUS_WIDTH = 12
       DEFAULT_TERMINAL_WIDTH = 80
       ELLIPSIS = "..."
 
-      def initialize(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil, waves: {})
+      def initialize(io:, label:, total:, jobs:, members: [], enabled: true, clock: nil, heading: nil, waves: {}, **options)
         @io = io
         @label = label
         @total = total.to_i
@@ -37,6 +38,7 @@ module Kettle
         @member_totals = {}
         @member_labels = @line_order.to_h { |member_name| [member_name, wave_label(member_name)] }
         @member_counts = Hash.new(0)
+        @member_secondary = {}
         @member_started_at = {}
         @member_finished_elapsed = {}
         @member_events = Hash.new("")
@@ -71,6 +73,7 @@ module Kettle
           store_label(key, label)
           @member_totals[key] = total.to_i
           @member_counts[key] = 0
+          @member_secondary.delete(key)
           @member_started_at[key] ||= monotonic_now
           @member_finished_elapsed.delete(key)
           if @tty
@@ -87,6 +90,7 @@ module Kettle
         synchronize do
           store_label(key, label)
           event_mark = mark || (success ? "." : "F")
+          @member_secondary.delete(key)
           increment_member_count(key)
           if @tty
             append_event(key, event_mark)
@@ -97,12 +101,13 @@ module Kettle
         end
       end
 
-      def update(member, status:, mark: nil, key: member.name, label: member.name)
+      def update(member, status:, mark: nil, key: member.name, label: member.name, secondary: nil, **options)
         return unless @enabled
         return if status.to_s.empty?
 
         synchronize do
           store_label(key, label)
+          @member_secondary[key] = secondary
           if @tty
             append_event(key, mark) if mark
             render(key, status: status)
@@ -117,6 +122,7 @@ module Kettle
 
         synchronize do
           store_label(key, label)
+          @member_secondary.delete(key)
           total = @member_totals[key].to_i
           @member_counts[key] = total if total.positive?
           @member_finished_elapsed[key] = elapsed_seconds_by_name(key)
@@ -251,8 +257,9 @@ module Kettle
           FORMAT,
           member: @member_labels.fetch(member_name, member_name),
           progress: progress_text(member_name),
+          secondary: secondary_text(member_name),
           duration: elapsed_text(member_name),
-          events: @member_events[member_name].rjust(EVENT_WIDTH),
+          events: @member_events[member_name].chars.last(rendered_event_width).join.rjust(rendered_event_width),
           status: @member_statuses[member_name]
         )
       end
@@ -277,6 +284,10 @@ module Kettle
         total = @member_totals[member_name].to_i
         denominator = total.positive? ? total.to_s : "*"
         "(#{count}/#{denominator})".rjust(PROGRESS_WIDTH)
+      end
+
+      def secondary_text(member_name)
+        truncate_display(@member_secondary[member_name].to_s, SECONDARY_WIDTH).rjust(SECONDARY_WIDTH)
       end
 
       def elapsed_text(member_name)
@@ -334,8 +345,14 @@ module Kettle
         Unicode::DisplayWidth.of(value.to_s)
       end
 
+      def rendered_event_width
+        return EVENT_WIDTH if render_width >= 90
+
+        [EVENT_WIDTH - SECONDARY_WIDTH - 1, 1].max
+      end
+
       def status_width
-        available = [render_width - MEMBER_WIDTH - 1 - PROGRESS_WIDTH - 1 - ELAPSED_WIDTH - 1 - EVENT_WIDTH - 1, 1].max
+        available = [render_width - MEMBER_WIDTH - 1 - PROGRESS_WIDTH - 1 - SECONDARY_WIDTH - 1 - ELAPSED_WIDTH - 1 - rendered_event_width - 1, 1].max
         [available, MIN_STATUS_WIDTH].max.clamp(1, available)
       end
 
