@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family templating now self-heals a boot-time Bundler::GemNotFound in prepare_template_dependencies. kettle-jem prepare boots with RUBYOPT=-rbundler/setup, so a member lockfile pinning gems absent from the family runner's gemset crashed at process boot before prepare's own repair install could run, and lockfile recovery only re-locks (never installs), so the retry failed identically. The workflow now detects the materialize message, runs a RUBYOPT-stripped bundle install against the member bundle (new prepare_template_dependencies_install phase), and retries preparation once (#70)
+
 ### Security
 
 ## [1.3.43] - 2026-11-15

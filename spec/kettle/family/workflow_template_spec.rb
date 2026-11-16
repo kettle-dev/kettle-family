@@ -2388,6 +2388,90 @@ RSpec.describe Kettle::Family::Workflow do
     expect(calls.count { |call| call[:phase] == "prepare_template_dependencies" }).to eq(2)
   end
 
+  it "installs the member bundle and retries when preparation crashes at boot on uninstalled locked gems" do
+    write_template_config(command: "bundle exec kettle-jem install")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    calls = []
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      calls << {phase: phase, command: command, env: env}
+      failure = phase == "prepare_template_dependencies" && calls.count { |call| call[:phase] == phase } == 1
+      output = if failure
+        <<~ERROR
+          /path/to/bundler/definition.rb:736:in 'Bundler::Definition#materialize': Could not find actionmailer-8.0.5.2, railties-8.0.5.2, actionpack-8.0.5.2 in locally installed gems (Bundler::GemNotFound)
+                  from /path/to/bundler/setup.rb:32:in '<top (required)>'
+        ERROR
+      else
+        ""
+      end
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        failure ? 1 : 0,
+        !failure,
+        "",
+        output,
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results).to all(be_ok)
+    expect(calls.map { |call| call[:phase] }).to include("prepare_template_dependencies_install")
+    expect(calls.map { |call| call[:phase] }).not_to include("prepare_template_dependencies_recovery")
+    expect(calls.count { |call| call[:phase] == "prepare_template_dependencies" }).to eq(2)
+    install_call = calls.find { |call| call[:phase] == "prepare_template_dependencies_install" }
+    expect(install_call.fetch(:command)).to eq(%w[bundle install])
+    expect(install_call.fetch(:env)["BUNDLE_GEMFILE"]).to eq(File.join(member.root, "Gemfile"))
+    expect(install_call.fetch(:env)["RUBYOPT"].to_s).not_to include("-rbundler/setup")
+  end
+
+  it "stops when the self-healing install cannot repair the boot crash" do
+    write_template_config(command: "bundle exec kettle-jem install")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = member_at("alpha")
+    calls = []
+    runner = instance_double(Kettle::Family::CommandRunner)
+    allow(Kettle::Family::CommandRunner).to receive(:new).and_return(runner)
+    allow(runner).to receive(:call) do |member:, phase:, command:, env: {}, **_args|
+      calls << {phase: phase, command: command}
+      failure = ["prepare_template_dependencies", "prepare_template_dependencies_install"].include?(phase)
+      output = if phase == "prepare_template_dependencies"
+        "Could not find railties-8.0.5.2 in locally installed gems (Bundler::GemNotFound)\n"
+      else
+        ""
+      end
+      Kettle::Family::CommandResult.new(
+        member.name,
+        phase,
+        command,
+        member.root,
+        failure ? 1 : 0,
+        !failure,
+        "",
+        output,
+        0.0,
+        false,
+        nil
+      )
+    end
+
+    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+
+    expect(results.last).not_to be_ok
+    expect(results.last.phase).to eq("prepare_template_dependencies_install")
+    expect(results.last.stderr).to include("Self-healing bundle install could not repair the boot-time Bundler::GemNotFound")
+    expect(calls.count { |call| call[:phase] == "prepare_template_dependencies" }).to eq(1)
+    expect(calls.map { |call| call[:phase] }).not_to include("prepare_template_dependencies_recovery")
+  end
+
   it "uses bundle lock --update syntax for nomono template recovery targets" do
     write_template_config(command: "bundle exec kettle-jem install")
     config_hash = YAML.load_file(File.join(@tmpdir, ".kettle-family.yml"))

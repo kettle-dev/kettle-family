@@ -6150,6 +6150,22 @@ module Kettle
         output.match?(/Bundler::(?:GemNotFound|VersionConflict)|Could not (?:find|resolve) |already activated .* but your Gemfile requires/)
       end
 
+      # `kettle-jem prepare` boots with RUBYOPT=-rbundler/setup, so ruby
+      # materializes the member's current lockfile before any kettle-jem code
+      # (including prepare's own RUBYOPT-stripped repair `bundle install`) can
+      # run. When the lockfile pins gems absent from the runner's gemset, the
+      # boot dies with Bundler's materialize message; the lockfile recovery
+      # phase only re-locks and never installs gems, so the retry crashes
+      # identically. The repair is a RUBYOPT-stripped `bundle install` against
+      # the member bundle. Resolution-time failures ("Could not find gem 'x'
+      # in source at ...") name a different message and stay on the lockfile
+      # recovery path.
+      def boot_materialize_gem_not_found?(result)
+        return false unless execute && !result.ok?
+
+        [result.stdout, result.stderr].join("\n").match?(/Could not find .+ in locally installed gems \(Bundler::GemNotFound\)/)
+      end
+
       def checksum_option_unsupported?(result)
         return false unless execute && !result.ok?
 
@@ -6352,6 +6368,37 @@ module Kettle
           )
           unless retry_result.ok?
             retry_result.stderr = [result.stderr, "Initial attempt failed with a transient cached-gemspec error.", retry_result.stderr].compact.reject(&:empty?).join("\n")
+          end
+          result = retry_result
+        end
+        if boot_materialize_gem_not_found?(result)
+          install_result = runner.call(
+            member: member,
+            phase: "prepare_template_dependencies_install",
+            command: %w[bundle install],
+            env: template_bundler_update_env(template_prepare_env(wave_jobs: wave_jobs, member: member), member)
+          )
+          unless install_result.ok?
+            install_result.stderr = [
+              result.stderr,
+              "Self-healing bundle install could not repair the boot-time Bundler::GemNotFound.",
+              install_result.stderr
+            ].compact.reject(&:empty?).join("\n")
+            memo << install_result
+            return false
+          end
+          memo << install_result
+          retry_result = runner.call(
+            member: member,
+            phase: "prepare_template_dependencies",
+            command: template_prepare_command(member),
+            env: template_prepare_env(wave_jobs: wave_jobs, member: member)
+          )
+          unless retry_result.ok?
+            retry_result.stderr = [
+              "Self-healing bundle install succeeded, but template preparation still fails.",
+              retry_result.stderr
+            ].compact.reject(&:empty?).join("\n")
           end
           result = retry_result
         end
