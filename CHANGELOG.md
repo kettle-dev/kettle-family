@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- `mise run pins` now reports updated GitHub Actions and versions per family member without dumping discovery and review data.
+
 ### Security
 
 ## [1.3.44] - 2026-11-16
