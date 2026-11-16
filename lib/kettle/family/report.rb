@@ -144,7 +144,7 @@ module Kettle
             lines << "  #{result_identity(result)}: #{result.reason || "skipped"}"
           elsif changes.empty? && result.ok?
             summary = template_events(result.stdout).reverse.find { |event| event["type"] == "gha_sha_pins_summary" }
-            status = summary && summary["updates"].to_i.zero? ? "up to date" : "no update details available"
+            status = (summary && summary["updates"].to_i.zero?) ? "up to date" : "no update details available"
             lines << "  #{result_identity(result)}: #{status}"
           else
             changes.each { |change| lines << "  #{result_identity(result)}: #{change}" }
