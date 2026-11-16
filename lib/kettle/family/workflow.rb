@@ -5775,7 +5775,7 @@ module Kettle
         when "remote_parity"
           remote_parity_event_label(event)
         when "ci_monitor"
-          ci_monitor_event_label(event)
+          ci_monitor_event_label(event, include_count: false)
         when "pre_release"
           pre_release_event_label(event)
         when "changelog"
@@ -5790,7 +5790,15 @@ module Kettle
           event["status"].to_s
         end
         mark = release_event_status_mark(event)
-        progress&.update(member, status: status, mark: mark) if status && !status.empty?
+        progress&.update(member, status: status, mark: mark, secondary: release_event_secondary_progress(event)) if status && !status.empty?
+      end
+
+      def release_event_secondary_progress(event)
+        return unless event["type"] == "ci_monitor"
+        return unless event["completed"].is_a?(Integer) && event["total"].is_a?(Integer)
+        return if event["completed"].negative? || event["total"] <= 0
+
+        "(#{event["completed"]}/#{event["total"]})"
       end
 
       def release_event_status_mark(event)
@@ -5874,7 +5882,7 @@ module Kettle
         parts.join(":")
       end
 
-      def ci_monitor_event_label(event)
+      def ci_monitor_event_label(event, include_count: true)
         action = event["action"].to_s
         provider = event["provider"].to_s
         target = event["workflow"].to_s
@@ -5883,7 +5891,7 @@ module Kettle
         parts << action unless action.empty?
         parts << provider unless provider.empty?
         parts << target unless target.empty?
-        if %w[github_wait github_started github_tick].include?(action) && event["completed"] && event["total"]
+        if include_count && event["completed"] && event["total"]
           parts << "#{event["completed"]}/#{event["total"]}"
         end
         completed_workflow = event["completed_workflow"].to_s
