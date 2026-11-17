@@ -116,6 +116,7 @@ module Kettle
         return append_metadata_results(lines) if command == "metadata"
         return if results.empty?
         return append_release_state_results(lines) if command == "release-state"
+        return append_gha_pins_results(lines) if gha_pins_executed?
 
         visible_results = results.reject { |result| release_wave_result?(result) }
         return if visible_results.empty?
@@ -131,7 +132,49 @@ module Kettle
         append_template_summary(lines) if command == "template"
       end
 
+      def gha_pins_executed?
+        command == "gha-sha-pins" && results.any? { |result| result.phase == "gha_sha_pins_list" }
+      end
+
+      def append_gha_pins_results(lines)
+        lines << "pins:"
+        results.select { |result| result.phase == "gha-sha-pins" }.each do |result|
+          changes = gha_pins_changes(result.stderr)
+          if result.skipped
+            lines << "  #{result_identity(result)}: #{result.reason || "skipped"}"
+          elsif changes.empty? && result.ok?
+            summary = template_events(result.stdout).reverse.find { |event| event["type"] == "gha_sha_pins_summary" }
+            status = (summary && summary["updates"].to_i.zero?) ? "up to date" : "no update details available"
+            lines << "  #{result_identity(result)}: #{status}"
+          else
+            changes.each { |change| lines << "  #{result_identity(result)}: #{change}" }
+          end
+        end
+        results.reject(&:ok?).each do |result|
+          lines << "  #{result_state(result)} #{result_identity(result)} #{result.phase} #{result.reason || ""}".rstrip
+          append_result_stdout(lines, result)
+          append_indented_output(lines, result.stderr) unless result.stderr.to_s.empty?
+        end
+      end
+
+      # kettle-gha-pins emits progress as NDJSON; its current event schema does
+      # not include changes, which are in the accompanying human report.
+      def gha_pins_changes(output)
+        rows = output.to_s.split("Outdated actions (", 2)[1]
+        return [] unless rows
+
+        rows.lines.drop(2).take_while { |line| !line.strip.empty? }.filter_map do |line|
+          action, old_version, new_version, = line.split
+          "#{action} #{old_version} -> #{new_version}" if new_version
+        end.uniq
+      end
+
       def append_summary(lines)
+        if gha_pins_executed?
+          lines << "summary: #{success? ? "success" : "failure"} (#{format_elapsed(elapsed_seconds)})"
+          return
+        end
+
         data = summary
         lines << "context:"
         report_context_lines.each { |line| lines << "  #{line}" }
@@ -267,7 +310,7 @@ module Kettle
       end
 
       def machine_readable_result?(result)
-        command == "release" && %w[gha_sha_pins_list gha_sha_pins_review].include?(result.phase.to_s)
+        %w[release gha-sha-pins].include?(command) && %w[gha_sha_pins_list gha_sha_pins_review].include?(result.phase.to_s)
       end
 
       def template_event_stdout?(result)

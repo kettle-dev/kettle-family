@@ -5,7 +5,7 @@ RSpec.describe Kettle::Family::Report do
     Kettle::Family::Member.new(name: name, root: "/repo/#{name}", gemspec_path: nil, version_file: nil, version: "1.0.0", dependencies: [])
   end
 
-  def result(member_name, phase: "release_publish", success: true, skipped: false, reason: nil, elapsed_seconds: 1.0)
+  def result(member_name, phase: "release_publish", success: true, skipped: false, reason: nil, elapsed_seconds: 1.0, stdout: "", stderr: "")
     Kettle::Family::CommandResult.new(
       member_name,
       phase,
@@ -13,8 +13,8 @@ RSpec.describe Kettle::Family::Report do
       "/repo/#{member_name}",
       success ? 0 : 1,
       success,
-      "",
-      "",
+      stdout,
+      stderr,
       elapsed_seconds,
       skipped,
       reason
@@ -526,6 +526,30 @@ RSpec.describe Kettle::Family::Report do
     expect(text).not_to include("Running pre-release checks via kettle-pre-release")
     expect(report.to_h.fetch("results").first.fetch("output_streamed")).to be(true)
     expect(report.to_h.fetch("results").first.fetch("log_path")).to eq("/repo/alpha/tmp/kettle-family/release/alpha-release_publish.log")
+  end
+
+  it "reports unique pin updates without dumping discovery payloads or event streams" do
+    selected_member = member("alpha")
+    discovery = result("alpha", phase: "gha_sha_pins_list", stdout: '{"pins":[{"path":"many files"}]}')
+    update = result("alpha", phase: "gha-sha-pins", stdout: %( {"event_version":1,"type":"gha_sha_pins_summary","updates":2}\n), stderr: <<~OUTPUT)
+      kettle-gha-pins report
+      Outdated actions (2):
+      Action Current Latest Location Reason
+      actions/checkout v4 v5 /repo/a.yml:1 upgrade
+      actions/checkout v4 v5 /repo/b.yml:1 upgrade
+
+      Planned changes (2):
+    OUTPUT
+    report = described_class.new(
+      family_name: "family", order_mode: "dependency", members: [selected_member],
+      selected_members: [selected_member], config_path: nil, command: "gha-sha-pins",
+      results: [discovery, update]
+    )
+
+    text = report.to_text
+    expect(text).to include("alpha: actions/checkout v4 -> v5")
+    expect(text.scan("actions/checkout").length).to eq(1)
+    expect(text).not_to include("many files", "event_version", "Planned changes")
   end
 
   it "keeps centralized action-pin JSON in its log instead of the text report" do
