@@ -6568,6 +6568,23 @@ module Kettle
         end
       end
 
+      # Cold start: a freshly scaffolded member's own Gemfile does not yet
+      # carry the templating gems, and standalone Kettle Jem (plain Ruby, no
+      # `bundle exec`) runs before it can. A relative BUNDLE_GEMFILE plus
+      # `-rbundler/setup` would pin that bare member bundle and hide Kettle
+      # Jem's own runtime (e.g. parslet). Use the family-root bundle instead,
+      # exactly as unreleased-template does. An explicit non-member
+      # BUNDLE_GEMFILE is intentional and is left alone.
+      def use_family_bundle_for_unprepared_member(env, member)
+        return if Array(template_prepare_command(member)).first.to_s == "bundle"
+
+        gemfile = env["BUNDLE_GEMFILE"]
+        return unless gemfile && File.expand_path(gemfile, member.root) == File.join(File.expand_path(member.root), "Gemfile")
+
+        family_gemfile = File.join(config.root, "Gemfile")
+        env["BUNDLE_GEMFILE"] = family_gemfile if File.file?(family_gemfile)
+      end
+
       def template_prepare_env(wave_jobs: 1, member: nil)
         # Templating is development work.  It must resolve the configured
         # family graph exactly as template application does; release-only
@@ -6579,6 +6596,7 @@ module Kettle
           exclusions = compute_local_gem_exclusions(member)
           env["KETTLE_JEM_LOCAL_GEM_EXCLUSIONS"] = exclusions.join(",") unless exclusions.empty?
         end
+        use_family_bundle_for_unprepared_member(env, member) if member
         # Template dependency preparation records what it changed as changelog
         # entries. Changelogs go where the family config says they go — the
         # family root changelog for shared-changelog families, each member's

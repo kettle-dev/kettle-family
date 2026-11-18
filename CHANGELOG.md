@@ -29,6 +29,7 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 - Family templating seeds corporate sponsors into member kettle-jem configuration, so standalone README generation retains them while preserving member-specific sponsors. (#74)
+- Cold-start templating of a freshly scaffolded member no longer fails with `cannot load such file -- parslet`; standalone `kettle-jem prepare` now uses the family-root bundle instead of the member's bare `Gemfile`.
 
 ### Security
 

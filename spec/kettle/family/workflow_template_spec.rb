@@ -313,6 +313,33 @@ RSpec.describe Kettle::Family::Workflow do
     )
   end
 
+  it "uses the family-root bundle for standalone prepare on a cold-start member" do
+    write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
+    local_stack = File.join(@tmpdir, "gems")
+    local_executable = File.join(local_stack, "kettle-jem", "exe", "kettle-jem")
+    FileUtils.mkdir_p(File.dirname(local_executable))
+    File.write(local_executable, "#!/usr/bin/env ruby\n")
+    family_gemfile = File.join(@tmpdir, "Gemfile")
+    File.write(family_gemfile, "source \"https://gem.coop\"\n")
+    member = member_at("alpha")
+    File.write(File.join(member.root, "Gemfile"), "source \"https://gem.coop\"\ngemspec\n")
+    workflow = described_class.new(
+      command: "template",
+      config: Kettle::Family::Config.load(root: @tmpdir),
+      members: [member],
+      execute: true,
+      env_overrides: {
+        "STRUCTUREDMERGE_DEV" => local_stack,
+        "RUBYOPT" => "-rbundler/setup",
+        "BUNDLE_GEMFILE" => "Gemfile"
+      }
+    )
+
+    env = workflow.send(:template_prepare_env, member: member)
+
+    expect(env).to include("BUNDLE_GEMFILE" => family_gemfile, "RUBYOPT" => "-rbundler/setup")
+  end
+
   it "uses the member bundle for local kettle-jem after its path dependency is locked" do
     write_template_config(command: ["bundle", "exec", "kettle-jem", "install"], normalize_lockfiles: false)
     local_stack = File.join(@tmpdir, "gems")
