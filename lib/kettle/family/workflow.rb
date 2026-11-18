@@ -1379,7 +1379,11 @@ module Kettle
       def monorepo_template_allowed_paths(member)
         return [] unless Paths.within?(member.root, config.root) && !Paths.same?(member.root, config.root)
 
-        config.template_root_outputs
+        outputs = config.template_root_outputs
+        if !outputs.empty? && !config.readme_corporate_sponsors.empty?
+          outputs = (outputs + [".structuredmerge/kettle-jem.yml"]).uniq
+        end
+        outputs
       end
 
       def monorepo_template_path_allowed?(path, relative_root, allowed_paths)
@@ -1694,7 +1698,10 @@ module Kettle
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label) if memo.last&.phase == "prepare_template_dependencies"
           return memo if prepared == false
 
-          sync_member_corporate_sponsors(member) if kettle_jem_template_command?(config.template_command || default_template_command(member))
+          if kettle_jem_template_command?(config.template_command || default_template_command(member))
+            sync_member_corporate_sponsors(member)
+            sync_corporate_sponsors_at(template_worktree_root) if template_worktree_root
+          end
 
           event_reporter&.step_started(member, command)
           memo << runner.call(
@@ -5227,10 +5234,14 @@ module Kettle
 
       # Seed missing family sponsors without overriding member-owned entries.
       def sync_member_corporate_sponsors(member)
+        sync_corporate_sponsors_at(member.root)
+      end
+
+      def sync_corporate_sponsors_at(root_path)
         sponsors = config.readme_corporate_sponsors
         return if sponsors.empty?
 
-        path = File.join(member.root, ".structuredmerge", "kettle-jem.yml")
+        path = File.join(root_path, ".structuredmerge", "kettle-jem.yml")
         content = File.exist?(path) ? File.read(path) : "{}\n"
         data = YAML.safe_load(content, permitted_classes: [Date], aliases: true) || {}
         existing = data.fetch("readme", {}).fetch("corporate_sponsors", []) || []
@@ -5241,21 +5252,27 @@ module Kettle
         # Merge the mapping separately: psych-merge cannot safely append
         # mapping items to an existing block sequence with different indent.
         tree = Psych.parse(content)
-        root = tree.root
+        root = tree.root if tree
         readme = yaml_mapping_value(root, "readme")
         sequence = yaml_mapping_value(readme, "corporate_sponsors") if readme
         if sequence.is_a?(Psych::Nodes::Sequence) && sequence.style == Psych::Nodes::Sequence::BLOCK && !sequence.children.empty?
-          first = sequence.children.first
-          indentation = content.lines.fetch(first.start_line)[/\A */]
-          addition = missing.to_yaml.sub(/\A---\s*\n/, "").lines.map { |line| indentation + line }.join
           lines = content.lines
-          lines.insert(first.start_line, addition)
+          first_line = (sequence.start_line..sequence.children.first.start_line).find { |line| lines.fetch(line).match?(/\A *-(?:\s|$)/) }
+          raise ArgumentError, "could not locate corporate sponsor sequence" unless first_line
+
+          indentation = lines.fetch(first_line)[/\A */]
+          addition = missing.to_yaml.sub(/\A---\s*\n/, "").lines.map { |line| indentation + line }.join
+          lines.insert(first_line, addition)
           updated = lines.join
         elsif sequence.is_a?(Psych::Nodes::Sequence)
           lines = content.lines
           start_offset = lines.take(sequence.start_line).sum(&:length) + sequence.start_column
-          end_offset = lines.take(sequence.end_line).sum(&:length) + sequence.end_column
-          updated = content[0...start_offset] + JSON.generate(existing + missing) + content[end_offset..]
+          bracket = content.index("[", start_offset)
+          addition = missing.map { |sponsor| JSON.generate(sponsor) }.join(", ")
+          addition += ", " unless existing.empty?
+          updated = content[0..bracket] + addition + content[(bracket + 1)..]
+        elsif root.nil?
+          updated = content + ((content.empty? || content.end_with?("\n")) ? "" : "\n") + {"readme" => {"corporate_sponsors" => missing}}.to_yaml.sub(/\A---\s*\n/, "")
         else
           fragment = {"readme" => {"corporate_sponsors" => missing}}.to_yaml
           result = Psych::Merge.merge_yaml(fragment, content, "yaml", add_template_only_nodes: true, add_template_only_sequence_items: true, preference: :destination)

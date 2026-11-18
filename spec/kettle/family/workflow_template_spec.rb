@@ -509,6 +509,38 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.exist?(File.join(member.root, "member-output.txt"))).to be(false)
   end
 
+  it "seeds and materializes sponsors for nested monorepo root outputs" do
+    member = member_at("packages/ruby")
+    File.write(File.join(member.root, "marker"), "member\n")
+    executable = File.join(@tmpdir, "bin", "kettle-jem")
+    FileUtils.mkdir_p(File.dirname(executable))
+    File.write(executable, <<~RUBY)
+      require "yaml"
+      if ARGV.first == "install"
+        sponsors = YAML.safe_load_file(".structuredmerge/kettle-jem.yml").fetch("readme").fetch("corporate_sponsors")
+        File.write("root-output.txt", sponsors.map { |sponsor| sponsor.fetch("name") }.join(","))
+      end
+    RUBY
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), {
+      "family" => {"mode" => "monorepo"},
+      "members" => {"roots" => ["packages/ruby"]},
+      "template" => {"root_outputs" => ["root-output.txt"], "command" => [RbConfig.ruby, executable, "install"], "normalize_lockfiles" => false},
+      "readme" => {"corporate_sponsors" => [{"name" => "Family", "url" => "https://family.example", "img_src" => "https://family.example/logo.svg"}]}
+    }.to_yaml)
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true, commit: false)
+
+    results = workflow.results
+
+    expect(results).to all(be_ok), results.map { |result| [result.phase, result.stderr, result.stdout] }.inspect
+    expect(File.read(File.join(@tmpdir, "root-output.txt"))).to eq("Family")
+    [@tmpdir, member.root].each do |root|
+      sponsors = YAML.safe_load_file(File.join(root, ".structuredmerge", "kettle-jem.yml")).fetch("readme").fetch("corporate_sponsors")
+      expect(sponsors.map { |sponsor| sponsor.fetch("name") }).to eq(["Family"])
+    end
+  end
+
   it "trusts root and member mise configs before running a detached template worktree" do
     Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
@@ -1285,6 +1317,18 @@ RSpec.describe Kettle::Family::Workflow do
     File.delete(path)
     workflow.send(:sync_member_corporate_sponsors, member)
     expect(YAML.safe_load_file(path).fetch("readme").fetch("corporate_sponsors").size).to eq(2)
+
+    ["", "# comment only\n", "readme:\n  corporate_sponsors:\n    -\n      name: Local\n      url: https://local.example\n", "readme:\n  corporate_sponsors: &sponsors [{name: Local, url: 'https://local.example'}]\ncopy: *sponsors\n", "readme:\n  corporate_sponsors: &sponsors\n    - name: Local\n      url: https://local.example\ncopy: *sponsors\n"].each do |source|
+      File.write(path, source)
+      workflow.send(:sync_member_corporate_sponsors, member)
+      output = File.read(path)
+      data = YAML.safe_load(output, aliases: true)
+      expect(data.fetch("readme").fetch("corporate_sponsors").map { |sponsor| sponsor.fetch("name") }).to include("Family", "Shared")
+      expect(output).to include("# comment only") if source.include?("# comment only")
+      expect(data.fetch("copy")).to eq(data.fetch("readme").fetch("corporate_sponsors")) if source.include?("&sponsors")
+      workflow.send(:sync_member_corporate_sponsors, member)
+      expect(File.read(path)).to eq(output)
+    end
   end
 
   it "executes custom non-kettle-jem template commands without prepare dependency results" do
