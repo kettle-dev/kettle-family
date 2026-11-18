@@ -184,6 +184,7 @@ module Kettle
         @release_state_results = Array(release_state_results)
         @event_tape = event_tape
         @template_commit_mutex = Mutex.new
+        @template_progress_mutex = Mutex.new
       end
 
       def results
@@ -6039,7 +6040,6 @@ module Kettle
       end
 
       def synchronize_template_progress(&block)
-        @template_progress_mutex ||= Mutex.new
         @template_progress_mutex.synchronize(&block)
       end
 
