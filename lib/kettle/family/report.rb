@@ -353,7 +353,7 @@ module Kettle
         # full ordered fix, not just the first command.
         idx = lines.rindex(line)
         follow_up = idx && lines[idx + 1]
-        if follow_up && follow_up.match?(/\A(?:Then|After|Next|Once)\b/)
+        if follow_up&.match?(/\A(?:Then|After|Next|Once)\b/)
           "#{line.sub(/\ARecommended fix:\s+/, "")}; #{follow_up.sub(/\A\w+ /, "")}"
         else
           line.sub(/\ARecommended fix:\s+/, "")

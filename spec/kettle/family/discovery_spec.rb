@@ -35,7 +35,7 @@ RSpec.describe Kettle::Family::Discovery do
     File.write(gemspec, "sleep 0.05\n#{File.read(gemspec)}")
     config = Kettle::Family::Config.load(root: @tmpdir)
 
-    discoveries = 2.times.map { Thread.new { described_class.new(config: config).members.map(&:name) } }
+    discoveries = 2.times.map { Thread.new { described_class.new(config: config).members.map(&:name) } } # rubocop:disable ThreadSafety/NewThread -- the spec exercises concurrent discovery
 
     expect(discoveries.map(&:value)).to eq([%w[alpha], %w[alpha]])
   end
