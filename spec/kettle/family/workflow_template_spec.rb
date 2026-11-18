@@ -509,6 +509,38 @@ RSpec.describe Kettle::Family::Workflow do
     expect(File.exist?(File.join(member.root, "member-output.txt"))).to be(false)
   end
 
+  it "seeds and materializes sponsors for nested monorepo root outputs" do
+    member = member_at("packages/ruby")
+    File.write(File.join(member.root, "marker"), "member\n")
+    executable = File.join(@tmpdir, "bin", "kettle-jem")
+    FileUtils.mkdir_p(File.dirname(executable))
+    File.write(executable, <<~RUBY)
+      require "yaml"
+      if ARGV.first == "install"
+        sponsors = YAML.safe_load_file(".structuredmerge/kettle-jem.yml").fetch("readme").fetch("corporate_sponsors")
+        File.write("root-output.txt", sponsors.map { |sponsor| sponsor.fetch("name") }.join(","))
+      end
+    RUBY
+    File.write(File.join(@tmpdir, ".kettle-family.yml"), {
+      "family" => {"mode" => "monorepo"},
+      "members" => {"roots" => ["packages/ruby"]},
+      "template" => {"root_outputs" => ["root-output.txt"], "command" => [RbConfig.ruby, executable, "install"], "normalize_lockfiles" => false},
+      "readme" => {"corporate_sponsors" => [{"name" => "Family", "url" => "https://family.example", "img_src" => "https://family.example/logo.svg"}]}
+    }.to_yaml)
+    initialize_git_repo(@tmpdir, branches: [])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true, commit: false)
+
+    results = workflow.results
+
+    expect(results).to all(be_ok), results.map { |result| [result.phase, result.stderr, result.stdout] }.inspect
+    expect(File.read(File.join(@tmpdir, "root-output.txt"))).to eq("Family")
+    [@tmpdir, member.root].each do |root|
+      sponsors = YAML.safe_load_file(File.join(root, ".structuredmerge", "kettle-jem.yml")).fetch("readme").fetch("corporate_sponsors")
+      expect(sponsors.map { |sponsor| sponsor.fetch("name") }).to eq(["Family"])
+    end
+  end
+
   it "trusts root and member mise configs before running a detached template worktree" do
     Kettle::Family.mise_adapter = build_mise_adapter(executable: "mise")
     alpha = member_at("alpha")
@@ -1254,50 +1286,49 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.fetch(1).command.join(" ")).not_to include("KETTLE_JEM_GIT_COMMIT_LOCK")
   end
 
-  it "passes family corporate sponsors to kettle-jem templating environment" do
-    write_template_config(
-      command: [
-        RbConfig.ruby,
-        "-rjson",
-        "-e",
-        "puts JSON.parse(ENV.fetch('KETTLE_JEM_CORPORATE_SPONSORS_JSON')).first.to_json",
-        "--",
-        "--skip-commit"
-      ]
-    )
+  it "seeds missing family sponsors in member config without overriding local sponsors" do
+    write_template_config(command: "kettle-jem install", normalize_lockfiles: false)
     config_path = File.join(@tmpdir, ".kettle-family.yml")
     config_data = YAML.load_file(config_path)
-    config_data["readme"] = {
-      "corporate_sponsors" => [
-        {
-          "name" => "Family Sponsor",
-          "target_href" => "https://sponsor.example",
-          "image_src" => "https://sponsor.example/logo.svg",
-          "since" => "2026-01-01",
-          "until" => "2026-12-31",
-          "members" => [{"name" => "Backer", "target_href" => "https://backer.example"}]
-        }
-      ]
-    }
+    config_data["readme"] = {"corporate_sponsors" => [
+      {"name" => "Family", "url" => "https://family.example", "img_src" => "https://family.example/logo.svg"},
+      {"name" => "Shared", "url" => "https://family.example/shared", "img_src" => "https://family.example/shared.svg"}
+    ]}
     File.write(config_path, YAML.dump(config_data))
     config = Kettle::Family::Config.load(root: @tmpdir)
     member = member_at("alpha")
+    path = File.join(member.root, ".structuredmerge", "kettle-jem.yml")
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(path, "# member configuration\nreadme:\n  corporate_sponsors:\n    - name: Shared\n      url: https://local.example\n    - name: Local\n      url: https://local.example\n")
+    workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
 
-    results = described_class.new(command: "template", config: config, members: [member], execute: true).results
+    workflow.send(:sync_member_corporate_sponsors, member)
+    content = File.read(path)
+    sponsors = YAML.safe_load(content).fetch("readme").fetch("corporate_sponsors")
+    expect(sponsors.map { |sponsor| sponsor.fetch("name") }).to contain_exactly("Family", "Shared", "Local")
+    expect(sponsors.find { |sponsor| sponsor["name"] == "Shared" }.fetch("url")).to eq("https://local.example")
+    expect(content).to include("# member configuration")
+    workflow.send(:sync_member_corporate_sponsors, member)
+    expect(File.read(path)).to eq(content)
 
-    expect(config.readme_corporate_sponsors).to eq([
-      {
-        "name" => "Family Sponsor",
-        "target_href" => "https://sponsor.example",
-        "image_src" => "https://sponsor.example/logo.svg",
-        "url" => "https://sponsor.example",
-        "img_src" => "https://sponsor.example/logo.svg",
-        "since" => "2026-01-01",
-        "until" => "2026-12-31",
-        "members" => [{"name" => "Backer", "target_href" => "https://backer.example", "url" => "https://backer.example"}]
-      }
-    ])
-    expect(JSON.parse(results.fetch(1).stdout.chomp)).to eq(config.readme_corporate_sponsors.first)
+    File.write(path, "readme:\n  corporate_sponsors: []\n")
+    workflow.send(:sync_member_corporate_sponsors, member)
+    expect(YAML.safe_load_file(path).fetch("readme").fetch("corporate_sponsors").size).to eq(2)
+    File.delete(path)
+    workflow.send(:sync_member_corporate_sponsors, member)
+    expect(YAML.safe_load_file(path).fetch("readme").fetch("corporate_sponsors").size).to eq(2)
+
+    ["", "# comment only\n", "readme:\n  corporate_sponsors:\n    -\n      name: Local\n      url: https://local.example\n", "readme:\n  corporate_sponsors: &sponsors [{name: Local, url: 'https://local.example'}]\ncopy: *sponsors\n", "readme:\n  corporate_sponsors: &sponsors\n    - name: Local\n      url: https://local.example\ncopy: *sponsors\n"].each do |source|
+      File.write(path, source)
+      workflow.send(:sync_member_corporate_sponsors, member)
+      output = File.read(path)
+      data = YAML.safe_load(output, aliases: true)
+      expect(data.fetch("readme").fetch("corporate_sponsors").map { |sponsor| sponsor.fetch("name") }).to include("Family", "Shared")
+      expect(output).to include("# comment only") if source.include?("# comment only")
+      expect(data.fetch("copy")).to eq(data.fetch("readme").fetch("corporate_sponsors")) if source.include?("&sponsors")
+      workflow.send(:sync_member_corporate_sponsors, member)
+      expect(File.read(path)).to eq(output)
+    end
   end
 
   it "executes custom non-kettle-jem template commands without prepare dependency results" do

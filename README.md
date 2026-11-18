@@ -110,6 +110,12 @@ gem install kettle-family
 `kettle-family` reads `.kettle-family.yml` from the family root by default.
 Use `--config PATH` to load a different file.
 
+Family `readme.corporate_sponsors` entries are seeded into each member's
+`.structuredmerge/kettle-jem.yml` when running `kettle-family template` with
+kettle-jem. Entries are matched by name: existing member entries take precedence,
+and member-only sponsors are retained. Edit the member file to change an
+existing sponsor; standalone kettle-jem runs use that file too.
+
 Member discovery is recursive under the family member search roots. Discovery
 skips gemspecs ignored by git and any configured `members.exclude` glob patterns
 before loading gemspec metadata, so fixture or temporary gemspecs do not create

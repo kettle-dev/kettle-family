@@ -10,6 +10,8 @@ require "pathname" # rubocop:disable Lint/RedundantRequireStatement -- Workflow 
 require "rbconfig"
 require "shellwords"
 require "yaml"
+require "date"
+require "psych/merge"
 require "kettle/dev"
 
 require_relative "concurrency"
@@ -182,6 +184,7 @@ module Kettle
         @release_state_results = Array(release_state_results)
         @event_tape = event_tape
         @template_commit_mutex = Mutex.new
+        @template_progress_mutex = Mutex.new
       end
 
       def results
@@ -1376,7 +1379,11 @@ module Kettle
       def monorepo_template_allowed_paths(member)
         return [] unless Paths.within?(member.root, config.root) && !Paths.same?(member.root, config.root)
 
-        config.template_root_outputs
+        outputs = config.template_root_outputs
+        if !outputs.empty? && !config.readme_corporate_sponsors.empty?
+          outputs = (outputs + [".structuredmerge/kettle-jem.yml"]).uniq
+        end
+        outputs
       end
 
       def monorepo_template_path_allowed?(path, relative_root, allowed_paths)
@@ -1690,6 +1697,11 @@ module Kettle
           )
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label) if memo.last&.phase == "prepare_template_dependencies"
           return memo if prepared == false
+
+          if kettle_jem_template_command?(config.template_command || default_template_command(member))
+            sync_member_corporate_sponsors(member)
+            sync_corporate_sponsors_at(template_worktree_root) if template_worktree_root
+          end
 
           event_reporter&.step_started(member, command)
           memo << runner.call(
@@ -5220,6 +5232,66 @@ module Kettle
         DEFAULT_COMMANDS.fetch("template")
       end
 
+      # Seed missing family sponsors without overriding member-owned entries.
+      def sync_member_corporate_sponsors(member)
+        sync_corporate_sponsors_at(member.root)
+      end
+
+      def sync_corporate_sponsors_at(root_path)
+        sponsors = config.readme_corporate_sponsors
+        return if sponsors.empty?
+
+        path = File.join(root_path, ".structuredmerge", "kettle-jem.yml")
+        content = File.exist?(path) ? File.read(path) : "{}\n"
+        data = YAML.safe_load(content, permitted_classes: [Date], aliases: true) || {}
+        existing = data.fetch("readme", {}).fetch("corporate_sponsors", []) || []
+        names = existing.map { |sponsor| sponsor.fetch("name") }
+        missing = sponsors.reject { |sponsor| names.include?(sponsor.fetch("name")) }
+        return if missing.empty?
+
+        # Merge the mapping separately: psych-merge cannot safely append
+        # mapping items to an existing block sequence with different indent.
+        tree = Psych.parse(content)
+        root = tree.root if tree
+        readme = yaml_mapping_value(root, "readme")
+        sequence = yaml_mapping_value(readme, "corporate_sponsors") if readme
+        if sequence.is_a?(Psych::Nodes::Sequence) && sequence.style == Psych::Nodes::Sequence::BLOCK && !sequence.children.empty?
+          lines = content.lines
+          first_line = (sequence.start_line..sequence.children.first.start_line).find { |line| lines.fetch(line).match?(/\A *-(?:\s|$)/) }
+          raise ArgumentError, "could not locate corporate sponsor sequence" unless first_line
+
+          indentation = lines.fetch(first_line)[/\A */]
+          addition = missing.to_yaml.sub(/\A---\s*\n/, "").lines.map { |line| indentation + line }.join
+          lines.insert(first_line, addition)
+          updated = lines.join
+        elsif sequence.is_a?(Psych::Nodes::Sequence)
+          lines = content.lines
+          start_offset = lines.take(sequence.start_line).sum(&:length) + sequence.start_column
+          bracket = content.index("[", start_offset)
+          addition = missing.map { |sponsor| JSON.generate(sponsor) }.join(", ")
+          addition += ", " unless existing.empty?
+          updated = content[0..bracket] + addition + content[(bracket + 1)..]
+        elsif root.nil?
+          updated = content + ((content.empty? || content.end_with?("\n")) ? "" : "\n") + {"readme" => {"corporate_sponsors" => missing}}.to_yaml.sub(/\A---\s*\n/, "")
+        else
+          fragment = {"readme" => {"corporate_sponsors" => missing}}.to_yaml
+          result = Psych::Merge.merge_yaml(fragment, content, "yaml", add_template_only_nodes: true, add_template_only_sequence_items: true, preference: :destination)
+          raise ArgumentError, Array(result[:diagnostics]).map { |diagnostic| diagnostic[:message] || diagnostic["message"] }.join("; ") unless result[:ok]
+          updated = result[:output]
+        end
+        YAML.safe_load(updated, permitted_classes: [Date], aliases: true)
+
+        FileUtils.mkdir_p(File.dirname(path))
+        File.write(path, updated)
+      end
+
+      def yaml_mapping_value(node, key)
+        return unless node.is_a?(Psych::Nodes::Mapping)
+
+        node.children.each_slice(2) { |name, value| return value if name.value == key }
+        nil
+      end
+
       def workflow_env
         {}.tap do |env|
           env.merge!(workflow_family_local_path_env)
@@ -5231,10 +5303,6 @@ module Kettle
               template_git_lock_path = template_git_commit_lock_path
               env["KETTLE_JEM_GIT_LOCK"] = template_git_lock_path
               env["KETTLE_JEM_GIT_COMMIT_LOCK"] = template_git_lock_path
-            end
-            corporate_sponsors = config.readme_corporate_sponsors
-            unless corporate_sponsors.empty?
-              env["KETTLE_JEM_CORPORATE_SPONSORS_JSON"] = JSON.generate(corporate_sponsors)
             end
           end
           env.merge!(env_overrides)
@@ -5989,7 +6057,6 @@ module Kettle
       end
 
       def synchronize_template_progress(&block)
-        @template_progress_mutex ||= Mutex.new
         @template_progress_mutex.synchronize(&block)
       end
 
