@@ -270,6 +270,8 @@ module Kettle
 
       def non_tty_line(member_key, mark:, status:)
         label = @member_labels.fetch(member_key, member_key)
+        secondary = @member_secondary[member_key].to_s
+        status = "#{status} #{secondary}" unless secondary.empty?
         "[#{label}] #{progress_text(member_key)} #{elapsed_text(member_key)} #{mark} #{status}"
       end
 

@@ -4826,12 +4826,12 @@ module Kettle
       end
 
       def emit_dependency_floor_lockfile_progress(member:, attempt:)
-        @release_progress&.update(member, status: "lockfiles #{attempt}/#{REGISTRY_WAIT_ATTEMPTS}", mark: ">")
+        @release_progress&.update(member, status: "lockfiles", mark: ">", secondary: "(#{attempt}/#{REGISTRY_WAIT_ATTEMPTS})")
       end
 
       def emit_dependency_floor_ci_bundle_progress(member:, gemfile:, attempt:)
         relative = relative_path_from_member_root(member: member, path: gemfile)
-        @release_progress&.update(member, status: "ci bundle #{relative} #{attempt}/#{REGISTRY_WAIT_ATTEMPTS}", mark: ">")
+        @release_progress&.update(member, status: "ci bundle #{relative}", mark: ">", secondary: "(#{attempt}/#{REGISTRY_WAIT_ATTEMPTS})")
       end
 
       # A published version only means "already released" when nothing
@@ -5717,16 +5717,14 @@ module Kettle
         when "gha_sha_pins_start"
           "discovering workflows"
         when "gha_sha_pins_action"
-          completed = event["completed"].to_i
-          total = event["total"].to_i
-          "actions: #{completed}/#{total} #{(event["cache"] == "hit") ? "cached" : "live"}"
+          "actions: #{(event["cache"] == "hit") ? "cached" : "live"}"
         when "gha_sha_pins_summary"
           "#{event["changed_files"].to_i} files, #{event["updates"].to_i} updates"
         else
           action.empty? ? "processing" : action
         end
         mark = (event["status"].to_s == "failed") ? "F" : nil
-        progress.update(member, status: status, mark: mark)
+        progress.update(member, status: status, mark: mark, secondary: release_event_secondary_progress(event))
       end
 
       def suppress_release_secret_provider_event?(event, progress:)
@@ -5862,7 +5860,6 @@ module Kettle
       end
 
       def release_event_secondary_progress(event)
-        return unless event["type"] == "ci_monitor"
         return unless event["completed"].is_a?(Integer) && event["total"].is_a?(Integer)
         return if event["completed"].negative? || event["total"] <= 0
 
