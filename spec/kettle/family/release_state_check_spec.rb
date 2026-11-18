@@ -471,7 +471,7 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
       [result_for.call(branch)]
     end
 
-    worker = Thread.new { check.results }
+    worker = Thread.new { check.results } # rubocop:disable ThreadSafety/NewThread -- the spec exercises concurrent branch checks
     2.times { started.pop }
     2.times { release << true }
     results = worker.value
