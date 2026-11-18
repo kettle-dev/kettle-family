@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- Family templating seeds corporate sponsors into member kettle-jem configuration, so standalone README generation retains them while preserving member-specific sponsors. (#74)
+
 ### Security
 
 ## [1.3.45] - 2026-11-16
