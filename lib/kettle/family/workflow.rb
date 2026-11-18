@@ -10,6 +10,8 @@ require "pathname" # rubocop:disable Lint/RedundantRequireStatement -- Workflow 
 require "rbconfig"
 require "shellwords"
 require "yaml"
+require "date"
+require "psych/merge"
 require "kettle/dev"
 
 require_relative "concurrency"
@@ -1690,6 +1692,8 @@ module Kettle
           )
           emit_member_result_progress(member, memo.last, progress: progress, progress_key: progress_key, progress_label: progress_label) if memo.last&.phase == "prepare_template_dependencies"
           return memo if prepared == false
+
+          sync_member_corporate_sponsors(member) if kettle_jem_template_command?(config.template_command || default_template_command(member))
 
           event_reporter&.step_started(member, command)
           memo << runner.call(
@@ -5220,6 +5224,56 @@ module Kettle
         DEFAULT_COMMANDS.fetch("template")
       end
 
+      # Seed missing family sponsors without overriding member-owned entries.
+      def sync_member_corporate_sponsors(member)
+        sponsors = config.readme_corporate_sponsors
+        return if sponsors.empty?
+
+        path = File.join(member.root, ".structuredmerge", "kettle-jem.yml")
+        content = File.exist?(path) ? File.read(path) : "{}\n"
+        data = YAML.safe_load(content, permitted_classes: [Date], aliases: true) || {}
+        existing = data.fetch("readme", {}).fetch("corporate_sponsors", []) || []
+        names = existing.map { |sponsor| sponsor.fetch("name") }
+        missing = sponsors.reject { |sponsor| names.include?(sponsor.fetch("name")) }
+        return if missing.empty?
+
+        # Merge the mapping separately: psych-merge cannot safely append
+        # mapping items to an existing block sequence with different indent.
+        tree = Psych.parse(content)
+        root = tree.root
+        readme = yaml_mapping_value(root, "readme")
+        sequence = yaml_mapping_value(readme, "corporate_sponsors") if readme
+        if sequence.is_a?(Psych::Nodes::Sequence) && sequence.style == Psych::Nodes::Sequence::BLOCK && !sequence.children.empty?
+          first = sequence.children.first
+          indentation = content.lines.fetch(first.start_line)[/\A */]
+          addition = missing.to_yaml.sub(/\A---\s*\n/, "").lines.map { |line| indentation + line }.join
+          lines = content.lines
+          lines.insert(first.start_line, addition)
+          updated = lines.join
+        elsif sequence.is_a?(Psych::Nodes::Sequence)
+          lines = content.lines
+          start_offset = lines.take(sequence.start_line).sum(&:length) + sequence.start_column
+          end_offset = lines.take(sequence.end_line).sum(&:length) + sequence.end_column
+          updated = content[0...start_offset] + JSON.generate(existing + missing) + content[end_offset..]
+        else
+          fragment = {"readme" => {"corporate_sponsors" => missing}}.to_yaml
+          result = Psych::Merge.merge_yaml(fragment, content, "yaml", add_template_only_nodes: true, add_template_only_sequence_items: true, preference: :destination)
+          raise ArgumentError, Array(result[:diagnostics]).map { |diagnostic| diagnostic[:message] || diagnostic["message"] }.join("; ") unless result[:ok]
+          updated = result[:output]
+        end
+        YAML.safe_load(updated, permitted_classes: [Date], aliases: true)
+
+        FileUtils.mkdir_p(File.dirname(path))
+        File.write(path, updated)
+      end
+
+      def yaml_mapping_value(node, key)
+        return unless node.is_a?(Psych::Nodes::Mapping)
+
+        node.children.each_slice(2) { |name, value| return value if name.value == key }
+        nil
+      end
+
       def workflow_env
         {}.tap do |env|
           env.merge!(workflow_family_local_path_env)
@@ -5231,10 +5285,6 @@ module Kettle
               template_git_lock_path = template_git_commit_lock_path
               env["KETTLE_JEM_GIT_LOCK"] = template_git_lock_path
               env["KETTLE_JEM_GIT_COMMIT_LOCK"] = template_git_lock_path
-            end
-            corporate_sponsors = config.readme_corporate_sponsors
-            unless corporate_sponsors.empty?
-              env["KETTLE_JEM_CORPORATE_SPONSORS_JSON"] = JSON.generate(corporate_sponsors)
             end
           end
           env.merge!(env_overrides)
