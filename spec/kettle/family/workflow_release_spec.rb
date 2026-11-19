@@ -3420,7 +3420,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(progress.string).to include("reconciling dependency floors for 1 member with 1 job:")
     expect(progress.string).to include("dependency floors")
-    expect(progress.string).to include("lockfiles 1/15")
+    expect(progress.string).to include("lockfiles").and include("(1/15)")
   end
 
   it "validates direct CI appraisal gemfiles after just-published dependency floors" do
