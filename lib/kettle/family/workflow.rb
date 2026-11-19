@@ -17,6 +17,7 @@ require "kettle/dev"
 require_relative "concurrency"
 require_relative "paths"
 require_relative "workflow_progress"
+require_relative "rebase_check"
 
 module Kettle
   module Family
@@ -199,6 +200,19 @@ module Kettle
         branch_preflight = branch_checkout_preflight_results
         return branch_preflight unless branch_preflight.empty?
 
+        # Per-member rebase preflight: members whose checkout could not be
+        # synced are excluded from the command; the rest continue. All
+        # failed → stop with just the rebase results.
+        rebase_preflight = rebase_preflight_results
+        return rebase_preflight if rebase_preflight.any? && members.empty?
+
+        rebase_preflight + gated_command_results
+      end
+
+      # The command body after the family-level preflights: template's
+      # worktree sync flow, the dirty-worktree gate, then the branch-target
+      # or current-branch dispatch.
+      def gated_command_results
         return template_with_worktree_sync_results if command == "template" && execute
 
         preflight = branch_checkout_dirty_preflight_results
@@ -1771,6 +1785,24 @@ module Kettle
 
         result = BranchCheckoutCheck.call(config: config, members: members, overrides: branch_overrides)
         result.ok? ? [] : [result]
+      end
+
+      # Family-level rebase gate for commands that rewrite member bundles,
+      # lockfiles, or history (see RebaseCheck::GATED_COMMANDS): every member
+      # checkout is synced to its upstream with git pull --rebase --autostash
+      # before the command touches it. Per-member results: members whose
+      # checkout could not be synced are excluded from the command here (the
+      # rest continue), so one member's rebase conflict never blocks the
+      # fleet. Plan (non-execute) runs are exempt. Skipped when nested inside
+      # an outer kettle command that already synced (KETTLE_REBASE_NESTED).
+      # Fails open for unreachable upstreams.
+      def rebase_preflight_results
+        return [] unless execute && RebaseCheck.gated?(command)
+
+        results = RebaseCheck.call(config: config, members: members, event_tape: @event_tape)
+        failed = results.reject(&:ok?).map(&:member_name)
+        @members = members.reject { |member| failed.include?(member.name) } if failed.any?
+        results
       end
 
       def check_results(workflow_members)
@@ -5332,6 +5364,12 @@ module Kettle
       def workflow_env
         {}.tap do |env|
           env.merge!(workflow_family_local_path_env)
+          # Member commands are spawned after this workflow's own rebase
+          # preflight (or an outer kettle command's): nested kettle tools
+          # must not re-sync checkouts mid-run.
+          if (execute && RebaseCheck.gated?(command)) || RebaseCheck.nested?
+            env[RebaseCheck::NESTED_ENV] = "true"
+          end
           if command == "template"
             env["BUNDLE_DISABLE_CHECKSUM_VALIDATION"] = "true"
             env["KETTLE_JEM_TEMPLATE_PROFILE"] = config.template_profile if config.template_profile
