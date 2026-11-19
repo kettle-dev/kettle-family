@@ -142,7 +142,7 @@ RSpec.describe Kettle::Family::BranchCheckoutCheck do
     it "falls back to `git remote show origin` when the origin/HEAD symref is unset" do
       root = make_repo("alpha")
       origin = File.join(@tmpdir, "origin.git")
-      system("git", "init", "--bare", origin, out: File::NULL, err: File::NULL) || raise("git init --bare failed")
+      system("git", "init", "--bare", "--initial-branch=main", origin, out: File::NULL, err: File::NULL) || raise("git init --bare failed")
       git(root, "remote", "add", "origin", origin)
       git(root, "push", "-u", "origin", "main")
       git(root, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD")
@@ -329,6 +329,19 @@ RSpec.describe Kettle::Family::BranchCheckoutCheck do
     it "is nil when git itself is unavailable" do
       check_instance = described_class.new(config: config, members: [])
       allow(Open3).to receive(:capture3).and_raise(Errno::ENOENT)
+
+      expect(check_instance.send(:default_branch, @tmpdir)).to be_nil
+    end
+
+    it "treats an ambiguous remote HEAD placeholder as undeterminable" do
+      check_instance = described_class.new(config: config, members: [])
+      allow(Open3).to receive(:capture3) do |*args|
+        if args.include?("symbolic-ref")
+          ["", "", instance_double(Process::Status, success?: false)]
+        else
+          ["  HEAD branch: (unknown)\n", "", instance_double(Process::Status, success?: true)]
+        end
+      end
 
       expect(check_instance.send(:default_branch, @tmpdir)).to be_nil
     end

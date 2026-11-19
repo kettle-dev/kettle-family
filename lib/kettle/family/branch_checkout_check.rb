@@ -71,7 +71,7 @@ module Kettle
       attr_reader :config, :members, :overrides
 
       def diagnostics
-        members.map { |member| member_diagnostics(member) }.flatten(1).compact
+        members.flat_map { |member| member_diagnostics(member) }.compact
       end
 
       def member_diagnostics(member)
@@ -123,7 +123,7 @@ module Kettle
           "root" => member.root,
           "current" => current,
           "expected" => expected,
-          "message" => "#{member.name} is on branch #{current.inspect}, expected #{expected.join(' or ')}; " \
+          "message" => "#{member.name} is on branch #{current.inspect}, expected #{expected.join(" or ")}; " \
             "switch with `git -C #{member.root} switch #{expected.first}` " \
             "or allow the current branch with --branch #{member.name}:#{current}"
         }
@@ -175,10 +175,13 @@ module Kettle
           "requirement" => dependency.requirement.to_s,
           "actual" => version.to_s,
           "message" => "#{member.name} requires #{dependency.name} #{dependency.requirement}, " \
-            "but the #{sibling.name} checkout provides #{version}" \
-            "#{sibling_branch ? " (branch #{sibling_branch.inspect})" : ''}; " \
+            "but the #{sibling.name} checkout provides #{version}#{branch_note(sibling_branch)}; " \
             "switch #{sibling.name} to a branch carrying a matching version, or run with released gems"
         }
+      end
+
+      def branch_note(sibling_branch)
+        " (branch #{sibling_branch.inspect})" if sibling_branch
       end
 
       def local_wiring_active?
@@ -236,7 +239,9 @@ module Kettle
         stdout, _stderr, status = Open3.capture3("git", "remote", "show", "origin", chdir: root)
         return nil unless status.success?
 
-        stdout[/HEAD branch:\s*(\S+)/, 1]
+        branch = stdout[/HEAD branch:\s*(\S+)/, 1]
+        # "(unknown)" / ambiguity notices are placeholders, not branch names.
+        branch&.start_with?("(") ? nil : branch
       rescue SystemCallError
         nil
       end
