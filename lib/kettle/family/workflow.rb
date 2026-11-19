@@ -125,7 +125,7 @@ module Kettle
       RESUME_COMMAND_SECRET_ENV_KEY_RE = /PASSPHRASE|PASSWORD|SECRET|TOKEN|OTP|CREDENTIAL/i
       RESUME_COMMAND_SECRET_ENV_KEY_EXCLUDE_RE = /(?:_SOURCE|_PROVIDER|_BROKER|_FIELD)\z/i
 
-      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, **options)
+      def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, branch_overrides: {}, **options)
         @command = command
         @config = config
         @members = members
@@ -181,6 +181,7 @@ module Kettle
         @start_member = start_member
         @start_branch = start_branch
         @template_branch_selection = template_branch_selection
+        @branch_overrides = branch_overrides || {}
         @release_state_results = Array(release_state_results)
         @event_tape = event_tape
         @template_commit_mutex = Mutex.new
@@ -194,6 +195,9 @@ module Kettle
 
         bundler_preflight = bundler_version_preflight_results
         return bundler_preflight unless bundler_preflight.empty?
+
+        branch_preflight = branch_checkout_preflight_results
+        return branch_preflight unless branch_preflight.empty?
 
         return template_with_worktree_sync_results if command == "template" && execute
 
@@ -233,7 +237,7 @@ module Kettle
         execute && release_command_delegates_secrets_to_kettle_release?
       end
 
-      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :skip_appraisals, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :validate_ci_bundles, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch, :release_state_results
+      attr_reader :command, :config, :members, :family_members, :execute, :accept, :commit, :allow_dirty, :autostash, :template_cleanup, :publish, :push, :tag, :start_step, :skip_steps, :fast_recovery, :fast_recovery_members, :skip_ci, :skip_changelog, :skip_appraisals, :local_ci, :continue_ci_failures, :ci_workflows, :skip_bundle_audit, :skip_remotes, :required_remotes, :auto_dependency_floors, :validate_ci_bundles, :gha_sha_pins_upgrade, :gha_sha_pins_check, :gha_sha_pins_ttl_days, :env_overrides, :debug, :verbose, :jobs, :progress_io, :reset_target, :bup_args, :bex_args, :start_member, :start_branch, :release_state_results, :branch_overrides
 
       def template_with_worktree_sync_results
         runner = command_runner
@@ -1757,9 +1761,23 @@ module Kettle
         result.ok? ? [] : [result]
       end
 
+      # Family-level branch gate for commands that mutate member bundles or
+      # history (see BranchCheckoutCheck::GATED_COMMANDS): every member runs
+      # from a branch the family expects — its default branch, a configured
+      # release/stack lane, or a --branch override — or the run stops before
+      # any member is touched. Plan (non-execute) runs are exempt.
+      def branch_checkout_preflight_results
+        return [] unless execute && BranchCheckoutCheck.gated?(command)
+
+        result = BranchCheckoutCheck.call(config: config, members: members, overrides: branch_overrides)
+        result.ok? ? [] : [result]
+      end
+
       def check_results(workflow_members)
         results = []
         results.concat(BranchLaneAudit.new(config: config, members: workflow_members).results) unless config.branch_lanes.empty?
+        branch_result = BranchCheckoutCheck.call(config: config, members: workflow_members, overrides: branch_overrides)
+        results << branch_result unless branch_result.ok?
         bundler_result = BundlerVersionCheck.call(config: config, members: workflow_members)
         results << bundler_result unless bundler_result.ok?
         reporter = member_reporter(workflow_members)

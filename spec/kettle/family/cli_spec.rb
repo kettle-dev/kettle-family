@@ -802,6 +802,28 @@ RSpec.describe Kettle::Family::CLI do
     expect(err.string).to include("--env requires KEY=VALUE")
   end
 
+  it "rejects invalid --branch overrides" do
+    write_gem("alpha")
+    err = StringIO.new
+
+    status = described_class.call(["template", "--root", @tmpdir, "--branch", "no-colon"], out: StringIO.new, err: err)
+
+    expect(status).to eq(1)
+    expect(err.string).to include("--branch requires MEMBER:BRANCH")
+  end
+
+  it "accepts --branch MEMBER:BRANCH overrides" do
+    write_gem("alpha")
+
+    status = described_class.call(
+      ["template", "--root", @tmpdir, "--branch", "alpha:feat/wip", "--branch", "beta:1-4-stable"],
+      out: StringIO.new,
+      err: StringIO.new
+    )
+
+    expect(status).to eq(0)
+  end
+
   it "rejects stray positional arguments after options" do
     write_gem("alpha")
     err = StringIO.new

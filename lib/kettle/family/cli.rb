@@ -55,6 +55,9 @@ module Kettle
           base.option :only, value: {type: String, usage: "MEMBERS"}, desc: "Select comma-separated members or branch targets (MEMBER@BRANCH), or release-state tokens: unreleased/unrel, prepared/prep, pending/pend, bump"
           base.option :exclude, value: {type: String, usage: "MEMBERS"}, desc: "Exclude comma-separated members"
           base.option :start_at, long: "--start-at", value: {type: String, usage: "MEMBER[@BRANCH]"}, desc: "Select from member through the end of order"
+          base.option :branch, value: {type: String, usage: "MEMBER:BRANCH"}, desc: "Allow MEMBER to run from BRANCH instead of an expected branch (repeatable)" do |value|
+            parse_branch_override(value)
+          end
         end
       end
 
@@ -143,11 +146,12 @@ module Kettle
         def initialize(**kwargs)
           super
           @workflow_env = {}
+          @branch_overrides = {}
         end
 
         private
 
-        attr_reader :workflow_env
+        attr_reader :workflow_env, :branch_overrides
 
         def family_options(overrides = {})
           {
@@ -195,7 +199,8 @@ module Kettle
             target_version: nil,
             reset_target: nil,
             bup_args: [],
-            bex_args: []
+            bex_args: [],
+            branch_overrides: branch_overrides
           }.merge(overrides)
         end
 
@@ -210,6 +215,13 @@ module Kettle
 
         def truthy_option?(name)
           options.key?(name) && !!options[name]
+        end
+
+        def parse_branch_override(value)
+          member, branch = value.split(":", 2)
+          raise OptionParser::InvalidArgument, "--branch requires MEMBER:BRANCH" if member.to_s.empty? || branch.to_s.empty?
+
+          branch_overrides[member] = branch
         end
 
         def parse_env_override(value, env)
