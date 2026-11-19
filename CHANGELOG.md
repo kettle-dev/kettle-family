@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- BundlerVersionCheck preflight: executing template and bup runs now stop before touching any member unless the family runs the latest stable Bundler — the installed stable and every member lockfile BUNDLED WITH must match the registrys newest non-held stable — and the failure names kettle-family update-bundler --execute as the remedy. The read-only check command reports the same drift. Plan (non-execute) runs and the remedy commands (bupb, update-bundler) are exempt, and the check fails open when the registry cannot be consulted
+
 ### Changed
 
 ### Deprecated

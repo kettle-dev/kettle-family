@@ -622,6 +622,103 @@ RSpec.describe Kettle::Family::Workflow do
     ])
   end
 
+  describe "bundler version preflight", :real_bundler_version_check do
+    def bundler_check_result(ok:)
+      Kettle::Family::CommandResult.new(
+        member_name: "spec",
+        phase: Kettle::Family::BundlerVersionCheck::PHASE,
+        command: ["internal", Kettle::Family::BundlerVersionCheck::PHASE],
+        workdir: @tmpdir,
+        status: ok ? 0 : 1,
+        success: ok,
+        stdout: "",
+        stderr: "",
+        elapsed_seconds: 0.0,
+        skipped: false,
+        reason: ok ? nil : "Bundler drifted from the latest stable"
+      )
+    end
+
+    it "stops an executing bup run at the preflight when Bundler drifted" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      failing = bundler_check_result(ok: false)
+      allow(Kettle::Family::BundlerVersionCheck).to receive(:call).and_return(failing)
+      workflow = described_class.new(command: "bup", config: config, members: [member], execute: true)
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      results = workflow.results
+
+      expect(results).to eq([failing])
+      expect(workflow).not_to have_received(:current_branch_results)
+    end
+
+    it "stops an executing template run at the preflight when Bundler drifted" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      failing = bundler_check_result(ok: false)
+      allow(Kettle::Family::BundlerVersionCheck).to receive(:call).and_return(failing)
+      workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+      allow(workflow).to receive(:template_with_worktree_sync_results).and_return([])
+
+      results = workflow.results
+
+      expect(results).to eq([failing])
+      expect(workflow).not_to have_received(:template_with_worktree_sync_results)
+    end
+
+    it "runs the gated command when the preflight passes" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      allow(Kettle::Family::BundlerVersionCheck).to receive(:call).and_return(bundler_check_result(ok: true))
+      workflow = described_class.new(command: "bup", config: config, members: [member], execute: true)
+      downstream = bundler_check_result(ok: true)
+      allow(workflow).to receive(:current_branch_results).and_return([downstream])
+
+      results = workflow.results
+
+      expect(results).to eq([downstream])
+      expect(Kettle::Family::BundlerVersionCheck).to have_received(:call)
+    end
+
+    it "does not run the check for plan (non-execute) runs of gated commands" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      allow(Kettle::Family::BundlerVersionCheck).to receive(:call).and_return(bundler_check_result(ok: false))
+      workflow = described_class.new(command: "bup", config: config, members: [member])
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      workflow.results
+
+      expect(Kettle::Family::BundlerVersionCheck).not_to have_received(:call)
+    end
+
+    it "never gates the remedy command" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      allow(Kettle::Family::BundlerVersionCheck).to receive(:call).and_return(bundler_check_result(ok: false))
+      workflow = described_class.new(command: "update-bundler", config: config, members: [member], execute: true)
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      workflow.results
+
+      expect(Kettle::Family::BundlerVersionCheck).not_to have_received(:call)
+    end
+
+    it "surfaces Bundler drift in the read-only check command without gating it" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      failing = bundler_check_result(ok: false)
+      allow(Kettle::Family::BundlerVersionCheck).to receive(:call).and_return(failing)
+      allow(Kettle::Family::ReadinessCheck).to receive(:call).and_return(bundler_check_result(ok: true))
+      workflow = described_class.new(command: "check", config: config, members: [member])
+
+      results = workflow.send(:check_results, [member])
+
+      expect(results).to include(failing)
+    end
+  end
+
   it "updates and commits a monorepo root before member bundle updates" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "monorepo", "members_root" => "gems"}}))
     write_gemfile(@tmpdir)

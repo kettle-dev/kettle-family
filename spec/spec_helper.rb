@@ -44,6 +44,7 @@ require_relative "support/no_real_gem_installs"
 require "kettle/family"
 
 require_relative "support/shared_contexts/with_mocked_release_secrets"
+require_relative "support/shared_contexts/with_stubbed_bundler_version_check"
 
 module KettleFamilySpecSupport
   # A real MiseAdapter with executable resolution pinned, so command argv
@@ -148,6 +149,7 @@ SENSITIVE_ENV_KEYS = %w[
 RSpec.configure do |config|
   config.include KettleFamilySpecSupport
   config.include_context "with mocked release secrets"
+  config.include_context "with stubbed bundler version check"
   config.before do
     hide_env(*SENSITIVE_ENV_KEYS)
     stub_env_hash_accessors

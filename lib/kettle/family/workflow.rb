@@ -192,6 +192,9 @@ module Kettle
           return with_release_secrets_broker { release_results }
         end
 
+        bundler_preflight = bundler_version_preflight_results
+        return bundler_preflight unless bundler_preflight.empty?
+
         return template_with_worktree_sync_results if command == "template" && execute
 
         preflight = branch_checkout_dirty_preflight_results
@@ -1740,9 +1743,25 @@ module Kettle
         Concurrency.wave_jobs(requested: requested, item_count: workflow_members.length)
       end
 
+      # Family-level Bundler gate for commands that rewrite bundles and
+      # lockfiles (see BundlerVersionCheck::GATED_COMMANDS): the family runs
+      # on the latest stable Bundler, or the run stops before any member is
+      # touched. Plan (non-execute) runs are exempt — they mutate nothing —
+      # and so are bupb / update-bundler, which are the remedy the failure
+      # points at. Empty when current, and fail-open when the registry
+      # cannot be consulted.
+      def bundler_version_preflight_results
+        return [] unless execute && BundlerVersionCheck.gated?(command)
+
+        result = BundlerVersionCheck.call(config: config, members: members)
+        result.ok? ? [] : [result]
+      end
+
       def check_results(workflow_members)
         results = []
         results.concat(BranchLaneAudit.new(config: config, members: workflow_members).results) unless config.branch_lanes.empty?
+        bundler_result = BundlerVersionCheck.call(config: config, members: workflow_members)
+        results << bundler_result unless bundler_result.ok?
         reporter = member_reporter(workflow_members)
         results.concat(workflow_members.map do |member|
           reporter&.start_member(member, steps: 1)
