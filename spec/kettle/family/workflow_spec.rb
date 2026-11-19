@@ -814,6 +814,111 @@ RSpec.describe Kettle::Family::Workflow do
     end
   end
 
+  describe "rebase preflight", :real_rebase_check do
+    def rebase_result(member_name, ok:)
+      Kettle::Family::CommandResult.new(
+        member_name: member_name,
+        phase: Kettle::Family::RebaseCheck::PHASE,
+        command: ["internal", Kettle::Family::RebaseCheck::PHASE],
+        workdir: @tmpdir,
+        status: ok ? 0 : 1,
+        success: ok,
+        stdout: "",
+        stderr: "",
+        elapsed_seconds: 0.0,
+        skipped: false,
+        reason: ok ? nil : "checkout not synced to upstream"
+      )
+    end
+
+    it "excludes only the member whose rebase failed and continues with the rest" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      alpha = member_at("alpha")
+      beta = member_at("beta")
+      failing = rebase_result("alpha", ok: false)
+      synced = rebase_result("beta", ok: true)
+      allow(Kettle::Family::RebaseCheck).to receive(:call).and_return([failing, synced])
+      downstream = rebase_result("beta", ok: true)
+      workflow = described_class.new(command: "bup", config: config, members: [alpha, beta], execute: true)
+      allow(workflow).to receive(:current_branch_results) do |members|
+        expect(members).to eq([beta])
+        [downstream]
+      end
+
+      results = workflow.results
+
+      expect(results).to eq([failing, synced, downstream])
+    end
+
+    it "stops before the command body when every member failed to sync" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      alpha = member_at("alpha")
+      failing = rebase_result("alpha", ok: false)
+      allow(Kettle::Family::RebaseCheck).to receive(:call).and_return([failing])
+      workflow = described_class.new(command: "template", config: config, members: [alpha], execute: true)
+      allow(workflow).to receive(:template_with_worktree_sync_results).and_return([])
+
+      results = workflow.results
+
+      expect(results).to eq([failing])
+      expect(workflow).not_to have_received(:template_with_worktree_sync_results)
+    end
+
+    it "passes the event tape through to the check" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      alpha = member_at("alpha")
+      tape = ->(event) {}
+      allow(Kettle::Family::RebaseCheck).to receive(:call).and_return([rebase_result("alpha", ok: true)])
+      workflow = described_class.new(command: "bup", config: config, members: [alpha], execute: true, event_tape: tape)
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      workflow.results
+
+      expect(Kettle::Family::RebaseCheck).to have_received(:call).with(hash_including(event_tape: tape))
+    end
+
+    it "does not run the check for plan (non-execute) runs of gated commands" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      allow(Kettle::Family::RebaseCheck).to receive(:call).and_return([rebase_result("alpha", ok: false)])
+      workflow = described_class.new(command: "bup", config: config, members: [member])
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      workflow.results
+
+      expect(Kettle::Family::RebaseCheck).not_to have_received(:call)
+    end
+
+    it "never gates release or the bundler remedy" do
+      %w[release update-bundler].each do |cmd|
+        config = Kettle::Family::Config.load(root: @tmpdir)
+        member = member_at("alpha")
+        allow(Kettle::Family::RebaseCheck).to receive(:call).and_return([rebase_result("alpha", ok: false)])
+        workflow = described_class.new(command: cmd, config: config, members: [member], execute: true)
+        allow(workflow).to receive(:current_branch_results).and_return([])
+
+        workflow.results
+
+        expect(Kettle::Family::RebaseCheck).not_to have_received(:call)
+      end
+    end
+
+    it "marks member-command env as nested after its own preflight" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      workflow = described_class.new(command: "template", config: config, members: [member_at("alpha")], execute: true)
+
+      expect(workflow.send(:workflow_env)).to include("KETTLE_REBASE_NESTED" => "true")
+    end
+
+    it "does not mark member-command env when the command is ungated and nothing outer nested" do
+      hide_env("KETTLE_REBASE_NESTED")
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      workflow = described_class.new(command: "test", config: config, members: [member_at("alpha")], execute: true)
+
+      expect(workflow.send(:workflow_env)).not_to have_key("KETTLE_REBASE_NESTED")
+    end
+  end
+
   it "updates and commits a monorepo root before member bundle updates" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "monorepo", "members_root" => "gems"}}))
     write_gemfile(@tmpdir)
