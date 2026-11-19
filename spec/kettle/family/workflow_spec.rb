@@ -719,6 +719,101 @@ RSpec.describe Kettle::Family::Workflow do
     end
   end
 
+  describe "branch checkout preflight" do
+    def branch_check_result(ok:)
+      Kettle::Family::CommandResult.new(
+        member_name: "spec",
+        phase: Kettle::Family::BranchCheckoutCheck::PHASE,
+        command: ["internal", Kettle::Family::BranchCheckoutCheck::PHASE],
+        workdir: @tmpdir,
+        status: ok ? 0 : 1,
+        success: ok,
+        stdout: "",
+        stderr: "",
+        elapsed_seconds: 0.0,
+        skipped: false,
+        reason: ok ? nil : "members checked out on unexpected branches"
+      )
+    end
+
+    it "stops an executing template run at the preflight on an unexpected branch" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      failing = branch_check_result(ok: false)
+      allow(Kettle::Family::BranchCheckoutCheck).to receive(:call).and_return(failing)
+      workflow = described_class.new(command: "template", config: config, members: [member], execute: true)
+      allow(workflow).to receive(:template_with_worktree_sync_results).and_return([])
+
+      results = workflow.results
+
+      expect(results).to eq([failing])
+      expect(workflow).not_to have_received(:template_with_worktree_sync_results)
+    end
+
+    it "stops an executing bup run at the preflight on an unexpected branch" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      failing = branch_check_result(ok: false)
+      allow(Kettle::Family::BranchCheckoutCheck).to receive(:call).and_return(failing)
+      workflow = described_class.new(command: "bup", config: config, members: [member], execute: true)
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      results = workflow.results
+
+      expect(results).to eq([failing])
+      expect(workflow).not_to have_received(:current_branch_results)
+    end
+
+    it "forwards branch overrides to the check" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      allow(Kettle::Family::BranchCheckoutCheck).to receive(:call).and_return(branch_check_result(ok: true))
+      workflow = described_class.new(command: "bup", config: config, members: [member], execute: true, branch_overrides: {"alpha" => "feat/wip"})
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      workflow.results
+
+      expect(Kettle::Family::BranchCheckoutCheck).to have_received(:call).with(hash_including(overrides: {"alpha" => "feat/wip"}))
+    end
+
+    it "does not run the check for plan (non-execute) runs of gated commands" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      allow(Kettle::Family::BranchCheckoutCheck).to receive(:call).and_return(branch_check_result(ok: false))
+      workflow = described_class.new(command: "bup", config: config, members: [member])
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      workflow.results
+
+      expect(Kettle::Family::BranchCheckoutCheck).not_to have_received(:call)
+    end
+
+    it "never gates commands that do not mutate member bundles or history" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      allow(Kettle::Family::BranchCheckoutCheck).to receive(:call).and_return(branch_check_result(ok: false))
+      workflow = described_class.new(command: "test", config: config, members: [member], execute: true)
+      allow(workflow).to receive(:current_branch_results).and_return([])
+
+      workflow.results
+
+      expect(Kettle::Family::BranchCheckoutCheck).not_to have_received(:call)
+    end
+
+    it "surfaces unexpected branches in the read-only check command without gating it" do
+      config = Kettle::Family::Config.load(root: @tmpdir)
+      member = member_at("alpha")
+      failing = branch_check_result(ok: false)
+      allow(Kettle::Family::BranchCheckoutCheck).to receive(:call).and_return(failing)
+      allow(Kettle::Family::ReadinessCheck).to receive(:call).and_return(branch_check_result(ok: true))
+      workflow = described_class.new(command: "check", config: config, members: [member])
+
+      results = workflow.send(:check_results, [member])
+
+      expect(results).to include(failing)
+    end
+  end
+
   it "updates and commits a monorepo root before member bundle updates" do
     File.write(File.join(@tmpdir, ".kettle-family.yml"), YAML.dump({"family" => {"mode" => "monorepo", "members_root" => "gems"}}))
     write_gemfile(@tmpdir)

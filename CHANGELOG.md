@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - BundlerVersionCheck preflight: executing template and bup runs now stop before touching any member unless the family runs the latest stable Bundler — the installed stable and every member lockfile BUNDLED WITH must match the registrys newest non-held stable — and the failure names kettle-family update-bundler --execute as the remedy. The read-only check command reports the same drift. Plan (non-execute) runs and the remedy commands (bupb, update-bundler) are exempt, and the check fails open when the registry cannot be consulted
 
+- BranchCheckoutCheck preflight: executing template, bup, and bump runs now stop before touching any member whose checkout is on an unexpected branch — expected means the default branch, a configured release/stack lane (member_target_branches, member-local release.target_branches, branch_lanes), or a new repeatable --branch MEMBER:BRANCH override. Under local sibling wiring (family *_DEV toggle or K_JEM_TEMPLATING) the check also fails when a member gemspec requirement cannot be satisfied by the sibling checkout version on its current branch (e.g. a member requiring oauth2 ~> 2.0 while oauth2 sits on 1-4-stable at 1.4.12). The read-only check command reports the same drift. Plan (non-execute) runs and release (which checks out its own lanes) are exempt
+
 ### Changed
 
 ### Deprecated
