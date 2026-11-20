@@ -328,7 +328,30 @@ re-authorize (source/provider/broker/field NAME), never a secret.</p>
         <li class="public ">
   <span class="summary_signature">
     
-      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: &quot;patch&quot;, gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, **options)  &#x21d2; Workflow </a>
+      <a href="#gated_command_results-instance_method" title="#gated_command_results (instance method)">#<strong>gated_command_results</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>The command body after the family-level preflights: template’s worktree sync flow, the dirty-worktree gate, then the branch-target or current-branch dispatch.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: &quot;patch&quot;, gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, branch_overrides: {}, **options)  &#x21d2; Workflow </a>
     
 
     
@@ -383,7 +406,7 @@ re-authorize (source/provider/broker/field NAME), never a secret.</p>
     <div class="method_details first">
   <h3 class="signature first" id="initialize-instance_method">
   
-    #<strong>initialize</strong>(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: &quot;patch&quot;, gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, **options)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::Workflow (class)">Workflow</a></span></tt> 
+    #<strong>initialize</strong>(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: &quot;patch&quot;, gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, branch_overrides: {}, **options)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::Workflow (class)">Workflow</a></span></tt> 
   
 
   
@@ -418,9 +441,6 @@ re-authorize (source/provider/broker/field NAME), never a secret.</p>
       <pre class="lines">
 
 
-126
-127
-128
 129
 130
 131
@@ -477,12 +497,17 @@ re-authorize (source/provider/broker/field NAME), never a secret.</p>
 182
 183
 184
-185</pre>
+185
+186
+187
+188
+189
+190</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 126</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 129</span>
 
-<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>command:</span><span class='comma'>,</span> <span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>family_members:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>accept:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>commit:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>allow_dirty:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>autostash:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>template_cleanup:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>publish:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>push:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>tag:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>start_step:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>skip_steps:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>fast_recovery:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>fast_recovery_members:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>skip_ci:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>skip_changelog:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>skip_appraisals:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>local_ci:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>continue_ci_failures:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>ci_workflows:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>skip_bundle_audit:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>skip_remotes:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>required_remotes:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>auto_dependency_floors:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>validate_ci_bundles:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>gha_sha_pins_upgrade:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>patch</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>gha_sha_pins_check:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>gha_sha_pins_ttl_days:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>env_overrides:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>debug:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>verbose:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>gem_signing_password:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>secrets_provider:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>jobs:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>progress_io:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>reset_target:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>bup_args:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>bex_args:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>start_member:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>start_branch:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>template_branch_selection:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>release_state_results:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>event_tape:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>mise_adapter:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>command:</span><span class='comma'>,</span> <span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>family_members:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>accept:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>commit:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>allow_dirty:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>autostash:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>template_cleanup:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>publish:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>push:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>tag:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>start_step:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>skip_steps:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>fast_recovery:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>fast_recovery_members:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>skip_ci:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>skip_changelog:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>skip_appraisals:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>local_ci:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>continue_ci_failures:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>ci_workflows:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>skip_bundle_audit:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>skip_remotes:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>required_remotes:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>auto_dependency_floors:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>validate_ci_bundles:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>gha_sha_pins_upgrade:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>patch</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>gha_sha_pins_check:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>gha_sha_pins_ttl_days:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>env_overrides:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>debug:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>verbose:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>gem_signing_password:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>secrets_provider:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>jobs:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>progress_io:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>reset_target:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>bup_args:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>bex_args:</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>start_member:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>start_branch:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>template_branch_selection:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='label'>release_state_results:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>event_tape:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>mise_adapter:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>branch_overrides:</span> <span class='lbrace'>{</span><span class='rbrace'>}</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
   <span class='ivar'>@command</span> <span class='op'>=</span> <span class='id identifier rubyid_command'>command</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
@@ -538,9 +563,11 @@ re-authorize (source/provider/broker/field NAME), never a secret.</p>
   <span class='ivar'>@start_member</span> <span class='op'>=</span> <span class='id identifier rubyid_start_member'>start_member</span>
   <span class='ivar'>@start_branch</span> <span class='op'>=</span> <span class='id identifier rubyid_start_branch'>start_branch</span>
   <span class='ivar'>@template_branch_selection</span> <span class='op'>=</span> <span class='id identifier rubyid_template_branch_selection'>template_branch_selection</span>
+  <span class='ivar'>@branch_overrides</span> <span class='op'>=</span> <span class='id identifier rubyid_branch_overrides'>branch_overrides</span> <span class='op'>||</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@release_state_results</span> <span class='op'>=</span> <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_release_state_results'>release_state_results</span><span class='rparen'>)</span>
   <span class='ivar'>@event_tape</span> <span class='op'>=</span> <span class='id identifier rubyid_event_tape'>event_tape</span>
   <span class='ivar'>@template_commit_mutex</span> <span class='op'>=</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
+  <span class='ivar'>@template_progress_mutex</span> <span class='op'>=</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>
@@ -555,7 +582,67 @@ re-authorize (source/provider/broker/field NAME), never a secret.</p>
 
     
       <div class="method_details first">
-  <h3 class="signature first" id="results-instance_method">
+  <h3 class="signature first" id="gated_command_results-instance_method">
+  
+    #<strong>gated_command_results</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>The command body after the family-level preflights: template’s<br />
+worktree sync flow, the dirty-worktree gate, then the branch-target<br />
+or current-branch dispatch.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 215</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_gated_command_results'>gated_command_results</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_template_with_worktree_sync_results'>template_with_worktree_sync_results</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>template</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_execute'>execute</span>
+
+  <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>=</span> <span class='id identifier rubyid_branch_checkout_dirty_preflight_results'>branch_checkout_dirty_preflight_results</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_preflight'>preflight</span> <span class='kw'>if</span> <span class='id identifier rubyid_preflight'>preflight</span><span class='period'>.</span><span class='id identifier rubyid_any?'>any?</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_result'>result</span><span class='op'>|</span> <span class='op'>!</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_ok?'>ok?</span> <span class='rbrace'>}</span>
+
+  <span class='id identifier rubyid_prompt_for_gem_signing_password'>prompt_for_gem_signing_password</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_execute'>execute</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_release_signing_prompt_required?'>release_signing_prompt_required?</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>+</span> <span class='id identifier rubyid_branch_target_results'>branch_target_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>+</span> <span class='id identifier rubyid_member_local_branch_target_results'>member_local_branch_target_results</span> <span class='kw'>if</span> <span class='id identifier rubyid_member_local_branch_targets?'>member_local_branch_targets?</span>
+
+  <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>+</span> <span class='id identifier rubyid_current_branch_results'>current_branch_results</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="results-instance_method">
   
     #<strong>results</strong>  &#x21d2; <tt>Object</tt> 
   
@@ -569,11 +656,6 @@ re-authorize (source/provider/broker/field NAME), never a secret.</p>
       <pre class="lines">
 
 
-187
-188
-189
-190
-191
 192
 193
 194
@@ -584,26 +666,37 @@ re-authorize (source/provider/broker/field NAME), never a secret.</p>
 199
 200
 201
-202</pre>
+202
+203
+204
+205
+206
+207
+208
+209
+210</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 187</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/workflow.rb', line 192</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span>
   <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_execute'>execute</span>
     <span class='kw'>return</span> <span class='id identifier rubyid_with_release_secrets_broker'>with_release_secrets_broker</span> <span class='lbrace'>{</span> <span class='id identifier rubyid_release_results'>release_results</span> <span class='rbrace'>}</span>
   <span class='kw'>end</span>
 
-  <span class='kw'>return</span> <span class='id identifier rubyid_template_with_worktree_sync_results'>template_with_worktree_sync_results</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>template</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_execute'>execute</span>
+  <span class='id identifier rubyid_bundler_preflight'>bundler_preflight</span> <span class='op'>=</span> <span class='id identifier rubyid_bundler_version_preflight_results'>bundler_version_preflight_results</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_bundler_preflight'>bundler_preflight</span> <span class='kw'>unless</span> <span class='id identifier rubyid_bundler_preflight'>bundler_preflight</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
 
-  <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>=</span> <span class='id identifier rubyid_branch_checkout_dirty_preflight_results'>branch_checkout_dirty_preflight_results</span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_preflight'>preflight</span> <span class='kw'>if</span> <span class='id identifier rubyid_preflight'>preflight</span><span class='period'>.</span><span class='id identifier rubyid_any?'>any?</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_result'>result</span><span class='op'>|</span> <span class='op'>!</span><span class='id identifier rubyid_result'>result</span><span class='period'>.</span><span class='id identifier rubyid_ok?'>ok?</span> <span class='rbrace'>}</span>
+  <span class='id identifier rubyid_branch_preflight'>branch_preflight</span> <span class='op'>=</span> <span class='id identifier rubyid_branch_checkout_preflight_results'>branch_checkout_preflight_results</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_branch_preflight'>branch_preflight</span> <span class='kw'>unless</span> <span class='id identifier rubyid_branch_preflight'>branch_preflight</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
 
-  <span class='id identifier rubyid_prompt_for_gem_signing_password'>prompt_for_gem_signing_password</span> <span class='kw'>if</span> <span class='id identifier rubyid_command'>command</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>release</span><span class='tstring_end'>&quot;</span></span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_execute'>execute</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_release_signing_prompt_required?'>release_signing_prompt_required?</span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>+</span> <span class='id identifier rubyid_branch_target_results'>branch_target_results</span> <span class='kw'>unless</span> <span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_release_target_branches'>release_target_branches</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
-  <span class='kw'>return</span> <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>+</span> <span class='id identifier rubyid_member_local_branch_target_results'>member_local_branch_target_results</span> <span class='kw'>if</span> <span class='id identifier rubyid_member_local_branch_targets?'>member_local_branch_targets?</span>
+  <span class='comment'># Per-member rebase preflight: members whose checkout could not be
+</span>  <span class='comment'># synced are excluded from the command; the rest continue. All
+</span>  <span class='comment'># failed → stop with just the rebase results.
+</span>  <span class='id identifier rubyid_rebase_preflight'>rebase_preflight</span> <span class='op'>=</span> <span class='id identifier rubyid_rebase_preflight_results'>rebase_preflight_results</span>
+  <span class='kw'>return</span> <span class='id identifier rubyid_rebase_preflight'>rebase_preflight</span> <span class='kw'>if</span> <span class='id identifier rubyid_rebase_preflight'>rebase_preflight</span><span class='period'>.</span><span class='id identifier rubyid_any?'>any?</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_members'>members</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
 
-  <span class='id identifier rubyid_preflight'>preflight</span> <span class='op'>+</span> <span class='id identifier rubyid_current_branch_results'>current_branch_results</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_rebase_preflight'>rebase_preflight</span> <span class='op'>+</span> <span class='id identifier rubyid_gated_command_results'>gated_command_results</span>
 <span class='kw'>end</span></pre>
     </td>
   </tr>

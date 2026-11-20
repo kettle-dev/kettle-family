@@ -21,6 +21,13 @@ module Kettle
     # serves, minus Kettle::Dev::BundlerPinning::HELD_VERSIONS (known-bad
     # stables). Fails open when the registry cannot be consulted: an offline
     # run is never blocked by network conditions.
+    #
+    # The gate also covers the other half of the pair: Bundler and RubyGems
+    # release in lockstep, and a machine that updates Bundler without
+    # updating RubyGems (gem -v) gets the vendored-uri clash — Bundler's
+    # vendored uri vs RubyGems' own — flooding every spawned subprocess's
+    # stderr with Gem::URI double-initialization warnings (a release coverage
+    # run died on exactly that). Remedy: `gem update --system`.
     class BundlerVersionCheck
       PHASE = "bundler_version_check"
 
@@ -65,10 +72,41 @@ module Kettle
       attr_reader :config, :members
 
       def diagnostics
+        bundler_diagnostics + rubygems_diagnostics
+      end
+
+      def bundler_diagnostics
         expected = Kettle::Dev::BundlerPinning.published_stable
         return [] unless expected
 
         installed_diagnostics(expected) + lockfile_diagnostics(expected)
+      end
+
+      # The RubyGems half of the matched pair: `gem -v` against the newest
+      # stable rubygems-update the registry serves. Fails open independently
+      # of the Bundler half — each registry lookup has its own outage story.
+      # Skipped entirely when the bundled kettle-dev predates the pair
+      # lookups (the Bundler half still gates), exactly like the fail-open
+      # registry story.
+      def rubygems_diagnostics
+        return [] unless Kettle::Dev::BundlerPinning.respond_to?(:published_stable_rubygems)
+
+        expected = Kettle::Dev::BundlerPinning.published_stable_rubygems
+        return [] unless expected
+
+        installed = Kettle::Dev::BundlerPinning.installed_rubygems
+        return [] if installed >= expected
+
+        [{
+          "kind" => "rubygems_lags_bundler_pair",
+          "member" => config.family_name,
+          "expected" => expected.to_s,
+          "actual" => installed.to_s,
+          "remedy" => "gem update --system",
+          "message" => "installed RubyGems #{installed} lags the registry's latest stable #{expected}; " \
+            "Bundler and RubyGems release as a matched pair, and a mismatched pair floods subprocess stderr " \
+            "with Gem::URI double-initialization warnings (vendored uri clash) — run `gem update --system`"
+        }]
       end
 
       def installed_diagnostics(expected)
