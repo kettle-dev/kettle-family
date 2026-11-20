@@ -3,9 +3,9 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        27,
-        175,
-        219
+        102,
+        244,
+        288
       ]
     }
   ],
@@ -13,8 +13,8 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        203,
-        521
+        272,
+        590
       ]
     }
   ],
@@ -22,8 +22,17 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        30,
-        599
+        105,
+        668
+      ]
+    }
+  ],
+  "- [kc] kettle-jem/template: updated 7 project files:\n- code and tests (1)": [
+    {
+      "file": "CHANGELOG.md",
+      "lines": [
+        34,
+        1310
       ]
     }
   ],
@@ -31,10 +40,10 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        161,
-        204,
-        477,
-        522
+        230,
+        273,
+        546,
+        591
       ]
     }
   ],
@@ -42,8 +51,8 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        179,
-        669
+        248,
+        738
       ]
     }
   ],
@@ -51,12 +60,12 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        33,
-        119,
-        205,
-        225,
-        478,
-        523
+        108,
+        188,
+        274,
+        294,
+        547,
+        592
       ]
     }
   ],
@@ -64,8 +73,8 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        162,
-        602
+        231,
+        671
       ]
     }
   ],
@@ -73,8 +82,17 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        34,
-        180
+        109,
+        249
+      ]
+    }
+  ],
+  "- other (1)\n- workflows (2)": [
+    {
+      "file": "CHANGELOG.md",
+      "lines": [
+        37,
+        295
       ]
     }
   ],
@@ -82,8 +100,8 @@
     {
       "file": "CHANGELOG.md",
       "lines": [
-        163,
-        603
+        232,
+        672
       ]
     }
   ],
@@ -100,8 +118,8 @@
     {
       "file": "spec/spec_helper.rb",
       "lines": [
-        91,
-        109
+        93,
+        111
       ]
     }
   ],
@@ -127,8 +145,8 @@
     {
       "file": "spec/spec_helper.rb",
       "lines": [
-        90,
-        108
+        92,
+        110
       ]
     }
   ]
