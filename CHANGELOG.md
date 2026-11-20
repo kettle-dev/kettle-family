@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- [kc] lazy-bundler-require: Stop requiring Bundler at load time (BundlerVersionCheck, workflow lockfile parsing): loading Bundler activates the machine's default Bundler, whose vendored uri clashes with RubyGems' own vendored copy when the pair is mismatched, flooding stderr with Gem::URI double-initialization warnings on every CLI invocation
+
 ### Security
 
 ## [1.3.46] - 2026-11-20

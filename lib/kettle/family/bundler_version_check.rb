@@ -1,6 +1,12 @@
 # frozen_string_literal: true
 
-require "bundler"
+# NOTE: `bundler` is deliberately NOT required at load time. family.rb
+# requires this file eagerly for every CLI invocation, and loading Bundler
+# activates the DEFAULT Bundler — whose vendored `uri` clashes with
+# RubyGems' own vendored copy (the Gem::URI double-initialization warning
+# wall on stderr) whenever the default Bundler is 4.x. `bundled_with`
+# requires it at the point of use instead, so plain CLI invocations never
+# load Bundler.
 require "kettle/dev/bundler_pinning"
 
 module Kettle
@@ -185,6 +191,7 @@ module Kettle
         lockfile = File.join(member.root, "Gemfile.lock")
         return nil unless File.file?(lockfile)
 
+        require "bundler"
         Bundler::LockfileParser.new(Bundler.read_file(lockfile)).bundler_version
       rescue Bundler::BundlerError, ArgumentError
         nil
