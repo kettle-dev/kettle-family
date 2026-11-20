@@ -26,6 +26,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - Add per-member rebase preflight (Kettle::Family::RebaseCheck) gating bump, bup, template, and gha-sha-pins: each member checkout is synced to its upstream before the command touches it; a member that fails to sync is excluded while the rest continue, and the check emits live member_start/command_step/member_complete events on the family event tape. Member commands are spawned with KETTLE_REBASE_NESTED so nested kettle tools skip re-syncing
 
+- BundlerVersionCheck preflight now also gates on the installed RubyGems version: when gem -v lags the registry's latest stable rubygems-update, gated commands stop with a diagnostic naming the vendored-uri clash (Gem::URI double-initialization warnings from the mismatched Bundler/RubyGems pair) and the gem update --system remedy. Skipped when the bundled kettle-dev predates the pair lookups or the registry is unreachable
+
 ### Changed
 
 - [kc] kettle-jem/prepare: updated 11 project files:

@@ -132,6 +132,53 @@ RSpec.describe Kettle::Family::BundlerVersionCheck, :real_bundler_version_check 
 
       expect(result).to be_ok
     end
+
+    it "fails when the installed RubyGems lags the registry, naming the vendored-uri clash and the remedy" do
+      stub_bundler_pinning(published: Gem::Version.new("4.1.0"), installed: Gem::Version.new("4.1.0"), rubygems_published: Gem::Version.new("4.1.0"), rubygems_installed: Gem::Version.new("4.0.24"))
+
+      result = check(members: [])
+
+      expect(result).not_to be_ok
+      expect(result.stdout).to include("RubyGems 4.0.24", "4.1.0", "gem update --system", "Gem::URI")
+      expect(result.diagnostics).to match([hash_including("kind" => "rubygems_lags_bundler_pair", "expected" => "4.1.0", "actual" => "4.0.24")])
+    end
+
+    it "passes when the installed RubyGems matches the registry latest stable" do
+      stub_bundler_pinning(published: Gem::Version.new("4.1.0"), installed: Gem::Version.new("4.1.0"), rubygems_published: Gem::Version.new("4.1.0"), rubygems_installed: Gem::Version.new("4.1.0"))
+
+      result = check(members: [])
+
+      expect(result).to be_ok
+      expect(result.diagnostics).to be_empty
+    end
+
+    it "fails open on the RubyGems half when its registry lookup fails, even while Bundler drift still gates" do
+      stub_bundler_pinning(published: Gem::Version.new("4.1.0"), installed: Gem::Version.new("4.1.0"), rubygems_published: nil)
+
+      result = check(members: [])
+
+      expect(result).to be_ok
+    end
+
+    it "reports RubyGems drift even when the Bundler registry lookup fails open" do
+      stub_bundler_pinning(published: nil, installed: Gem::Version.new("4.1.0"), rubygems_published: Gem::Version.new("4.1.0"), rubygems_installed: Gem::Version.new("4.0.20"))
+
+      result = check(members: [])
+
+      expect(result).not_to be_ok
+      expect(result.diagnostics).to match([hash_including("kind" => "rubygems_lags_bundler_pair", "actual" => "4.0.20")])
+    end
+
+    it "skips the RubyGems half when the bundled kettle-dev predates the pair lookups" do
+      stub_bundler_pinning(published: Gem::Version.new("4.1.0"), installed: Gem::Version.new("4.1.0"))
+      allow(Kettle::Dev::BundlerPinning).to receive(:respond_to?).and_call_original
+      allow(Kettle::Dev::BundlerPinning).to receive(:respond_to?).with(:published_stable_rubygems).and_return(false)
+
+      result = check(members: [])
+
+      expect(result).to be_ok
+      expect(Kettle::Dev::BundlerPinning).not_to have_received(:published_stable_rubygems)
+    end
   end
 
   def write_config
@@ -146,11 +193,13 @@ RSpec.describe Kettle::Family::BundlerVersionCheck, :real_bundler_version_check 
     described_class.call(config: config, members: members)
   end
 
-  def stub_bundler_pinning(published:, installed:)
+  def stub_bundler_pinning(published:, installed:, rubygems_published: nil, rubygems_installed: Gem::Version.new("4.1.0"))
     allow(Kettle::Dev::BundlerPinning).to receive_messages(
       published_stable: published,
       installed_stable: installed,
-      held_reason: nil
+      held_reason: nil,
+      published_stable_rubygems: rubygems_published,
+      installed_rubygems: rubygems_installed
     )
   end
 
