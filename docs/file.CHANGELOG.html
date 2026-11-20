@@ -90,7 +90,7 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <ul>
   <li>TAG: <a href="https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.46">v1.3.46</a>
 </li>
-  <li>COVERAGE: 94.08% – 8652/9196 lines in 49 files</li>
+  <li>COVERAGE: 94.09% – 8653/9197 lines in 49 files</li>
   <li>BRANCH COVERAGE: 79.20% – 3628/4581 branches in 49 files</li>
   <li>41.57% documented</li>
 </ul>
@@ -115,16 +115,16 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 <h3 id="changed-1">Changed</h3>
 
 <ul>
-  <li>[kc] kettle-jem/prepare: updated 11 project files:
+  <li>[kc] kettle-jem/prepare: updated 17 project files:
     <ul>
-      <li>dependencies (11)</li>
+      <li>dependencies (17)</li>
     </ul>
   </li>
-  <li>[kc] kettle-jem/template: updated 7 project files:
+  <li>[kc] kettle-jem/template: updated 12 project files:
     <ul>
-      <li>code and tests (1)</li>
-      <li>dependencies (3)</li>
-      <li>other (1)</li>
+      <li>code and tests (2)</li>
+      <li>dependencies (6)</li>
+      <li>other (2)</li>
       <li>workflows (2)</li>
     </ul>
   </li>
@@ -134,7 +134,10 @@ Please file a bug if you notice a violation of semantic versioning.</p>
 
 <ul>
   <li>Family templating seeds corporate sponsors into member kettle-jem configuration, so standalone README generation retains them while preserving member-specific sponsors. (#74)</li>
-  <li>Cold-start templating of a freshly scaffolded member no longer fails with <code>cannot load such file -- parslet</code>; standalone <code>kettle-jem prepare</code> now uses the family-root bundle instead of the member’s bare <code>Gemfile</code>.</li>
+  <li>
+    <p>Cold-start templating of a freshly scaffolded member no longer fails with <code>cannot load such file -- parslet</code>; standalone <code>kettle-jem prepare</code> now uses the family-root bundle instead of the member’s bare <code>Gemfile</code>.</p>
+  </li>
+  <li>[kc] lazy-bundler-require: Stop requiring Bundler at load time (BundlerVersionCheck, workflow lockfile parsing): loading Bundler activates the machine’s default Bundler, whose vendored uri clashes with RubyGems’ own vendored copy when the pair is mismatched, flooding stderr with Gem::URI double-initialization warnings on every CLI invocation</li>
 </ul>
 
 <h2 id="1345---2026-11-16">

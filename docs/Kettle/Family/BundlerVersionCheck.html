@@ -318,13 +318,13 @@ and gating them would deadlock the fix.</p>
       <pre class="lines">
 
 
-47
-48
-49
-50</pre>
+53
+54
+55
+56</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/bundler_version_check.rb', line 47</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/bundler_version_check.rb', line 53</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='rparen'>)</span>
   <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
@@ -357,12 +357,12 @@ and gating them would deadlock the fix.</p>
       <pre class="lines">
 
 
-43
-44
-45</pre>
+49
+50
+51</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/bundler_version_check.rb', line 43</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/bundler_version_check.rb', line 49</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='rparen'>)</span>
   <span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='label'>config:</span> <span class='id identifier rubyid_config'>config</span><span class='comma'>,</span> <span class='label'>members:</span> <span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span>
@@ -410,12 +410,12 @@ and gating them would deadlock the fix.</p>
       <pre class="lines">
 
 
-39
-40
-41</pre>
+45
+46
+47</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/bundler_version_check.rb', line 39</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/bundler_version_check.rb', line 45</span>
 
 <span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_gated?'>gated?</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
   <span class='const'><span class='object_link'><a href="#GATED_COMMANDS-constant" title="Kettle::Family::BundlerVersionCheck::GATED_COMMANDS (constant)">GATED_COMMANDS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='rparen'>)</span>
@@ -446,12 +446,6 @@ and gating them would deadlock the fix.</p>
       <pre class="lines">
 
 
-52
-53
-54
-55
-56
-57
 58
 59
 60
@@ -462,10 +456,16 @@ and gating them would deadlock the fix.</p>
 65
 66
 67
-68</pre>
+68
+69
+70
+71
+72
+73
+74</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/bundler_version_check.rb', line 52</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/bundler_version_check.rb', line 58</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
   <span class='id identifier rubyid_found'>found</span> <span class='op'>=</span> <span class='id identifier rubyid_diagnostics'>diagnostics</span>

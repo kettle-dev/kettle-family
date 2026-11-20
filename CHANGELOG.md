@@ -22,28 +22,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- [kc] kettle-jem/prepare: updated 6 project files:
-  - dependencies (6)
-
-- [kc] kettle-jem/template: updated 5 project files:
-  - code and tests (1)
-  - dependencies (3)
-  - other (1)
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
-- [kc] lazy-bundler-require: Stop requiring Bundler at load time (BundlerVersionCheck, workflow lockfile parsing): loading Bundler activates the machine's default Bundler, whose vendored uri clashes with RubyGems' own vendored copy when the pair is mismatched, flooding stderr with Gem::URI double-initialization warnings on every CLI invocation
-
 ### Security
 
 ## [1.3.46] - 2026-11-20
 
 - TAG: [v1.3.46][1.3.46t]
-- COVERAGE: 94.08% -- 8652/9196 lines in 49 files
+- COVERAGE: 94.09% -- 8653/9197 lines in 49 files
 - BRANCH COVERAGE: 79.20% -- 3628/4581 branches in 49 files
 - 41.57% documented
 
@@ -59,19 +49,20 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- [kc] kettle-jem/prepare: updated 11 project files:
-  - dependencies (11)
-
-- [kc] kettle-jem/template: updated 7 project files:
-  - code and tests (1)
-  - dependencies (3)
-  - other (1)
+- [kc] kettle-jem/prepare: updated 17 project files:
+  - dependencies (17)
+- [kc] kettle-jem/template: updated 12 project files:
+  - code and tests (2)
+  - dependencies (6)
+  - other (2)
   - workflows (2)
 
 ### Fixed
 
 - Family templating seeds corporate sponsors into member kettle-jem configuration, so standalone README generation retains them while preserving member-specific sponsors. (#74)
 - Cold-start templating of a freshly scaffolded member no longer fails with `cannot load such file -- parslet`; standalone `kettle-jem prepare` now uses the family-root bundle instead of the member's bare `Gemfile`.
+
+- [kc] lazy-bundler-require: Stop requiring Bundler at load time (BundlerVersionCheck, workflow lockfile parsing): loading Bundler activates the machine's default Bundler, whose vendored uri clashes with RubyGems' own vendored copy when the pair is mismatched, flooding stderr with Gem::URI double-initialization warnings on every CLI invocation
 
 ## [1.3.45] - 2026-11-16
 
