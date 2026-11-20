@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.46] - 2026-11-20
+
+- TAG: [v1.3.46][1.3.46t]
+- COVERAGE: 94.08% -- 8652/9196 lines in 49 files
+- BRANCH COVERAGE: 79.20% -- 3628/4581 branches in 49 files
+- 41.57% documented
+
+### Added
+
 - BundlerVersionCheck preflight: executing template and bup runs now stop before touching any member unless the family runs the latest stable Bundler — the installed stable and every member lockfile BUNDLED WITH must match the registrys newest non-held stable — and the failure names kettle-family update-bundler --execute as the remedy. The read-only check command reports the same drift. Plan (non-execute) runs and the remedy commands (bupb, update-bundler) are exempt, and the check fails open when the registry cannot be consulted
 
 - BranchCheckoutCheck preflight: executing template, bup, and bump runs now stop before touching any member whose checkout is on an unexpected branch — expected means the default branch, a configured release/stack lane (member_target_branches, member-local release.target_branches, branch_lanes), or a new repeatable --branch MEMBER:BRANCH override. Under local sibling wiring (family *_DEV toggle or K_JEM_TEMPLATING) the check also fails when a member gemspec requirement cannot be satisfied by the sibling checkout version on its current branch (e.g. a member requiring oauth2 ~> 2.0 while oauth2 sits on 1-4-stable at 1.4.12). The read-only check command reports the same drift. Plan (non-execute) runs and release (which checks out its own lanes) are exempt
@@ -39,16 +58,10 @@ Please file a bug if you notice a violation of semantic versioning.
   - other (1)
   - workflows (2)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Family templating seeds corporate sponsors into member kettle-jem configuration, so standalone README generation retains them while preserving member-specific sponsors. (#74)
 - Cold-start templating of a freshly scaffolded member no longer fails with `cannot load such file -- parslet`; standalone `kettle-jem prepare` now uses the family-root bundle instead of the member's bare `Gemfile`.
-
-### Security
 
 ## [1.3.45] - 2026-11-16
 
@@ -3503,7 +3516,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.45...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.46...HEAD
+[1.3.46]: https://github.com/kettle-dev/kettle-family/compare/v1.3.45...v1.3.46
+[1.3.46t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.46
 [1.3.45]: https://github.com/kettle-dev/kettle-family/compare/v1.3.44...v1.3.45
 [1.3.45t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.45
 [1.3.44]: https://github.com/kettle-dev/kettle-family/compare/v1.3.43...v1.3.44
