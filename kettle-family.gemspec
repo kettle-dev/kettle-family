@@ -106,7 +106,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency("command_kit-completion", "~> 0.1")                   # ruby >= 3.0.0
   spec.add_dependency("kettle-changelog", "~> 1.0", ">= 1.0.20")             # ruby >= 4.0.0, release-state and family changelog commands
   spec.add_dependency("kettle-deps-floor", "~> 0.1", ">= 0.1.3")           # generic AST-based gemspec dependency floor updates
-  spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.30")                 # ruby >= 3.2.0
+  spec.add_dependency("kettle-dev", "~> 3.1", ">= 3.1.31")                 # ruby >= 3.2.0
   spec.add_dependency("kettle-gha-pins", "~> 0.3", ">= 0.3.21")              # ruby >= 4.0.0, built-in GitHub Actions pin workflow
   spec.add_dependency("kettle-jem", "~> 7.1", ">= 7.1.28")                    # ruby >= 4.0.0, built-in templating workflow
   spec.add_dependency("kettle-ndjson", "~> 0.1", ">= 0.1.24")             # shared NDJSON event streams
