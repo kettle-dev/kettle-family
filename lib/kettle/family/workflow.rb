@@ -6797,6 +6797,7 @@ module Kettle
         lockfile = File.join(member.root, "Gemfile.lock")
         return false unless File.file?(lockfile)
 
+        require "bundler"
         spec = Bundler::LockfileParser.new(Bundler.read_file(lockfile)).specs.find do |locked_spec|
           locked_spec.name == "kettle-jem"
         end
