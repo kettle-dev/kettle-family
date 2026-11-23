@@ -376,6 +376,51 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
       broker&.close
     end
 
+    it "asks the vault again when the user presses Enter on an empty line, instead of failing" do
+      provider = instance_double(Kettle::Family::Secrets::Provider)
+      allow(provider).to receive(:rubygems_otp).and_invoke(
+        -> { raise Kettle::Family::Secrets::AuthorizationError, "access prompt dismissed" },
+        -> { "777777" }
+      )
+      allow(prompter).to receive(:ask).and_return("")
+      broker = described_class::Broker.new(provider: provider, root: root, prompter: prompter).start
+
+      expect(broker_request(broker, "rubygems_otp")).to eq("ok" => true, "value" => "777777")
+      expect(provider).to have_received(:rubygems_otp).twice
+    ensure
+      broker&.close
+    end
+
+    it "gives up after repeated empty answers and approval failures" do
+      provider = instance_double(Kettle::Family::Secrets::Provider)
+      allow(provider).to receive(:rubygems_otp).and_raise(Kettle::Family::Secrets::AuthorizationError, "access prompt dismissed")
+      allow(prompter).to receive(:ask).and_return("")
+      broker = described_class::Broker.new(provider: provider, root: root, prompter: prompter).start
+
+      response = broker_request(broker, "rubygems_otp")
+
+      expect(response["ok"]).to be(false)
+      expect(provider).to have_received(:rubygems_otp).exactly(described_class::Broker::MAX_APPROVAL_ATTEMPTS).times
+    ensure
+      broker&.close
+    end
+
+    it "tells the user exactly what to do and reminds them while waiting" do
+      slow_input = Class.new do
+        def noecho
+          sleep 0.2
+          yield self
+        end
+
+        def gets = "424242\n"
+      end.new
+      output = StringIO.new
+      terminal = described_class::TerminalPrompter.new(input: slow_input, output: output, remind_every: 0.05)
+
+      expect(terminal.ask(operation: "rubygems_otp", reason: "access prompt dismissed")).to eq("424242")
+      expect(output.string).to include("Action required", "paste the RubyGems MFA code", "Enter on an empty line", "Still waiting")
+    end
+
     it "does not prompt for the explicit interactive provider (child keeps its own behavior)" do
       provider = Kettle::Family::Secrets::Provider.new
       allow(prompter).to receive(:ask)

@@ -69,19 +69,32 @@ module Kettle
           "rubygems_otp" => "RubyGems MFA code"
         }.freeze
 
-        def initialize(input: $stdin, output: $stderr)
+        REMIND_EVERY_SECONDS = 60
+
+        def initialize(input: $stdin, output: $stderr, remind_every: REMIND_EVERY_SECONDS)
           @input = input
           @output = output
+          @remind_every = remind_every
         end
 
         def self.for_terminal(input: $stdin, output: $stderr)
           new(input: input, output: output) if input.respond_to?(:tty?) && input.tty?
         end
 
+        # Blocks until the user presses Enter. An empty answer means "ask the
+        # vault again" (the broker retries the adapter), so the instructions
+        # say so, and a reminder repeats once a minute so a long-running release
+        # never looks like a silent hang.
         def ask(operation:, reason: nil)
-          @output.puts("#{reason}; enter it manually.") if reason
-          @output.print("#{LABELS.fetch(operation, operation)}: ")
+          label = LABELS.fetch(operation, operation)
+          instructions = "paste the #{label} and press Enter (nothing is shown while you type or paste), " \
+            "or press Enter on an empty line to ask the vault again"
+          @output.puts
+          @output.puts("🔑 #{label} needed#{": #{reason}" if reason}")
+          @output.puts("   Action required: #{instructions}.")
+          @output.print("\a#{label}: ")
           @output.flush
+          reminder = start_reminder(label, instructions)
           value = if @input.respond_to?(:noecho)
             @input.noecho(&:gets)
           else
@@ -89,6 +102,25 @@ module Kettle
           end
           @output.puts
           value.to_s.chomp
+        ensure
+          reminder&.kill
+        end
+
+        private
+
+        def start_reminder(label, instructions)
+          return nil unless @remind_every&.positive?
+
+          Thread.new do # rubocop:disable ThreadSafety/NewThread -- the reminder must tick while the main thread blocks on terminal input
+            waited = 0
+            loop do
+              sleep(@remind_every)
+              waited += @remind_every
+              @output.puts("\n⏳ Still waiting for the #{label} (#{waited / 60} min): #{instructions}.")
+              @output.print("#{label}: ")
+              @output.flush
+            end
+          end
         end
       end
 

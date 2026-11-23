@@ -15,6 +15,8 @@ module Kettle
       # one release session is shared across sequential and parallel waves.
       class Broker
         OPERATIONS = %w[gem_signing_passphrase rubygems_otp].freeze
+        # Approval attempts per request: the first plus retries after the user presses Enter on an empty line.
+        MAX_APPROVAL_ATTEMPTS = 3
         UNIX_SOCKET_PATH_MAX = RbConfig::CONFIG["host_os"].include?("darwin") ? 103 : 107
 
         attr_reader :path
@@ -118,14 +120,22 @@ module Kettle
                 +""
           end
 
-          provider.public_send(operation)
-        rescue AuthorizationError => error
-          message = "#{error.message} (approve the access prompt, then resume the release)"
-          typed = prompt_user(operation, error.message)
-          return typed if typed
+          attempts = 0
+          begin
+            attempts += 1
+            provider.public_send(operation)
+          rescue AuthorizationError => error
+            # An empty answer from the user means "ask the vault again", so a
+            # blank Enter retries the adapter (re-raising the approval prompt)
+            # instead of failing the whole release.
+            typed = prompt_user(operation, error.message)
+            return typed if typed
+            retry if attempts < MAX_APPROVAL_ATTEMPTS && @prompter
 
-          @authorization_failure = {at: Process.clock_gettime(Process::CLOCK_MONOTONIC), message: message}
-          raise Error, message
+            message = "#{error.message} (approve the access prompt, then resume the release)"
+            @authorization_failure = {at: Process.clock_gettime(Process::CLOCK_MONOTONIC), message: message}
+            raise Error, message
+          end
         end
 
         def prompt_user(operation, reason)

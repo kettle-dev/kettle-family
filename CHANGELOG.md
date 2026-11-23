@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- release secrets broker: an empty Enter at the manual MFA/passphrase prompt now asks the vault again (up to 3 attempts) instead of failing every queued member; the prompt states exactly what to paste, and repeats a reminder every minute while waiting
+
 ### Deprecated
 
 ### Removed
