@@ -737,6 +737,18 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("resume_hints")).to eq(["kettle-family release --execute --publish --only alpha --start-step 15"])
   end
 
+  it "does not point a family changelog failure at its already released anchor member" do
+    changelog = result("anchor", success: false, reason: "coverage failed")
+    changelog.phase = "family_changelog"
+    members = %w[anchor beta gamma].map { |n| member(n) }
+    report = described_class.new(
+      family_name: "example", order_mode: "dependency", members: members, selected_members: members,
+      config_path: nil, command: "release", release_mode: "publish", results: [changelog]
+    )
+
+    expect(report.to_h.fetch("resume_hints")).to eq(["kettle-family release --execute --publish --only beta,gamma"])
+  end
+
   it "merges release failures sharing a resume step into one --only hint" do
     a = result("alpha", success: false, reason: "OTP failed")
     b = result("beta", success: false, reason: "build failed")

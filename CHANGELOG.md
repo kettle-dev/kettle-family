@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- release resume hints no longer point a family changelog failure at its anchor member (often already released); the unfinished members are the resume set
+
 ### Security
 
 ## [1.3.47] - 2026-11-23

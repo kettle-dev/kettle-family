@@ -840,8 +840,15 @@ module Kettle
       end
 
       def release_resume_hints
-        failed_hints = merged_release_failure_hints(visible_results.reject(&:ok?))
         pending_names = summary_pending.map { |entry| entry.fetch("member") }
+        failures = visible_results.reject(&:ok?)
+        # The family changelog runs before any member and is attributed to the
+        # member that owns the shared version file, which is often an already
+        # released member of an earlier wave. Resuming "--only <that member>"
+        # would target a published gem; the resumed run redoes the changelog
+        # itself, so the unfinished members are the whole resume set.
+        failures = failures.reject { |result| result.phase == "family_changelog" } unless pending_names.empty?
+        failed_hints = merged_release_failure_hints(failures)
         return failed_hints if pending_names.empty?
 
         [*failed_hints, release_resume_hint_for_pending(pending_names)]
