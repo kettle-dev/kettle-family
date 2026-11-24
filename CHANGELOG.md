@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- release resume hints no longer point a family changelog failure at its anchor member (often already released); the unfinished members are the resume set
-
 ### Security
+
+## [1.3.48] - 2026-11-23
+
+- TAG: [v1.3.48][1.3.48t]
+- COVERAGE: 94.21% -- 8688/9222 lines in 49 files
+- BRANCH COVERAGE: 79.26% -- 3639/4591 branches in 49 files
+- 41.76% documented
+
+### Fixed
+
+- release resume hints no longer point a family changelog failure at its anchor member (often already released); the unfinished members are the resume set
 
 ## [1.3.47] - 2026-11-23
 
@@ -3530,7 +3539,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.47...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.48...HEAD
+[1.3.48]: https://github.com/kettle-dev/kettle-family/compare/v1.3.47...v1.3.48
+[1.3.48t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.48
 [1.3.47]: https://github.com/kettle-dev/kettle-family/compare/v1.3.46...v1.3.47
 [1.3.47t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.47
 [1.3.46]: https://github.com/kettle-dev/kettle-family/compare/v1.3.45...v1.3.46
