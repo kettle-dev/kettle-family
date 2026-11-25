@@ -1714,6 +1714,25 @@ RSpec.describe Kettle::Family::Workflow do
     expect(command).to include("skip_steps=1,10")
   end
 
+  it "still cuts the changelog of an independent-series member that rides the shared cohort" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      family_changelog: {"enabled" => true, "command" => "bundle exec kettle-changelog"},
+      aggregate_validation: {"enabled" => true},
+      version_series: {"independent_members" => ["kettle-jem"]},
+      family: {"name" => "example", "mode" => "monorepo", "members_root" => "gems"},
+      changelog: {"mode" => "root", "path" => "CHANGELOG.md", "version_file" => "alpha/lib/alpha/version.rb"}
+    )
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = ready_member("alpha", changelog: false, version: "7.1.6", version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
+    kettle_jem = ready_member("kettle-jem", version: "7.1.13")
+    workflow = described_class.new(command: "release", config: config, members: [alpha, kettle_jem], publish: true)
+
+    expect(workflow.send(:release_command_for, alpha).to_s).to include("--skip-changelog")
+    expect(workflow.send(:release_command_for, kettle_jem).to_s).not_to include("--skip-changelog")
+  end
+
   it "uses the shared-version cohort for aggregate validation and release" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
@@ -4351,7 +4370,7 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.first).not_to be_ok
   end
 
-  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family: nil, family_changelog: nil, aggregate_validation: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil, release_allowed_local_path_roots: nil, preflight_commands: nil)
+  def write_release_config(build_command: [RbConfig.ruby, "-e", "puts 'build'"], publish_command: [RbConfig.ruby, "-e", "puts 'publish'"], target_branches: nil, family: nil, family_changelog: nil, aggregate_validation: nil, version_series: nil, check: nil, changelog: nil, release_env: nil, template: nil, secrets: nil, required_remotes: nil, release_normalize_lockfiles: nil, release_waves: nil, release_allowed_local_path_roots: nil, preflight_commands: nil)
     release = {
       "build_command" => build_command,
       "publish_command" => publish_command,
@@ -4362,6 +4381,7 @@ RSpec.describe Kettle::Family::Workflow do
     release["preflight_commands"] = preflight_commands if preflight_commands
     release["family_changelog"] = family_changelog if family_changelog
     release["aggregate_validation"] = aggregate_validation if aggregate_validation
+    release["version_series"] = version_series if version_series
     release["env"] = release_env if release_env
     release["secrets"] = secrets if secrets
     release["required_remotes"] = required_remotes if required_remotes

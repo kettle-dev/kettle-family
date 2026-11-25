@@ -30,6 +30,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - release: the aggregate GitHub release no longer fails with "all selected members must have the same version" when only independently versioned members (for example kettle-jem) are released; the shared-version release is taken from the family's shared cohort and the member's artifacts attach to it
 
+- release: an independently versioned member (release.version_series.independent_members) no longer has its own changelog skipped when it rides the shared cohort; --skip-changelog now applies only to the cohort members the family changelog covers
+
 ### Security
 
 ## [1.3.48] - 2026-11-23

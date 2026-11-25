@@ -4337,7 +4337,10 @@ module Kettle
         effective_skip_steps = (configured_skip_steps + release_skip_steps_for(member).split(",")).uniq.join(",")
         args << "start_step=#{effective_start_step}" if effective_start_step
         args << "skip_steps=#{effective_skip_steps}" unless effective_skip_steps.empty?
-        args << "--skip-changelog" if skip_changelog || aggregate_validation_member?(member)
+        # The family changelog covers the shared-version cohort only. An
+        # independently versioned member keeps its own CHANGELOG and series, so
+        # its own release must still cut its changelog section.
+        args << "--skip-changelog" if skip_changelog || (aggregate_validation_member?(member) && !independent_version_series_member?(member))
         args << "--skip-appraisals" if skip_appraisals
         args << "--ci-workflows=#{ci_workflows}" if ci_workflows && !ci_workflows.to_s.empty?
         args << "--local-ci" if local_ci
