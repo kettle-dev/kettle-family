@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
+- release report: a failed streamed step is summarized by its root-cause Ruby error header (class and message) instead of the last output line that mentions "error", which was often a backtrace frame such as bundler/friendly_errors.rb; backtrace frames are never chosen, and known failure signatures (Bundler/RubyGems mismatch, frozen path-gem lockfile, unauthorized gem push, 1Password authorization) now attach a recommended fix
+
 ### Deprecated
 
 ### Removed

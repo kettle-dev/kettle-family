@@ -481,6 +481,48 @@ RSpec.describe Kettle::Family::Report do
     expect(text).not_to include("\"run_start\"")
   end
 
+  def streamed_failure_report(stdout)
+    selected_member = member("alpha")
+    result = Kettle::Family::CommandResult.new(
+      "alpha", "release_publish", ["bundle", "exec", "kettle-release"], "/repo/alpha", 1, false,
+      stdout, "", 1.0, false, "command failed", nil, true, "/repo/alpha/tmp/release_publish.log"
+    )
+    described_class.new(
+      family_name: "kettle-dev", order_mode: "dependency", members: [selected_member],
+      selected_members: [selected_member], config_path: nil, command: "release",
+      release_mode: "publish", results: [result]
+    )
+  end
+
+  it "reports the root-cause error header, not a backtrace frame, and attaches a known fix" do
+    stdout = <<~TEXT
+      bundler: failed to load command: kettle-test (/gems/bin/kettle-test)
+      /gems/bundler-4.1.0/lib/bundler/source/metadata.rb:14:in 'block in Bundler::Source::Metadata#specs': The running version of Bundler (4.1.0) does not match the version of the specification installed for it (4.1.1). Reinstalling Ruby from scratch should fix the problem. (Bundler::CorruptBundlerInstallError)
+      \tfrom /gems/bundler-4.1.0/lib/bundler/friendly_errors.rb:118:in 'Bundler.with_friendly_errors'
+      kettle-changelog: unexpected error: RuntimeError: Failed to get coverage data: bundle exec kettle-test failed
+      /gems/bundler-4.1.0/lib/bundler/friendly_errors.rb:118:in 'Bundler.with_friendly_errors'
+    TEXT
+
+    text = streamed_failure_report(stdout).to_text
+
+    expect(text).to include("summary: Bundler::CorruptBundlerInstallError: The running version of Bundler (4.1.0) does not match")
+    expect(text).not_to include("summary: /gems/bundler-4.1.0/lib/bundler/friendly_errors.rb")
+    expect(text).to include("recommended fix: kettle-family update-bundler --execute")
+  end
+
+  it "never picks a backtrace frame as the summary even when it matches the failure words" do
+    stdout = <<~TEXT
+      Something exploded: build failed for alpha
+      /gems/bundler-4.1.0/lib/bundler/friendly_errors.rb:118:in 'Bundler.with_friendly_errors'
+      /gems/bundler-4.1.0/exe/bundle:20:in '<top (required)>'
+    TEXT
+
+    text = streamed_failure_report(stdout).to_text
+
+    expect(text).to include("summary: Something exploded: build failed for alpha")
+    expect(text).not_to include("summary: /gems")
+  end
+
   it "summarizes streamed failure output without replaying the transcript" do
     selected_member = member("alpha")
     stdout = <<~TEXT

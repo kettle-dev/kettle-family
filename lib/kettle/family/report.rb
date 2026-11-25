@@ -334,17 +334,69 @@ module Kettle
         lines << "    output: omitted because it was already streamed"
       end
 
+      # A Ruby backtrace frame ("path:12:in 'meth'" or "from path:12:in ..."). These
+      # must never be chosen as a summary: a frame such as bundler/friendly_errors.rb
+      # matches /error/ by file name alone and previously became the whole summary.
+      BACKTRACE_FRAME = /\A(?:from\s+)?\S+:\d+:in\s+['`]/
+      # The first line of a Ruby error report: "path:12:in 'meth': message (Class)".
+      ERROR_HEADER = /:\d+:in\s+['`][^'`]*['`]:\s+(?<message>.+?)\s+\((?<klass>[A-Z][\w:]*)\)\z/
+
+      # Known failure signatures with the command that fixes them. A tool's own
+      # "Recommended fix:" line always wins over these.
+      FAILURE_HINTS = [
+        [
+          /does not match the version of the specification installed for it|Bundler::CorruptBundlerInstallError/,
+          "kettle-family update-bundler --execute (RubyGems/Bundler were upgraded but lockfiles still pin the old " \
+            "BUNDLED WITH version, so Bundler re-execs into the old gem; reinstalling Ruby is not needed)"
+        ],
+        [
+          /The gemspecs for path gems changed, but the lockfile can't be updated because\s*frozen mode is set/,
+          "re-lock the named lockfile (bundle lock --update) and commit it; the path gem's version changed"
+        ],
+        [
+          /You are not allowed to push this gem/,
+          "register a trusted publisher for the gem on rubygems.org (or push the built gem once by hand), then re-run"
+        ],
+        [
+          /1Password .*(?:authorization|desktop app|not signed in)/i,
+          "unlock 1Password and approve the access prompt, then re-run the resume command"
+        ]
+      ].freeze
+
       def streamed_output_summary(result)
         lines = streamed_output_lines(result)
-        lines.reverse.find do |line|
+        root_cause_summary(lines) || last_failure_line(lines)
+      end
+
+      # The first error header in the output is the root cause; later ones are
+      # wrappers re-raising it ("Failed to get coverage data: ...").
+      def root_cause_summary(lines)
+        lines.each do |line|
+          match = ERROR_HEADER.match(line)
+          next unless match
+
+          return "#{match[:klass]}: #{match[:message]}"[0, 400]
+        end
+        nil
+      end
+
+      def last_failure_line(lines)
+        candidates = lines.reject { |line| line.match?(BACKTRACE_FRAME) }
+        candidates.reverse.find do |line|
           line.match?(/(?:failed|failure|error|exited|aborted)/i) && !line.match?(/\A(?:Files|CI|Actions)/)
-        end || lines.reverse.find { |line| !line.match?(/\A(?:Files|CI|Actions)/) }
+        end || candidates.reverse.find { |line| !line.match?(/\A(?:Files|CI|Actions)/) }
+      end
+
+      def known_failure_hint(result)
+        text = [result.stdout, result.stderr].join("\n")
+        FAILURE_HINTS.each { |pattern, fix| return fix if text.match?(pattern) }
+        nil
       end
 
       def streamed_recommended_fix(result)
         lines = streamed_output_lines(result)
         line = lines.reverse.find { |candidate| candidate.match?(/\ARecommended fix:\s+/) }
-        return nil unless line
+        return known_failure_hint(result) unless line
 
         # Some hints are incomplete without their follow-up step (e.g. the
         # kettle-gha-pins pin refresh must be committed + pushed BEFORE
