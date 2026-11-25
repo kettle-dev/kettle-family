@@ -22,19 +22,30 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Changed
 
-- release report: a failed streamed step is summarized by its root-cause Ruby error header (class and message) instead of the last output line that mentions "error", which was often a backtrace frame such as bundler/friendly_errors.rb; backtrace frames are never chosen, and known failure signatures (Bundler/RubyGems mismatch, frozen path-gem lockfile, unauthorized gem push, 1Password authorization) now attach a recommended fix
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
+### Security
+
+## [1.3.49] - 2026-11-25
+
+- TAG: [v1.3.49][1.3.49t]
+- COVERAGE: 94.22% -- 8704/9238 lines in 49 files
+- BRANCH COVERAGE: 79.28% -- 3643/4595 branches in 49 files
+- 41.76% documented
+
+### Changed
+
+- release report: a failed streamed step is summarized by its root-cause Ruby error header (class and message) instead of the last output line that mentions "error", which was often a backtrace frame such as bundler/friendly_errors.rb; backtrace frames are never chosen, and known failure signatures (Bundler/RubyGems mismatch, frozen path-gem lockfile, unauthorized gem push, 1Password authorization) now attach a recommended fix
+
+### Fixed
+
 - release: the aggregate GitHub release no longer fails with "all selected members must have the same version" when only independently versioned members (for example kettle-jem) are released; the shared-version release is taken from the family's shared cohort and the member's artifacts attach to it
 
 - release: an independently versioned member (release.version_series.independent_members) no longer has its own changelog skipped when it rides the shared cohort; --skip-changelog now applies only to the cohort members the family changelog covers
-
-### Security
 
 ## [1.3.48] - 2026-11-23
 
@@ -3545,7 +3556,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.48...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.49...HEAD
+[1.3.49]: https://github.com/kettle-dev/kettle-family/compare/v1.3.48...v1.3.49
+[1.3.49t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.49
 [1.3.48]: https://github.com/kettle-dev/kettle-family/compare/v1.3.47...v1.3.48
 [1.3.48t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.48
 [1.3.47]: https://github.com/kettle-dev/kettle-family/compare/v1.3.46...v1.3.47
