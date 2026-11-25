@@ -4668,6 +4668,12 @@ module Kettle
         # exempt from the uniformity check while their artifacts still
         # attach — at their own series version, not the cohort's.
         shared_members = members.reject { |member| independent_version_series_member?(member) }
+        # Releasing only independently versioned members (for example just
+        # kettle-jem) leaves no shared cohort among the contributed members. The
+        # repository-level release still belongs to the family's shared version,
+        # so take that version from the family's shared cohort and attach the
+        # independent member's artifacts to it.
+        shared_members = Array(family_members).reject { |member| independent_version_series_member?(member) } if shared_members.empty?
         version = shared_members.map { |member| member.version.to_s }.uniq
         return aggregate_release_result("all selected members must have the same version") unless version.length == 1
 

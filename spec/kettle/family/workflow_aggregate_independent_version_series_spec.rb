@@ -79,6 +79,24 @@ RSpec.describe Kettle::Family::Workflow do
     expect(result.command.join(" ")).not_to include("indy-1.0.0")
   end
 
+  it "attaches an independent-series member alone to the family's shared-version release" do
+    write_family_config(independent_members: ["indy"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member("alpha", version: "1.0.0")
+    beta = member("beta", version: "1.0.0")
+    indy = member("indy", version: "2.0.0")
+    write_member_artifact(indy, version: "2.0.0")
+    workflow = described_class.new(
+      command: "release", config: config, members: [indy], family_members: [alpha, beta, indy], publish: true
+    )
+
+    result = workflow.send(:aggregate_monorepo_github_release, [indy])
+
+    expect(result).to be_ok
+    expect(result.command).to include("--release-version", "1.0.0")
+    expect(result.command.join(" ")).to include("indy-2.0.0.gem", "indy-2.0.0.gem.sha256")
+  end
+
   it "still enforces the same-version invariant without independent-series declarations" do
     write_family_config
     config = Kettle::Family::Config.load(root: @tmpdir)

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- release: the aggregate GitHub release no longer fails with "all selected members must have the same version" when only independently versioned members (for example kettle-jem) are released; the shared-version release is taken from the family's shared cohort and the member's artifacts attach to it
+
 ### Security
 
 ## [1.3.48] - 2026-11-23
