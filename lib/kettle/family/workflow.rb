@@ -4177,11 +4177,34 @@ module Kettle
         return unless family_changelog_applies_to_selected_members?
 
         member = family_changelog_member
-        memo << runner.call(
+        result = runner.call(
           member: member,
           phase: "family_changelog",
           command: family_changelog_command,
           env: family_changelog_env
+        )
+        memo << result
+        commit_family_changelog(member: member, runner: runner, memo: memo) if execute && commit && result.ok?
+      end
+
+      def commit_family_changelog(member:, runner:, memo:)
+        changelog_rel = config.changelog_path.to_s
+        changelog_rel = "CHANGELOG.md" if changelog_rel.empty?
+        version = member&.version.to_s
+        message = version.empty? ? "docs(changelog): 📝 update #{changelog_rel}" : "docs(changelog): 📝 update #{changelog_rel} for v#{version}"
+        quoted_path = Shellwords.escape(changelog_rel)
+        quoted_message = Shellwords.escape(message)
+
+        memo << runner.call(
+          member: family_member,
+          phase: "commit_family_changelog",
+          command: [
+            "sh",
+            "-lc",
+            "git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0; " \
+              "files=$(git ls-files --modified --others --exclude-standard -- #{quoted_path}); " \
+              "if [ -n \"$files\" ]; then git add -- #{quoted_path} && git commit --only -m #{quoted_message} -- #{quoted_path}; fi"
+          ]
         )
       end
 

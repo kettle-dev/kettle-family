@@ -899,6 +899,43 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'publish'"])
   end
 
+  it "commits the updated root CHANGELOG.md immediately after family_changelog when executing" do
+    system("git", "init", "-q", "-b", "main", @tmpdir, exception: true)
+    system("git", "-C", @tmpdir, "config", "user.email", "test@example.com", exception: true)
+    system("git", "-C", @tmpdir, "config", "user.name", "Test User", exception: true)
+    File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
+    system("git", "-C", @tmpdir, "add", "CHANGELOG.md", exception: true)
+    system("git", "-C", @tmpdir, "commit", "-q", "-m", "initial", exception: true)
+
+    changelog_writer = [
+      RbConfig.ruby,
+      "-e",
+      "File.write(ENV.fetch('K_CHANGELOG_PATH'), \"## [Unreleased]\\n\\n## [1.2.3]\\n\")"
+    ]
+    write_release_config(
+      build_command: [RbConfig.ruby, "-e", "puts 'build'"],
+      family_changelog: {"enabled" => true, "command" => changelog_writer},
+      changelog: {
+        "mode" => "root",
+        "path" => "CHANGELOG.md",
+        "version_file" => "alpha/lib/alpha/version.rb"
+      }
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha", version: "1.2.3", changelog: false, version_file: File.join(@tmpdir, "alpha", "lib", "alpha", "version.rb"))
+
+    workflow = described_class.new(command: "release", config: config, members: [member], execute: true, commit: true, publish: false)
+    results = []
+    workflow.send(:append_family_changelog_result, runner: workflow.send(:release_command_runner), memo: results)
+
+    expect(results.map(&:phase)).to eq(%w[family_changelog commit_family_changelog])
+    expect(results).to all(be_ok)
+    status = `git -C #{Shellwords.escape(@tmpdir)} status --porcelain -- CHANGELOG.md`.strip
+    expect(status).to eq("")
+    last_subject = `git -C #{Shellwords.escape(@tmpdir)} log -1 --format=%s`.strip
+    expect(last_subject).to eq("docs(changelog): 📝 update CHANGELOG.md for v1.2.3")
+  end
+
   it "skips the shared family changelog for an independent member-local release" do
     write_release_config(
       publish_command: [RbConfig.ruby, "-e", "puts 'publish'"],
