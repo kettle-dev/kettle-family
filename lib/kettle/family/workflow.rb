@@ -4177,7 +4177,7 @@ module Kettle
         return unless family_changelog_applies_to_selected_members?
 
         member = family_changelog_member
-        before_dirty = execute && commit ? family_root_dirty_paths : []
+        before_dirty = (execute && commit) ? family_root_dirty_paths : []
         result = runner.call(
           member: member,
           phase: "family_changelog",
