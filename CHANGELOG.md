@@ -28,9 +28,18 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
-- manual RubyGems MFA prompt: a typed code is validated (exactly six digits; spaces ignored). The same code pasted more than once (for example 12 characters from a keyboard whose first Enter only woke it) is reduced to its first six digits; anything else is rejected and the prompt asks again, without ever echoing the code, instead of being sent to RubyGems and failing the release
-
 ### Security
+
+## [1.3.50] - 2026-11-26
+
+- TAG: [v1.3.50][1.3.50t]
+- COVERAGE: 94.24% -- 8722/9255 lines in 49 files
+- BRANCH COVERAGE: 79.44% -- 3660/4607 branches in 49 files
+- 41.69% documented
+
+### Fixed
+
+- manual RubyGems MFA prompt: a typed code is validated (exactly six digits; spaces ignored). The same code pasted more than once (for example 12 characters from a keyboard whose first Enter only woke it) is reduced to its first six digits; anything else is rejected and the prompt asks again, without ever echoing the code, instead of being sent to RubyGems and failing the release
 
 ## [1.3.49] - 2026-11-25
 
@@ -3558,7 +3567,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.49...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.50...HEAD
+[1.3.50]: https://github.com/kettle-dev/kettle-family/compare/v1.3.49...v1.3.50
+[1.3.50t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.50
 [1.3.49]: https://github.com/kettle-dev/kettle-family/compare/v1.3.48...v1.3.49
 [1.3.49t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.49
 [1.3.48]: https://github.com/kettle-dev/kettle-family/compare/v1.3.47...v1.3.48
