@@ -421,6 +421,49 @@ RSpec.describe Kettle::Family::Secrets, :real_release_secrets do
       expect(output.string).to include("Action required", "paste the RubyGems MFA code", "Enter on an empty line", "Still waiting")
     end
 
+    describe "typed RubyGems code sanitization" do
+      def ask_otp(*lines)
+        output = StringIO.new
+        prompter = described_class::TerminalPrompter.new(input: StringIO.new(lines.join("\n") + "\n"), output: output, remind_every: nil)
+        [prompter.ask(operation: "rubygems_otp"), output.string]
+      end
+
+      it "accepts a six digit code, ignoring spaces" do
+        expect(ask_otp("  123 456 ").first).to eq("123456")
+      end
+
+      it "takes the first six digits when the same code was pasted twice (a sleeping keyboard's first Enter)" do
+        code, output = ask_otp("123456123456")
+
+        expect(code).to eq("123456")
+        expect(output).to include("pasted 2 times")
+        expect(output).not_to include("123456")
+      end
+
+      it "rejects a wrong length instead of guessing, and asks again" do
+        code, output = ask_otp("12345", "654321")
+
+        expect(code).to eq("654321")
+        expect(output).to include("6 digits").and include("again")
+        expect(output).not_to include("12345")
+      end
+
+      it "rejects non-digits and asks again" do
+        expect(ask_otp("12a456", "654321").first).to eq("654321")
+      end
+
+      it "keeps an empty answer, which means ask the vault again" do
+        expect(ask_otp("").first).to eq("")
+      end
+
+      it "does not touch other secrets" do
+        output = StringIO.new
+        prompter = described_class::TerminalPrompter.new(input: StringIO.new("not-six-digits\n"), output: output, remind_every: nil)
+
+        expect(prompter.ask(operation: "gem_signing_passphrase")).to eq("not-six-digits")
+      end
+    end
+
     it "does not prompt for the explicit interactive provider (child keeps its own behavior)" do
       provider = Kettle::Family::Secrets::Provider.new
       allow(prompter).to receive(:ask)

@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- manual RubyGems MFA prompt: a typed code is validated (exactly six digits; spaces ignored). The same code pasted more than once (for example 12 characters from a keyboard whose first Enter only woke it) is reduced to its first six digits; anything else is rejected and the prompt asks again, without ever echoing the code, instead of being sent to RubyGems and failing the release
+
 ### Security
 
 ## [1.3.49] - 2026-11-25

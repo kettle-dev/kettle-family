@@ -70,6 +70,7 @@ module Kettle
         }.freeze
 
         REMIND_EVERY_SECONDS = 60
+        OTP_LENGTH = 6
 
         def initialize(input: $stdin, output: $stderr, remind_every: REMIND_EVERY_SECONDS)
           @input = input
@@ -95,18 +96,47 @@ module Kettle
           @output.print("\a#{label}: ")
           @output.flush
           reminder = start_reminder(label, instructions)
-          value = if @input.respond_to?(:noecho)
-            @input.noecho(&:gets)
-          else
-            @input.gets
+          loop do
+            value = read_line
+            @output.puts
+            return value.to_s.chomp unless operation == "rubygems_otp"
+
+            code, problem = sanitize_otp(value.to_s)
+            return code if problem.nil?
+
+            @output.puts("#{problem} Paste the #{label} again (or press Enter on an empty line to ask the vault again).")
+            @output.print("\a#{label}: ")
+            @output.flush
           end
-          @output.puts
-          value.to_s.chomp
         ensure
           reminder&.kill
         end
 
         private
+
+        def read_line
+          @input.respond_to?(:noecho) ? @input.noecho(&:gets) : @input.gets
+        end
+
+        # RubyGems one-time codes are exactly six digits. Pasting into a terminal that is still
+        # waking up, or pasting twice, produced twelve characters and a rejected release. Accept
+        # a six digit code (spaces and newlines ignored) or the same code pasted several times;
+        # reject anything else instead of guessing. Returns [code, nil] or [nil, problem]; an
+        # empty answer is kept (it means "ask the vault again"). Never echoes the digits.
+        def sanitize_otp(raw)
+          cleaned = raw.gsub(/\s+/, "")
+          return [cleaned, nil] if cleaned.empty?
+          return [nil, "A RubyGems code is six digits, but this has #{cleaned.length} characters, not all digits."] unless cleaned.match?(/\A\d+\z/)
+          return [cleaned, nil] if cleaned.length == OTP_LENGTH
+
+          repeats, remainder = cleaned.length.divmod(OTP_LENGTH)
+          if remainder.zero? && repeats > 1 && cleaned == cleaned[0, OTP_LENGTH] * repeats
+            @output.puts("Took the first #{OTP_LENGTH} digits: the same code was pasted #{repeats} times.")
+            return [cleaned[0, OTP_LENGTH], nil]
+          end
+
+          [nil, "A RubyGems code is #{OTP_LENGTH} digits, but this has #{cleaned.length}."]
+        end
 
         def start_reminder(label, instructions)
           return nil unless @remind_every&.positive?
