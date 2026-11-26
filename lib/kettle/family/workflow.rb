@@ -4177,6 +4177,7 @@ module Kettle
         return unless family_changelog_applies_to_selected_members?
 
         member = family_changelog_member
+        before_dirty = execute && commit ? family_root_dirty_paths : []
         result = runner.call(
           member: member,
           phase: "family_changelog",
@@ -4184,15 +4185,21 @@ module Kettle
           env: family_changelog_env
         )
         memo << result
-        commit_family_changelog(member: member, runner: runner, memo: memo) if execute && commit && result.ok?
+        commit_family_changelog(member: member, runner: runner, memo: memo, before_dirty: before_dirty) if execute && commit && result.ok?
       end
 
-      def commit_family_changelog(member:, runner:, memo:)
+      def commit_family_changelog(member:, runner:, memo:, before_dirty: [])
         changelog_rel = config.changelog_path.to_s
         changelog_rel = "CHANGELOG.md" if changelog_rel.empty?
+        after_dirty = family_root_dirty_paths
+        paths = (after_dirty - before_dirty)
+        paths << changelog_rel if after_dirty.include?(changelog_rel)
+        paths = paths.uniq.sort
+        return if paths.empty?
+
         version = member&.version.to_s
         message = version.empty? ? "docs(changelog): 📝 update #{changelog_rel}" : "docs(changelog): 📝 update #{changelog_rel} for v#{version}"
-        quoted_path = Shellwords.escape(changelog_rel)
+        quoted_paths = paths.map { |path| Shellwords.escape(path) }.join(" ")
         quoted_message = Shellwords.escape(message)
 
         memo << runner.call(
@@ -4201,11 +4208,16 @@ module Kettle
           command: [
             "sh",
             "-lc",
-            "git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0; " \
-              "files=$(git ls-files --modified --others --exclude-standard -- #{quoted_path}); " \
-              "if [ -n \"$files\" ]; then git add -- #{quoted_path} && git commit --only -m #{quoted_message} -- #{quoted_path}; fi"
+            "git add -- #{quoted_paths} && git commit --only -m #{quoted_message} -- #{quoted_paths}"
           ]
         )
+      end
+
+      def family_root_dirty_paths
+        out, status = Open3.capture2e("git", "-C", config.root.to_s, "ls-files", "--modified", "--others", "--exclude-standard")
+        return [] unless status.success?
+
+        out.lines.map(&:strip).reject(&:empty?)
       end
 
       def family_changelog_applies_to_selected_members?

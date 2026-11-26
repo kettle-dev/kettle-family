@@ -899,18 +899,21 @@ RSpec.describe Kettle::Family::Workflow do
     expect(results.last.command).to eq([RbConfig.ruby, "-e", "puts 'publish'"])
   end
 
-  it "commits the updated root CHANGELOG.md immediately after family_changelog when executing" do
+  it "commits the updated root CHANGELOG.md and regenerated docs immediately after family_changelog when executing" do
     system("git", "init", "-q", "-b", "main", @tmpdir, exception: true)
     system("git", "-C", @tmpdir, "config", "user.email", "test@example.com", exception: true)
     system("git", "-C", @tmpdir, "config", "user.name", "Test User", exception: true)
     File.write(File.join(@tmpdir, "CHANGELOG.md"), "## [Unreleased]\n")
-    system("git", "-C", @tmpdir, "add", "CHANGELOG.md", exception: true)
+    FileUtils.mkdir_p(File.join(@tmpdir, "alpha", "docs"))
+    File.write(File.join(@tmpdir, "alpha", "docs", "Version.html"), "1.2.2\n")
+    system("git", "-C", @tmpdir, "add", "CHANGELOG.md", "alpha/docs/Version.html", exception: true)
     system("git", "-C", @tmpdir, "commit", "-q", "-m", "initial", exception: true)
 
     changelog_writer = [
       RbConfig.ruby,
       "-e",
-      "File.write(ENV.fetch('K_CHANGELOG_PATH'), \"## [Unreleased]\\n\\n## [1.2.3]\\n\")"
+      "File.write(ENV.fetch('K_CHANGELOG_PATH'), \"## [Unreleased]\\n\\n## [1.2.3]\\n\"); " \
+        "File.write(File.join(ENV.fetch('K_CHANGELOG_COVERAGE_ROOT'), 'alpha/docs/Version.html'), \"1.2.3\\n\")"
     ]
     write_release_config(
       build_command: [RbConfig.ruby, "-e", "puts 'build'"],
@@ -930,7 +933,7 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(results.map(&:phase)).to eq(%w[family_changelog commit_family_changelog])
     expect(results).to all(be_ok)
-    status = `git -C #{Shellwords.escape(@tmpdir)} status --porcelain -- CHANGELOG.md`.strip
+    status = `git -C #{Shellwords.escape(@tmpdir)} status --porcelain -- CHANGELOG.md alpha/docs/Version.html`.strip
     expect(status).to eq("")
     last_subject = `git -C #{Shellwords.escape(@tmpdir)} log -1 --format=%s`.strip
     expect(last_subject).to eq("docs(changelog): 📝 update CHANGELOG.md for v1.2.3")
