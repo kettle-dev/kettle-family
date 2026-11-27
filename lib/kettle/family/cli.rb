@@ -11,10 +11,10 @@ module Kettle
     class CLI < CommandKit::Command
       include CommandKit::Commands
 
-      COMMANDS = %w[version mise-trust mise-tasks discover plan report metadata check clean-blockers clean-installed clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up branch-lanes release-state state].freeze
-      EVENT_COMMANDS = %w[bup bupb update-bundler up push pull sync test install lint docs bex check reset clean-unreleased clean-blockers clean-installed bump bump-version add-changelog mise-trust reconcile-releases].freeze
+      COMMANDS = %w[version mise-trust mise-tasks discover plan report metadata check clean-blockers clean-installed clean-unreleased reconcile-releases reset test lint docs template gha-sha-pins bup bupb update-bundler bex install bump bump-version add-changelog release push pull sync up fix-remotes branch-lanes release-state state].freeze
+      EVENT_COMMANDS = %w[bup bupb update-bundler up push pull sync fix-remotes test install lint docs bex check reset clean-unreleased clean-blockers clean-installed bump bump-version add-changelog mise-trust reconcile-releases].freeze
       PROGRESS_COMMANDS = (%w[release template gha-sha-pins] + EVENT_COMMANDS).freeze
-      WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb update-bundler bex release push pull sync up].freeze
+      WORKFLOW_COMMANDS = %w[check reset test lint docs template gha-sha-pins bup bupb update-bundler bex release push pull sync up fix-remotes].freeze
 
       command_name "kettle-family"
       usage "[options] COMMAND [ARGS...]"
@@ -778,6 +778,12 @@ module Kettle
         description "Plan or execute git pull --rebase then git push per member."
       end
 
+      class FixRemotes < WorkflowCommand
+        command_name "fix-remotes"
+        usage "[options]"
+        description "Plan or execute git remote URL updates for permanently redirected repositories."
+      end
+
       command Discover
       command Version
       command MiseTrust
@@ -809,6 +815,7 @@ module Kettle
       command Pull
       command Sync
       command Up
+      command FixRemotes
       command BranchLanes
       command ReleaseState
       command State

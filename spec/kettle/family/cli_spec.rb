@@ -2350,6 +2350,18 @@ RSpec.describe Kettle::Family::CLI do
     end
   end
 
+  it "runs fix-remotes through the CLI in plan mode" do
+    write_ready_gem("alpha")
+    out = StringIO.new
+
+    status = described_class.call(["fix-remotes", "--root", @tmpdir, "--only", "alpha", "--json"], out: out, err: StringIO.new)
+
+    expect(status).to eq(0)
+    payload = JSON.parse(out.string)
+    expect(payload.fetch("command")).to eq("fix-remotes")
+    expect(payload.fetch("results").first.fetch("phase")).to eq("fix_remotes")
+  end
+
   def clean_entrypoint_env
     {
       "DEBUG" => nil,

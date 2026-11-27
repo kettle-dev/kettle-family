@@ -516,6 +516,7 @@ The command names below are available from `kettle-family --help`:
 | `pull` | Pull selected member repositories with rebase. |
 | `sync` | Fetch and rebase selected member repositories and branches. |
 | `up` | Pull with rebase, then push selected member repositories. |
+| `fix-remotes` | Plan or execute git remote URL updates for permanently redirected repositories. |
 | `branch-lanes` | Audit configured long-lived release branches. |
 | `release-state` | Report release state for selected members. |
 | `state` | Alias for `release-state`. |

@@ -48,21 +48,39 @@ module Kettle
       end
 
       def results(event_handler: nil)
-        return scoped_checkout_results(event_handler: event_handler) if checked_out_scoped_results?
-        return branch_results(event_handler: event_handler) unless release_target_branches.empty?
-        if shared_changelog?
-          results = parallel_map(members) { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) }
-          return normalize_lockstep_version_bump(normalize_shared_version_bump(results))
+        computed = if checked_out_scoped_results?
+          scoped_checkout_results(event_handler: event_handler)
+        elsif !release_target_branches.empty?
+          branch_results(event_handler: event_handler)
+        elsif shared_changelog?
+          raw = parallel_map(members) { |member| check_shared_changelog_member_or_local(member, event_handler: event_handler) }
+          normalize_lockstep_version_bump(normalize_shared_version_bump(raw))
+        else
+          member_results = parallel_map(members) do |member|
+            member_branch_results = member_local_branch_results(member, event_handler: event_handler)
+            member_branch_results || check_member(member, event_handler: event_handler)
+          end
+          normalize_lockstep_version_bump(member_results.flat_map { |result| Array(result) })
         end
-
-        member_results = parallel_map(members) do |member|
-          member_branch_results = member_local_branch_results(member, event_handler: event_handler)
-          member_branch_results || check_member(member, event_handler: event_handler)
-        end
-        normalize_lockstep_version_bump(member_results.flat_map { |result| Array(result) })
+        enrich_remote_state!(computed)
       end
 
       private
+
+      def enrich_remote_state!(computed_results)
+        inspection = RemoteCheck.inspect_family(config: config, members: members)
+        by_member = inspection.fetch(:members)
+        computed_results.each do |result|
+          next unless result.respond_to?(:state) && result.state.is_a?(Hash)
+
+          info = by_member[result.member_name]
+          next unless info
+
+          result.state["git_remote_org"] = info[:origin_org] if info[:origin_org]
+          result.state["git_remote_issues"] = info[:issues]
+        end
+        computed_results
+      end
 
       attr_reader :members, :config, :jobs, :branches
 

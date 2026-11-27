@@ -200,13 +200,16 @@ module Kettle
         branch_preflight = branch_checkout_preflight_results
         return branch_preflight unless branch_preflight.empty?
 
+        remote_preflight = remote_preflight_results
+        return remote_preflight if remote_preflight.any? { |result| !result.ok? }
+
         # Per-member rebase preflight: members whose checkout could not be
         # synced are excluded from the command; the rest continue. All
         # failed → stop with just the rebase results.
         rebase_preflight = rebase_preflight_results
-        return rebase_preflight if rebase_preflight.any? && members.empty?
+        return remote_preflight + rebase_preflight if rebase_preflight.any? && members.empty?
 
-        rebase_preflight + gated_command_results
+        remote_preflight + rebase_preflight + gated_command_results
       end
 
       # The command body after the family-level preflights: template's
@@ -595,6 +598,7 @@ module Kettle
       def current_branch_results(workflow_members)
         return check_results(workflow_members) if command == "check"
         return reset_member_results(workflow_members) if command == "reset"
+        return fix_remotes_results(workflow_members) if command == "fix-remotes"
         if command == "release"
           results = release_dependency_floor_reconciliation_results(workflow_members)
           return results unless results.all?(&:ok?)
@@ -1789,6 +1793,18 @@ module Kettle
         result.ok? ? [] : [result]
       end
 
+      def remote_preflight_results
+        return [] unless execute && RemoteCheck.gated?(command) && command != "release"
+        return [] unless RemoteCheck.has_hosted_remotes?(members: members, config: config)
+
+        result = RemoteCheck.call(config: config, members: members, execute: true)
+        (result.ok? && result.skipped) ? [] : [result]
+      end
+
+      def fix_remotes_results(workflow_members)
+        RemoteCheck.fix(config: config, members: workflow_members, execute: execute)
+      end
+
       # Family-level rebase gate for commands that rewrite member bundles,
       # lockfiles, or history (see RebaseCheck::GATED_COMMANDS): every member
       # checkout is synced to its upstream with git pull --rebase --autostash
@@ -1814,6 +1830,8 @@ module Kettle
         results << branch_result unless branch_result.ok?
         bundler_result = BundlerVersionCheck.call(config: config, members: workflow_members)
         results << bundler_result unless bundler_result.ok?
+        remote_result = RemoteCheck.call(config: config, members: workflow_members, execute: false)
+        results << remote_result unless remote_result.ok?
         reporter = member_reporter(workflow_members)
         results.concat(workflow_members.map do |member|
           reporter&.start_member(member, steps: 1)
@@ -2248,9 +2266,19 @@ module Kettle
         dirty_phase = {label: "branch checkout readiness", method: :release_preflight_branch_checkout_dirty_results}
         signing_phase = {label: "gem signing password", method: :release_preflight_signing_password_results}
         secrets_phase = release_secrets_authorization_required? ? {label: "secrets provider authorization", method: :release_preflight_secrets_authorization_results} : nil
+        remote_phase = release_remote_check_required? ? {label: "git remote hygiene", method: :release_preflight_remote_results} : nil
         gha_sha_pins_phase = release_gha_sha_pins_review_required? ? {label: "GitHub Actions SHA pins", method: :release_preflight_gha_sha_pins_results} : nil
 
-        [maintenance_phase, bump_phase, drift_phase, secrets_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
+        [maintenance_phase, bump_phase, drift_phase, secrets_phase, remote_phase, gha_sha_pins_phase, dirty_phase, signing_phase].compact
+      end
+
+      def release_remote_check_required?
+        RemoteCheck.has_hosted_remotes?(members: members, config: config)
+      end
+
+      def release_preflight_remote_results
+        result = RemoteCheck.call(config: config, members: members, execute: execute)
+        result.ok? ? [] : [result]
       end
 
       # Family-declared pre-release maintenance hooks (release.preflight_commands
