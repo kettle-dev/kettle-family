@@ -206,6 +206,88 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_text).to include("🔴 v1.2.2")
   end
 
+  it "renders single-char git dirty states in ^ / v / ~ and omits wt when no worktrees exist" do
+    rows = [
+      ["clean-gem", {"ahead" => 0, "behind" => 0, "git_state" => "clean"}],
+      ["staged-gem", {"ahead" => 2, "behind" => 0, "git_state" => "staged"}],
+      ["untracked-gem", {"ahead" => 1, "behind" => 0, "git_state" => "untracked"}],
+      ["unstaged-gem", {"ahead" => 3, "behind" => 1, "remote_ahead" => 2, "git_state" => "unstaged"}],
+      ["conflict-gem", {"ahead" => 1, "behind" => 2, "git_state" => "conflict"}],
+      ["new-gem", {"git_state" => "unstaged"}]
+    ].map do |name, state|
+      Kettle::Family::ReleaseStateResult.new(
+        member_name: name,
+        command: [],
+        workdir: "/repo/#{name}",
+        status: 0,
+        success: true,
+        stdout: "",
+        stderr: "",
+        elapsed_seconds: 0.0,
+        state: {"gem_name" => name, "current_branch" => "main", "version" => "1.0.0"}.merge(state)
+      )
+    end
+    report = described_class.new(family_name: "example", order_mode: "dependency", members: [], selected_members: [], config_path: nil, command: "release-state", results: rows)
+
+    text = report.to_text
+
+    expect(text).to include("^ / v / ~")
+    expect(text).to include("git state (- clean, + staged, ? untracked, * unstaged, ! conflict)")
+    expect(text).not_to include("wt: linked git worktrees")
+    expect(text.lines.find { |line| line.include?("clean-gem") }).to include("0 / 0 / -")
+    expect(text.lines.find { |line| line.include?("staged-gem") }).to include("2 / 0 / +")
+    expect(text.lines.find { |line| line.include?("untracked-gem") }).to include("1 / 0 / ?")
+    expect(text.lines.find { |line| line.include?("unstaged-gem") }).to include("3 (2) / 1 / *")
+    expect(text.lines.find { |line| line.include?("conflict-gem") }).to include("1 / 2 / !")
+    expect(text.lines.find { |line| line.include?("new-gem") }).to include("unknown / *")
+  end
+
+  it "renders the conditional wt column and deduplicates it across shared-changelog cohorts" do
+    rows = [
+      ["alpha", {"ahead" => 1, "behind" => 0, "git_state" => "clean", "git_worktree" => false, "git_linked_worktrees" => 2, "shared_changelog_root" => "/repo"}],
+      ["beta", {"ahead" => 1, "behind" => 0, "git_state" => "clean", "git_worktree" => false, "git_linked_worktrees" => 2, "shared_changelog_root" => "/repo"}],
+      ["solo-wt", {"ahead" => 0, "behind" => 0, "git_state" => "staged", "git_worktree" => true, "git_linked_worktrees" => 1}],
+      ["multi-wt", {"ahead" => 0, "behind" => 0, "git_state" => "unstaged", "git_worktree" => true, "git_linked_worktrees" => 3}],
+      ["plain", {"ahead" => 0, "behind" => 0, "git_state" => "clean", "git_worktree" => false, "git_linked_worktrees" => 0}]
+    ].map do |name, state|
+      Kettle::Family::ReleaseStateResult.new(
+        member_name: name,
+        command: [],
+        workdir: "/repo/#{name}",
+        status: 0,
+        success: true,
+        stdout: "",
+        stderr: "",
+        elapsed_seconds: 0.0,
+        state: {
+          "gem_name" => name,
+          "current_branch" => "main",
+          "version" => "1.0.0",
+          "latest_released" => "1.0.0",
+          "latest_changelog_version" => "1.0.0",
+          "github_latest_release" => "v1.0.0",
+          "unreleased_entries" => false
+        }.merge(state)
+      )
+    end
+    report = described_class.new(family_name: "example", order_mode: "dependency", members: [], selected_members: [], config_path: nil, command: "release-state", results: rows)
+
+    text = report.to_text
+    header = text.lines.find { |line| line.include?("GH.rel") }
+    expect(header).to include("^ / v / ~", "wt")
+    expect(text).to include("wt: linked git worktrees (- none, N count, @ inside linked worktree, @+N inside one with N others)")
+
+    alpha_line = text.lines.find { |line| line.strip.start_with?("alpha ") }
+    beta_tokens = text.lines.find { |line| line.strip.start_with?("beta ") }.split
+    expect(alpha_line).to include("1 / 0 / -")
+    expect(alpha_line).to match(/\s2\s+no\s/)
+    expect(beta_tokens[7]).to eq("-")
+    expect(beta_tokens[8]).to eq("-")
+    expect(text.lines.find { |line| line.strip.start_with?("solo-wt ") }).to match(/\s@\s+no\s/)
+    expect(text.lines.find { |line| line.strip.start_with?("multi-wt ") }).to match(/\s@\+2\s+no\s/)
+    expect(text.lines.find { |line| line.strip.start_with?("plain ") }).to match(/0 \/ 0 \/ -\s+-\s+no\s/)
+  end
+
   it "renders member-local release target branches" do
     report = described_class.new(
       family_name: "rubocop-lts",
