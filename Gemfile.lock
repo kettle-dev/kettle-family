@@ -584,7 +584,7 @@ GEM
       ast-merge (= 7.1.20)
       tree_haver (= 7.1.20)
       version_gem (~> 1.1, >= 1.1.17)
-    yard (0.9.45)
+    yard (0.9.46)
     yard-fence (0.9.12)
       rdoc (>= 6.11, < 8)
       version_gem (~> 1.1, >= 1.1.17)
@@ -852,7 +852,7 @@ CHECKSUMS
   webrick (1.9.2) sha256=beb4a15fc474defed24a3bda4ffd88a490d517c9e4e6118c3edce59e45864131
   yaml-converter (0.2.8) sha256=5f0f7a02f6b913669bb48ac0c39d173b529d5d40beb97ed9862fb3e1797fb7d8
   yaml-merge (7.1.20) sha256=0e83fbd0e52aac195b751f9049f222e74254de35716930f7c0c88ee04961d836
-  yard (0.9.45) sha256=52e211493f7cb8a3ebf7e104a25a1e73937a3103092545d34cb88fafebb3dc51
+  yard (0.9.46) sha256=9b1ee37b5da942811dc584d8bb2dfd0efca0a72c44be30bf8282c34955902855
   yard-fence (0.9.12) sha256=5758ddd995b7b1f302d0bf901a1d41e5fe42d802e47c95b10d6c1ce5673894c5
   yard-junk (0.1.0) sha256=e85fe2ec1afa47313decd333447b53458cb1ed49b510b70015fdc3041a94bcdd
   yard-lint (1.15.0) sha256=e96da1b8cd052c5af09616db7729c7e9aa651a984c63ea322f55c9e422e52480
