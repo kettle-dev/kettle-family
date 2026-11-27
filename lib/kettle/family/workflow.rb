@@ -125,6 +125,45 @@ module Kettle
       # re-authorize (source/provider/broker/field NAME), never a secret.
       RESUME_COMMAND_SECRET_ENV_KEY_RE = /PASSPHRASE|PASSWORD|SECRET|TOKEN|OTP|CREDENTIAL/i
       RESUME_COMMAND_SECRET_ENV_KEY_EXCLUDE_RE = /(?:_SOURCE|_PROVIDER|_BROKER|_FIELD)\z/i
+      RELEASE_START_STEP_PATTERN = /\bkettle-release\b[^\n]*?(?:--start-step(?:=|\s+)|\bstart_step=)(\d+)\b/
+
+      class << self
+        def release_event_resume_step(event)
+          return nil unless event.is_a?(Hash)
+          return parse_release_start_step(event["message"]) if event["type"] == "diagnostic" && event["blocking"] == true
+          return nil unless event["status"] == "failed"
+          return nil unless event["phase"] == "release" || event["type"] == "summary"
+          return event["resume_step"].to_i if event["resume_step"].to_s.match?(/\A\d+\z/)
+
+          parse_release_start_step(event["restart_hint"]) ||
+            parse_release_start_step(event["error_message"]) ||
+            parse_release_start_step(event["reason"])
+        end
+
+        def parse_release_start_step(text)
+          match = RELEASE_START_STEP_PATTERN.match(text.to_s)
+          match ? match[1].to_i : nil
+        end
+
+        def extract_release_resume_step(result)
+          detected = nil
+          [result.stdout, result.stderr].each do |stream|
+            stream.to_s.split(/\r\n|\n|\r/).each do |line|
+              event = parse_ndjson_event(line)
+              step = event ? release_event_resume_step(event) : parse_release_start_step(line)
+              detected = step if step
+            end
+          end
+          detected
+        end
+
+        def parse_ndjson_event(line)
+          payload = JSON.parse(line.to_s)
+          (payload.is_a?(Hash) && payload["event_version"]) ? payload : nil
+        rescue JSON::ParserError
+          nil
+        end
+      end
 
       def initialize(command:, config:, members:, family_members: nil, execute: false, accept: true, commit: true, allow_dirty: false, autostash: true, template_cleanup: true, publish: false, push: false, tag: false, start_step: nil, skip_steps: nil, fast_recovery: nil, fast_recovery_members: nil, skip_ci: false, skip_changelog: false, skip_appraisals: false, local_ci: false, continue_ci_failures: false, ci_workflows: nil, skip_bundle_audit: false, skip_remotes: nil, required_remotes: nil, auto_dependency_floors: nil, validate_ci_bundles: nil, gha_sha_pins_upgrade: "patch", gha_sha_pins_check: false, gha_sha_pins_ttl_days: nil, env_overrides: {}, debug: false, verbose: false, gem_signing_password: nil, secrets_provider: nil, jobs: nil, progress_io: nil, reset_target: nil, bup_args: [], bex_args: [], start_member: nil, start_branch: nil, template_branch_selection: {}, release_state_results: nil, event_tape: nil, mise_adapter: nil, branch_overrides: {}, **options)
         @command = command
@@ -2979,7 +3018,7 @@ module Kettle
             passthrough_output: release_command_passthrough_output?
           )
           result.member_name = original_member.name
-          result.resume_step = release_event_state[:failed_step] unless result.ok?
+          result.resume_step = release_event_state[:failed_step] || self.class.extract_release_resume_step(result) unless result.ok?
           memo << result
           emit_member_result_progress(original_member, result, progress: progress)
         ensure
@@ -3043,16 +3082,19 @@ module Kettle
           results << ensure_monorepo_release_tag(member, runner: runner)
           break unless results.last.ok?
 
-          results << runner.call(
+          finalize_event_state = {}
+          finalize_result = runner.call(
             member: member,
             phase: "release_finalize",
             command: release_command_for(member),
             env: release_env_for_member(member).merge("KETTLE_RELEASE_FAMILY_MEMBER_FINALIZE" => "true"),
             interactive: release_command_interactive?,
-            stdout_line_handler: release_event_line_handler(member, progress: @release_progress, state: {}),
+            stdout_line_handler: release_event_line_handler(member, progress: @release_progress, state: finalize_event_state),
             log_path: release_command_log_path(member, "release_finalize"),
             passthrough_output: release_command_passthrough_output?
           )
+          finalize_result.resume_step = finalize_event_state[:failed_step] || self.class.extract_release_resume_step(finalize_result) unless finalize_result.ok?
+          results << finalize_result
           break unless results.last.ok?
 
           results << runner.call(
@@ -3162,7 +3204,7 @@ module Kettle
             log_path: release_command_log_path(member, release_phase),
             passthrough_output: release_command_passthrough_output?
           )
-          release_result.resume_step = release_event_state[:failed_step] unless release_result.ok?
+          release_result.resume_step = release_event_state[:failed_step] || self.class.extract_release_resume_step(release_result) unless release_result.ok?
           memo << release_result
           emit_member_result_progress(member, memo.last, progress: progress)
           return memo unless memo.last.ok?
@@ -5826,9 +5868,8 @@ module Kettle
           event = parse_template_event(line)
           next false unless event
 
-          if event["type"] == "command_step" && event["phase"] == "release" && event["status"] == "failed"
-            state[:failed_step] = event["resume_step"].to_i if state && event["resume_step"].to_s.match?(/\A\d+\z/)
-          end
+          step = self.class.release_event_resume_step(event)
+          state[:failed_step] = step if state && step
 
           @event_tape&.call(event.merge("member" => member.name))
 
@@ -5906,10 +5947,7 @@ module Kettle
       end
 
       def parse_template_event(line)
-        payload = JSON.parse(line.to_s)
-        (payload.is_a?(Hash) && payload["event_version"]) ? payload : nil
-      rescue JSON::ParserError
-        nil
+        self.class.parse_ndjson_event(line)
       end
 
       def emit_template_event_progress(member, event)

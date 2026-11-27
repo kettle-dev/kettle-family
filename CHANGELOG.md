@@ -37,6 +37,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- release resume hints: preserve `--start-step N` (such as `--start-step 10` on CI monitoring timeouts/failures) in both per-result and final summary `resume:` commands by extracting the resume step from failed `ci_monitor` (`restart_hint`/`reason`), `summary` (`error_message`), and blocking `diagnostic` events as well as plain-text `kettle-release` restart output, while ignoring non-failed events and `summary["start_step"]` (fixes #88)
+
 ### Security
 
 ## [1.3.52] - 2026-11-27

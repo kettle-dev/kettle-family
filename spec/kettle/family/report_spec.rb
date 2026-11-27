@@ -909,6 +909,66 @@ RSpec.describe Kettle::Family::Report do
     expect(report.to_h.fetch("resume_hint")).to eq("kettle-family release --execute --publish --secrets-provider op --skip-ci --env RELEASE_CHANNEL=stable --only alpha --start-step 15")
   end
 
+  it "preserves --start-step 10 in per-result and final resume hints when CI monitoring times out" do
+    failed = result(
+      "kettle-paths",
+      success: false,
+      reason: "command failed",
+      stdout: [
+        JSON.generate(type: "ci_monitor", event_version: 1, action: "start", phase: "release", status: "started", restart_hint: "bundle exec kettle-release --start-step 10"),
+        JSON.generate(type: "ci_monitor", event_version: 1, action: "finish", phase: "release", status: "failed", restart_hint: "bundle exec kettle-release --start-step 10", reason: "Timed out after 300s"),
+        "kettle-release: exited (status=1, msg=Timed out after 300s waiting for GitHub Actions workflows to start. Confirm GitHub Actions started, then restart this tool from CI validation with: bundle exec kettle-release --start-step 10)"
+      ].join("\n")
+    )
+    failed.output_streamed = true
+    members = %w[kettle-paths kettle-test].map { |name| member(name) }
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: members,
+      selected_members: members,
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      release_resume_arguments: ["--secrets-provider", "op"],
+      results: [failed]
+    )
+
+    expected_failed_hint = "kettle-family release --execute --publish --secrets-provider op --only kettle-paths --start-step 10"
+    expected_pending_hint = "kettle-family release --execute --publish --secrets-provider op --only kettle-test"
+    expect(report.to_text).to include("    resume: #{expected_failed_hint}")
+    expect(report.to_h.fetch("resume_hints")).to eq([expected_failed_hint, expected_pending_hint])
+  end
+
+  it "does not attach --start-step 10 when CI monitoring succeeded before a later failure" do
+    failed = result(
+      "kettle-paths",
+      success: false,
+      reason: "command failed",
+      stdout: [
+        JSON.generate(type: "ci_monitor", event_version: 1, action: "start", phase: "release", status: "started", restart_hint: "bundle exec kettle-release --start-step 10"),
+        JSON.generate(type: "ci_monitor", event_version: 1, action: "finish", phase: "release", status: "ok", restart_hint: "bundle exec kettle-release --start-step 10"),
+        "kettle-release: exited (status=1, msg=git push failed)"
+      ].join("\n")
+    )
+    failed.output_streamed = true
+    report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [member("kettle-paths")],
+      selected_members: [member("kettle-paths")],
+      config_path: nil,
+      command: "release",
+      release_mode: "publish",
+      release_resume_arguments: ["--secrets-provider", "op"],
+      results: [failed]
+    )
+
+    expected_hint = "kettle-family release --execute --publish --secrets-provider op --only kettle-paths"
+    expect(report.to_h.fetch("resume_hints")).to eq([expected_hint])
+    expect(report.to_text).not_to include("--start-step 10")
+  end
+
   it "does not generate member selectors for synthetic aggregate release failures" do
     aggregate_failure = result("structuredmerge-ruby", phase: "aggregate_github_release", success: false, reason: "mixed versions")
     report = described_class.new(

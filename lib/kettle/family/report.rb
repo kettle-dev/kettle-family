@@ -1006,7 +1006,7 @@ module Kettle
             order << [:raw, hint] if hint && !order.include?([:raw, hint])
             next
           end
-          step = result.respond_to?(:resume_step) ? result.resume_step : nil
+          step = release_resume_step_for(result)
           key = [:group, step]
           order << key unless groups.key?(key)
           (groups[key] ||= []) << result.member_name
@@ -1039,8 +1039,17 @@ module Kettle
 
         hint = release_resume_base
         hint = "#{hint} --only #{result.member_name}" if result.member_name
-        hint = "#{hint} --start-step #{result.resume_step}" if result.respond_to?(:resume_step) && result.resume_step
+        step = release_resume_step_for(result)
+        hint = "#{hint} --start-step #{step}" if step
         hint
+      end
+
+      def release_resume_step_for(result)
+        step = result.respond_to?(:resume_step) ? result.resume_step : nil
+        return step if step
+        return nil unless result.phase.to_s.start_with?("release_")
+
+        Workflow.extract_release_resume_step(result)
       end
 
       def release_resume_hint_for_pending(member_names)
