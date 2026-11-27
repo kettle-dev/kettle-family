@@ -136,6 +136,11 @@
         </dt>
         <dd><pre class="code"><span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span></pre></dd>
       
+        <dt id="UNMERGED_STATUS_CODES-constant" class="">UNMERGED_STATUS_CODES =
+          
+        </dt>
+        <dd><pre class="code"><span class='qwords_beg'>%w[</span><span class='tstring_content'>DD</span><span class='words_sep'> </span><span class='tstring_content'>AU</span><span class='words_sep'> </span><span class='tstring_content'>UD</span><span class='words_sep'> </span><span class='tstring_content'>UA</span><span class='words_sep'> </span><span class='tstring_content'>DU</span><span class='words_sep'> </span><span class='tstring_content'>AA</span><span class='words_sep'> </span><span class='tstring_content'>UU</span><span class='tstring_end'>]</span></span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
     </dl>
   
 
@@ -237,7 +242,6 @@ the branch that happens to have unreleased entries.</p>
       <pre class="lines">
 
 
-33
 34
 35
 36
@@ -248,10 +252,14 @@ the branch that happens to have unreleased entries.</p>
 41
 42
 43
-44</pre>
+44
+45
+46
+47
+48</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 33</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 34</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>jobs:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>branches:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='ivar'>@members</span> <span class='op'>=</span> <span class='id identifier rubyid_members'>members</span>
@@ -262,6 +270,9 @@ the branch that happens to have unreleased entries.</p>
   <span class='ivar'>@transfer_changelog_status_by_root</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_lag_by_key</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
   <span class='ivar'>@transfer_changelog_total_count</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="#TRANSFER_CHANGELOG_TOTAL_UNSET-constant" title="Kettle::Family::ReleaseStateCheck::TRANSFER_CHANGELOG_TOTAL_UNSET (constant)">TRANSFER_CHANGELOG_TOTAL_UNSET</a></span></span>
+  <span class='ivar'>@git_status_by_worktree</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='ivar'>@git_worktrees_by_common_dir</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='ivar'>@branch_worktree_snapshot</span> <span class='op'>=</span> <span class='kw'>nil</span>
   <span class='ivar'>@cache_mutex</span> <span class='op'>=</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
   <span class='ivar'>@transfer_changelog_total_mutex</span> <span class='op'>=</span> <span class='const'>Mutex</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span>
 <span class='kw'>end</span></pre>
@@ -292,10 +303,6 @@ the branch that happens to have unreleased entries.</p>
       <pre class="lines">
 
 
-46
-47
-48
-49
 50
 51
 52
@@ -305,10 +312,14 @@ the branch that happens to have unreleased entries.</p>
 56
 57
 58
-59</pre>
+59
+60
+61
+62
+63</pre>
     </td>
     <td>
-      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 46</span>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/release_state_check.rb', line 50</span>
 
 <span class='kw'>def</span> <span class='id identifier rubyid_results'>results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
   <span class='kw'>return</span> <span class='id identifier rubyid_scoped_checkout_results'>scoped_checkout_results</span><span class='lparen'>(</span><span class='label'>event_handler:</span> <span class='id identifier rubyid_event_handler'>event_handler</span><span class='rparen'>)</span> <span class='kw'>if</span> <span class='id identifier rubyid_checked_out_scoped_results?'>checked_out_scoped_results?</span>

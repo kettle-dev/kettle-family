@@ -20,8 +20,6 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
-- `state` (`release-state`): report single-char git working-tree dirty state (`-` clean, `+` staged, `?` untracked, `*` unstaged, `!` conflict) in the `^ / v / ~` column, a conditional `wt` column (`-`, `N`, `@`, `@+N`) when linked git worktrees are present, and structured `git_dirty`/`git_state`/`git_*_count`/`git_worktree`/`git_linked_worktrees` fields in `--json` output (fixes #86)
-
 ### Changed
 
 ### Deprecated
@@ -30,10 +28,23 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+### Security
+
+## [1.3.52] - 2026-11-27
+
+- TAG: [v1.3.52][1.3.52t]
+- COVERAGE: 94.38% -- 8960/9494 lines in 49 files
+- BRANCH COVERAGE: 79.76% -- 3791/4753 branches in 49 files
+- 41.52% documented
+
+### Added
+
+- `state` (`release-state`): report single-char git working-tree dirty state (`-` clean, `+` staged, `?` untracked, `*` unstaged, `!` conflict) in the `^ / v / ~` column, a conditional `wt` column (`-`, `N`, `@`, `@+N`) when linked git worktrees are present, and structured `git_dirty`/`git_state`/`git_*_count`/`git_worktree`/`git_linked_worktrees` fields in `--json` output (fixes #86)
+
+### Fixed
+
 - progress pane secondary ticker: move remaining `N/M` counters (`attempt/attempts` for `release_lockfile`, `release_probe`, and `github_release`; `queued/total` for `secret_provider`) out of TTY status row text and into the dedicated `secondary:` ticker column while keeping counts in plain log lines (fixes #83)
 - release secrets broker: stop `CommandRunner` from concurrently selecting on `$stdin` while `Secrets::TerminalPrompter` reads a fallback RubyGems MFA code (which left the main loop blocked in `$stdin.readpartial` after the prompter consumed the line, freezing terminal output until a second Enter). Disable child stdin forwarding under `kettle-release --yes` with an active broker, coordinate exclusive terminal stdin handoff for `--no-accept` runs, exit Open3 interactive loops once child stdout/stderr close, and require a prompt delimiter (`:`/`?`) in `otp_response_prompt?` so intro sentences and invalid-OTP errors never double-fire
-
-### Security
 
 ## [1.3.51] - 2026-11-26
 
@@ -3583,7 +3594,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.51...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.52...HEAD
+[1.3.52]: https://github.com/kettle-dev/kettle-family/compare/v1.3.51...v1.3.52
+[1.3.52t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.52
 [1.3.51]: https://github.com/kettle-dev/kettle-family/compare/v1.3.50...v1.3.51
 [1.3.51t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.51
 [1.3.50]: https://github.com/kettle-dev/kettle-family/compare/v1.3.49...v1.3.50
