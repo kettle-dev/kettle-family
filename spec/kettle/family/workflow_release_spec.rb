@@ -3063,6 +3063,7 @@ RSpec.describe Kettle::Family::Workflow do
     tty_progress = Kettle::Family::WorkflowProgress.new(io: Class.new(StringIO) { def tty? = true }.new, label: "release", total: 1, jobs: 1)
     tty_progress.start
     workflow.instance_variable_set(:@release_progress, tty_progress)
+    allow(tty_progress).to receive(:update).and_call_original
 
     handled = workflow.send(:aggregate_github_release_event_line_handler, workflow.send(:family_member)).call(
       JSON.generate(
@@ -3078,7 +3079,16 @@ RSpec.describe Kettle::Family::Workflow do
 
     expect(handled).to be(true)
     expect(progress.string).not_to include("github_release:asset_upload")
+    expect(tty_progress).to have_received(:update).with(
+      anything,
+      status: "github_release:asset_upload:alpha-1.2.3.gem",
+      mark: ">",
+      secondary: "(1/3)",
+      key: config.family_name,
+      label: config.family_name
+    )
     expect(tty_progress.instance_variable_get(:@member_statuses).values.join(" ")).to include("github_release")
+    expect(tty_progress.instance_variable_get(:@member_secondary)[config.family_name]).to eq("(1/3)")
   end
 
   it "consumes release NDJSON events when progress rendering is disabled" do
@@ -3129,6 +3139,7 @@ RSpec.describe Kettle::Family::Workflow do
       {event_version: 1, type: "pre_release", action: "image_links", status: "ok", mark: "."},
       {event_version: 1, type: "changelog", action: "plan", plan: "create_release", status: "ok", mark: "."},
       {event_version: 1, type: "release_lockfile", action: "validate", stage: "before push", status: "ok", mark: "."},
+      {event_version: 1, type: "release_lockfile", action: "reset", stage: "before push", attempt: 1, attempts: 2, status: "retrying", mark: ">"},
       {
         event_version: 1,
         type: "release_probe",
@@ -3147,6 +3158,9 @@ RSpec.describe Kettle::Family::Workflow do
     expect(secondary_updates).to include(["ci:github_started:github", "(0/2)"])
     expect(secondary_updates).to include(["ci:github_workflow:github:ci.yml", "(1/2)"])
     expect(secondary_updates).to include(["ci:gitlab_pipeline:gitlab:pipeline", nil])
+    expect(secondary_updates).to include(["lockfile:validate:before_push", nil])
+    expect(secondary_updates).to include(["lockfile:reset:before_push", "(1/2)"])
+    expect(secondary_updates).to include(["probe:availability:alpha-1.2.3", "(2/3)"])
     expect(updates).to include(["release", ">"])
     expect(updates).to include(["release:yard:documentation", "."])
     expect(notifications).to eq(["👀 🔒 watch for authorization prompt", ""])
@@ -3159,9 +3173,40 @@ RSpec.describe Kettle::Family::Workflow do
     expect(updates).to include(["pre:image_links", "."])
     expect(updates).to include(["changelog:plan:create_release", "."])
     expect(updates).to include(["lockfile:validate:before_push", "."])
-    expect(updates).to include(["probe:availability:alpha-1.2.3:2/3", "."])
+    expect(updates).to include(["lockfile:reset:before_push", ">"])
+    expect(updates).to include(["probe:availability:alpha-1.2.3", "."])
+    expect(updates).not_to include(["lockfile:reset:before_push:1/2", ">"])
+    expect(updates).not_to include(["probe:availability:alpha-1.2.3:2/3", "."])
     expect(updates).to include(["remote_fetch", "!"])
     expect(updates).to include(["ok", "."])
+  end
+
+  it "moves queued/total and attempt/attempts counters to the secondary column in emit_release_event_status" do
+    write_release_config
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    recorded = []
+    progress = Class.new do
+      define_method(:initialize) { |target| @target = target }
+      define_method(:update) do |_member, status:, mark:, secondary: nil|
+        @target << {status: status, mark: mark, secondary: secondary}
+      end
+    end.new(recorded)
+    workflow = described_class.new(command: "release", config: config, members: [member], progress_io: StringIO.new)
+
+    [
+      {"type" => "secret_provider", "action" => "otp_queue", "label" => "RubyGems MFA prompts", "queued" => 1, "total" => 4, "status" => "queued", "mark" => ">"},
+      {"type" => "release_lockfile", "action" => "reset", "stage" => "before publish", "attempt" => 2, "attempts" => 3, "status" => "retrying", "mark" => ">"},
+      {"type" => "release_probe", "action" => "availability", "gem" => "alpha", "version" => "1.2.3", "attempt" => 1, "attempts" => 15, "status" => "retrying", "mark" => ">"},
+      {"type" => "ci_monitor", "action" => "github_tick", "provider" => "github", "workflow" => "ci.yml", "completed" => 2, "total" => 5, "status" => "ok", "mark" => "."}
+    ].each { |event| workflow.send(:emit_release_event_status, member, event, progress: progress) }
+
+    expect(recorded).to eq([
+      {status: "secret:otp_queue:RubyGems MFA prompts", mark: ">", secondary: "(1/4)"},
+      {status: "lockfile:reset:before_publish", mark: ">", secondary: "(2/3)"},
+      {status: "probe:availability:alpha-1.2.3", mark: ">", secondary: "(1/15)"},
+      {status: "ci:github_tick:github:ci.yml", mark: ".", secondary: "(2/5)"}
+    ])
   end
 
   it "emits release wave markers for parallel release groups" do

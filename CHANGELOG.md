@@ -28,6 +28,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- progress pane secondary ticker: move remaining `N/M` counters (`attempt/attempts` for `release_lockfile`, `release_probe`, and `github_release`; `queued/total` for `secret_provider`) out of TTY status row text and into the dedicated `secondary:` ticker column while keeping counts in plain log lines (fixes #83)
 - release secrets broker: stop `CommandRunner` from concurrently selecting on `$stdin` while `Secrets::TerminalPrompter` reads a fallback RubyGems MFA code (which left the main loop blocked in `$stdin.readpartial` after the prompter consumed the line, freezing terminal output until a second Enter). Disable child stdin forwarding under `kettle-release --yes` with an active broker, coordinate exclusive terminal stdin handoff for `--no-accept` runs, exit Open3 interactive loops once child stdout/stderr close, and require a prompt delimiter (`:`/`?`) in `otp_response_prompt?` so intro sentences and invalid-OTP errors never double-fire
 
 ### Security
