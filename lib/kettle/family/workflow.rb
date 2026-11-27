@@ -4809,8 +4809,9 @@ module Kettle
             # release event handler.
             @release_progress.update(
               member,
-              status: github_release_event_label(event),
+              status: github_release_event_label(event, include_count: false),
               mark: github_release_event_mark(event),
+              secondary: release_event_secondary_progress(event),
               key: member.name,
               label: member.name
             )
@@ -5966,7 +5967,7 @@ module Kettle
         when "command_step"
           command_step_event_label(event)
         when "secret_provider"
-          secret_provider_event_label(event)
+          secret_provider_event_label(event, include_count: false)
         when "remote_parity"
           remote_parity_event_label(event)
         when "ci_monitor"
@@ -5976,9 +5977,9 @@ module Kettle
         when "changelog"
           changelog_event_label(event)
         when "release_lockfile"
-          release_lockfile_event_label(event)
+          release_lockfile_event_label(event, include_count: false)
         when "release_probe"
-          release_probe_event_label(event)
+          release_probe_event_label(event, include_count: false)
         when "diagnostic"
           diagnostic_event_label(event)
         when "summary"
@@ -5989,10 +5990,17 @@ module Kettle
       end
 
       def release_event_secondary_progress(event)
-        return unless event["completed"].is_a?(Integer) && event["total"].is_a?(Integer)
-        return if event["completed"].negative? || event["total"] <= 0
+        [
+          [event["completed"], event["total"]],
+          [event["attempt"], event["attempts"]],
+          [event["queued"], event["total"]]
+        ].each do |current, total|
+          next unless current.is_a?(Integer) && total.is_a?(Integer)
+          next if current.negative? || total <= 0
 
-        "(#{event["completed"]}/#{event["total"]})"
+          return "(#{current}/#{total})"
+        end
+        nil
       end
 
       def release_event_status_mark(event)
@@ -6037,7 +6045,7 @@ module Kettle
         end
       end
 
-      def secret_provider_event_label(event)
+      def secret_provider_event_label(event, include_count: true)
         action = event["action"].to_s
         purpose = event["purpose"].to_s
         label = event["label"].to_s
@@ -6047,7 +6055,7 @@ module Kettle
         parts << purpose unless purpose.empty?
         parts << label unless label.empty?
         parts << source if purpose.empty? && label.empty? && !source.empty?
-        parts << "#{event["queued"]}/#{event["total"]}" if event["queued"] && event["total"]
+        parts << "#{event["queued"]}/#{event["total"]}" if include_count && event["queued"] && event["total"]
         parts.join(":")
       end
 
@@ -6111,33 +6119,33 @@ module Kettle
         parts.join(":")
       end
 
-      def release_lockfile_event_label(event)
+      def release_lockfile_event_label(event, include_count: true)
         action = event["action"].to_s
         stage = event["stage"].to_s
         stage = stage.tr(" ", "_")
         parts = ["lockfile"]
         parts << action unless action.empty?
         parts << stage unless stage.empty?
-        parts << "#{event["attempt"]}/#{event["attempts"]}" if event["attempt"] && event["attempts"]
+        parts << "#{event["attempt"]}/#{event["attempts"]}" if include_count && event["attempt"] && event["attempts"]
         parts.join(":")
       end
 
-      def release_probe_event_label(event)
+      def release_probe_event_label(event, include_count: true)
         action = event["action"].to_s
         gem_name = event["gem"].to_s
         version = event["version"].to_s
         parts = ["probe"]
         parts << action unless action.empty?
         parts << [gem_name, version].reject(&:empty?).join("-")
-        parts << "#{event["attempt"]}/#{event["attempts"]}" if event["attempt"] && event["attempts"]
+        parts << "#{event["attempt"]}/#{event["attempts"]}" if include_count && event["attempt"] && event["attempts"]
         parts.reject(&:empty?).join(":")
       end
 
-      def github_release_event_label(event)
+      def github_release_event_label(event, include_count: true)
         parts = ["github_release", event["action"].to_s]
         asset = event["asset"].to_s
         parts << asset unless asset.empty?
-        parts << "#{event["attempt"]}/#{event["attempts"]}" if event["attempt"] && event["attempts"]
+        parts << "#{event["attempt"]}/#{event["attempts"]}" if include_count && event["attempt"] && event["attempts"]
         parts.reject(&:empty?).join(":")
       end
 
