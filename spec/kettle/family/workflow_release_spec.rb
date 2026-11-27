@@ -1519,6 +1519,145 @@ RSpec.describe Kettle::Family::Workflow do
     expect(state).to be_empty
   end
 
+  it "records the resume step from a failed ci_monitor event restart_hint" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], publish: true)
+    state = {}
+    handler = workflow.send(:release_event_line_handler, ready_member("alpha"), state: state)
+
+    expect(handler.call(JSON.generate(
+      type: "ci_monitor",
+      event_version: 1,
+      action: "start",
+      phase: "release",
+      status: "started",
+      restart_hint: "bundle exec kettle-release --start-step 10"
+    ))).to be(true)
+    expect(state).to be_empty
+
+    expect(handler.call(JSON.generate(
+      type: "ci_monitor",
+      event_version: 1,
+      action: "finish",
+      phase: "release",
+      status: "failed",
+      restart_hint: "bundle exec kettle-release --start-step 10",
+      reason: "Timed out after 300s waiting for GitHub Actions workflows to start"
+    ))).to be(true)
+    expect(state).to eq(failed_step: 10)
+  end
+
+  it "ignores non-failed ci_monitor events and summary input start_step" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], publish: true)
+    state = {}
+    handler = workflow.send(:release_event_line_handler, ready_member("alpha"), state: state)
+
+    expect(handler.call(JSON.generate(
+      type: "ci_monitor",
+      event_version: 1,
+      action: "finish",
+      phase: "release",
+      status: "continued",
+      restart_hint: "bundle exec kettle-release --start-step 10"
+    ))).to be(true)
+    expect(handler.call(JSON.generate(
+      type: "diagnostic",
+      event_version: 1,
+      kind: "release_note",
+      blocking: false,
+      message: "hint: bundle exec kettle-release --start-step 10"
+    ))).to be(true)
+    expect(handler.call(JSON.generate(
+      type: "summary",
+      event_version: 1,
+      start_step: 10,
+      status: "failed",
+      error_message: "git push failed"
+    ))).to be(true)
+    expect(state).to be_empty
+  end
+
+  it "records the resume step from failed summary error_message or blocking diagnostic and preserves earlier command_step resume_step" do
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    workflow = described_class.new(command: "release", config: config, members: [ready_member("alpha")], publish: true)
+
+    summary_state = {}
+    summary_handler = workflow.send(:release_event_line_handler, ready_member("alpha"), state: summary_state)
+    expect(summary_handler.call(JSON.generate(
+      type: "summary",
+      event_version: 1,
+      status: "failed",
+      error_message: "Workflow failed. Fix and restart with: bundle exec kettle-release --start-step=10"
+    ))).to be(true)
+    expect(summary_state).to eq(failed_step: 10)
+
+    diagnostic_state = {}
+    diagnostic_handler = workflow.send(:release_event_line_handler, ready_member("alpha"), state: diagnostic_state)
+    expect(diagnostic_handler.call(JSON.generate(
+      type: "diagnostic",
+      event_version: 1,
+      kind: "release_exit",
+      blocking: true,
+      message: "Restart with: bundle exec kettle-release start_step=10"
+    ))).to be(true)
+    expect(diagnostic_state).to eq(failed_step: 10)
+
+    command_state = {}
+    command_handler = workflow.send(:release_event_line_handler, ready_member("alpha"), state: command_state)
+    expect(command_handler.call(JSON.generate(
+      type: "command_step",
+      event_version: 1,
+      phase: "release",
+      index: 8,
+      resume_step: 15,
+      status: "failed"
+    ))).to be(true)
+    expect(command_handler.call(JSON.generate(
+      type: "summary",
+      event_version: 1,
+      status: "failed",
+      error_message: "Command failed: bundle exec rake release"
+    ))).to be(true)
+    expect(command_state).to eq(failed_step: 15)
+  end
+
+  it "extracts a resume step from plain failure output without false positives from earlier non-failed NDJSON events" do
+    ci_timeout = Kettle::Family::CommandResult.new(
+      "kettle-paths",
+      "release_publish",
+      ["bundle", "exec", "kettle-release"],
+      @tmpdir,
+      1,
+      false,
+      "",
+      "kettle-release: exited (status=1, msg=Timed out after 300s waiting for GitHub Actions workflows to start. Confirm GitHub Actions started, then restart this tool from CI validation with: bundle exec kettle-release --start-step 10)\n",
+      1.0,
+      false,
+      "command failed"
+    )
+    expect(described_class.extract_release_resume_step(ci_timeout)).to eq(10)
+
+    later_failure = Kettle::Family::CommandResult.new(
+      "kettle-paths",
+      "release_publish",
+      ["bundle", "exec", "kettle-release"],
+      @tmpdir,
+      1,
+      false,
+      [
+        "Checking...\r#{JSON.generate(type: "ci_monitor", event_version: 1, action: "start", phase: "release", status: "started", restart_hint: "bundle exec kettle-release --start-step 10")}",
+        JSON.generate(type: "ci_monitor", event_version: 1, action: "finish", phase: "release", status: "ok", restart_hint: "bundle exec kettle-release --start-step 10"),
+        JSON.generate(type: "summary", event_version: 1, start_step: 10, status: "failed", error_message: "git push failed")
+      ].join("\n"),
+      "kettle-release: exited (status=1, msg=git push failed)\n",
+      1.0,
+      false,
+      "command failed"
+    )
+    expect(described_class.extract_release_resume_step(later_failure)).to be_nil
+  end
+
   it "lets kettle-release own release lockfile normalization" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
