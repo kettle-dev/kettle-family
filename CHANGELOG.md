@@ -28,6 +28,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- release secrets broker: stop `CommandRunner` from concurrently selecting on `$stdin` while `Secrets::TerminalPrompter` reads a fallback RubyGems MFA code (which left the main loop blocked in `$stdin.readpartial` after the prompter consumed the line, freezing terminal output until a second Enter). Disable child stdin forwarding under `kettle-release --yes` with an active broker, coordinate exclusive terminal stdin handoff for `--no-accept` runs, exit Open3 interactive loops once child stdout/stderr close, and require a prompt delimiter (`:`/`?`) in `otp_response_prompt?` so intro sentences and invalid-OTP errors never double-fire
+
 ### Security
 
 ## [1.3.51] - 2026-11-26
