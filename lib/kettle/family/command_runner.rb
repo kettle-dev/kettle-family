@@ -224,12 +224,15 @@ module Kettle
       end
       private_constant :FailureStatus
 
-      def initialize(execute: false, accept: true, gem_signing_password: nil, otp_coordinator: nil, mise_adapter: nil)
+      def initialize(execute: false, accept: true, gem_signing_password: nil, otp_coordinator: nil, mise_adapter: nil, forward_stdin: true, stdin_input: nil, stdin_gate: nil)
         @execute = execute
         @accept = accept
         @gem_signing_password = gem_signing_password
         @otp_coordinator = otp_coordinator
         @mise_adapter = mise_adapter || Kettle::Family.mise_adapter
+        @forward_stdin = forward_stdin
+        @stdin_input = stdin_input
+        @stdin_gate = stdin_gate
       end
 
       def call(member:, phase:, command:, env: {}, interactive: false, raw: false, stdout_line_handler: nil, log_path: nil, passthrough_output: true, chdir: member.root, **options)
@@ -282,7 +285,7 @@ module Kettle
 
       private
 
-      attr_reader :execute, :accept, :gem_signing_password, :otp_coordinator
+      attr_reader :execute, :accept, :gem_signing_password, :otp_coordinator, :stdin_gate
 
       def run_streaming(env:, argv:, chdir:, process_options:, stdout_line_handler:, log_io: nil)
         captured_stdout = +""
@@ -354,22 +357,16 @@ module Kettle
         prompt_buffer = +""
         status = nil
         PTY.spawn(env, *argv, chdir: chdir, **process_options) do |output, input, pid|
-          begin
+          with_stdin_gate do |wakeup|
+            stdin_eof = false
             loop do
-              readers = [output]
-              readers << $stdin if $stdin.tty? && !otp_coordinator
-              ready = IO.select(readers)
-              ready.first.each do |reader|
-                if reader.equal?(output)
-                  chunk = output.readpartial(1024)
-                  stdout << chunk
-                  transcript_write(log_io, chunk)
-                  stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler, passthrough_output: passthrough_output)
-                  prompt_buffer = handle_interactive_prompt(input, chunk, member_name: member_name, prompt_buffer: prompt_buffer)
-                else
-                  chunk = $stdin.readpartial(1024)
-                  input.write(chunk)
-                end
+              ready_outputs, stdin_eof = select_interactive_readers([output], input: input, wakeup: wakeup, stdin_eof: stdin_eof)
+              ready_outputs.each do |reader|
+                chunk = reader.readpartial(1024)
+                stdout << chunk
+                transcript_write(log_io, chunk)
+                stdout_line_buffer = print_interactive_stdout(stdout_line_buffer, chunk, stdout_line_handler, passthrough_output: passthrough_output)
+                prompt_buffer = handle_interactive_prompt(input, chunk, member_name: member_name, prompt_buffer: prompt_buffer)
               end
             end
           rescue Errno::EIO, EOFError
@@ -407,29 +404,25 @@ module Kettle
         status = nil
         Open3.popen3(env, *argv, chdir: chdir, **process_options) do |input, output, error, wait_thread|
           readers = [output, error]
-          readers << $stdin if $stdin.tty? && !otp_coordinator
-          begin
+          with_stdin_gate do |wakeup|
+            stdin_eof = false
             until readers.empty?
-              ready = IO.select(readers)
-              ready.first.each do |reader|
-                if reader.equal?($stdin)
-                  input.write($stdin.readpartial(1024))
-                else
-                  stdout_line_buffer, prompt_buffer = read_interactive_stream(
-                    reader,
-                    output,
-                    input,
-                    captured_stdout,
-                    captured_stderr,
-                    readers,
-                    member_name: member_name,
-                    stdout_line_buffer: stdout_line_buffer,
-                    stdout_line_handler: stdout_line_handler,
-                    log_io: log_io,
-                    passthrough_output: passthrough_output,
-                    prompt_buffer: prompt_buffer
-                  )
-                end
+              ready_outputs, stdin_eof = select_interactive_readers(readers, input: input, wakeup: wakeup, stdin_eof: stdin_eof)
+              ready_outputs.each do |reader|
+                stdout_line_buffer, prompt_buffer = read_interactive_stream(
+                  reader,
+                  output,
+                  input,
+                  captured_stdout,
+                  captured_stderr,
+                  readers,
+                  member_name: member_name,
+                  stdout_line_buffer: stdout_line_buffer,
+                  stdout_line_handler: stdout_line_handler,
+                  log_io: log_io,
+                  passthrough_output: passthrough_output,
+                  prompt_buffer: prompt_buffer
+                )
               end
             end
           rescue Error => error
@@ -452,8 +445,9 @@ module Kettle
         prompt_buffer = +""
         status = nil
         Open3.popen3(env, *argv, chdir: chdir, **process_options) do |input, output, stderr_stream, wait_thread|
-          streams = [output, stderr_stream]
-          streams << $stdin if $stdin.tty? && !otp_coordinator
+          output_streams = [output, stderr_stream]
+          streams = output_streams.dup
+          streams << stdin_stream if forward_stdin?
           queue = Queue.new
           readers = streams.map do |stream|
             Thread.new do # rubocop:disable ThreadSafety/NewThread -- Windows pipes are not selectable with IO.select.
@@ -462,17 +456,16 @@ module Kettle
               queue << [stream, nil]
             end
           end
-          input_reader = readers[streams.index($stdin)] if streams.include?($stdin)
-          active_streams = streams.dup
+          input_reader = readers[streams.index(stdin_stream)] if streams.include?(stdin_stream)
           begin
-            until active_streams.empty?
+            until output_streams.empty?
               stream, chunk = queue.pop
               unless chunk
-                active_streams.delete(stream)
+                output_streams.delete(stream)
                 next
               end
-              if stream.equal?($stdin)
-                input.write(chunk)
+              if stream.equal?(stdin_stream)
+                write_forwarded_stdin(input, chunk)
                 next
               end
               if stream.equal?(output)
@@ -499,6 +492,77 @@ module Kettle
           flush_interactive_stdout(stdout_line_buffer, stdout_line_handler, passthrough_output: passthrough_output)
         end
         [captured_stdout, captured_stderr, status]
+      end
+
+      def forward_stdin?
+        @forward_stdin && !otp_coordinator && stdin_stream.respond_to?(:tty?) && stdin_stream.tty?
+      end
+
+      def stdin_stream
+        @stdin_input || $stdin
+      end
+
+      def with_stdin_gate(&block)
+        if forward_stdin? && stdin_gate
+          stdin_gate.with_stdin_forwarder(&block)
+        else
+          yield nil
+        end
+      end
+
+      def select_interactive_readers(output_readers, input:, wakeup:, stdin_eof:)
+        readers = output_readers.dup
+        watching_stdin = false
+        stdin_chunk = nil
+        begin
+          if !stdin_eof && forward_stdin?
+            watching_stdin = stdin_gate ? stdin_gate.enter_stdin_select : true
+            readers << stdin_stream if watching_stdin
+            readers << wakeup if wakeup
+          end
+          ready_readers = IO.select(readers).first
+          drain_wakeup(wakeup) if wakeup && ready_readers.include?(wakeup)
+          if watching_stdin
+            stdin_chunk, stdin_eof = read_forwarded_stdin(ready_readers.include?(stdin_stream))
+            watching_stdin = false
+          end
+        ensure
+          stdin_gate.leave_stdin_select if watching_stdin && stdin_gate
+        end
+        write_forwarded_stdin(input, stdin_chunk) if stdin_chunk
+        [ready_readers.select { |reader| output_readers.include?(reader) }, stdin_eof]
+      end
+
+      def read_forwarded_stdin(stdin_ready)
+        return read_stdin_chunk(stdin_ready) unless stdin_gate
+
+        result = [nil, false]
+        stdin_gate.leave_stdin_select do
+          result = read_stdin_chunk(stdin_ready)
+        end
+        result
+      end
+
+      def read_stdin_chunk(stdin_ready)
+        return [nil, false] unless stdin_ready
+
+        [stdin_stream.readpartial(1024), false]
+      rescue IOError
+        [nil, true]
+      end
+
+      def write_forwarded_stdin(input, chunk)
+        input.write(chunk)
+      rescue Errno::EPIPE, IOError
+        nil
+      end
+
+      def drain_wakeup(wakeup)
+        loop do
+          break unless wakeup.read_nonblock(1024, exception: false).is_a?(String)
+        end
+      rescue IOError
+        nil
       end
 
       def read_interactive_stream(
@@ -650,7 +714,7 @@ module Kettle
       end
 
       def otp_response_prompt?(chunk)
-        chunk.match?(/(?:OTP code|one-time password|\bCode:\s*)/i)
+        chunk.match?(/(?:OTP code|one-time password|\bCode)\s*[:?]\s*\z/i)
       end
 
       def signing_password_prompt?(chunk)

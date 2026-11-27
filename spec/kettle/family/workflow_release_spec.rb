@@ -1652,6 +1652,36 @@ RSpec.describe Kettle::Family::Workflow do
     expect(runner.instance_variable_get(:@otp_coordinator)).to be_nil
   end
 
+  it "disables child stdin forwarding when the family secrets broker owns prompts under kettle-release --yes" do
+    write_release_config(
+      publish_command: "bundle exec kettle-release",
+      secrets: {"provider" => "1password"}
+    )
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    member = ready_member("alpha")
+    provider = Kettle::Family::Secrets::OnePassword.new(config.release_secrets)
+    prompter = Kettle::Family::Secrets::TerminalPrompter.new(input: StringIO.new, output: StringIO.new, remind_every: nil)
+    broker = instance_double(Kettle::Family::Secrets::Broker, path: File.join(@tmpdir, "secrets.sock"))
+
+    workflow = described_class.new(command: "release", config: config, members: [member], publish: true, accept: true, secrets_provider: provider)
+    workflow.instance_variable_set(:@release_secrets_broker, broker)
+    workflow.instance_variable_set(:@release_secrets_prompter, prompter)
+
+    runner = workflow.send(:release_command_runner)
+
+    expect(runner.instance_variable_get(:@forward_stdin)).to be(false)
+    expect(runner.instance_variable_get(:@stdin_gate)).to eq(prompter)
+
+    manual_workflow = described_class.new(command: "release", config: config, members: [member], publish: true, accept: false, secrets_provider: provider)
+    manual_workflow.instance_variable_set(:@release_secrets_broker, broker)
+    manual_workflow.instance_variable_set(:@release_secrets_prompter, prompter)
+
+    manual_runner = manual_workflow.send(:release_command_runner)
+
+    expect(manual_runner.instance_variable_get(:@forward_stdin)).to be(true)
+    expect(manual_runner.instance_variable_get(:@stdin_gate)).to eq(prompter)
+  end
+
   it "uses one family-owned secrets broker for delegated kettle-release commands" do
     write_release_config(
       publish_command: "bundle exec kettle-release",
