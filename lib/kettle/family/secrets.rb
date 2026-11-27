@@ -76,10 +76,47 @@ module Kettle
           @input = input
           @output = output
           @remind_every = remind_every
+          @gate_mutex = Mutex.new
+          @gate_condition = ConditionVariable.new
+          @active = false
+          @select_listeners = []
+          @active_selects = 0
         end
 
         def self.for_terminal(input: $stdin, output: $stderr)
           new(input: input, output: output) if input.respond_to?(:tty?) && input.tty?
+        end
+
+        # Coordinates terminal stdin with any interactive CommandRunner that
+        # forwards stdin to a child process. Before prompting, TerminalPrompter
+        # wakes active IO.select loops and waits for them to drop stdin so two
+        # threads never compete on the same terminal fd.
+        def with_stdin_forwarder
+          reader, writer = IO.pipe
+          @gate_mutex.synchronize { @select_listeners << writer }
+          yield reader
+        ensure
+          @gate_mutex.synchronize { @select_listeners.delete(writer) } if writer
+          writer&.close unless writer&.closed?
+          reader&.close unless reader&.closed?
+        end
+
+        def enter_stdin_select
+          @gate_mutex.synchronize do
+            return false if @active
+
+            @active_selects += 1
+            true
+          end
+        end
+
+        def leave_stdin_select
+          @gate_mutex.synchronize do
+            yield if block_given? && !@active
+          ensure
+            @active_selects -= 1
+            @gate_condition.broadcast if @active_selects.zero?
+          end
         end
 
         # Blocks until the user presses Enter. An empty answer means "ask the
@@ -87,32 +124,59 @@ module Kettle
         # say so, and a reminder repeats once a minute so a long-running release
         # never looks like a silent hang.
         def ask(operation:, reason: nil)
-          label = LABELS.fetch(operation, operation)
-          instructions = "paste the #{label} and press Enter (nothing is shown while you type or paste), " \
-            "or press Enter on an empty line to ask the vault again"
-          @output.puts
-          @output.puts("🔑 #{label} needed#{": #{reason}" if reason}")
-          @output.puts("   Action required: #{instructions}.")
-          @output.print("\a#{label}: ")
-          @output.flush
-          reminder = start_reminder(label, instructions)
-          loop do
-            value = read_line
+          with_exclusive_stdin do
+            label = LABELS.fetch(operation, operation)
+            instructions = "paste the #{label} and press Enter (nothing is shown while you type or paste), " \
+              "or press Enter on an empty line to ask the vault again"
             @output.puts
-            return value.to_s.chomp unless operation == "rubygems_otp"
-
-            code, problem = sanitize_otp(value.to_s)
-            return code if problem.nil?
-
-            @output.puts("#{problem} Paste the #{label} again (or press Enter on an empty line to ask the vault again).")
+            @output.puts("🔑 #{label} needed#{": #{reason}" if reason}")
+            @output.puts("   Action required: #{instructions}.")
             @output.print("\a#{label}: ")
             @output.flush
+            reminder = start_reminder(label, instructions)
+            begin
+              loop do
+                value = read_line
+                @output.puts
+                return value.to_s.chomp unless operation == "rubygems_otp"
+
+                code, problem = sanitize_otp(value.to_s)
+                return code if problem.nil?
+
+                @output.puts("#{problem} Paste the #{label} again (or press Enter on an empty line to ask the vault again).")
+                @output.print("\a#{label}: ")
+                @output.flush
+              end
+            ensure
+              reminder&.kill
+              reminder&.join(1)
+            end
           end
-        ensure
-          reminder&.kill
         end
 
         private
+
+        def with_exclusive_stdin
+          @gate_mutex.synchronize do
+            @active = true
+            wake_select_listeners_locked
+            @gate_condition.wait(@gate_mutex) while @active_selects.positive?
+          end
+          yield
+        ensure
+          @gate_mutex.synchronize do
+            @active = false
+            wake_select_listeners_locked
+          end
+        end
+
+        def wake_select_listeners_locked
+          @select_listeners.each do |writer|
+            writer.write_nonblock(".")
+          rescue IO::WaitWritable, IOError, Errno::EPIPE
+            nil
+          end
+        end
 
         def read_line
           @input.respond_to?(:noecho) ? @input.noecho(&:gets) : @input.gets

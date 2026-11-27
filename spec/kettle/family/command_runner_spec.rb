@@ -835,6 +835,178 @@ RSpec.describe Kettle::Family::CommandRunner do
     expect(runner.send(:normalize_output, "first\r\nsecond\r\n")).to eq("first\nsecond\n")
   end
 
+  it "writes OTP only once when RubyGems prints its MFA intro line and Code prompt in separate chunks" do
+    provider = instance_double(Kettle::Family::Secrets::Provider, rubygems_otp: "123456")
+    coordinator = described_class::OtpCoordinator.new(
+      input: StringIO.new,
+      output: StringIO.new,
+      secrets_provider: provider
+    )
+    runner = described_class.new(otp_coordinator: coordinator)
+    child_input = StringIO.new
+
+    prompt_buffer = runner.send(
+      :handle_interactive_prompt,
+      child_input,
+      "You have enabled multi-factor authentication. Please enter OTP code.\n",
+      member_name: "alpha",
+      prompt_buffer: +""
+    )
+    expect(child_input.string).to eq("")
+
+    runner.send(
+      :handle_interactive_prompt,
+      child_input,
+      "Code:   ",
+      member_name: "alpha",
+      prompt_buffer: prompt_buffer
+    )
+    runner.send(
+      :handle_interactive_prompt,
+      child_input,
+      "Your OTP code is incorrect. Please check it and retry.\n",
+      member_name: "alpha",
+      prompt_buffer: +""
+    )
+
+    expect(child_input.string).to eq("123456\n")
+    expect(provider).to have_received(:rubygems_otp).once
+  end
+
+  it "does not block interactive PTY completion when stdin forwarding is disabled for a brokered prompter" do
+    member = member_at("alpha")
+    runner_probe = described_class.new(execute: true)
+    skip "PTY is unavailable on this Ruby engine" unless runner_probe.send(:pty_available?)
+
+    PTY.open do |tty_master, tty_slave|
+      provider = Class.new(Kettle::Family::Secrets::Provider) do
+        def rubygems_otp
+          raise Kettle::Family::Secrets::AuthorizationError, "timed out"
+        end
+      end.new
+      prompter_output = StringIO.new
+      prompter = Kettle::Family::Secrets::TerminalPrompter.new(input: tty_slave, output: prompter_output, remind_every: nil)
+      broker = Kettle::Family::Secrets::Broker.new(provider: provider, root: @tmpdir, prompter: prompter).start
+      runner = described_class.new(execute: true, forward_stdin: false, stdin_input: tty_slave)
+      child_code = <<~RUBY
+        require "socket"
+        require "json"
+        socket = UNIXSocket.new(ENV.fetch("BROKER_SOCK"))
+        socket.puts(JSON.generate("operation" => "rubygems_otp"))
+        response = JSON.parse(socket.gets)
+        puts "PUBLISHED:" + response.fetch("value")
+      RUBY
+      writer = Thread.new do # rubocop:disable ThreadSafety/NewThread -- simulates the user pasting a single OTP code on the terminal.
+        wait_until { prompter_output.string.include?("RubyGems MFA code:") }
+        tty_master.write("123456\n")
+        tty_master.flush
+      end
+
+      result = Timeout.timeout(5) do
+        runner.call(
+          member: member,
+          phase: "release_publish",
+          command: [RbConfig.ruby, "-e", child_code],
+          env: {"BROKER_SOCK" => broker.path},
+          interactive: true,
+          passthrough_output: false
+        )
+      end
+
+      expect(result).to be_ok
+      expect(result.stdout).to include("PUBLISHED:123456")
+    ensure
+      writer&.kill
+      writer&.join(1)
+      broker&.close
+    end
+  end
+
+  it "yields exclusive TTY stdin to the broker prompter when stdin forwarding is enabled" do
+    member = member_at("alpha")
+    runner_probe = described_class.new(execute: true)
+    skip "PTY is unavailable on this Ruby engine" unless runner_probe.send(:pty_available?)
+
+    PTY.open do |tty_master, tty_slave|
+      provider = Class.new(Kettle::Family::Secrets::Provider) do
+        def rubygems_otp
+          raise Kettle::Family::Secrets::AuthorizationError, "timed out"
+        end
+      end.new
+      prompter_output = StringIO.new
+      prompter = Kettle::Family::Secrets::TerminalPrompter.new(input: tty_slave, output: prompter_output, remind_every: nil)
+      broker = Kettle::Family::Secrets::Broker.new(provider: provider, root: @tmpdir, prompter: prompter).start
+      runner = described_class.new(execute: true, accept: false, forward_stdin: true, stdin_input: tty_slave, stdin_gate: prompter)
+      child_code = <<~RUBY
+        require "socket"
+        require "json"
+        STDOUT.puts('{"prompt":"proceed"}')
+        STDOUT.flush
+        answer = STDIN.gets.to_s.chomp
+        exit(2) unless answer == "yes"
+        socket = UNIXSocket.new(ENV.fetch("BROKER_SOCK"))
+        socket.puts(JSON.generate("operation" => "rubygems_otp"))
+        response = JSON.parse(socket.gets)
+        puts "PUBLISHED:" + response.fetch("value")
+      RUBY
+      prompt_seen = Queue.new
+      writer = Thread.new do # rubocop:disable ThreadSafety/NewThread -- simulates answering a child prompt and then a broker OTP fallback prompt.
+        prompt_seen.pop
+        tty_master.write("yes\n")
+        tty_master.flush
+        wait_until { prompter_output.string.include?("RubyGems MFA code:") }
+        tty_master.write("654321\n")
+        tty_master.flush
+      end
+
+      result = Timeout.timeout(5) do
+        runner.call(
+          member: member,
+          phase: "release_publish",
+          command: [RbConfig.ruby, "-e", child_code],
+          env: {"BROKER_SOCK" => broker.path},
+          interactive: true,
+          passthrough_output: false,
+          stdout_line_handler: lambda do |line|
+            prompt_seen << true if line.include?("proceed")
+            false
+          end
+        )
+      end
+
+      expect(result).to be_ok
+      expect(result.stdout).to include("PUBLISHED:654321")
+    ensure
+      writer&.kill
+      writer&.join(1)
+      broker&.close
+    end
+  end
+
+  it "finishes interactive Open3 commands when child streams close on a TTY stdin" do
+    member = member_at("alpha")
+    runner_probe = described_class.new(execute: true)
+    skip "PTY is unavailable on this Ruby engine" unless runner_probe.send(:pty_available?)
+
+    PTY.open do |_tty_master, tty_slave|
+      runner = described_class.new(execute: true, stdin_input: tty_slave)
+      allow(runner).to receive(:pty_available?).and_return(false)
+
+      result = Timeout.timeout(5) do
+        runner.call(
+          member: member,
+          phase: "release_publish",
+          command: [RbConfig.ruby, "-e", "puts 'done'"],
+          interactive: true,
+          passthrough_output: false
+        )
+      end
+
+      expect(result).to be_ok
+      expect(result.stdout).to eq("done\n")
+    end
+  end
+
   it "rejects unsupported command shapes" do
     member = member_at("alpha")
 

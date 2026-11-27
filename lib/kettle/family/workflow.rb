@@ -240,11 +240,13 @@ module Kettle
       def with_release_secrets_broker
         return yield unless release_secrets_broker_required?
 
-        @release_secrets_broker = Secrets::Broker.new(provider: @secrets_provider, root: config.root, prompter: Secrets::TerminalPrompter.for_terminal).start
+        @release_secrets_prompter = Secrets::TerminalPrompter.for_terminal
+        @release_secrets_broker = Secrets::Broker.new(provider: @secrets_provider, root: config.root, prompter: @release_secrets_prompter).start
         yield
       ensure
         @release_secrets_broker&.close
         @release_secrets_broker = nil
+        @release_secrets_prompter = nil
       end
 
       def release_secrets_broker_required?
@@ -3302,8 +3304,16 @@ module Kettle
           # coordinator here can make a family-level gem retry look successful
           # while skipping the child's checksums and GitHub release steps.
           otp_coordinator: nil,
+          forward_stdin: release_command_forward_stdin?,
+          stdin_gate: @release_secrets_prompter,
           mise_adapter: @mise_adapter
         )
+      end
+
+      def release_command_forward_stdin?
+        return false if @release_secrets_broker && release_command_uses_kettle_release_yes?
+
+        true
       end
 
       def parallel_release_members?(release_members)
