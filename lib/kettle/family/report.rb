@@ -34,6 +34,14 @@ module Kettle
         update-bundler
       ].freeze
 
+      GIT_STATE_SYMBOLS = {
+        "clean" => "-",
+        "staged" => "+",
+        "untracked" => "?",
+        "unstaged" => "*",
+        "conflict" => "!"
+      }.freeze
+
       attr_reader :family_name, :family_mode, :order_mode, :members, :selected_members, :config_path, :command, :results, :branch_lanes, :release_target_branches, :member_release_target_branches, :release_mode, :release_resume_arguments, :warnings, :event_log_dirs
 
       def initialize(family_name:, order_mode:, members:, selected_members:, config_path:, family_mode: nil, branch_lanes: {}, release_target_branches: [], member_release_target_branches: {}, release_mode: nil, release_resume_arguments: [], command: nil, results: [], warnings: [], event_log_dirs: [], elapsed_seconds: nil)
@@ -682,6 +690,7 @@ module Kettle
       end
 
       def append_release_state_results(lines)
+        has_worktrees = release_state_has_worktrees?
         lines << "release state:"
         lines << "  boolean columns:"
         lines << "    unrel: unreleased changelog entries are present (including replayed transfer entries)"
@@ -690,10 +699,12 @@ module Kettle
         lines << "    bump: unrel is yes and V.rb matches V.rel"
         lines << "  count columns:"
         lines << "    T(n): filter-aware kettle-jem transfer changelog lag; n is the total source entry count and row values are missing / applicable (x excluded-present)"
-        rows = release_state_header
+        lines << "    ^ / v / ~: commits ahead / behind latest release tag (remote in parentheses if different) / git state (- clean, + staged, ? untracked, * unstaged, ! conflict)"
+        lines << "    wt: linked git worktrees (- none, N count, @ inside linked worktree, @+N inside one with N others)" if has_worktrees
+        rows = release_state_header(has_worktrees: has_worktrees)
         shared_rows = {}
         results.each do |result|
-          row = release_state_row(result)
+          row = release_state_row(result, has_worktrees: has_worktrees)
           state = result.state || {}
           shared_root = state["shared_changelog_root"]
           if shared_root
@@ -701,7 +712,7 @@ module Kettle
             # member versions, registry state, transfer filters and flags intact.
             key = [shared_root, result.branch, state["latest_released"]]
             offset = release_state_has_branches? ? 1 : 0
-            shared_columns = [1, 3, 5, 7]
+            shared_columns = has_worktrees ? [1, 3, 5, 7, 8] : [1, 3, 5, 7]
             if shared_rows.key?(key)
               shared_columns.each do |column|
                 row[column + offset] = "-" if row[column + offset] == shared_rows[key][column + offset]
@@ -724,7 +735,7 @@ module Kettle
         end
       end
 
-      def release_state_row(result)
+      def release_state_row(result, has_worktrees: release_state_has_worktrees?)
         state = result.state || {}
         row = [
           state.fetch("gem_name", result.member_name).to_s,
@@ -734,22 +745,27 @@ module Kettle
           state.fetch("latest_released", nil).to_s.empty? ? "unknown" : state.fetch("latest_released").to_s,
           release_state_github_release(state),
           release_state_transfer_changelog_value(state),
-          release_state_ahead_behind(state),
+          release_state_ahead_behind(state)
+        ]
+        row << release_state_worktree(state) if has_worktrees
+        row.concat([
           yes_no(state.fetch("unreleased_entries", nil)),
           yes_no(state.fetch("prepared_release_pending", nil)),
           yes_no(state.fetch("pending_release", nil)),
           yes_no(state.fetch("bump_release_pending", nil))
-        ]
+        ])
         return row unless release_state_has_branches?
 
         [result.branch.to_s.empty? ? "current" : result.branch.to_s, *row]
       end
 
-      def release_state_header
-        header = [["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", release_state_transfer_changelog_header, "^ / v", "unrel", "prep", "pend", "bump"]]
-        return header unless release_state_has_branches?
+      def release_state_header(has_worktrees: release_state_has_worktrees?)
+        columns = ["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", release_state_transfer_changelog_header, "^ / v / ~"]
+        columns << "wt" if has_worktrees
+        columns.concat(["unrel", "prep", "pend", "bump"])
+        return [columns] unless release_state_has_branches?
 
-        [["branch", *header.first]]
+        [["branch", *columns]]
       end
 
       def release_state_transfer_changelog_header
@@ -795,9 +811,36 @@ module Kettle
       def release_state_ahead_behind(state)
         local_ahead = state.fetch("ahead", nil)
         local_behind = state.fetch("behind", nil)
-        return "unknown" if local_ahead.nil? && local_behind.nil?
+        dirty = release_state_git_dirty_indicator(state)
+        if local_ahead.nil? && local_behind.nil?
+          return dirty ? "unknown / #{dirty}" : "unknown"
+        end
 
-        "#{release_state_count(local_ahead, state.fetch("remote_ahead", nil))} / #{release_state_count(local_behind, state.fetch("remote_behind", nil))}"
+        counts = "#{release_state_count(local_ahead, state.fetch("remote_ahead", nil))} / #{release_state_count(local_behind, state.fetch("remote_behind", nil))}"
+        dirty ? "#{counts} / #{dirty}" : counts
+      end
+
+      def release_state_git_dirty_indicator(state)
+        GIT_STATE_SYMBOLS[state.fetch("git_state", nil).to_s]
+      end
+
+      def release_state_has_worktrees?
+        results.any? do |result|
+          state = result.state || {}
+          state["git_worktree"] == true || state["git_linked_worktrees"].to_i.positive?
+        end
+      end
+
+      def release_state_worktree(state)
+        linked = state["git_linked_worktrees"].to_i
+        if state["git_worktree"] == true
+          others = [linked - 1, 0].max
+          others.positive? ? "@+#{others}" : "@"
+        elsif linked.positive?
+          linked.to_s
+        else
+          "-"
+        end
       end
 
       def release_state_count(local_value, remote_value)

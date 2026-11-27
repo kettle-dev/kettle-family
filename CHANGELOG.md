@@ -20,6 +20,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+- `state` (`release-state`): report single-char git working-tree dirty state (`-` clean, `+` staged, `?` untracked, `*` unstaged, `!` conflict) in the `^ / v / ~` column, a conditional `wt` column (`-`, `N`, `@`, `@+N`) when linked git worktrees are present, and structured `git_dirty`/`git_state`/`git_*_count`/`git_worktree`/`git_linked_worktrees` fields in `--json` output (fixes #86)
+
 ### Changed
 
 ### Deprecated

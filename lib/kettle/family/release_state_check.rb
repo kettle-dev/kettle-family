@@ -24,6 +24,7 @@ module Kettle
       TRANSFER_CHANGELOG_TOTAL_UNSET = Object.new.freeze
       CACHE_MISS = Object.new.freeze
       WORKTREE_ADMIN_MUTEX = Mutex.new
+      UNMERGED_STATUS_CODES = %w[DD AU UD UA DU AA UU].freeze
 
       # +branches+ scopes the check to specific release target branches. A
       # branch-stack member produces one result per branch; a per-branch
@@ -39,6 +40,9 @@ module Kettle
         @transfer_changelog_status_by_root = {}
         @transfer_changelog_lag_by_key = {}
         @transfer_changelog_total_count = TRANSFER_CHANGELOG_TOTAL_UNSET
+        @git_status_by_worktree = {}
+        @git_worktrees_by_common_dir = {}
+        @branch_worktree_snapshot = nil
         @cache_mutex = Mutex.new
         @transfer_changelog_total_mutex = Mutex.new
       end
@@ -336,6 +340,7 @@ module Kettle
         enriched = state.dup
         current_branch = branch || git_output(root, "branch", "--show-current")
         enriched["current_branch"] = current_branch unless current_branch.to_s.empty?
+        enrich_working_tree_state!(root, enriched, branch: branch)
 
         version = state["latest_released"].to_s.empty? ? state["latest_changelog_version"] : state["latest_released"]
         return enriched if version.to_s.empty?
@@ -359,6 +364,166 @@ module Kettle
         end
 
         enriched
+      end
+
+      def enrich_working_tree_state!(root, enriched, branch: nil)
+        if @branch_worktree_snapshot && branch
+          snapshot = @branch_worktree_snapshot
+          checked_out_path = snapshot[:by_branch][branch]
+          enriched["git_worktree"] = !checked_out_path.nil? && checked_out_path != snapshot[:primary_path]
+          enriched["git_linked_worktrees"] = snapshot[:linked_count]
+          if checked_out_path && (status = git_status_summary(checked_out_path))
+            enriched.merge!(status)
+          end
+          return
+        end
+
+        worktree_info = git_worktree_info(root)
+        if worktree_info
+          enriched["git_worktree"] = worktree_info[:linked]
+          enriched["git_linked_worktrees"] = worktree_info[:linked_count]
+        end
+        if (status = git_status_summary(root))
+          enriched.merge!(status)
+        end
+      end
+
+      def git_worktree_info(root)
+        git_dir, common_dir = git_dir_paths(root)
+        return nil unless git_dir && common_dir
+
+        snapshot = @cache_mutex.synchronize { @git_worktrees_by_common_dir[common_dir] }
+        unless snapshot
+          snapshot = snapshot_git_worktrees(root, common_dir: common_dir)
+          @cache_mutex.synchronize { @git_worktrees_by_common_dir[common_dir] = snapshot } if snapshot
+        end
+        return nil unless snapshot
+
+        {
+          linked: git_dir != common_dir,
+          linked_count: snapshot[:linked_count]
+        }
+      end
+
+      def snapshot_git_worktrees(root, common_dir: nil)
+        return nil unless git_work_tree?(root)
+
+        common_dir ||= git_dir_paths(root).last
+        stdout, _stderr, status = Open3.capture3("git", "worktree", "list", "--porcelain", chdir: root)
+        return nil unless status.success?
+
+        entries = parse_git_worktree_list(stdout)
+        primary_path = entries.first&.fetch(:path)
+        by_branch = {}
+        entries.each do |entry|
+          by_branch[entry[:branch]] = entry[:path] if entry[:branch]
+        end
+        {
+          common_dir: common_dir,
+          primary_path: primary_path,
+          linked_count: [entries.length - 1, 0].max,
+          by_branch: by_branch
+        }
+      end
+
+      def parse_git_worktree_list(stdout)
+        entries = []
+        current = nil
+        stdout.each_line do |raw_line|
+          line = raw_line.strip
+          if line.empty?
+            entries << current if current && !current[:prunable]
+            current = nil
+          elsif line.start_with?("worktree ")
+            current = {path: canonical_git_path(line.delete_prefix("worktree ")), branch: nil, prunable: false}
+          elsif current && line.start_with?("branch ")
+            ref = line.delete_prefix("branch ")
+            current[:branch] = ref.delete_prefix("refs/heads/")
+          elsif current && line.start_with?("prunable")
+            current[:prunable] = true
+          end
+        end
+        entries << current if current && !current[:prunable]
+        entries
+      end
+
+      def git_dir_paths(root)
+        stdout, _stderr, status = Open3.capture3("git", "rev-parse", "--git-dir", "--git-common-dir", chdir: root)
+        return [nil, nil] unless status.success?
+
+        lines = stdout.lines.map(&:strip).reject(&:empty?)
+        return [nil, nil] unless lines.length == 2
+
+        lines.map { |path| canonical_git_path(File.expand_path(path, root)) }
+      end
+
+      def git_status_summary(worktree_root)
+        toplevel = git_output(worktree_root, "rev-parse", "--show-toplevel")
+        return nil if toplevel.to_s.empty?
+
+        cache_key = canonical_git_path(toplevel)
+        cached = @cache_mutex.synchronize { @git_status_by_worktree.fetch(cache_key, CACHE_MISS) }
+        return cached unless cached.equal?(CACHE_MISS)
+
+        stdout, _stderr, status = Open3.capture3("git", "status", "--porcelain=v1", "-z", "--untracked-files=normal", chdir: toplevel)
+        summary = status.success? ? parse_git_status_porcelain(stdout) : nil
+        @cache_mutex.synchronize { @git_status_by_worktree[cache_key] = summary }
+        summary
+      end
+
+      def parse_git_status_porcelain(stdout)
+        entries = stdout.split("\0")
+        staged = 0
+        unstaged = 0
+        untracked = 0
+        conflict = 0
+        index = 0
+        while index < entries.length
+          entry = entries[index]
+          index += 1
+          next if entry.empty?
+
+          code = entry[0, 2]
+          x = code[0]
+          y = code[1]
+          index += 1 if %w[R C].include?(x) || %w[R C].include?(y)
+
+          if code == "??"
+            untracked += 1
+          elsif UNMERGED_STATUS_CODES.include?(code)
+            conflict += 1
+          else
+            staged += 1 if x && x != " "
+            unstaged += 1 if y && y != " "
+          end
+        end
+
+        git_state = if conflict.positive?
+          "conflict"
+        elsif unstaged.positive?
+          "unstaged"
+        elsif untracked.positive?
+          "untracked"
+        elsif staged.positive?
+          "staged"
+        else
+          "clean"
+        end
+
+        {
+          "git_dirty" => git_state != "clean",
+          "git_state" => git_state,
+          "git_staged_count" => staged,
+          "git_unstaged_count" => unstaged,
+          "git_untracked_count" => untracked,
+          "git_conflict_count" => conflict
+        }
+      end
+
+      def canonical_git_path(path)
+        File.realpath(path)
+      rescue Errno::ENOENT, Errno::ENOTDIR
+        File.expand_path(path)
       end
 
       def git_work_tree?(root)
@@ -954,8 +1119,13 @@ module Kettle
       def with_branch_worktrees(root:, branches:)
         with_worktree_registry_lock(root: root) do
           base = File.join(root, "tmp", "kettle-family-release-state")
-          FileUtils.mkdir_p(base)
           prune_stale_worktrees(root: root)
+          # Snapshot worktrees and working-tree status before creating
+          # tmp/kettle-family-release-state/ so repos without tmp/ in
+          # .gitignore do not report our own inspection worktrees as dirty.
+          @branch_worktree_snapshot = snapshot_git_worktrees(root)
+          @branch_worktree_snapshot&.fetch(:by_branch)&.each_value { |path| git_status_summary(path) }
+          FileUtils.mkdir_p(base)
           entries = branches.map do |branch|
             {branch: branch, worktree_root: File.join(base, "worktree-#{Process.pid}-#{SecureRandom.hex(8)}")}
           end
@@ -966,6 +1136,7 @@ module Kettle
           end
           yield entries
         ensure
+          @branch_worktree_snapshot = nil
           entries&.reverse_each do |entry|
             remove_branch_worktree(root: root, worktree_root: entry[:worktree_root])
           end

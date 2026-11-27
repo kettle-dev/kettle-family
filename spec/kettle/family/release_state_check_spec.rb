@@ -1149,6 +1149,119 @@ RSpec.describe Kettle::Family::ReleaseStateCheck do
     Kettle::Family::Member.new(name: name, root: root, gemspec_path: nil, version_file: version_file, version: "1.0.0", dependencies: [])
   end
 
+  it "classifies clean, staged, untracked, unstaged, and conflict git working trees" do
+    repo = File.join(@tmpdir, "dirty-repo")
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(repo, "README.md"), "initial\n")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "branch", "-M", "main")
+
+    # Clean tree (also verifies enrichment runs even without latest_released / latest_changelog_version).
+    clean = described_class.new(members: []).send(:enrich_git_state, repo, {})
+    expect(clean).to include(
+      "git_dirty" => false,
+      "git_state" => "clean",
+      "git_staged_count" => 0,
+      "git_unstaged_count" => 0,
+      "git_untracked_count" => 0,
+      "git_conflict_count" => 0,
+      "git_worktree" => false,
+      "git_linked_worktrees" => 0
+    )
+
+    # All changes staged (pure rename emits an R entry with an extra NUL-terminated source path).
+    run_git(repo, "mv", "README.md", "DOCS.md")
+    staged = described_class.new(members: []).send(:enrich_git_state, repo, {})
+    expect(staged).to include(
+      "git_dirty" => true,
+      "git_state" => "staged",
+      "git_staged_count" => 1,
+      "git_unstaged_count" => 0,
+      "git_untracked_count" => 0
+    )
+
+    # Staged + untracked -> not all staged ("untracked").
+    File.write(File.join(repo, "scratch.txt"), "hi\n")
+    untracked = described_class.new(members: []).send(:enrich_git_state, repo, {})
+    expect(untracked).to include(
+      "git_dirty" => true,
+      "git_state" => "untracked",
+      "git_staged_count" => 1,
+      "git_untracked_count" => 1
+    )
+
+    # Unstaged tracked modification takes precedence over staged and untracked.
+    File.write(File.join(repo, "DOCS.md"), "unstaged\n")
+    unstaged = described_class.new(members: []).send(:enrich_git_state, repo, {})
+    expect(unstaged).to include(
+      "git_dirty" => true,
+      "git_state" => "unstaged",
+      "git_unstaged_count" => 1
+    )
+
+    # Unmerged / conflict entries take highest precedence.
+    conflict = described_class.new(members: []).send(:parse_git_status_porcelain, "UU README.md\0 M other.rb\0?? new.rb\0")
+    expect(conflict).to eq(
+      "git_dirty" => true,
+      "git_state" => "conflict",
+      "git_staged_count" => 0,
+      "git_unstaged_count" => 1,
+      "git_untracked_count" => 1,
+      "git_conflict_count" => 1
+    )
+  end
+
+  it "detects linked worktrees, ignores prunable entries, and excludes temporary branch-inspection worktrees" do
+    repo = File.join(@tmpdir, "wt-repo")
+    linked = File.join(@tmpdir, "wt-linked")
+    run_git(repo, "init", "--quiet")
+    run_git(repo, "config", "user.email", "kettle-family@example.test")
+    run_git(repo, "config", "user.name", "Kettle Family")
+    File.write(File.join(repo, "README.md"), "initial\n")
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "--quiet", "-m", "Initial")
+    run_git(repo, "branch", "-M", "main")
+    run_git(repo, "branch", "other")
+    run_git(repo, "worktree", "add", "--quiet", linked, "other")
+
+    primary_state = described_class.new(members: []).send(:enrich_git_state, repo, {})
+    expect(primary_state).to include("git_worktree" => false, "git_linked_worktrees" => 1, "git_state" => "clean")
+
+    File.write(File.join(linked, "README.md"), "edited in linked\n")
+    linked_state = described_class.new(members: []).send(:enrich_git_state, linked, {})
+    expect(linked_state).to include("git_worktree" => true, "git_linked_worktrees" => 1, "git_state" => "unstaged")
+
+    # Prunable worktrees are ignored by parse_git_worktree_list.
+    parsed = described_class.new(members: []).send(
+      :parse_git_worktree_list,
+      "worktree /a\nHEAD 111\nbranch refs/heads/main\n\nworktree /b\nHEAD 222\nprunable gitdir file points to non-existent location\n"
+    )
+    expect(parsed.length).to eq(1)
+    expect(parsed.first[:branch]).to eq("main")
+
+    # Branch-stack inspection snapshots real worktrees before adding temporary
+    # --detach worktrees, so dirty state on checked-out branches is preserved
+    # and temporary worktrees are not counted as user worktrees.
+    run_git(repo, "branch", "unmounted")
+    File.write(File.join(repo, "README.md"), "staged on main\n")
+    run_git(repo, "add", "README.md")
+    check = described_class.new(members: [])
+    observed = {}
+    check.send(:with_branch_worktrees, root: repo, branches: %w[main other unmounted]) do |entries|
+      entries.each do |entry|
+        observed[entry[:branch]] = check.send(:enrich_git_state, entry[:worktree_root], {}, branch: entry[:branch])
+      end
+    end
+
+    expect(observed["main"]).to include("git_state" => "staged", "git_worktree" => false, "git_linked_worktrees" => 1)
+    expect(observed["other"]).to include("git_state" => "unstaged", "git_worktree" => true, "git_linked_worktrees" => 1)
+    expect(observed["unmounted"]).to include("git_worktree" => false, "git_linked_worktrees" => 1)
+    expect(observed["unmounted"]).not_to have_key("git_state")
+  end
+
   def changelog_command(member)
     [RbConfig.ruby, Gem.bin_path("kettle-changelog", "kettle-changelog"), "--version", member.version, "--release-state", "--json"]
   rescue Gem::Exception
