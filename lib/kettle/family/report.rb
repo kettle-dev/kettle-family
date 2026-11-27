@@ -18,6 +18,7 @@ module Kettle
         clean-installed
         clean-unreleased
         docs
+        fix-remotes
         gha-sha-pins
         install
         lint
@@ -691,6 +692,7 @@ module Kettle
 
       def append_release_state_results(lines)
         has_worktrees = release_state_has_worktrees?
+        has_remote_issues = release_state_has_remote_issues?
         lines << "release state:"
         lines << "  boolean columns:"
         lines << "    unrel: unreleased changelog entries are present (including replayed transfer entries)"
@@ -701,10 +703,11 @@ module Kettle
         lines << "    T(n): filter-aware kettle-jem transfer changelog lag; n is the total source entry count and row values are missing / applicable (x excluded-present)"
         lines << "    ^ / v / ~: commits ahead / behind latest release tag (remote in parentheses if different) / git state (- clean, + staged, ? untracked, * unstaged, ! conflict)"
         lines << "    wt: linked git worktrees (- none, N count, @ inside linked worktree, @+N inside one with N others)" if has_worktrees
-        rows = release_state_header(has_worktrees: has_worktrees)
+        lines << "    remote: git remote org mismatches (- ok, !<org> mismatched org)" if has_remote_issues
+        rows = release_state_header(has_worktrees: has_worktrees, has_remote_issues: has_remote_issues)
         shared_rows = {}
         results.each do |result|
-          row = release_state_row(result, has_worktrees: has_worktrees)
+          row = release_state_row(result, has_worktrees: has_worktrees, has_remote_issues: has_remote_issues)
           state = result.state || {}
           shared_root = state["shared_changelog_root"]
           if shared_root
@@ -712,7 +715,13 @@ module Kettle
             # member versions, registry state, transfer filters and flags intact.
             key = [shared_root, result.branch, state["latest_released"]]
             offset = release_state_has_branches? ? 1 : 0
-            shared_columns = has_worktrees ? [1, 3, 5, 7, 8] : [1, 3, 5, 7]
+            shared_columns = [1, 3, 5, 7]
+            next_col = 8
+            if has_worktrees
+              shared_columns << next_col
+              next_col += 1
+            end
+            shared_columns << next_col if has_remote_issues
             if shared_rows.key?(key)
               shared_columns.each do |column|
                 row[column + offset] = "-" if row[column + offset] == shared_rows[key][column + offset]
@@ -725,6 +734,7 @@ module Kettle
         end
         lines << "  -: shared family value reported on the first matching cohort row" unless shared_rows.empty?
         lines.concat(format_table(rows).map { |line| "  #{line}" })
+        append_release_state_remote_warnings(lines) if has_remote_issues
         failures = results.reject(&:ok?)
         return if failures.empty?
 
@@ -735,7 +745,7 @@ module Kettle
         end
       end
 
-      def release_state_row(result, has_worktrees: release_state_has_worktrees?)
+      def release_state_row(result, has_worktrees: release_state_has_worktrees?, has_remote_issues: release_state_has_remote_issues?)
         state = result.state || {}
         row = [
           state.fetch("gem_name", result.member_name).to_s,
@@ -748,6 +758,7 @@ module Kettle
           release_state_ahead_behind(state)
         ]
         row << release_state_worktree(state) if has_worktrees
+        row << release_state_remote(state) if has_remote_issues
         row.concat([
           yes_no(state.fetch("unreleased_entries", nil)),
           yes_no(state.fetch("prepared_release_pending", nil)),
@@ -759,9 +770,10 @@ module Kettle
         [result.branch.to_s.empty? ? "current" : result.branch.to_s, *row]
       end
 
-      def release_state_header(has_worktrees: release_state_has_worktrees?)
+      def release_state_header(has_worktrees: release_state_has_worktrees?, has_remote_issues: release_state_has_remote_issues?)
         columns = ["gem", "checkout", "V.rb", "V.ch.md", "V.rel", "GH.rel", release_state_transfer_changelog_header, "^ / v / ~"]
         columns << "wt" if has_worktrees
+        columns << "remote" if has_remote_issues
         columns.concat(["unrel", "prep", "pend", "bump"])
         return [columns] unless release_state_has_branches?
 
@@ -841,6 +853,38 @@ module Kettle
         else
           "-"
         end
+      end
+
+      def release_state_has_remote_issues?
+        results.any? do |result|
+          state = result.state || {}
+          Array(state["git_remote_issues"]).any?
+        end
+      end
+
+      def release_state_remote(state)
+        issues = Array(state["git_remote_issues"])
+        return "-" if issues.empty?
+
+        owners = issues.map { |issue| issue["owner"].to_s }.reject(&:empty?).uniq
+        owners.empty? ? "!" : "!#{owners.join(",")}"
+      end
+
+      def append_release_state_remote_warnings(lines)
+        lines << "remote warnings:"
+        seen = {}
+        results.each do |result|
+          issues = Array((result.state || {})["git_remote_issues"])
+          issues.each do |issue|
+            key = [result.member_name, issue["remote"], issue["url"]]
+            next if seen[key]
+
+            seen[key] = true
+            lines << "  #{result.member_name} #{issue["remote"]}: #{issue["reason"]} (#{issue["url"]})"
+            lines << "    fix: #{issue["recommended_command"]}" if issue["recommended_command"]
+          end
+        end
+        lines << "  run `kettle-family fix-remotes --execute` to auto-fix permanently redirected GitHub remotes"
       end
 
       def release_state_count(local_value, remote_value)

@@ -339,6 +339,16 @@ module Kettle
         fetch_path("release", "required_remotes")
       end
 
+      def expected_org
+        value = fetch_path("remotes", "expected_org") || fetch_path("family", "org")
+        value = value.to_s.strip
+        value.empty? ? nil : value
+      end
+
+      def allowed_remote_orgs
+        Array(fetch_path("remotes", "allowed_orgs")).map { |org| org.to_s.strip }.reject(&:empty?)
+      end
+
       def release_env
         stringify_env(fetch_path("release", "env") || {})
       end

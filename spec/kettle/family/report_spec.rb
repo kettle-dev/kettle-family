@@ -1325,4 +1325,82 @@ RSpec.describe Kettle::Family::Report do
     expect(summary.fetch("failed").map { |entry| entry.fetch("member") }).to eq(%w[alpha zulu])
     expect(report.to_text).to include("failed: alpha release_publish (CI failed)")
   end
+
+  it "shows a conditional remote column and remote warnings in state reports only when mismatches exist" do
+    ok_state = Kettle::Family::ReleaseStateResult.new(
+      member_name: "kettle-rb",
+      command: ["internal", "release-state"],
+      workdir: "/repo/kettle-rb",
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.1,
+      state: {
+        "gem_name" => "kettle-rb",
+        "version" => "0.1.22",
+        "latest_changelog_version" => "0.1.22",
+        "latest_released" => "0.1.22",
+        "git_remote_org" => "kettle-dev",
+        "git_remote_issues" => []
+      }
+    )
+    stale_state = Kettle::Family::ReleaseStateResult.new(
+      member_name: "kettle-paths",
+      command: ["internal", "release-state"],
+      workdir: "/repo/kettle-paths",
+      status: 0,
+      success: true,
+      stdout: "",
+      stderr: "",
+      elapsed_seconds: 0.1,
+      state: {
+        "gem_name" => "kettle-paths",
+        "version" => "0.1.6",
+        "latest_changelog_version" => "0.1.6",
+        "latest_released" => "0.1.5",
+        "git_remote_org" => "pboling",
+        "git_remote_issues" => [
+          {
+            "remote" => "origin",
+            "host" => "github.com",
+            "url" => "git@github.com:pboling/kettle-paths.git",
+            "owner" => "pboling",
+            "repo" => "kettle-paths",
+            "expected_org" => "kettle-dev",
+            "reason" => "remote org 'pboling' differs from family majority 'kettle-dev' on github.com",
+            "recommended_command" => "git remote set-url origin git@github.com:kettle-dev/kettle-paths.git"
+          }
+        ]
+      }
+    )
+
+    clean_report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [member("kettle-rb")],
+      selected_members: [member("kettle-rb")],
+      config_path: nil,
+      command: "release-state",
+      results: [ok_state]
+    )
+    expect(clean_report.to_text).not_to include("remote warnings:")
+    expect(clean_report.to_text).not_to include("remote: git remote org mismatches")
+
+    warn_report = described_class.new(
+      family_name: "kettle-dev",
+      order_mode: "dependency",
+      members: [member("kettle-rb"), member("kettle-paths")],
+      selected_members: [member("kettle-rb"), member("kettle-paths")],
+      config_path: nil,
+      command: "release-state",
+      results: [ok_state, stale_state]
+    )
+    text = warn_report.to_text
+    expect(text).to include("remote: git remote org mismatches (- ok, !<org> mismatched org)")
+    expect(text).to include("!pboling")
+    expect(text).to include("remote warnings:")
+    expect(text).to include("git remote set-url origin git@github.com:kettle-dev/kettle-paths.git")
+    expect(text).to include("kettle-family fix-remotes --execute")
+  end
 end
