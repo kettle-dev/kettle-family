@@ -112,6 +112,53 @@ RSpec.describe Kettle::Family::RemoteCheck do
       inspection = described_class.inspect_family(config: config, members: [member])
       expect(inspection[:members]["personal"][:issues]).to be_empty
     end
+
+    it "parses the loaded Gem::Specification instead of matching comments, descriptions, or funding_uri" do
+      config = build_config
+      root = File.join(@tmpdir, "kettle-test")
+      FileUtils.mkdir_p(root)
+      Open3.capture3("git", "init", chdir: root)
+      Open3.capture3("git", "remote", "add", "origin", "git@github.com:kettle-dev/kettle-test.git", chdir: root)
+      Open3.capture3("git", "remote", "add", "gl", "git@gitlab.com:kettle-dev/kettle-test.git", chdir: root)
+      Open3.capture3("git", "remote", "add", "all", "git@github.com:kettle-dev/kettle-test.git", chdir: root)
+      gemspec_path = File.join(root, "kettle-test.gemspec")
+      File.write(gemspec_path, <<~RUBY)
+        # Ref: https://github.com/simplecov-ruby/simplecov
+        # Ref: https://gitlab.com/ruby-oauth/version_gem/-/issues/3
+        Gem::Specification.new do |spec|
+          spec.name = "kettle-test"
+          spec.version = "2.0.31"
+          spec.summary = "See https://github.com/simplecov-ruby/simplecov"
+          spec.description = "Inspired by https://gitlab.com/ruby-oauth/version_gem"
+          spec.homepage = "https://github.com/kettle-dev/kettle-test"
+          spec.metadata["source_code_uri"] = "https://github.com/kettle-dev/kettle-test/tree/v2.0.31"
+          spec.metadata["funding_uri"] = "https://github.com/sponsors/pboling"
+          spec.metadata["homepage_uri"] = "https://structuredmerge.org"
+        end
+      RUBY
+      member = Kettle::Family::Member.new(
+        name: "kettle-test",
+        root: root,
+        gemspec_path: gemspec_path,
+        version_file: nil,
+        version: "2.0.31",
+        dependencies: []
+      )
+
+      inspection = described_class.inspect_family(config: config, members: [member])
+
+      expect(inspection[:members]["kettle-test"][:remotes].map { |r| r[:remote] }).to contain_exactly("origin", "gl")
+      expect(inspection[:members]["kettle-test"][:issues]).to be_empty
+    end
+
+    it "extracts owner from metadata source_code_uri with /tree/ subpaths and ignores reserved GitHub paths" do
+      expect(described_class.parse_hosted_repo_url("https://github.com/kettle-dev/kettle-family/tree/v1.3.53"))
+        .to eq(host: "github.com", owner: "kettle-dev", repo: "kettle-family")
+      expect(described_class.parse_hosted_repo_url("https://gitlab.com/kettle-dev/kettle-test/-/issues"))
+        .to eq(host: "gitlab.com", owner: "kettle-dev", repo: "kettle-test")
+      expect(described_class.parse_hosted_repo_url("https://github.com/sponsors/pboling")).to be_nil
+      expect(described_class.parse_hosted_repo_url("https://structuredmerge.org")).to be_nil
+    end
   end
 
   describe ".call (preflight)" do
