@@ -33,8 +33,19 @@ module Kettle
       FIX_PHASE = "fix_remotes"
       GATED_COMMANDS = %w[release template sync push].freeze
       SUPPORTED_HOSTS = %w[github.com gitlab.com codeberg.org].freeze
+      AGGREGATE_REMOTE_NAMES = %w[all].freeze
+      RESERVED_HOST_OWNERS = %w[
+        sponsors
+        orgs
+        topics
+        settings
+        marketplace
+        features
+        explore
+      ].freeze
       MAX_REDIRECTS = 5
       PERMANENT_REDIRECT_CODES = [301, 308].freeze
+      GEMSPEC_FALLBACK_MUTEX = Mutex.new
 
       def self.gated?(command)
         GATED_COMMANDS.include?(command.to_s)
@@ -99,6 +110,24 @@ module Kettle
         nil
       end
 
+      def self.parse_hosted_repo_url(url)
+        raw = url.to_s.strip
+        return nil if raw.empty?
+
+        uri = URI.parse(raw)
+        return nil unless SUPPORTED_HOSTS.include?(uri.host)
+
+        segments = uri.path.to_s.split("/").reject(&:empty?)
+        owner = segments[0]
+        repo = segments[1]
+        return nil if owner.to_s.empty? || repo.to_s.empty?
+        return nil if RESERVED_HOST_OWNERS.include?(owner.downcase)
+
+        {host: uri.host, owner: owner, repo: repo.sub(/\.git\z/, "")}
+      rescue URI::InvalidURIError
+        nil
+      end
+
       def self.rewrite_remote_url(url, new_owner, new_repo)
         raw = url.to_s.strip
         suffix = raw.end_with?(".git") ? ".git" : ""
@@ -125,6 +154,8 @@ module Kettle
           next unless match
 
           remote_name = match[1]
+          next if AGGREGATE_REMOTE_NAMES.include?(remote_name)
+
           url = match[2]
           next if seen[remote_name]
 
@@ -462,18 +493,42 @@ module Kettle
       end
 
       def gemspec_owners_by_host(member)
-        path = member.respond_to?(:gemspec_path) ? member.gemspec_path : nil
-        return {} unless path && File.file?(path)
+        spec = load_gemspec(member)
+        return {} unless spec
 
-        content = File.read(path)
         owners = {}
-        SUPPORTED_HOSTS.each do |host|
-          match = content.match(%r{https?://#{Regexp.escape(host)}/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)})
-          owners[host] = match[1] if match
+        gemspec_repository_urls(spec).each do |url|
+          parsed = self.class.parse_hosted_repo_url(url)
+          next unless parsed
+
+          owners[parsed[:host]] ||= parsed[:owner]
         end
         owners
-      rescue SystemCallError
-        {}
+      end
+
+      def load_gemspec(member)
+        path = member.respond_to?(:gemspec_path) ? member.gemspec_path : nil
+        return nil unless path && File.file?(path)
+
+        mutex = defined?(Discovery::GEMSPEC_EVALUATION_MUTEX) ? Discovery::GEMSPEC_EVALUATION_MUTEX : GEMSPEC_FALLBACK_MUTEX
+        mutex.synchronize do
+          # rubocop:disable ThreadSafety/DirChdir
+          Dir.chdir(File.dirname(path)) { Gem::Specification.load(path) }
+          # rubocop:enable ThreadSafety/DirChdir
+        end
+      rescue StandardError, LoadError, SyntaxError
+        nil
+      end
+
+      def gemspec_repository_urls(spec)
+        metadata = spec.metadata.is_a?(Hash) ? spec.metadata : {}
+        [
+          metadata["source_code_uri"],
+          spec.homepage,
+          metadata["bug_tracker_uri"],
+          metadata["changelog_uri"],
+          metadata["homepage_uri"]
+        ].compact
       end
 
       def evaluate_remote_offline(entry:, expected_org_by_host:, gemspec_owners:, allowed_orgs:)

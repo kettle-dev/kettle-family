@@ -28,6 +28,7 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- remotes: load member gemspecs via `Gem::Specification.load` and inspect only structured repository metadata (`source_code_uri`, `homepage`, `bug_tracker_uri`, `changelog_uri`, `homepage_uri`) instead of regex-matching raw gemspec text (which falsely matched comments and unrelated URLs like `simplecov-ruby` and `ruby-oauth`), and ignore the multi-pushurl aggregate `"all"` remote (#94)
 - release: independently versioned monorepo members (`release.version_series.independent_members`, such as `kettle-jem`) now keep their own tracked GitHub Release at their own version tag instead of skipping step 18 and attaching their assets to the shared cohort's aggregate GitHub Release (#92)
 - release: set `KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE=true` (when not overridden) for publishing members that own their own GitHub Release so step-18 GitHub Release failures abort loudly instead of warning and exiting 0 (#92)
 - template/add-changelog/release: route `K_CHANGELOG_PATH` and family-changelog/reset checks to the member's own `CHANGELOG.md` for `release.version_series.independent_members` (and member-local changelogs) inside shared-changelog monorepos (#92)
