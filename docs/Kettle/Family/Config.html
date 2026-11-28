@@ -4935,9 +4935,9 @@ self-commit; the hook does not commit on their behalf.</p>
     <p>Members that keep their own monotonic version series even in a<br />
 shared-version family (release.version_series.independent_members;<br />
 default empty). An independent-series member is skipped by lockstep<br />
-shared-version raises — its bumps stay on its own series — and is<br />
-exempt from the aggregate GitHub Release same-version invariant,<br />
-while its built artifacts still attach to the aggregate release.</p>
+shared-version raises — its bumps stay on its own series — and keeps<br />
+its own tracked GitHub Release at its own version tag rather than<br />
+attaching artifacts to the shared cohort’s aggregate release.</p>
 
 
   </div>
