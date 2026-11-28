@@ -385,7 +385,7 @@ module Kettle
             # families write each member's own.
             "changelog" => "bundle exec kettle-family add-changelog --execute"
           }
-          %w[install docs clean-unreleased gha-sha-pins bex branch-lanes discover metadata report pull push up sync reset mise-trust reconcile-releases].each do |command|
+          %w[install docs clean-unreleased gha-sha-pins bex branch-lanes discover metadata report pull push up sync fix-remotes reset mise-trust reconcile-releases].each do |command|
             name = {"clean-unreleased" => "clean", "gha-sha-pins" => "pins"}.fetch(command, command)
             flags = %w[branch-lanes discover metadata report mise-trust].include?(command) ? "" : " --execute"
             flags += " --upgrade major" if name == "pins"

@@ -431,10 +431,16 @@ RSpec.describe Kettle::Family::MiseTasks do
       end
     end
 
+    it "wires fix-remotes as an executing family task" do
+      content = described_class::ManagedSuite.new(sibling_config).content
+
+      expect(content).to include("run = \"bundle exec kettle-family fix-remotes --execute\"")
+    end
+
     it "renders TOML that parses as a managed task file" do
       content = described_class::ManagedSuite.new(monorepo_config).content
 
-      task_names = %w[test lint state release-state template local-template unreleased-template bump changelog bup bupb update-bundler]
+      task_names = %w[test lint state release-state template local-template unreleased-template bump changelog bup bupb update-bundler fix-remotes]
       expect(described_class.task_names(content, managed: true)).to include(*task_names)
 
       analysis = ::Toml::Merge::FileAnalysis.new(content)

@@ -22,6 +22,8 @@ Please file a bug if you notice a violation of semantic versioning.
 
 - `RemoteCheck`, `fix-remotes`, and `state` remote-drift reporting: inspect hosted git remotes across family members offline (comparing against explicit `remotes.expected_org`/`family.org`, gemspec homepage/source org, and family majority org while respecting `remotes.allowed_orgs`), surface mismatches in `state` (`git_remote_org`, `git_remote_issues`, conditional `remote` column, and `remote warnings:` with exact fix hints), probe flagged GitHub remotes on `fix-remotes` and `release`/`template`/`sync`/`push` preflight to auto-fix verified permanent redirects (`301`/`308`) under `--execute` while aborting on HTTP `404` or explicit org-policy violations (fixes #90)
 
+- managed family mise tasks: wire a `fix-remotes` task (`bundle exec kettle-family fix-remotes --execute`) into the generated `mise-family.tasks.toml` for every family root, so redirected git remotes can be fixed fleet-wide via `mise run fix-remotes`
+
 ### Changed
 
 - [kc] kettle-jem/prepare: updated 8 project files since the last release:
