@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "fileutils"
+require "tmpdir"
+
 RSpec.describe Kettle::Family::ReleaseReconciler do
   def member(name)
     Kettle::Family::Member.new(
@@ -185,5 +188,56 @@ RSpec.describe Kettle::Family::ReleaseReconciler do
     allow(Gem::Specification).to receive(:find_by_name).with("kettle-dev").and_return(specification)
 
     expect(reconciler.send(:kettle_gh_release_path)).to eq("/installed/kettle-dev/exe/kettle-gh-release")
+  end
+
+  it "attaches local gem and checksum assets when backfilling a missing GitHub Release" do
+    Dir.mktmpdir("kettle-family-reconciler-assets") do |dir|
+      root = File.join(dir, "kettle-jem")
+      FileUtils.mkdir_p(File.join(root, "pkg"))
+      FileUtils.mkdir_p(File.join(root, "checksums"))
+      gem_path = File.join(root, "pkg", "kettle-jem-7.1.44.gem")
+      sha256_path = File.join(root, "checksums", "kettle-jem-7.1.44.gem.sha256")
+      sha512_path = File.join(root, "checksums", "kettle-jem-7.1.44.gem.sha512")
+      File.write(gem_path, "gem\n")
+      File.write(sha256_path, "sha256\n")
+      File.write(sha512_path, "sha512\n")
+
+      kettle_jem = Kettle::Family::Member.new(
+        name: "kettle-jem",
+        root: root,
+        gemspec_path: nil,
+        version_file: nil,
+        version: "7.1.44",
+        dependencies: []
+      )
+      check = Kettle::Family::CommandResult.new("kettle-jem", "reconcile_github_release_check", [], root, 0, true, "{\"type\":\"github_release\",\"message\":\"ready\"}\n", "", 0.0, false, nil)
+      create = Kettle::Family::CommandResult.new("kettle-jem", "reconcile_github_release", [], root, 0, true, "", "", 0.0, false, nil)
+      runner = instance_double(Kettle::Family::CommandRunner)
+      allow(Kettle::Family::ReleaseStateCheck).to receive(:new)
+        .and_return(instance_double(Kettle::Family::ReleaseStateCheck, results: [release_state("kettle-jem", latest_released: "7.1.44")]))
+      allow(runner).to receive(:call).and_return(check, create)
+      reconciler = described_class.new(config: nil, members: [kettle_jem], execute: true, runner: runner)
+      allow(reconciler).to receive(:kettle_gh_release_path).and_return("/tools/kettle-gh-release")
+
+      reconciler.results
+
+      expect(runner).to have_received(:call).with(
+        member: kettle_jem,
+        phase: "reconcile_github_release",
+        command: [
+          RbConfig.ruby,
+          "/tools/kettle-gh-release",
+          "--release-version",
+          "7.1.44",
+          "--events",
+          "--asset",
+          gem_path,
+          "--asset",
+          sha256_path,
+          "--asset",
+          sha512_path
+        ]
+      )
+    end
   end
 end

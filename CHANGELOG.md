@@ -28,6 +28,9 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Fixed
 
+- release: independently versioned monorepo members (`release.version_series.independent_members`, such as `kettle-jem`) now keep their own tracked GitHub Release at their own version tag instead of skipping step 18 and attaching their assets to the shared cohort's aggregate GitHub Release (#92)
+- reconcile-releases: attach existing local `.gem` and `.sha256`/`.sha512` checksum files via `--asset` when backfilling a missing GitHub Release (#92)
+
 ### Security
 
 ## [1.3.53] - 2026-11-28

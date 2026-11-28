@@ -451,9 +451,9 @@ module Kettle
       # Members that keep their own monotonic version series even in a
       # shared-version family (release.version_series.independent_members;
       # default empty). An independent-series member is skipped by lockstep
-      # shared-version raises — its bumps stay on its own series — and is
-      # exempt from the aggregate GitHub Release same-version invariant,
-      # while its built artifacts still attach to the aggregate release.
+      # shared-version raises — its bumps stay on its own series — and keeps
+      # its own tracked GitHub Release at its own version tag rather than
+      # attaching artifacts to the shared cohort's aggregate release.
       def release_version_series_independent_members
         Array(fetch_path("release", "version_series", "independent_members"))
           .map(&:to_s)
