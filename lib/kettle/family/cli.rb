@@ -1713,7 +1713,7 @@ module Kettle
       # back to the invoking directory's CHANGELOG.md when K_CHANGELOG_PATH is
       # unset, which is only correct for member-local families by accident.
       def changelog_target_env(config:, member:)
-        path = if config&.shared_changelog?
+        path = if config&.shared_changelog? && !config.member_local_changelog?(member) && !config.independent_version_series_member?(member)
           File.expand_path(config.changelog_path, config.root)
         else
           File.join(member.root, "CHANGELOG.md")

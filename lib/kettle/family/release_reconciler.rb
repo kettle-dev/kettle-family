@@ -58,7 +58,26 @@ module Kettle
         check = summarize_check(check: check, member: member, version: version)
         return [check] unless execute
 
-        [check, runner.call(member: member, phase: CREATE_PHASE, command: gh_release_command("--release-version", version, "--events"))]
+        [
+          check,
+          runner.call(
+            member: member,
+            phase: CREATE_PHASE,
+            command: gh_release_command("--release-version", version, "--events", *artifact_asset_args(member: member, version: version))
+          )
+        ]
+      end
+
+      def artifact_asset_args(member:, version:)
+        artifact_paths(member: member, version: version).flat_map { |path| ["--asset", path] }
+      end
+
+      def artifact_paths(member:, version:)
+        return [] if member.root.to_s.empty?
+
+        gem_paths = Paths.glob(member.root, "pkg", "*.gem").select { |path| File.basename(path).end_with?("-#{version}.gem") }
+        checksum_paths = %w[sha256 sha512].map { |algorithm| File.join(member.root, "checksums", "#{member.name}-#{version}.gem.#{algorithm}") }
+        (gem_paths + checksum_paths).select { |path| File.file?(path) }
       end
 
       def published_version(state)

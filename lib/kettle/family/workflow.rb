@@ -3981,7 +3981,7 @@ module Kettle
       # coordinated monorepo release is only partly published can force
       # Bundler to select the prior registry dependency graph instead.
       def reset_skips_member_changelog_dependency?(member)
-        config.shared_changelog? && !config.member_local_changelog?(member)
+        config.shared_changelog? && !config.member_local_changelog?(member) && !independent_version_series_member?(member)
       end
 
       def reset_helper_ruby
@@ -4303,9 +4303,10 @@ module Kettle
       def family_changelog_applies_to_selected_members?
         return true unless config.shared_changelog?
 
-        # A member-local changelog is an independent release lane. Do not
-        # prepare the shared root changelog when that is the only lane selected.
-        members.any? { |member| !config.member_local_changelog?(member) }
+        # A member-local changelog or independent version series is an
+        # independent release lane. Do not prepare the shared root changelog
+        # when only independent lanes are selected.
+        members.any? { |member| !config.member_local_changelog?(member) && !independent_version_series_member?(member) }
       end
 
       # simplecov:disable
@@ -4551,8 +4552,8 @@ module Kettle
 
       # An independently versioned member (release.version_series.
       # independent_members) keeps its own monotonic series: it is exempt
-      # from lockstep raises and from the aggregate same-version invariant,
-      # but remains part of the aggregate release for artifact attachment.
+      # from lockstep raises and from the shared-version aggregate GitHub
+      # Release, keeping its own tracked GitHub Release at its own version tag.
       def independent_version_series_member?(member)
         return false unless member
 
@@ -4563,13 +4564,18 @@ module Kettle
         member && member.name == (@aggregate_validation_member_name || aggregate_validation_members.first&.name)
       end
 
-      # The aggregate GitHub Release represents the shared-version cohort. An
-      # aggregate-validation exclusion retains an independently versioned
-      # member's complete release lifecycle, including its own GitHub Release.
+      # The aggregate GitHub Release represents the shared-version cohort.
+      # Aggregate-validation exclusions and independently versioned members
+      # (release.version_series.independent_members) each keep their own
+      # tracked GitHub Release at their own version tag rather than attaching
+      # to the shared cohort's release.
       def aggregate_release_members(release_members = members)
-        return Array(release_members) unless config.release_aggregate_validation? && config.shared_changelog?
-
-        aggregate_validation_members(release_members)
+        cohort = if config.release_aggregate_validation? && config.shared_changelog?
+          aggregate_validation_members(release_members)
+        else
+          Array(release_members)
+        end
+        cohort.reject { |member| independent_version_series_member?(member) }
       end
 
       def aggregate_release_member?(member)
@@ -4717,6 +4723,11 @@ module Kettle
           # GitHub Release.
           env["KETTLE_RELEASE_SKIP_GITHUB_RELEASE"] = "true" if aggregate_monorepo_github_release? && aggregate_release_member?(member)
         end
+        # Members that own their own GitHub Release (sibling repos, standalone
+        # gems, aggregate-excluded and independent-series monorepo members)
+        # must fail step 18 loudly instead of warning and exiting 0 when
+        # GitHub Release creation fails.
+        env["KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE"] ||= "true" if publish && !env.key?("KETTLE_RELEASE_SKIP_GITHUB_RELEASE")
         if aggregate_validation_member?(member)
           env["KETTLE_RELEASE_FAMILY_CI_MODE"] = aggregate_validation_member_name?(member) ? "validation" : "member"
         end
@@ -4725,7 +4736,7 @@ module Kettle
         # TurboTests2 process pool for this active Family wave.
         env["TURBO_TESTS2_MAX_PROCESSES"] ||= Concurrency.test_process_ceiling(wave_jobs: wave_jobs).to_s
         return env unless config.shared_changelog?
-        if config.member_local_changelog?(member)
+        if config.member_local_changelog?(member) || independent_version_series_member?(member)
           return env.merge(
             "K_CHANGELOG_GEM_NAME" => member.name.to_s,
             "K_CHANGELOG_PATH" => File.join(member.root, "CHANGELOG.md"),
@@ -4780,25 +4791,20 @@ module Kettle
 
       # simplecov:disable Covered by monorepo release integration, not sibling-repository suite.
       def aggregate_monorepo_github_release(members)
-        # The same-version invariant describes the shared-version cohort.
-        # Independently versioned members (release.version_series.
-        # independent_members) can never satisfy it by design, so they are
-        # exempt from the uniformity check while their artifacts still
-        # attach — at their own series version, not the cohort's.
+        # The aggregate GitHub Release represents the shared-version cohort
+        # only. Independently versioned members (release.version_series.
+        # independent_members) keep their own tracked GitHub Release at their
+        # own version tag and must never attach artifacts to the shared
+        # cohort's release.
         shared_members = members.reject { |member| independent_version_series_member?(member) }
-        # Releasing only independently versioned members (for example just
-        # kettle-jem) leaves no shared cohort among the contributed members. The
-        # repository-level release still belongs to the family's shared version,
-        # so take that version from the family's shared cohort and attach the
-        # independent member's artifacts to it.
-        shared_members = Array(family_members).reject { |member| independent_version_series_member?(member) } if shared_members.empty?
+        return aggregate_release_result("no shared-version members selected for aggregate GitHub release") if shared_members.empty?
+
         version = shared_members.map { |member| member.version.to_s }.uniq
         return aggregate_release_result("all selected members must have the same version") unless version.length == 1
 
-        assets = members.flat_map do |member|
-          asset_version = independent_version_series_member?(member) ? member.version.to_s : version.first
-          gem_path = Paths.glob(member.root, "pkg", "*.gem").select { |path| File.basename(path).end_with?("-#{asset_version}.gem") }
-          checksum_paths = %w[sha256 sha512].map { |algorithm| File.join(member.root, "checksums", "#{member.name}-#{asset_version}.gem.#{algorithm}") }
+        assets = shared_members.flat_map do |member|
+          gem_path = Paths.glob(member.root, "pkg", "*.gem").select { |path| File.basename(path).end_with?("-#{version.first}.gem") }
+          checksum_paths = %w[sha256 sha512].map { |algorithm| File.join(member.root, "checksums", "#{member.name}-#{version.first}.gem.#{algorithm}") }
           gem_path + checksum_paths.select { |path| File.file?(path) }
         end
         command = ["bundle", "exec", "kettle-gh-release", "--allow-unpublished", "--events", "--release-version", version.first]
@@ -6805,7 +6811,9 @@ module Kettle
         # when the family shares one, splitting a lock-step member into its
         # own release lane.
         if kettle_jem_template_command?(config.template_command || default_template_command(member))
-          if config&.shared_changelog?
+          if member && (independent_version_series_member?(member) || config.release_aggregate_validation_excluded_members.include?(member.name.to_s))
+            env["K_CHANGELOG_PATH"] = File.join(member.root, "CHANGELOG.md")
+          elsif config&.shared_changelog?
             env["K_CHANGELOG_PATH"] = File.expand_path(config.changelog_path, config.root)
           elsif member
             env["K_CHANGELOG_PATH"] = File.join(member.root, "CHANGELOG.md")
