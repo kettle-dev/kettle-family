@@ -20,6 +20,25 @@ Please file a bug if you notice a violation of semantic versioning.
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.3.53] - 2026-11-28
+
+- TAG: [v1.3.53][1.3.53t]
+- COVERAGE: 94.22% -- 9326/9898 lines in 50 files
+- BRANCH COVERAGE: 79.42% -- 3936/4956 branches in 50 files
+- 40.19% documented
+
+### Added
+
 - `RemoteCheck`, `fix-remotes`, and `state` remote-drift reporting: inspect hosted git remotes across family members offline (comparing against explicit `remotes.expected_org`/`family.org`, gemspec homepage/source org, and family majority org while respecting `remotes.allowed_orgs`), surface mismatches in `state` (`git_remote_org`, `git_remote_issues`, conditional `remote` column, and `remote warnings:` with exact fix hints), probe flagged GitHub remotes on `fix-remotes` and `release`/`template`/`sync`/`push` preflight to auto-fix verified permanent redirects (`301`/`308`) under `--execute` while aborting on HTTP `404` or explicit org-policy violations (fixes #90)
 
 - managed family mise tasks: wire a `fix-remotes` task (`bundle exec kettle-family fix-remotes --execute`) into the generated `mise-family.tasks.toml` for every family root, so redirected git remotes can be fixed fleet-wide via `mise run fix-remotes`
@@ -33,15 +52,9 @@ Please file a bug if you notice a violation of semantic versioning.
   - code and tests (1)
   - other (1)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - release resume hints: preserve `--start-step N` (such as `--start-step 10` on CI monitoring timeouts/failures) in both per-result and final summary `resume:` commands by extracting the resume step from failed `ci_monitor` (`restart_hint`/`reason`), `summary` (`error_message`), and blocking `diagnostic` events as well as plain-text `kettle-release` restart output, while ignoring non-failed events and `summary["start_step"]` (fixes #88)
-
-### Security
 
 ## [1.3.52] - 2026-11-27
 
@@ -3607,7 +3620,9 @@ Please file a bug if you notice a violation of semantic versioning.
 - Fixed CI load failures on engines without compatible `pty` support by falling back to Open3 for interactive release commands.
 - Fixed Ruby 3.2 version-bump support by loading Prism lazily and wiring the Prism gem only for MRI versions that need it.
 
-[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.52...HEAD
+[Unreleased]: https://github.com/kettle-dev/kettle-family/compare/v1.3.53...HEAD
+[1.3.53]: https://github.com/kettle-dev/kettle-family/compare/v1.3.52...v1.3.53
+[1.3.53t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.53
 [1.3.52]: https://github.com/kettle-dev/kettle-family/compare/v1.3.51...v1.3.52
 [1.3.52t]: https://github.com/kettle-dev/kettle-family/releases/tag/v1.3.52
 [1.3.51]: https://github.com/kettle-dev/kettle-family/compare/v1.3.50...v1.3.51

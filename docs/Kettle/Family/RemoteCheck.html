@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  Class: Kettle::Family::RemoteCheck
+  
+    &mdash; Documentation by YARD 0.9.46
+  
+</title>
+
+  <link rel="stylesheet" href="../../css/style.css" type="text/css">
+
+  <link rel="stylesheet" href="../../css/common.css" type="text/css">
+
+<script type="text/javascript">
+  pathId = "Kettle::Family::RemoteCheck";
+  relpath = '../../';
+</script>
+
+
+  <script type="text/javascript" charset="utf-8" src="../../js/jquery.js"></script>
+
+  <script type="text/javascript" charset="utf-8" src="../../js/app.js"></script>
+
+
+  </head>
+  <body>
+    <div id="main_progress" aria-hidden="true"></div>
+
+    <div class="nav_wrap">
+      <iframe id="nav" src="../../class_list.html?1"></iframe>
+      <div id="resizer"></div>
+    </div>
+
+    <div id="main" tabindex="-1">
+      <div id="header">
+        <div id="menu">
+  
+    <a href="../../_index.html">Index (R)</a> &raquo;
+    <span class='title'><span class='object_link'><a href="../../Kettle.html" title="Kettle (module)">Kettle</a></span></span> &raquo; <span class='title'><span class='object_link'><a href="../Family.html" title="Kettle::Family (module)">Family</a></span></span>
+     &raquo; 
+    <span class="title">RemoteCheck</span>
+  
+</div>
+
+        <div id="search">
+  
+    <a class="full_list_link" id="class_list_link"
+        href="../../class_list.html">
+
+        <svg width="24" height="24">
+          <rect x="0" y="4" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="12" width="24" height="4" rx="1" ry="1"></rect>
+          <rect x="0" y="20" width="24" height="4" rx="1" ry="1"></rect>
+        </svg>
+    </a>
+  
+</div>
+        <div class="clear"></div>
+      </div>
+
+      <div id="content"><h1>Class: Kettle::Family::RemoteCheck
+  
+  
+  
+</h1>
+<div class="box_info">
+  
+  <dl>
+    <dt>Inherits:</dt>
+    <dd>
+      <span class="inheritName">Object</span>
+      
+        <ul class="fullTree">
+          <li>Object</li>
+          
+            <li class="next">Kettle::Family::RemoteCheck</li>
+          
+        </ul>
+        <a href="#" class="inheritanceTree">show all</a>
+      
+    </dd>
+  </dl>
+  
+
+  
+  
+  
+  
+  
+
+  
+
+  
+  <dl>
+    <dt>Defined in:</dt>
+    <dd>lib/kettle/family/remote_check.rb
+</dd>
+  </dl>
+  
+</div>
+
+<h2>Overview</h2><div class="docstring">
+  <div class="discussion">
+    <p>Family-level git remote hygiene check and redirect-verified fixer.</p>
+
+<p>Detects member git remotes whose org disagrees with:</p>
+<ol>
+  <li>explicit config (<code>remotes.expected_org</code> or <code>family.org</code>, honoring<br />
+<code>remotes.allowed_orgs</code>),</li>
+  <li>the member’s gemspec <code>homepage</code> / <code>source_code_uri</code> on the same host, or</li>
+  <li>the family’s majority org on that host (when &gt;= 2 distinct git roots).</li>
+</ol>
+
+<p>Offline inspection (<code>inspect_family</code>) is read-only and makes zero network<br />
+requests so <code>kettle-family state</code> stays fast and side-effect-free.</p>
+
+<p>Authoritative probing (<code>call</code> / <code>fix</code>) checks flagged GitHub remotes via<br />
+<code>GET /repos/:owner/:repo</code> (following HTTP 301/302/307/308 redirects):</p>
+<ul>
+  <li>Confirmed permanent redirect (301/308): safe to auto-fix via<br />
+<code>git remote set-url</code> under <code>execute: true</code> (preserving SSH vs HTTPS<br />
+and <code>.git</code> suffix), or reported as a planned fix in dry-run mode.</li>
+  <li>HTTP 404: fails fast with remote URL / token guidance.</li>
+  <li>Unverified org mismatch (no redirect): fails only when an explicit<br />
+<code>expected_org</code> policy is violated; never silently rewrites an<br />
+intentional multi-org repo.</li>
+</ul>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div>
+  
+    <h2>
+      Constant Summary
+      <small><a href="#" class="constants_summary_toggle">collapse</a></small>
+    </h2>
+
+    <dl class="constants">
+      
+        <dt id="PHASE-constant" class="">PHASE =
+          
+        </dt>
+        <dd><pre class="code"><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>remote_check</span><span class='tstring_end'>&quot;</span></span></pre></dd>
+      
+        <dt id="FIX_PHASE-constant" class="">FIX_PHASE =
+          
+        </dt>
+        <dd><pre class="code"><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>fix_remotes</span><span class='tstring_end'>&quot;</span></span></pre></dd>
+      
+        <dt id="GATED_COMMANDS-constant" class="">GATED_COMMANDS =
+          
+        </dt>
+        <dd><pre class="code"><span class='qwords_beg'>%w[</span><span class='tstring_content'>release</span><span class='words_sep'> </span><span class='tstring_content'>template</span><span class='words_sep'> </span><span class='tstring_content'>sync</span><span class='words_sep'> </span><span class='tstring_content'>push</span><span class='tstring_end'>]</span></span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
+        <dt id="SUPPORTED_HOSTS-constant" class="">SUPPORTED_HOSTS =
+          
+        </dt>
+        <dd><pre class="code"><span class='qwords_beg'>%w[</span><span class='tstring_content'>github.com</span><span class='words_sep'> </span><span class='tstring_content'>gitlab.com</span><span class='words_sep'> </span><span class='tstring_content'>codeberg.org</span><span class='tstring_end'>]</span></span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
+        <dt id="MAX_REDIRECTS-constant" class="">MAX_REDIRECTS =
+          
+        </dt>
+        <dd><pre class="code"><span class='int'>5</span></pre></dd>
+      
+        <dt id="PERMANENT_REDIRECT_CODES-constant" class="">PERMANENT_REDIRECT_CODES =
+          
+        </dt>
+        <dd><pre class="code"><span class='lbracket'>[</span><span class='int'>301</span><span class='comma'>,</span> <span class='int'>308</span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_freeze'>freeze</span></pre></dd>
+      
+    </dl>
+  
+
+
+
+
+
+
+
+  
+    <h2>
+      Class Method Summary
+      <small><a href="#" class="summary_toggle">collapse</a></small>
+    </h2>
+
+    <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#call-class_method" title="call (class method)">.<strong>call</strong>(config:, members:, execute: false, verify_redirects: true, auto_fix: nil, probe: nil, **options)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#classify_github_repo_info-class_method" title="classify_github_repo_info (class method)">.<strong>classify_github_repo_info</strong>(owner:, repo:, info:)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#fix-class_method" title="fix (class method)">.<strong>fix</strong>(config:, members:, execute: false, probe: nil, **options)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#gated%3F-class_method" title="gated? (class method)">.<strong>gated?</strong>(command)  &#x21d2; Boolean </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#has_hosted_remotes%3F-class_method" title="has_hosted_remotes? (class method)">.<strong>has_hosted_remotes?</strong>(members:, config: nil, **options)  &#x21d2; Boolean </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#hosted_remotes_for-class_method" title="hosted_remotes_for (class method)">.<strong>hosted_remotes_for</strong>(root)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#inspect_family-class_method" title="inspect_family (class method)">.<strong>inspect_family</strong>(config:, members:, **options)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#parse_hosted_remote-class_method" title="parse_hosted_remote (class method)">.<strong>parse_hosted_remote</strong>(url)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#probe_github_repo-class_method" title="probe_github_repo (class method)">.<strong>probe_github_repo</strong>(owner:, repo:, token: nil, **options)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#probe_github_repo_http-class_method" title="probe_github_repo_http (class method)">.<strong>probe_github_repo_http</strong>(owner:, repo:, token: nil)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#rewrite_remote_url-class_method" title="rewrite_remote_url (class method)">.<strong>rewrite_remote_url</strong>(url, new_owner, new_repo)  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+    </ul>
+    
+  
+    <h2>
+      Instance Method Summary
+      <small><a href="#" class="summary_toggle">collapse</a></small>
+    </h2>
+
+    <ul class="summary">
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#call-instance_method" title="#call (instance method)">#<strong>call</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#fix-instance_method" title="#fix (instance method)">#<strong>fix</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#initialize-instance_method" title="#initialize (instance method)">#<strong>initialize</strong>(config:, members:, execute: false, verify_redirects: true, auto_fix: false, probe: nil, **options)  &#x21d2; RemoteCheck </a>
+    
+
+    
+  </span>
+  
+  
+    <span class="note title constructor">constructor</span>
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'><p>A new instance of RemoteCheck.</p>
+</div></span>
+  
+</li>
+
+      
+        <li class="public ">
+  <span class="summary_signature">
+    
+      <a href="#inspect_family-instance_method" title="#inspect_family (instance method)">#<strong>inspect_family</strong>  &#x21d2; Object </a>
+    
+
+    
+  </span>
+  
+  
+  
+  
+  
+  
+  
+
+  
+    <span class="summary_desc"><div class='inline'>
+</div></span>
+  
+</li>
+
+      
+    </ul>
+    
+  
+
+<div id="constructor_details" class="method_details_list">
+  <h2>Constructor Details</h2>
+  
+    <div class="method_details first">
+  <h3 class="signature first" id="initialize-instance_method">
+  
+    #<strong>initialize</strong>(config:, members:, execute: false, verify_redirects: true, auto_fix: false, probe: nil, **options)  &#x21d2; <tt><span class='object_link'><a href="" title="Kettle::Family::RemoteCheck (class)">RemoteCheck</a></span></tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    <p>Returns a new instance of RemoteCheck.</p>
+
+
+  </div>
+</div>
+<div class="tags">
+  
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 217</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_initialize'>initialize</span><span class='lparen'>(</span><span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>verify_redirects:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>auto_fix:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>probe:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='ivar'>@config</span> <span class='op'>=</span> <span class='id identifier rubyid_config'>config</span>
+  <span class='ivar'>@members</span> <span class='op'>=</span> <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span>
+  <span class='ivar'>@execute</span> <span class='op'>=</span> <span class='op'>!</span><span class='op'>!</span><span class='id identifier rubyid_execute'>execute</span>
+  <span class='ivar'>@verify_redirects</span> <span class='op'>=</span> <span class='op'>!</span><span class='op'>!</span><span class='id identifier rubyid_verify_redirects'>verify_redirects</span>
+  <span class='ivar'>@auto_fix</span> <span class='op'>=</span> <span class='op'>!</span><span class='op'>!</span><span class='id identifier rubyid_auto_fix'>auto_fix</span>
+  <span class='ivar'>@probe</span> <span class='op'>=</span> <span class='id identifier rubyid_probe'>probe</span>
+  <span class='ivar'>@remotes_by_root</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='ivar'>@git_root_by_path</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+  
+</div>
+
+
+  <div id="class_method_details" class="method_details_list">
+    <h2>Class Method Details</h2>
+
+    
+      <div class="method_details first">
+  <h3 class="signature first" id="call-class_method">
+  
+    .<strong>call</strong>(config:, members:, execute: false, verify_redirects: true, auto_fix: nil, probe: nil, **options)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 55</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span><span class='lparen'>(</span><span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>verify_redirects:</span> <span class='kw'>true</span><span class='comma'>,</span> <span class='label'>auto_fix:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='label'>probe:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+    <span class='label'>config:</span> <span class='id identifier rubyid_config'>config</span><span class='comma'>,</span>
+    <span class='label'>members:</span> <span class='id identifier rubyid_members'>members</span><span class='comma'>,</span>
+    <span class='label'>execute:</span> <span class='id identifier rubyid_execute'>execute</span><span class='comma'>,</span>
+    <span class='label'>verify_redirects:</span> <span class='id identifier rubyid_verify_redirects'>verify_redirects</span><span class='comma'>,</span>
+    <span class='label'>auto_fix:</span> <span class='id identifier rubyid_auto_fix'>auto_fix</span><span class='period'>.</span><span class='id identifier rubyid_nil?'>nil?</span> <span class='op'>?</span> <span class='id identifier rubyid_execute'>execute</span> <span class='op'>:</span> <span class='id identifier rubyid_auto_fix'>auto_fix</span><span class='comma'>,</span>
+    <span class='label'>probe:</span> <span class='id identifier rubyid_probe'>probe</span>
+  <span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_call'>call</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="classify_github_repo_info-class_method">
+  
+    .<strong>classify_github_repo_info</strong>(owner:, repo:, info:)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 159</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_classify_github_repo_info'>classify_github_repo_info</span><span class='lparen'>(</span><span class='label'>owner:</span><span class='comma'>,</span> <span class='label'>repo:</span><span class='comma'>,</span> <span class='label'>info:</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_full_name'>full_name</span> <span class='op'>=</span> <span class='id identifier rubyid_info'>info</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>full_name</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span>
+  <span class='id identifier rubyid_new_owner'>new_owner</span><span class='comma'>,</span> <span class='id identifier rubyid_new_repo'>new_repo</span> <span class='op'>=</span> <span class='id identifier rubyid_full_name'>full_name</span><span class='period'>.</span><span class='id identifier rubyid_split'>split</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>/</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='int'>2</span><span class='rparen'>)</span>
+  <span class='kw'>if</span> <span class='id identifier rubyid_info'>info</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>redirected</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_new_owner'>new_owner</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_new_repo'>new_repo</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>&amp;&amp;</span>
+      <span class='id identifier rubyid_full_name'>full_name</span><span class='period'>.</span><span class='id identifier rubyid_casecmp'>casecmp</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_owner'>owner</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_repo'>repo</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>!=</span> <span class='int'>0</span>
+    <span class='kw'>return</span> <span class='lbrace'>{</span>
+      <span class='label'>status:</span> <span class='symbol'>:redirect</span><span class='comma'>,</span>
+      <span class='label'>canonical_owner:</span> <span class='id identifier rubyid_new_owner'>new_owner</span><span class='comma'>,</span>
+      <span class='label'>canonical_repo:</span> <span class='id identifier rubyid_new_repo'>new_repo</span><span class='comma'>,</span>
+      <span class='label'>code:</span> <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_info'>info</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>redirects</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_first'>first</span><span class='op'>&amp;.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='symbol'>:code</span><span class='comma'>,</span> <span class='int'>301</span><span class='rparen'>)</span> <span class='op'>||</span> <span class='int'>301</span>
+    <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:ok</span><span class='comma'>,</span> <span class='label'>canonical_owner:</span> <span class='id identifier rubyid_new_owner'>new_owner</span> <span class='op'>||</span> <span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='label'>canonical_repo:</span> <span class='id identifier rubyid_new_repo'>new_repo</span> <span class='op'>||</span> <span class='id identifier rubyid_repo'>repo</span><span class='rbrace'>}</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="fix-class_method">
+  
+    .<strong>fix</strong>(config:, members:, execute: false, probe: nil, **options)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 66</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_fix'>fix</span><span class='lparen'>(</span><span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='label'>execute:</span> <span class='kw'>false</span><span class='comma'>,</span> <span class='label'>probe:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+    <span class='label'>config:</span> <span class='id identifier rubyid_config'>config</span><span class='comma'>,</span>
+    <span class='label'>members:</span> <span class='id identifier rubyid_members'>members</span><span class='comma'>,</span>
+    <span class='label'>execute:</span> <span class='id identifier rubyid_execute'>execute</span><span class='comma'>,</span>
+    <span class='label'>verify_redirects:</span> <span class='kw'>true</span><span class='comma'>,</span>
+    <span class='label'>auto_fix:</span> <span class='id identifier rubyid_execute'>execute</span><span class='comma'>,</span>
+    <span class='label'>probe:</span> <span class='id identifier rubyid_probe'>probe</span>
+  <span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_fix'>fix</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="gated?-class_method">
+  
+    .<strong>gated?</strong>(command)  &#x21d2; <tt>Boolean</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+39
+40
+41</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 39</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_gated?'>gated?</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='rparen'>)</span>
+  <span class='const'><span class='object_link'><a href="#GATED_COMMANDS-constant" title="Kettle::Family::RemoteCheck::GATED_COMMANDS (constant)">GATED_COMMANDS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_command'>command</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="has_hosted_remotes?-class_method">
+  
+    .<strong>has_hosted_remotes?</strong>(members:, config: nil, **options)  &#x21d2; <tt>Boolean</tt> 
+  
+
+  
+
+  
+</h3><div class="docstring">
+  <div class="discussion">
+    
+
+
+  </div>
+</div>
+<div class="tags">
+  
+<p class="tag_title">Returns:</p>
+<ul class="return">
+  
+    <li>
+      
+      
+        <span class='type'>(<tt>Boolean</tt>)</span>
+      
+      
+      
+    </li>
+  
+</ul>
+
+</div><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+43
+44
+45
+46
+47
+48
+49</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 43</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_has_hosted_remotes?'>has_hosted_remotes?</span><span class='lparen'>(</span><span class='label'>members:</span><span class='comma'>,</span> <span class='label'>config:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='kw'>true</span> <span class='kw'>if</span> <span class='id identifier rubyid_config'>config</span><span class='op'>&amp;.</span><span class='id identifier rubyid_expected_org'>expected_org</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_config'>config</span><span class='period'>.</span><span class='id identifier rubyid_expected_org'>expected_org</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
+  <span class='const'>Array</span><span class='lparen'>(</span><span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_any?'>any?</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span>
+    <span class='op'>!</span><span class='id identifier rubyid_hosted_remotes_for'>hosted_remotes_for</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="hosted_remotes_for-class_method">
+  
+    .<strong>hosted_remotes_for</strong>(root)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 116</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_hosted_remotes_for'>hosted_remotes_for</span><span class='lparen'>(</span><span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='lbracket'>[</span><span class='rbracket'>]</span> <span class='kw'>unless</span> <span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span> <span class='op'>&amp;&amp;</span> <span class='const'>Dir</span><span class='period'>.</span><span class='id identifier rubyid_exist?'>exist?</span><span class='lparen'>(</span><span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='rparen'>)</span>
+
+  <span class='id identifier rubyid_stdout'>stdout</span><span class='comma'>,</span> <span class='id identifier rubyid__stderr'>_stderr</span><span class='comma'>,</span> <span class='id identifier rubyid_status'>status</span> <span class='op'>=</span> <span class='const'>Open3</span><span class='period'>.</span><span class='id identifier rubyid_capture3'>capture3</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>git</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>remote</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>-v</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='label'>chdir:</span> <span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='rparen'>)</span>
+  <span class='kw'>return</span> <span class='lbracket'>[</span><span class='rbracket'>]</span> <span class='kw'>unless</span> <span class='id identifier rubyid_status'>status</span><span class='period'>.</span><span class='id identifier rubyid_success?'>success?</span>
+
+  <span class='id identifier rubyid_seen'>seen</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='id identifier rubyid_stdout'>stdout</span><span class='period'>.</span><span class='id identifier rubyid_each_line'>each_line</span><span class='lparen'>(</span><span class='label'>chomp:</span> <span class='kw'>true</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_each_with_object'>each_with_object</span><span class='lparen'>(</span><span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_line'>line</span><span class='comma'>,</span> <span class='id identifier rubyid_list'>list</span><span class='op'>|</span>
+    <span class='id identifier rubyid_match'>match</span> <span class='op'>=</span> <span class='id identifier rubyid_line'>line</span><span class='period'>.</span><span class='id identifier rubyid_match'>match</span><span class='lparen'>(</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\A(\S+)\s+(\S+)\s+\(fetch\)\z</span><span class='regexp_end'>/</span></span><span class='rparen'>)</span>
+    <span class='kw'>next</span> <span class='kw'>unless</span> <span class='id identifier rubyid_match'>match</span>
+
+    <span class='id identifier rubyid_remote_name'>remote_name</span> <span class='op'>=</span> <span class='id identifier rubyid_match'>match</span><span class='lbracket'>[</span><span class='int'>1</span><span class='rbracket'>]</span>
+    <span class='id identifier rubyid_url'>url</span> <span class='op'>=</span> <span class='id identifier rubyid_match'>match</span><span class='lbracket'>[</span><span class='int'>2</span><span class='rbracket'>]</span>
+    <span class='kw'>next</span> <span class='kw'>if</span> <span class='id identifier rubyid_seen'>seen</span><span class='lbracket'>[</span><span class='id identifier rubyid_remote_name'>remote_name</span><span class='rbracket'>]</span>
+
+    <span class='id identifier rubyid_parsed'>parsed</span> <span class='op'>=</span> <span class='id identifier rubyid_parse_hosted_remote'>parse_hosted_remote</span><span class='lparen'>(</span><span class='id identifier rubyid_url'>url</span><span class='rparen'>)</span>
+    <span class='kw'>next</span> <span class='kw'>unless</span> <span class='id identifier rubyid_parsed'>parsed</span>
+
+    <span class='id identifier rubyid_seen'>seen</span><span class='lbracket'>[</span><span class='id identifier rubyid_remote_name'>remote_name</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='kw'>true</span>
+    <span class='id identifier rubyid_list'>list</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_parsed'>parsed</span><span class='period'>.</span><span class='id identifier rubyid_merge'>merge</span><span class='lparen'>(</span><span class='label'>remote:</span> <span class='id identifier rubyid_remote_name'>remote_name</span><span class='comma'>,</span> <span class='label'>url:</span> <span class='id identifier rubyid_url'>url</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>rescue</span> <span class='const'>SystemCallError</span>
+  <span class='lbracket'>[</span><span class='rbracket'>]</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="inspect_family-class_method">
+  
+    .<strong>inspect_family</strong>(config:, members:, **options)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+51
+52
+53</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 51</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_inspect_family'>inspect_family</span><span class='lparen'>(</span><span class='label'>config:</span><span class='comma'>,</span> <span class='label'>members:</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='label'>config:</span> <span class='id identifier rubyid_config'>config</span><span class='comma'>,</span> <span class='label'>members:</span> <span class='id identifier rubyid_members'>members</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_inspect_family'>inspect_family</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="parse_hosted_remote-class_method">
+  
+    .<strong>parse_hosted_remote</strong>(url)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 77</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_parse_hosted_remote'>parse_hosted_remote</span><span class='lparen'>(</span><span class='id identifier rubyid_url'>url</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_raw'>raw</span> <span class='op'>=</span> <span class='id identifier rubyid_url'>url</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_strip'>strip</span>
+  <span class='kw'>return</span> <span class='kw'>nil</span> <span class='kw'>if</span> <span class='id identifier rubyid_raw'>raw</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
+  <span class='const'><span class='object_link'><a href="#SUPPORTED_HOSTS-constant" title="Kettle::Family::RemoteCheck::SUPPORTED_HOSTS (constant)">SUPPORTED_HOSTS</a></span></span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_host'>host</span><span class='op'>|</span>
+    <span class='kw'>if</span> <span class='id identifier rubyid_raw'>raw</span> <span class='op'>=~</span> <span class='tstring'><span class='regexp_beg'>%r{</span><span class='tstring_content'>\Agit@</span><span class='embexpr_beg'>#{</span><span class='const'>Regexp</span><span class='period'>.</span><span class='id identifier rubyid_escape'>escape</span><span class='lparen'>(</span><span class='id identifier rubyid_host'>host</span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='tstring_content'>:([^/]+)/([^/]+?)(?:\.git)?\z</span><span class='regexp_end'>}</span></span>
+      <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>host:</span> <span class='id identifier rubyid_host'>host</span><span class='comma'>,</span> <span class='label'>owner:</span> <span class='const'>Regexp</span><span class='period'>.</span><span class='id identifier rubyid_last_match'>last_match</span><span class='lparen'>(</span><span class='int'>1</span><span class='rparen'>)</span><span class='comma'>,</span> <span class='label'>repo:</span> <span class='const'>Regexp</span><span class='period'>.</span><span class='id identifier rubyid_last_match'>last_match</span><span class='lparen'>(</span><span class='int'>2</span><span class='rparen'>)</span><span class='rbrace'>}</span>
+    <span class='kw'>end</span>
+
+    <span class='kw'>begin</span>
+      <span class='id identifier rubyid_uri'>uri</span> <span class='op'>=</span> <span class='const'>URI</span><span class='period'>.</span><span class='id identifier rubyid_parse'>parse</span><span class='lparen'>(</span><span class='id identifier rubyid_raw'>raw</span><span class='rparen'>)</span>
+    <span class='kw'>rescue</span> <span class='const'>URI</span><span class='op'>::</span><span class='const'>InvalidURIError</span>
+      <span class='kw'>next</span>
+    <span class='kw'>end</span>
+    <span class='kw'>next</span> <span class='kw'>unless</span> <span class='id identifier rubyid_uri'>uri</span><span class='period'>.</span><span class='id identifier rubyid_host'>host</span> <span class='op'>==</span> <span class='id identifier rubyid_host'>host</span>
+
+    <span class='id identifier rubyid_path'>path</span> <span class='op'>=</span> <span class='id identifier rubyid_uri'>uri</span><span class='period'>.</span><span class='id identifier rubyid_path'>path</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_sub'>sub</span><span class='lparen'>(</span><span class='tstring'><span class='regexp_beg'>%r{</span><span class='tstring_content'>\A/</span><span class='regexp_end'>}</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='id identifier rubyid_repo'>repo</span> <span class='op'>=</span> <span class='id identifier rubyid_path'>path</span><span class='period'>.</span><span class='id identifier rubyid_split'>split</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>/</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='int'>2</span><span class='rparen'>)</span>
+    <span class='kw'>next</span> <span class='kw'>if</span> <span class='id identifier rubyid_owner'>owner</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>||</span> <span class='id identifier rubyid_repo'>repo</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
+    <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>host:</span> <span class='id identifier rubyid_host'>host</span><span class='comma'>,</span> <span class='label'>owner:</span> <span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='label'>repo:</span> <span class='id identifier rubyid_repo'>repo</span><span class='period'>.</span><span class='id identifier rubyid_sub'>sub</span><span class='lparen'>(</span><span class='tstring'><span class='regexp_beg'>/</span><span class='tstring_content'>\.git\z</span><span class='regexp_end'>/</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+  <span class='kw'>nil</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="probe_github_repo-class_method">
+  
+    .<strong>probe_github_repo</strong>(owner:, repo:, token: nil, **options)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 141</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_probe_github_repo'>probe_github_repo</span><span class='lparen'>(</span><span class='label'>owner:</span><span class='comma'>,</span> <span class='label'>repo:</span><span class='comma'>,</span> <span class='label'>token:</span> <span class='kw'>nil</span><span class='comma'>,</span> <span class='op'>**</span><span class='id identifier rubyid_options'>options</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_token'>token</span> <span class='op'>||=</span> <span class='const'>ENV</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>GITHUB_TOKEN</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>||</span> <span class='const'>ENV</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>GH_TOKEN</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
+  <span class='kw'>if</span> <span class='const'><span class='object_link'><a href="../../Kettle.html" title="Kettle (module)">Kettle</a></span></span><span class='op'>::</span><span class='const'>Dev</span><span class='op'>::</span><span class='const'>CIHelpers</span><span class='period'>.</span><span class='id identifier rubyid_respond_to?'>respond_to?</span><span class='lparen'>(</span><span class='symbol'>:github_repo_info</span><span class='rparen'>)</span>
+    <span class='kw'>begin</span>
+      <span class='id identifier rubyid_info'>info</span> <span class='op'>=</span> <span class='const'><span class='object_link'><a href="../../Kettle.html" title="Kettle (module)">Kettle</a></span></span><span class='op'>::</span><span class='const'>Dev</span><span class='op'>::</span><span class='const'>CIHelpers</span><span class='period'>.</span><span class='id identifier rubyid_github_repo_info'>github_repo_info</span><span class='lparen'>(</span><span class='label'>owner:</span> <span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='label'>repo:</span> <span class='id identifier rubyid_repo'>repo</span><span class='comma'>,</span> <span class='label'>token:</span> <span class='id identifier rubyid_token'>token</span><span class='rparen'>)</span>
+      <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:unknown</span><span class='rbrace'>}</span> <span class='kw'>unless</span> <span class='id identifier rubyid_info'>info</span><span class='period'>.</span><span class='id identifier rubyid_is_a?'>is_a?</span><span class='lparen'>(</span><span class='const'>Hash</span><span class='rparen'>)</span>
+
+      <span class='kw'>return</span> <span class='id identifier rubyid_classify_github_repo_info'>classify_github_repo_info</span><span class='lparen'>(</span><span class='label'>owner:</span> <span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='label'>repo:</span> <span class='id identifier rubyid_repo'>repo</span><span class='comma'>,</span> <span class='label'>info:</span> <span class='id identifier rubyid_info'>info</span><span class='rparen'>)</span>
+    <span class='kw'>rescue</span> <span class='op'>=&gt;</span> <span class='id identifier rubyid_error'>error</span>
+      <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:not_found</span><span class='comma'>,</span> <span class='label'>message:</span> <span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='rbrace'>}</span> <span class='kw'>if</span> <span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>404</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+
+      <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:unknown</span><span class='comma'>,</span> <span class='label'>message:</span> <span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='rbrace'>}</span>
+    <span class='kw'>end</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_probe_github_repo_http'>probe_github_repo_http</span><span class='lparen'>(</span><span class='label'>owner:</span> <span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='label'>repo:</span> <span class='id identifier rubyid_repo'>repo</span><span class='comma'>,</span> <span class='label'>token:</span> <span class='id identifier rubyid_token'>token</span><span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="probe_github_repo_http-class_method">
+  
+    .<strong>probe_github_repo_http</strong>(owner:, repo:, token: nil)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 175</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_probe_github_repo_http'>probe_github_repo_http</span><span class='lparen'>(</span><span class='label'>owner:</span><span class='comma'>,</span> <span class='label'>repo:</span><span class='comma'>,</span> <span class='label'>token:</span> <span class='kw'>nil</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_current_url'>current_url</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>https://api.github.com/repos/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_owner'>owner</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_repo'>repo</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+  <span class='id identifier rubyid_initial_host'>initial_host</span> <span class='op'>=</span> <span class='const'>URI</span><span class='lparen'>(</span><span class='id identifier rubyid_current_url'>current_url</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_hostname'>hostname</span>
+  <span class='id identifier rubyid_permanent_code'>permanent_code</span> <span class='op'>=</span> <span class='kw'>nil</span>
+
+  <span class='lparen'>(</span><span class='const'><span class='object_link'><a href="#MAX_REDIRECTS-constant" title="Kettle::Family::RemoteCheck::MAX_REDIRECTS (constant)">MAX_REDIRECTS</a></span></span> <span class='op'>+</span> <span class='int'>1</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_times'>times</span> <span class='kw'>do</span>
+    <span class='id identifier rubyid_uri'>uri</span> <span class='op'>=</span> <span class='const'>URI</span><span class='lparen'>(</span><span class='id identifier rubyid_current_url'>current_url</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_req'>req</span> <span class='op'>=</span> <span class='const'>Net</span><span class='op'>::</span><span class='const'>HTTP</span><span class='op'>::</span><span class='const'>Get</span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span><span class='id identifier rubyid_uri'>uri</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_req'>req</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>User-Agent</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>kettle-family/remote-check</span><span class='tstring_end'>&quot;</span></span>
+    <span class='id identifier rubyid_req'>req</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Authorization</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>token </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_token'>token</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span> <span class='kw'>if</span> <span class='id identifier rubyid_token'>token</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_token'>token</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_uri'>uri</span><span class='period'>.</span><span class='id identifier rubyid_hostname'>hostname</span> <span class='op'>==</span> <span class='id identifier rubyid_initial_host'>initial_host</span>
+    <span class='id identifier rubyid_res'>res</span> <span class='op'>=</span> <span class='const'>Net</span><span class='op'>::</span><span class='const'>HTTP</span><span class='period'>.</span><span class='id identifier rubyid_start'>start</span><span class='lparen'>(</span><span class='id identifier rubyid_uri'>uri</span><span class='period'>.</span><span class='id identifier rubyid_hostname'>hostname</span><span class='comma'>,</span> <span class='id identifier rubyid_uri'>uri</span><span class='period'>.</span><span class='id identifier rubyid_port'>port</span><span class='comma'>,</span> <span class='label'>use_ssl:</span> <span class='kw'>true</span><span class='rparen'>)</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_http'>http</span><span class='op'>|</span> <span class='id identifier rubyid_http'>http</span><span class='period'>.</span><span class='id identifier rubyid_request'>request</span><span class='lparen'>(</span><span class='id identifier rubyid_req'>req</span><span class='rparen'>)</span> <span class='rbrace'>}</span>
+
+    <span class='kw'>if</span> <span class='id identifier rubyid_res'>res</span><span class='period'>.</span><span class='id identifier rubyid_is_a?'>is_a?</span><span class='lparen'>(</span><span class='const'>Net</span><span class='op'>::</span><span class='const'>HTTPSuccess</span><span class='rparen'>)</span>
+      <span class='id identifier rubyid_data'>data</span> <span class='op'>=</span> <span class='const'>JSON</span><span class='period'>.</span><span class='id identifier rubyid_parse'>parse</span><span class='lparen'>(</span><span class='id identifier rubyid_res'>res</span><span class='period'>.</span><span class='id identifier rubyid_body'>body</span><span class='rparen'>)</span>
+      <span class='id identifier rubyid_full_name'>full_name</span> <span class='op'>=</span> <span class='id identifier rubyid_data'>data</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>full_name</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span>
+      <span class='id identifier rubyid_new_owner'>new_owner</span><span class='comma'>,</span> <span class='id identifier rubyid_new_repo'>new_repo</span> <span class='op'>=</span> <span class='id identifier rubyid_full_name'>full_name</span><span class='period'>.</span><span class='id identifier rubyid_split'>split</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>/</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='int'>2</span><span class='rparen'>)</span>
+      <span class='kw'>if</span> <span class='id identifier rubyid_permanent_code'>permanent_code</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_new_owner'>new_owner</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>&amp;&amp;</span> <span class='op'>!</span><span class='id identifier rubyid_new_repo'>new_repo</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>&amp;&amp;</span>
+          <span class='id identifier rubyid_full_name'>full_name</span><span class='period'>.</span><span class='id identifier rubyid_casecmp'>casecmp</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_owner'>owner</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_repo'>repo</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>!=</span> <span class='int'>0</span>
+        <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:redirect</span><span class='comma'>,</span> <span class='label'>canonical_owner:</span> <span class='id identifier rubyid_new_owner'>new_owner</span><span class='comma'>,</span> <span class='label'>canonical_repo:</span> <span class='id identifier rubyid_new_repo'>new_repo</span><span class='comma'>,</span> <span class='label'>code:</span> <span class='id identifier rubyid_permanent_code'>permanent_code</span><span class='rbrace'>}</span>
+      <span class='kw'>end</span>
+
+      <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:ok</span><span class='comma'>,</span> <span class='label'>canonical_owner:</span> <span class='id identifier rubyid_new_owner'>new_owner</span> <span class='op'>||</span> <span class='id identifier rubyid_owner'>owner</span><span class='comma'>,</span> <span class='label'>canonical_repo:</span> <span class='id identifier rubyid_new_repo'>new_repo</span> <span class='op'>||</span> <span class='id identifier rubyid_repo'>repo</span><span class='rbrace'>}</span>
+    <span class='kw'>elsif</span> <span class='id identifier rubyid_res'>res</span><span class='period'>.</span><span class='id identifier rubyid_is_a?'>is_a?</span><span class='lparen'>(</span><span class='const'>Net</span><span class='op'>::</span><span class='const'>HTTPRedirection</span><span class='rparen'>)</span>
+      <span class='id identifier rubyid_location'>location</span> <span class='op'>=</span> <span class='id identifier rubyid_res'>res</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>location</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span> <span class='op'>||</span> <span class='id identifier rubyid_res'>res</span><span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>Location</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span>
+      <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:unknown</span><span class='rbrace'>}</span> <span class='kw'>if</span> <span class='id identifier rubyid_location'>location</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+
+      <span class='id identifier rubyid_code'>code</span> <span class='op'>=</span> <span class='id identifier rubyid_res'>res</span><span class='period'>.</span><span class='id identifier rubyid_code'>code</span><span class='period'>.</span><span class='id identifier rubyid_to_i'>to_i</span>
+      <span class='id identifier rubyid_permanent_code'>permanent_code</span> <span class='op'>||=</span> <span class='id identifier rubyid_code'>code</span> <span class='kw'>if</span> <span class='const'><span class='object_link'><a href="#PERMANENT_REDIRECT_CODES-constant" title="Kettle::Family::RemoteCheck::PERMANENT_REDIRECT_CODES (constant)">PERMANENT_REDIRECT_CODES</a></span></span><span class='period'>.</span><span class='id identifier rubyid_include?'>include?</span><span class='lparen'>(</span><span class='id identifier rubyid_code'>code</span><span class='rparen'>)</span>
+      <span class='id identifier rubyid_current_url'>current_url</span> <span class='op'>=</span> <span class='const'>URI</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='id identifier rubyid_current_url'>current_url</span><span class='comma'>,</span> <span class='id identifier rubyid_location'>location</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span>
+      <span class='kw'>next</span>
+    <span class='kw'>elsif</span> <span class='id identifier rubyid_res'>res</span><span class='period'>.</span><span class='id identifier rubyid_is_a?'>is_a?</span><span class='lparen'>(</span><span class='const'>Net</span><span class='op'>::</span><span class='const'>HTTPNotFound</span><span class='rparen'>)</span>
+      <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:not_found</span><span class='comma'>,</span> <span class='label'>message:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>GitHub repository </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_owner'>owner</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_repo'>repo</span><span class='embexpr_end'>}</span><span class='tstring_content'> not found (HTTP 404)</span><span class='tstring_end'>&quot;</span></span><span class='rbrace'>}</span>
+    <span class='kw'>else</span>
+      <span class='kw'>return</span> <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:unknown</span><span class='rbrace'>}</span>
+    <span class='kw'>end</span>
+  <span class='kw'>end</span>
+
+  <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:unknown</span><span class='rbrace'>}</span>
+<span class='kw'>rescue</span> <span class='op'>=&gt;</span> <span class='id identifier rubyid_error'>error</span>
+  <span class='lbrace'>{</span><span class='label'>status:</span> <span class='symbol'>:unknown</span><span class='comma'>,</span> <span class='label'>message:</span> <span class='id identifier rubyid_error'>error</span><span class='period'>.</span><span class='id identifier rubyid_message'>message</span><span class='rbrace'>}</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="rewrite_remote_url-class_method">
+  
+    .<strong>rewrite_remote_url</strong>(url, new_owner, new_repo)  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 102</span>
+
+<span class='kw'>def</span> <span class='kw'>self</span><span class='period'>.</span><span class='id identifier rubyid_rewrite_remote_url'>rewrite_remote_url</span><span class='lparen'>(</span><span class='id identifier rubyid_url'>url</span><span class='comma'>,</span> <span class='id identifier rubyid_new_owner'>new_owner</span><span class='comma'>,</span> <span class='id identifier rubyid_new_repo'>new_repo</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_raw'>raw</span> <span class='op'>=</span> <span class='id identifier rubyid_url'>url</span><span class='period'>.</span><span class='id identifier rubyid_to_s'>to_s</span><span class='period'>.</span><span class='id identifier rubyid_strip'>strip</span>
+  <span class='id identifier rubyid_suffix'>suffix</span> <span class='op'>=</span> <span class='id identifier rubyid_raw'>raw</span><span class='period'>.</span><span class='id identifier rubyid_end_with?'>end_with?</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.git</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span> <span class='op'>?</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>.git</span><span class='tstring_end'>&quot;</span></span> <span class='op'>:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_end'>&quot;</span></span>
+  <span class='id identifier rubyid_parsed'>parsed</span> <span class='op'>=</span> <span class='id identifier rubyid_parse_hosted_remote'>parse_hosted_remote</span><span class='lparen'>(</span><span class='id identifier rubyid_raw'>raw</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_host'>host</span> <span class='op'>=</span> <span class='id identifier rubyid_parsed'>parsed</span> <span class='op'>?</span> <span class='id identifier rubyid_parsed'>parsed</span><span class='lbracket'>[</span><span class='symbol'>:host</span><span class='rbracket'>]</span> <span class='op'>:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>github.com</span><span class='tstring_end'>&quot;</span></span>
+  <span class='kw'>if</span> <span class='id identifier rubyid_raw'>raw</span><span class='period'>.</span><span class='id identifier rubyid_start_with?'>start_with?</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>git@</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_host'>host</span><span class='embexpr_end'>}</span><span class='tstring_content'>:</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span>
+    <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>git@</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_host'>host</span><span class='embexpr_end'>}</span><span class='tstring_content'>:</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_new_owner'>new_owner</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_new_repo'>new_repo</span><span class='embexpr_end'>}</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_suffix'>suffix</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+  <span class='kw'>elsif</span> <span class='id identifier rubyid_raw'>raw</span> <span class='op'>=~</span> <span class='tstring'><span class='regexp_beg'>%r{</span><span class='tstring_content'>\A((?:git\+)?ssh://[^/]+/)</span><span class='regexp_end'>}</span></span>
+    <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='embexpr_beg'>#{</span><span class='const'>Regexp</span><span class='period'>.</span><span class='id identifier rubyid_last_match'>last_match</span><span class='lparen'>(</span><span class='int'>1</span><span class='rparen'>)</span><span class='embexpr_end'>}</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_new_owner'>new_owner</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_new_repo'>new_repo</span><span class='embexpr_end'>}</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_suffix'>suffix</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+  <span class='kw'>else</span>
+    <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>https://</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_host'>host</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_new_owner'>new_owner</span><span class='embexpr_end'>}</span><span class='tstring_content'>/</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_new_repo'>new_repo</span><span class='embexpr_end'>}</span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_suffix'>suffix</span><span class='embexpr_end'>}</span><span class='tstring_end'>&quot;</span></span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+  </div>
+
+  <div id="instance_method_details" class="method_details_list">
+    <h2>Instance Method Details</h2>
+
+    
+      <div class="method_details first">
+  <h3 class="signature first" id="call-instance_method">
+  
+    #<strong>call</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 270</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_call'>call</span>
+  <span class='id identifier rubyid_started'>started</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_inspection'>inspection</span> <span class='op'>=</span> <span class='id identifier rubyid_inspect_family'>inspect_family</span>
+  <span class='id identifier rubyid_fixed_lines'>fixed_lines</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_blocking_lines'>blocking_lines</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_diagnostics'>diagnostics</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+  <span class='id identifier rubyid_fixed_roots'>fixed_roots</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+
+  <span class='ivar'>@members</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span>
+    <span class='id identifier rubyid_info'>info</span> <span class='op'>=</span> <span class='id identifier rubyid_inspection'>inspection</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='symbol'>:members</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_info'>info</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='symbol'>:issues</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_issue'>issue</span><span class='op'>|</span>
+      <span class='id identifier rubyid_outcome'>outcome</span> <span class='op'>=</span> <span class='id identifier rubyid_handle_issue'>handle_issue</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>git_root:</span> <span class='id identifier rubyid_info'>info</span><span class='lbracket'>[</span><span class='symbol'>:git_root</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>issue:</span> <span class='id identifier rubyid_issue'>issue</span><span class='comma'>,</span> <span class='label'>fixed_roots:</span> <span class='id identifier rubyid_fixed_roots'>fixed_roots</span><span class='rparen'>)</span>
+      <span class='kw'>next</span> <span class='kw'>unless</span> <span class='id identifier rubyid_outcome'>outcome</span>
+
+      <span class='id identifier rubyid_diagnostics'>diagnostics</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:diagnostic</span><span class='rbracket'>]</span>
+      <span class='kw'>case</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:action</span><span class='rbracket'>]</span>
+      <span class='kw'>when</span> <span class='symbol'>:fixed</span>
+        <span class='id identifier rubyid_fixed_lines'>fixed_lines</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:message</span><span class='rbracket'>]</span>
+      <span class='kw'>when</span> <span class='symbol'>:error</span>
+        <span class='id identifier rubyid_blocking_lines'>blocking_lines</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:message</span><span class='rbracket'>]</span>
+      <span class='kw'>end</span>
+    <span class='kw'>end</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_elapsed'>elapsed</span> <span class='op'>=</span> <span class='lparen'>(</span><span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span> <span class='op'>-</span> <span class='id identifier rubyid_started'>started</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_round'>round</span><span class='lparen'>(</span><span class='int'>3</span><span class='rparen'>)</span>
+  <span class='kw'>if</span> <span class='id identifier rubyid_blocking_lines'>blocking_lines</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+    <span class='kw'>return</span> <span class='const'><span class='object_link'><a href="CommandResult.html" title="Kettle::Family::CommandResult (class)">CommandResult</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+      <span class='label'>member_name:</span> <span class='ivar'>@config</span><span class='period'>.</span><span class='id identifier rubyid_family_name'>family_name</span><span class='comma'>,</span>
+      <span class='label'>phase:</span> <span class='const'><span class='object_link'><a href="#PHASE-constant" title="Kettle::Family::RemoteCheck::PHASE (constant)">PHASE</a></span></span><span class='comma'>,</span>
+      <span class='label'>command:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>internal</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>remote-check</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='comma'>,</span>
+      <span class='label'>workdir:</span> <span class='ivar'>@config</span><span class='period'>.</span><span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='comma'>,</span>
+      <span class='label'>status:</span> <span class='int'>0</span><span class='comma'>,</span>
+      <span class='label'>success:</span> <span class='kw'>true</span><span class='comma'>,</span>
+      <span class='label'>stdout:</span> <span class='id identifier rubyid_fixed_lines'>fixed_lines</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='comma'>,</span>
+      <span class='label'>stderr:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>elapsed_seconds:</span> <span class='id identifier rubyid_elapsed'>elapsed</span><span class='comma'>,</span>
+      <span class='label'>skipped:</span> <span class='id identifier rubyid_fixed_lines'>fixed_lines</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span><span class='comma'>,</span>
+      <span class='label'>reason:</span> <span class='id identifier rubyid_fixed_lines'>fixed_lines</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span> <span class='op'>?</span> <span class='kw'>nil</span> <span class='op'>:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>auto-fixed </span><span class='embexpr_beg'>#{</span><span class='id identifier rubyid_fixed_lines'>fixed_lines</span><span class='period'>.</span><span class='id identifier rubyid_length'>length</span><span class='embexpr_end'>}</span><span class='tstring_content'> redirected remote(s)</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+      <span class='label'>diagnostics:</span> <span class='id identifier rubyid_diagnostics'>diagnostics</span>
+    <span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='const'><span class='object_link'><a href="CommandResult.html" title="Kettle::Family::CommandResult (class)">CommandResult</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+    <span class='label'>member_name:</span> <span class='ivar'>@config</span><span class='period'>.</span><span class='id identifier rubyid_family_name'>family_name</span><span class='comma'>,</span>
+    <span class='label'>phase:</span> <span class='const'><span class='object_link'><a href="#PHASE-constant" title="Kettle::Family::RemoteCheck::PHASE (constant)">PHASE</a></span></span><span class='comma'>,</span>
+    <span class='label'>command:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>internal</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>remote-check</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='comma'>,</span>
+    <span class='label'>workdir:</span> <span class='ivar'>@config</span><span class='period'>.</span><span class='id identifier rubyid_root'><span class='object_link'><a href="../../top-level-namespace.html" title="Top Level Namespace (root)">root</a></span></span><span class='comma'>,</span>
+    <span class='label'>status:</span> <span class='int'>1</span><span class='comma'>,</span>
+    <span class='label'>success:</span> <span class='kw'>false</span><span class='comma'>,</span>
+    <span class='label'>stdout:</span> <span class='id identifier rubyid_fixed_lines'>fixed_lines</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='comma'>,</span>
+    <span class='label'>stderr:</span> <span class='id identifier rubyid_blocking_lines'>blocking_lines</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='comma'>,</span>
+    <span class='label'>elapsed_seconds:</span> <span class='id identifier rubyid_elapsed'>elapsed</span><span class='comma'>,</span>
+    <span class='label'>skipped:</span> <span class='kw'>false</span><span class='comma'>,</span>
+    <span class='label'>reason:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>stale or mismatched git remote(s)</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+    <span class='label'>diagnostics:</span> <span class='id identifier rubyid_diagnostics'>diagnostics</span>
+  <span class='rparen'>)</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="fix-instance_method">
+  
+    #<strong>fix</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 328</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_fix'>fix</span>
+  <span class='id identifier rubyid_inspection'>inspection</span> <span class='op'>=</span> <span class='id identifier rubyid_inspect_family'>inspect_family</span>
+  <span class='id identifier rubyid_fixed_roots'>fixed_roots</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+
+  <span class='ivar'>@members</span><span class='period'>.</span><span class='id identifier rubyid_map'>map</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span>
+    <span class='id identifier rubyid_started'>started</span> <span class='op'>=</span> <span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_info'>info</span> <span class='op'>=</span> <span class='id identifier rubyid_inspection'>inspection</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='symbol'>:members</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_issues'>issues</span> <span class='op'>=</span> <span class='id identifier rubyid_info'>info</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='symbol'>:issues</span><span class='rparen'>)</span>
+    <span class='kw'>if</span> <span class='id identifier rubyid_issues'>issues</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+      <span class='id identifier rubyid_elapsed'>elapsed</span> <span class='op'>=</span> <span class='lparen'>(</span><span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span> <span class='op'>-</span> <span class='id identifier rubyid_started'>started</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_round'>round</span><span class='lparen'>(</span><span class='int'>3</span><span class='rparen'>)</span>
+      <span class='kw'>next</span> <span class='const'><span class='object_link'><a href="CommandResult.html" title="Kettle::Family::CommandResult (class)">CommandResult</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+        <span class='label'>member_name:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span>
+        <span class='label'>phase:</span> <span class='const'><span class='object_link'><a href="#FIX_PHASE-constant" title="Kettle::Family::RemoteCheck::FIX_PHASE (constant)">FIX_PHASE</a></span></span><span class='comma'>,</span>
+        <span class='label'>command:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>internal</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>fix-remotes</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='comma'>,</span>
+        <span class='label'>workdir:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='comma'>,</span>
+        <span class='label'>status:</span> <span class='int'>0</span><span class='comma'>,</span>
+        <span class='label'>success:</span> <span class='kw'>true</span><span class='comma'>,</span>
+        <span class='label'>stdout:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+        <span class='label'>stderr:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span>
+        <span class='label'>elapsed_seconds:</span> <span class='id identifier rubyid_elapsed'>elapsed</span><span class='comma'>,</span>
+        <span class='label'>skipped:</span> <span class='kw'>true</span><span class='comma'>,</span>
+        <span class='label'>reason:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>remotes up to date</span><span class='tstring_end'>&quot;</span></span>
+      <span class='rparen'>)</span>
+    <span class='kw'>end</span>
+
+    <span class='id identifier rubyid_stdout_lines'>stdout_lines</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+    <span class='id identifier rubyid_stderr_lines'>stderr_lines</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+    <span class='id identifier rubyid_diagnostics'>diagnostics</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+    <span class='id identifier rubyid_ok'>ok</span> <span class='op'>=</span> <span class='kw'>true</span>
+    <span class='id identifier rubyid_skipped'>skipped</span> <span class='op'>=</span> <span class='kw'>true</span>
+
+    <span class='id identifier rubyid_issues'>issues</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_issue'>issue</span><span class='op'>|</span>
+      <span class='id identifier rubyid_outcome'>outcome</span> <span class='op'>=</span> <span class='id identifier rubyid_handle_issue'>handle_issue</span><span class='lparen'>(</span><span class='label'>member:</span> <span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='label'>git_root:</span> <span class='id identifier rubyid_info'>info</span><span class='lbracket'>[</span><span class='symbol'>:git_root</span><span class='rbracket'>]</span><span class='comma'>,</span> <span class='label'>issue:</span> <span class='id identifier rubyid_issue'>issue</span><span class='comma'>,</span> <span class='label'>fixed_roots:</span> <span class='id identifier rubyid_fixed_roots'>fixed_roots</span><span class='comma'>,</span> <span class='label'>report_planned:</span> <span class='kw'>true</span><span class='rparen'>)</span>
+      <span class='kw'>next</span> <span class='kw'>unless</span> <span class='id identifier rubyid_outcome'>outcome</span>
+
+      <span class='id identifier rubyid_diagnostics'>diagnostics</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:diagnostic</span><span class='rbracket'>]</span>
+      <span class='kw'>case</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:action</span><span class='rbracket'>]</span>
+      <span class='kw'>when</span> <span class='symbol'>:fixed</span>
+        <span class='id identifier rubyid_stdout_lines'>stdout_lines</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:message</span><span class='rbracket'>]</span>
+        <span class='id identifier rubyid_skipped'>skipped</span> <span class='op'>=</span> <span class='kw'>false</span>
+      <span class='kw'>when</span> <span class='symbol'>:planned</span>
+        <span class='id identifier rubyid_stdout_lines'>stdout_lines</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:message</span><span class='rbracket'>]</span>
+      <span class='kw'>when</span> <span class='symbol'>:warning</span>
+        <span class='id identifier rubyid_stdout_lines'>stdout_lines</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:message</span><span class='rbracket'>]</span>
+      <span class='kw'>when</span> <span class='symbol'>:error</span>
+        <span class='id identifier rubyid_stderr_lines'>stderr_lines</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_outcome'>outcome</span><span class='lbracket'>[</span><span class='symbol'>:message</span><span class='rbracket'>]</span>
+        <span class='id identifier rubyid_ok'>ok</span> <span class='op'>=</span> <span class='kw'>false</span>
+        <span class='id identifier rubyid_skipped'>skipped</span> <span class='op'>=</span> <span class='kw'>false</span>
+      <span class='kw'>end</span>
+    <span class='kw'>end</span>
+
+    <span class='id identifier rubyid_elapsed'>elapsed</span> <span class='op'>=</span> <span class='lparen'>(</span><span class='const'>Process</span><span class='period'>.</span><span class='id identifier rubyid_clock_gettime'>clock_gettime</span><span class='lparen'>(</span><span class='const'>Process</span><span class='op'>::</span><span class='const'>CLOCK_MONOTONIC</span><span class='rparen'>)</span> <span class='op'>-</span> <span class='id identifier rubyid_started'>started</span><span class='rparen'>)</span><span class='period'>.</span><span class='id identifier rubyid_round'>round</span><span class='lparen'>(</span><span class='int'>3</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_reason'>reason</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='op'>!</span><span class='id identifier rubyid_ok'>ok</span>
+      <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>remote check failed</span><span class='tstring_end'>&quot;</span></span>
+    <span class='kw'>elsif</span> <span class='op'>!</span><span class='id identifier rubyid_skipped'>skipped</span>
+      <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>updated redirected remote(s)</span><span class='tstring_end'>&quot;</span></span>
+    <span class='kw'>elsif</span> <span class='op'>!</span><span class='id identifier rubyid_stdout_lines'>stdout_lines</span><span class='period'>.</span><span class='id identifier rubyid_empty?'>empty?</span>
+      <span class='ivar'>@execute</span> <span class='op'>?</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>no redirected remotes to update</span><span class='tstring_end'>&quot;</span></span> <span class='op'>:</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>dry-run; planned remote update(s)</span><span class='tstring_end'>&quot;</span></span>
+    <span class='kw'>else</span>
+      <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>remotes up to date</span><span class='tstring_end'>&quot;</span></span>
+    <span class='kw'>end</span>
+
+    <span class='const'><span class='object_link'><a href="CommandResult.html" title="Kettle::Family::CommandResult (class)">CommandResult</a></span></span><span class='period'>.</span><span class='id identifier rubyid_new'>new</span><span class='lparen'>(</span>
+      <span class='label'>member_name:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span>
+      <span class='label'>phase:</span> <span class='const'><span class='object_link'><a href="#FIX_PHASE-constant" title="Kettle::Family::RemoteCheck::FIX_PHASE (constant)">FIX_PHASE</a></span></span><span class='comma'>,</span>
+      <span class='label'>command:</span> <span class='lbracket'>[</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>internal</span><span class='tstring_end'>&quot;</span></span><span class='comma'>,</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>fix-remotes</span><span class='tstring_end'>&quot;</span></span><span class='rbracket'>]</span><span class='comma'>,</span>
+      <span class='label'>workdir:</span> <span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='comma'>,</span>
+      <span class='label'>status:</span> <span class='id identifier rubyid_ok'>ok</span> <span class='op'>?</span> <span class='int'>0</span> <span class='op'>:</span> <span class='int'>1</span><span class='comma'>,</span>
+      <span class='label'>success:</span> <span class='id identifier rubyid_ok'>ok</span><span class='comma'>,</span>
+      <span class='label'>stdout:</span> <span class='id identifier rubyid_stdout_lines'>stdout_lines</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='comma'>,</span>
+      <span class='label'>stderr:</span> <span class='id identifier rubyid_stderr_lines'>stderr_lines</span><span class='period'>.</span><span class='id identifier rubyid_join'>join</span><span class='lparen'>(</span><span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>\n</span><span class='tstring_end'>&quot;</span></span><span class='rparen'>)</span><span class='comma'>,</span>
+      <span class='label'>elapsed_seconds:</span> <span class='id identifier rubyid_elapsed'>elapsed</span><span class='comma'>,</span>
+      <span class='label'>skipped:</span> <span class='id identifier rubyid_skipped'>skipped</span><span class='comma'>,</span>
+      <span class='label'>reason:</span> <span class='id identifier rubyid_reason'>reason</span><span class='comma'>,</span>
+      <span class='label'>diagnostics:</span> <span class='id identifier rubyid_diagnostics'>diagnostics</span>
+    <span class='rparen'>)</span>
+  <span class='kw'>end</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+      <div class="method_details ">
+  <h3 class="signature " id="inspect_family-instance_method">
+  
+    #<strong>inspect_family</strong>  &#x21d2; <tt>Object</tt> 
+  
+
+  
+
+  
+</h3><table class="source_code">
+  <tr>
+    <td>
+      <pre class="lines">
+
+
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268</pre>
+    </td>
+    <td>
+      <pre class="code"><span class="info file"># File 'lib/kettle/family/remote_check.rb', line 228</span>
+
+<span class='kw'>def</span> <span class='id identifier rubyid_inspect_family'>inspect_family</span>
+  <span class='id identifier rubyid_member_remotes'>member_remotes</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='id identifier rubyid_member_git_roots'>member_git_roots</span> <span class='op'>=</span> <span class='lbrace'>{</span><span class='rbrace'>}</span>
+  <span class='ivar'>@members</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='op'>|</span>
+    <span class='id identifier rubyid_git_root'>git_root</span> <span class='op'>=</span> <span class='id identifier rubyid_resolve_git_root'>resolve_git_root</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_root'>root</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_member_git_roots'>member_git_roots</span><span class='lbracket'>[</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_git_root'>git_root</span>
+    <span class='id identifier rubyid_member_remotes'>member_remotes</span><span class='lbracket'>[</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='id identifier rubyid_remotes_for_root'>remotes_for_root</span><span class='lparen'>(</span><span class='id identifier rubyid_git_root'>git_root</span><span class='rparen'>)</span>
+  <span class='kw'>end</span>
+
+  <span class='id identifier rubyid_expected_org_by_host'>expected_org_by_host</span> <span class='op'>=</span> <span class='id identifier rubyid_compute_expected_orgs'>compute_expected_orgs</span><span class='lparen'>(</span><span class='id identifier rubyid_member_git_roots'>member_git_roots</span><span class='comma'>,</span> <span class='id identifier rubyid_member_remotes'>member_remotes</span><span class='rparen'>)</span>
+  <span class='id identifier rubyid_allowed_orgs'>allowed_orgs</span> <span class='op'>=</span> <span class='id identifier rubyid_allowed_org_set'>allowed_org_set</span>
+
+  <span class='id identifier rubyid_members_report'>members_report</span> <span class='op'>=</span> <span class='ivar'>@members</span><span class='period'>.</span><span class='id identifier rubyid_each_with_object'>each_with_object</span><span class='lparen'>(</span><span class='lbrace'>{</span><span class='rbrace'>}</span><span class='rparen'>)</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_member'>member</span><span class='comma'>,</span> <span class='id identifier rubyid_report'>report</span><span class='op'>|</span>
+    <span class='id identifier rubyid_remotes'>remotes</span> <span class='op'>=</span> <span class='id identifier rubyid_member_remotes'>member_remotes</span><span class='period'>.</span><span class='id identifier rubyid_fetch'>fetch</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='comma'>,</span> <span class='lbracket'>[</span><span class='rbracket'>]</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_gemspec_owners'>gemspec_owners</span> <span class='op'>=</span> <span class='id identifier rubyid_gemspec_owners_by_host'>gemspec_owners_by_host</span><span class='lparen'>(</span><span class='id identifier rubyid_member'>member</span><span class='rparen'>)</span>
+    <span class='id identifier rubyid_origin'>origin</span> <span class='op'>=</span> <span class='id identifier rubyid_remotes'>remotes</span><span class='period'>.</span><span class='id identifier rubyid_find'>find</span> <span class='lbrace'>{</span> <span class='op'>|</span><span class='id identifier rubyid_entry'>entry</span><span class='op'>|</span> <span class='id identifier rubyid_entry'>entry</span><span class='lbracket'>[</span><span class='symbol'>:remote</span><span class='rbracket'>]</span> <span class='op'>==</span> <span class='tstring'><span class='tstring_beg'>&quot;</span><span class='tstring_content'>origin</span><span class='tstring_end'>&quot;</span></span> <span class='rbrace'>}</span> <span class='op'>||</span> <span class='id identifier rubyid_remotes'>remotes</span><span class='period'>.</span><span class='id identifier rubyid_first'>first</span>
+    <span class='id identifier rubyid_issues'>issues</span> <span class='op'>=</span> <span class='lbracket'>[</span><span class='rbracket'>]</span>
+
+    <span class='id identifier rubyid_remotes'>remotes</span><span class='period'>.</span><span class='id identifier rubyid_each'>each</span> <span class='kw'>do</span> <span class='op'>|</span><span class='id identifier rubyid_entry'>entry</span><span class='op'>|</span>
+      <span class='id identifier rubyid_issue'>issue</span> <span class='op'>=</span> <span class='id identifier rubyid_evaluate_remote_offline'>evaluate_remote_offline</span><span class='lparen'>(</span>
+        <span class='label'>entry:</span> <span class='id identifier rubyid_entry'>entry</span><span class='comma'>,</span>
+        <span class='label'>expected_org_by_host:</span> <span class='id identifier rubyid_expected_org_by_host'>expected_org_by_host</span><span class='comma'>,</span>
+        <span class='label'>gemspec_owners:</span> <span class='id identifier rubyid_gemspec_owners'>gemspec_owners</span><span class='comma'>,</span>
+        <span class='label'>allowed_orgs:</span> <span class='id identifier rubyid_allowed_orgs'>allowed_orgs</span>
+      <span class='rparen'>)</span>
+      <span class='id identifier rubyid_issues'>issues</span> <span class='op'>&lt;&lt;</span> <span class='id identifier rubyid_issue'>issue</span> <span class='kw'>if</span> <span class='id identifier rubyid_issue'>issue</span>
+    <span class='kw'>end</span>
+
+    <span class='id identifier rubyid_report'>report</span><span class='lbracket'>[</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span> <span class='op'>=</span> <span class='lbrace'>{</span>
+      <span class='label'>git_root:</span> <span class='id identifier rubyid_member_git_roots'>member_git_roots</span><span class='lbracket'>[</span><span class='id identifier rubyid_member'>member</span><span class='period'>.</span><span class='id identifier rubyid_name'>name</span><span class='rbracket'>]</span><span class='comma'>,</span>
+      <span class='label'>remotes:</span> <span class='id identifier rubyid_remotes'>remotes</span><span class='comma'>,</span>
+      <span class='label'>origin_org:</span> <span class='id identifier rubyid_origin'>origin</span> <span class='op'>&amp;&amp;</span> <span class='id identifier rubyid_origin'>origin</span><span class='lbracket'>[</span><span class='symbol'>:owner</span><span class='rbracket'>]</span><span class='comma'>,</span>
+      <span class='label'>issues:</span> <span class='id identifier rubyid_issues'>issues</span>
+    <span class='rbrace'>}</span>
+  <span class='kw'>end</span>
+
+  <span class='lbrace'>{</span>
+    <span class='label'>expected_org_by_host:</span> <span class='id identifier rubyid_expected_org_by_host'>expected_org_by_host</span><span class='comma'>,</span>
+    <span class='label'>members:</span> <span class='id identifier rubyid_members_report'>members_report</span>
+  <span class='rbrace'>}</span>
+<span class='kw'>end</span></pre>
+    </td>
+  </tr>
+</table>
+</div>
+    
+  </div>
+
+</div>
+
+      <div id="footer">
+  Generated on Sat Nov 28 00:51:20 2026 by
+  <a href="https://yardoc.org" title="Yay! A Ruby Documentation Tool" target="_parent">yard</a>
+  0.9.46 (ruby-4.0.10).
+</div>
+
+    </div>
+  </body>
+</html>
