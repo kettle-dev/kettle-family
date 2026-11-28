@@ -29,6 +29,8 @@ Please file a bug if you notice a violation of semantic versioning.
 ### Fixed
 
 - release: independently versioned monorepo members (`release.version_series.independent_members`, such as `kettle-jem`) now keep their own tracked GitHub Release at their own version tag instead of skipping step 18 and attaching their assets to the shared cohort's aggregate GitHub Release (#92)
+- release: set `KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE=true` (when not overridden) for publishing members that own their own GitHub Release so step-18 GitHub Release failures abort loudly instead of warning and exiting 0 (#92)
+- template/add-changelog/release: route `K_CHANGELOG_PATH` and family-changelog/reset checks to the member's own `CHANGELOG.md` for `release.version_series.independent_members` (and member-local changelogs) inside shared-changelog monorepos (#92)
 - reconcile-releases: attach existing local `.gem` and `.sha256`/`.sha512` checksum files via `--asset` when backfilling a missing GitHub Release (#92)
 
 ### Security

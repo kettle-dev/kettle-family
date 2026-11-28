@@ -2322,6 +2322,8 @@ RSpec.describe Kettle::Family::CLI do
       config = instance_double(
         Kettle::Family::Config,
         shared_changelog?: true,
+        member_local_changelog?: false,
+        independent_version_series_member?: false,
         changelog_path: "CHANGELOG.md",
         root: "/fam"
       )
@@ -2330,6 +2332,30 @@ RSpec.describe Kettle::Family::CLI do
       env = cli.send(:changelog_target_env, config: config, member: member)
 
       expect(env).to eq("K_CHANGELOG_PATH" => "/fam/CHANGELOG.md")
+    end
+
+    it "targets the member's own changelog for independent-series and local-changelog members in a shared-changelog family" do
+      member = instance_double(Kettle::Family::Member, root: "/fam/gems/kettle-jem")
+
+      independent_config = instance_double(
+        Kettle::Family::Config,
+        shared_changelog?: true,
+        member_local_changelog?: false,
+        independent_version_series_member?: true
+      )
+      expect(cli.send(:changelog_target_env, config: independent_config, member: member)).to eq(
+        "K_CHANGELOG_PATH" => "/fam/gems/kettle-jem/CHANGELOG.md"
+      )
+
+      local_changelog_config = instance_double(
+        Kettle::Family::Config,
+        shared_changelog?: true,
+        member_local_changelog?: true,
+        independent_version_series_member?: false
+      )
+      expect(cli.send(:changelog_target_env, config: local_changelog_config, member: member)).to eq(
+        "K_CHANGELOG_PATH" => "/fam/gems/kettle-jem/CHANGELOG.md"
+      )
     end
 
     it "targets each member's own changelog for member-local families" do

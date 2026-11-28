@@ -3981,7 +3981,7 @@ module Kettle
       # coordinated monorepo release is only partly published can force
       # Bundler to select the prior registry dependency graph instead.
       def reset_skips_member_changelog_dependency?(member)
-        config.shared_changelog? && !config.member_local_changelog?(member)
+        config.shared_changelog? && !config.member_local_changelog?(member) && !independent_version_series_member?(member)
       end
 
       def reset_helper_ruby
@@ -4303,9 +4303,10 @@ module Kettle
       def family_changelog_applies_to_selected_members?
         return true unless config.shared_changelog?
 
-        # A member-local changelog is an independent release lane. Do not
-        # prepare the shared root changelog when that is the only lane selected.
-        members.any? { |member| !config.member_local_changelog?(member) }
+        # A member-local changelog or independent version series is an
+        # independent release lane. Do not prepare the shared root changelog
+        # when only independent lanes are selected.
+        members.any? { |member| !config.member_local_changelog?(member) && !independent_version_series_member?(member) }
       end
 
       # simplecov:disable
@@ -4722,6 +4723,11 @@ module Kettle
           # GitHub Release.
           env["KETTLE_RELEASE_SKIP_GITHUB_RELEASE"] = "true" if aggregate_monorepo_github_release? && aggregate_release_member?(member)
         end
+        # Members that own their own GitHub Release (sibling repos, standalone
+        # gems, aggregate-excluded and independent-series monorepo members)
+        # must fail step 18 loudly instead of warning and exiting 0 when
+        # GitHub Release creation fails.
+        env["KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE"] ||= "true" if publish && !env.key?("KETTLE_RELEASE_SKIP_GITHUB_RELEASE")
         if aggregate_validation_member?(member)
           env["KETTLE_RELEASE_FAMILY_CI_MODE"] = aggregate_validation_member_name?(member) ? "validation" : "member"
         end
@@ -6805,7 +6811,9 @@ module Kettle
         # when the family shares one, splitting a lock-step member into its
         # own release lane.
         if kettle_jem_template_command?(config.template_command || default_template_command(member))
-          if config&.shared_changelog?
+          if member && (independent_version_series_member?(member) || config.release_aggregate_validation_excluded_members.include?(member.name.to_s))
+            env["K_CHANGELOG_PATH"] = File.join(member.root, "CHANGELOG.md")
+          elsif config&.shared_changelog?
             env["K_CHANGELOG_PATH"] = File.expand_path(config.changelog_path, config.root)
           elsif member
             env["K_CHANGELOG_PATH"] = File.join(member.root, "CHANGELOG.md")

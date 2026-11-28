@@ -93,11 +93,48 @@ RSpec.describe Kettle::Family::Workflow do
     indy_env = workflow.send(:release_env_for_member, indy)
 
     expect(alpha_env).to include("KETTLE_RELEASE_SKIP_GITHUB_RELEASE" => "true")
+    expect(alpha_env).not_to have_key("KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE")
     expect(indy_env).not_to have_key("KETTLE_RELEASE_SKIP_GITHUB_RELEASE")
     expect(indy_env).to include(
+      "KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE" => "true",
       "K_CHANGELOG_GEM_NAME" => "indy",
       "K_CHANGELOG_PATH" => File.join(indy.root, "CHANGELOG.md")
     )
+  end
+
+  it "does not require GitHub release on non-publish runs and honors explicit opt-out" do
+    write_family_config(independent_members: ["indy"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member("alpha", version: "1.0.0")
+    indy = member("indy", version: "2.0.0")
+
+    build_only = described_class.new(command: "release", config: config, members: [alpha, indy], publish: false)
+    expect(build_only.send(:release_env_for_member, indy)).not_to have_key("KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE")
+
+    opt_out = described_class.new(
+      command: "release",
+      config: config,
+      members: [alpha, indy],
+      publish: true,
+      env_overrides: {"KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE" => "false"}
+    )
+    expect(opt_out.send(:release_env_for_member, indy)).to include("KETTLE_RELEASE_REQUIRE_GITHUB_RELEASE" => "false")
+  end
+
+  it "routes template prepare, family changelog, and reset changelog handling to the independent member" do
+    write_family_config(independent_members: ["indy"])
+    config = Kettle::Family::Config.load(root: @tmpdir)
+    alpha = member("alpha", version: "1.0.0")
+    indy = member("indy", version: "2.0.0")
+
+    template_workflow = described_class.new(command: "template", config: config, members: [alpha, indy])
+    expect(template_workflow.send(:template_prepare_env, member: alpha).fetch("K_CHANGELOG_PATH")).to eq(File.join(@tmpdir, "CHANGELOG.md"))
+    expect(template_workflow.send(:template_prepare_env, member: indy).fetch("K_CHANGELOG_PATH")).to eq(File.join(indy.root, "CHANGELOG.md"))
+
+    solo_release = described_class.new(command: "release", config: config, members: [indy], family_members: [alpha, indy], publish: true)
+    expect(solo_release.send(:family_changelog_applies_to_selected_members?)).to be(false)
+    expect(solo_release.send(:reset_skips_member_changelog_dependency?, indy)).to be(false)
+    expect(solo_release.send(:reset_skips_member_changelog_dependency?, alpha)).to be(true)
   end
 
   it "does not invoke the shared-cohort aggregate release when only an independent-series member is released" do
